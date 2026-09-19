@@ -227,6 +227,15 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
     }
 #endif
 
+    // Qt reads this setting while it creates the first application object. Krita
+    // creates a temporary QCoreApplication later during startup, so set our
+    // Windows default before that happens. Keep an explicit user setting intact.
+#ifdef Q_OS_WIN
+    if (!qEnvironmentVariableIsSet("QT_SCALE_FACTOR_ROUNDING_POLICY")) {
+        qputenv("QT_SCALE_FACTOR_ROUNDING_POLICY", "RoundPreferFloor");
+    }
+#endif
+
     bool runningInKDE = !qgetenv("KDE_FULL_SESSION").isEmpty();
 
 #if defined HAVE_X11
@@ -274,9 +283,9 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
     //   RoundPreferFloor: Round up for .75 and above.
     //   PassThrough:      Don't round.
     //
-    // The default is set to RoundPreferFloor for better behaviour than before,
-    // but can be overridden by the above environment variable.
-    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::RoundPreferFloor);
+    // The default is provided through the environment before the first Qt
+    // application object is created (see above). A user can still override it
+    // with QT_SCALE_FACTOR_ROUNDING_POLICY.
 #endif
 
 #ifdef Q_OS_ANDROID

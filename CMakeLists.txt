@@ -755,8 +755,11 @@ if (WIN32)
 endif()
 configure_file(config-hdr.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-hdr.h)
 
-set(CMAKE_REQUIRED_INCLUDES ${Qt5Core_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_LIBRARIES ${Qt5Core_LIBRARIES} ${Qt5Gui_LIBRARIES} ${Qt5Widgets_LIBRARIES})
+# Imported Qt targets carry the correct include paths and link dependencies for
+# either Qt 5 or Qt 6. The legacy Qt5*_INCLUDE_DIRS variables are not populated
+# by Qt 6's config packages, causing this capability check to fail for Qt 6.
+set(CMAKE_REQUIRED_INCLUDES)
+set(CMAKE_REQUIRED_LIBRARIES Qt${QT_MAJOR_VERSION}::Core Qt${QT_MAJOR_VERSION}::Gui Qt${QT_MAJOR_VERSION}::Widgets)
 
 CHECK_CXX_SOURCE_COMPILES("
 #include <QGuiApplication>
