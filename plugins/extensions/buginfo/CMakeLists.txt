@@ -5,11 +5,7 @@ set(kritabuginfo_SOURCES
     DlgKritaLog.cpp
 )
 
-if (ANDROID)
-    set(kritabuginfo_SOURCES ${kritabuginfo_SOURCES} DlgAndroidLogcatDumper.cpp)
-endif()
-
-if (WIN32 OR ANDROID)
+if (WIN32)
     set(kritabuginfo_SOURCES ${kritabuginfo_SOURCES} DlgCrashLog.cpp)
 endif()
 
@@ -22,11 +18,6 @@ ki18n_wrap_ui(kritabuginfo_SOURCES wdg_buginfo.ui )
 kis_add_library(kritabuginfo MODULE ${kritabuginfo_SOURCES})
 
 target_link_libraries(kritabuginfo kritaui)
-if (ANDROID)
-    if (QT_MAJOR_VERSION STREQUAL "5")
-        target_link_libraries(kritabuginfo Qt${QT_MAJOR_VERSION}::AndroidExtras)
-    endif()
-endif()
 
 if (KRITA_USE_SURFACE_COLOR_MANAGEMENT_API)
     target_link_libraries(kritabuginfo kritasurfacecolormanagementapi)

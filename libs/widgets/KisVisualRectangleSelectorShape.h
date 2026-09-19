@@ -12,12 +12,19 @@ class KisVisualRectangleSelectorShape : public KisVisualColorSelectorShape
 {
     Q_OBJECT
 public:
-    enum singelDTypes{vertical, horizontal, border, borderMirrored};
-    explicit KisVisualRectangleSelectorShape(KisVisualColorSelector *parent,
-                                             Dimensions dimension,
-                                             int channel1, int channel2, int width=20,
-                                             KisVisualRectangleSelectorShape::singelDTypes d = KisVisualRectangleSelectorShape::vertical
-            );
+    enum singelDTypes {
+        vertical,
+        horizontal,
+        border,
+        borderMirrored
+    };
+    explicit KisVisualRectangleSelectorShape(
+        KisVisualColorSelector *parent,
+        Dimensions dimension,
+        int channel1,
+        int channel2,
+        int width = 20,
+        KisVisualRectangleSelectorShape::singelDTypes d = KisVisualRectangleSelectorShape::vertical);
     ~KisVisualRectangleSelectorShape() override;
 
     void setBorderWidth(int width) override;
@@ -31,11 +38,14 @@ public:
     QRect getSpaceForSquare(QRect geom) override;
     QRect getSpaceForCircle(QRect geom) override;
     QRect getSpaceForTriangle(QRect geom) override;
+
 protected:
     QRect getAvailableSpace(QRect geom, bool stretch);
     QImage renderAlphaMask() const override;
+    QImage renderStaticAlphaMask() const override;
 
 private:
+    QImage renderAlphaMaskImpl() const;
     QPointF convertShapeCoordinateToWidgetCoordinate(QPointF coordinate) const override;
     QPointF convertWidgetCoordinateToShapeCoordinate(QPointF coordinate) const override;
 
@@ -45,4 +55,4 @@ private:
     void drawCursor(QPainter &painter) override;
 };
 
-#endif 
+#endif

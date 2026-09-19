@@ -9,16 +9,13 @@ variables:
   DEPS_BRANCH_NAME_WINDOWS: 'master'
   DEPS_BRANCH_NAME_LINUX: 'master'
   DEPS_BRANCH_NAME_MACOS: 'master'
-  DEPS_BRANCH_NAME_ANDROID: 'master'
 
   DEPS_REPO_BRANCH_NAME_WINDOWS: 'master'
   DEPS_REPO_BRANCH_NAME_LINUX: 'master'
   DEPS_REPO_BRANCH_NAME_MACOS: 'master'
-  DEPS_REPO_BRANCH_NAME_ANDROID: 'master'
 
   VM_IMAGE_NAME_WINDOWS: 'storage.kde.org/vm-images/krita-windows-clang21-twinpy'
   VM_IMAGE_NAME_LINUX: 'storage.kde.org/vm-images/krita-appimage-2204'
-  VM_IMAGE_NAME_ANDROID: 'storage.kde.org/vm-images/krita-android-sdk36-2204'
 
   # The name of python executable that will be used for initializing
   # the initial virtual envioronment. After venv is initialized, the chosen
@@ -72,7 +69,7 @@ variables:
       - "krita-*.zip"
       - "krita-*-setup.exe"
       - "krita-*.msix"
-      # Linux, MacOS and Android packages
+      # Linux and MacOS packages
       - "_packaging"
       # Logs from MacOS signer/notarizer
       - "_dmg/*.log"
@@ -144,7 +141,6 @@ workflow:
 include:
   - local: /build-tools/ci-scripts/linux.yml
   - local: /build-tools/ci-scripts/windows.yml
-  - local: /build-tools/ci-scripts/android.yml
   - local: /build-tools/ci-scripts/macos.yml
   # TODO: For some reason cppcheck doesn't work in our MR pipelines (no GUI visible),
   #       we should recover this job only when the MR pipelines are fixed. There is

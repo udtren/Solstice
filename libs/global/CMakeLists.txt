@@ -55,19 +55,6 @@ if(WIN32)
     )
 endif(WIN32)
 
-if (ANDROID)
-    list(APPEND kritaglobal_LIB_SRCS
-        KisAndroidCrashHandler.cpp
-        KisAndroidExitInfo.cpp
-        KisAndroidLogHandler.cpp
-        KisAndroidUtils.cpp
-    )
-    include_directories(${unwindstack_INCLUDE_DIR})
-    if (QT_MAJOR_VERSION STREQUAL "5")
-        include_directories(${Qt5AndroidExtras_INCLUDE_DIRS})
-    endif()
-endif()
-
 kis_add_library(kritaglobal SHARED ${kritaglobal_LIB_SRCS}
    )
 
@@ -101,14 +88,6 @@ endif()
 if (GSL_FOUND)
   target_link_libraries(kritaglobal PRIVATE GSL::gsl)
 endif ()
-
-if (ANDROID)
-    if (QT_MAJOR_VERSION STREQUAL "6")
-        target_link_libraries(kritaglobal PRIVATE ${unwindstack_LIBRARIES} log)
-    else()
-        target_link_libraries(kritaglobal PRIVATE ${unwindstack_LIBRARIES} Qt5::AndroidExtras log)
-    endif()
-endif()
 
 if(APPLE)
     target_link_libraries(kritaglobal PRIVATE

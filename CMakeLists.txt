@@ -155,8 +155,8 @@ set(KRITA_VERSION_REVISION 0)
 # In MSI packages we cannot use the fourth digit for release numbering,
 # since this digit is used by Microsoft Store internally. Hence we cannot
 # release hotfix releases (like 6.0.1.1, 6.0.1.2) on Windows. Therefore we
-# use the same approach as on Android, we just number all the official
-# releases in the same X.Y.* branch sequentially. We use a simple formula
+# number all official releases in the same X.Y.* branch sequentially. We use
+# a simple formula
 # for that, e.g. 5.4.2.3 will be released as 5.4.10203.0.
 math(EXPR KRITA_MSI_VERSION_RELEASE_TRANSITIONAL "10000 + 100 * ${KRITA_VERSION_RELEASE} + ${KRITA_VERSION_REVISION}")
 
@@ -299,18 +299,6 @@ add_feature_info("Dr. Mingw" USE_DRMINGW "Enable the Dr. Mingw crash handler")
             add_link_options(/GUARD:CF)
         endif (USE_CONTROL_FLOW_GUARD)
     endif (MINGW)
-elseif(ANDROID)
-    # Increase the stack size to match MinGW's. Prevents crashes with GMic.
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,stack-size=4194304")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,stack-size=4194304")
-    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,stack-size=4194304")
-
-    if (${CMAKE_ANDROID_NDK_VERSION} VERSION_GREATER_EQUAL "27.0.0"
-            AND (CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64"))
-        message(STATUS "Enable 16K page alignment for Android NDK 27")
-        set(PAGE_ALIGN_16K_LINKER_FLAGS -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384)
-        add_link_options(${PAGE_ALIGN_16K_LINKER_FLAGS})
-    endif()
 endif ()
 
 option(HIDE_SAFE_ASSERTS "Don't show message box for \"safe\" asserts, just ignore them automatically and dump a message to the terminal." ON)
@@ -349,12 +337,6 @@ option(KRITA_ENABLE_PCH "Enable precompiled headers support" OFF)
 add_feature_info("Precompiled Headers" KRITA_ENABLE_PCH "precompiled headers make build process faster on some systems")
 
 option(USE_EXTERNAL_RAQM "Fetch Raqm dependency online instead of the embedded one" OFF)
-
-if(ANDROID)
-option(ANDROID_ENABLE_STDIO_FORWARDING "Enable forwarding of qDebug() and stdio messages to logcat" OFF)
-configure_file(config-android-stdio-forwarding.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-android-stdio-forwarding.h)
-add_feature_info("Enable debug logging on Android" ANDROID_ENABLE_STDIO_FORWARDING "Enable forwarding of qDebug() and stdio messages to logcat")
-endif()
 
 set(ADDRESS_SANITIZER_ENABLED FALSE)
 if (ECM_ENABLE_SANITIZERS MATCHES address)
@@ -568,15 +550,6 @@ find_package(Qt${QT_MAJOR_VERSION} ${MIN_QT_VERSION}
         Concurrent
         Sql
 )
-
-if (ANDROID)
-    if (QT_MAJOR_VERSION STREQUAL "5")
-        find_package(Qt${QT_MAJOR_VERSION} ${MIN_QT_VERSION}
-            REQUIRED COMPONENTS
-            AndroidExtras
-        )
-    endif()
-endif()
 
 if (QT_MAJOR_VERSION STREQUAL "6")
     find_package(Qt${QT_MAJOR_VERSION} ${MIN_QT_VERSION}
@@ -798,33 +771,6 @@ QWindowsWindowFunctions::setHasBorderInFullScreenDefault(true);
 endif (WIN32)
 
 CHECK_CXX_SOURCE_COMPILES("
-#include <QCoreApplication>
-int main(int argc, char *argv[]) {
-QCoreApplication::setKritaAttribute(KRITA_QATTRIBUTE_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_PAGE_UP_DOWN);
-}
-"
-KRITA_QT_HAS_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_PAGE_UP_DOWN
-)
-
-CHECK_CXX_SOURCE_COMPILES("
-#include <QCoreApplication>
-int main(int argc, char *argv[]) {
-QCoreApplication::setKritaAttribute(KRITA_QATTRIBUTE_ANDROID_IGNORE_HISTORIC_TABLET_EVENTS);
-}
-"
-KRITA_QT_HAS_ANDROID_IGNORE_HISTORIC_TABLET_EVENTS
-)
-
-CHECK_CXX_SOURCE_COMPILES("
-#include <QCoreApplication>
-int main(int argc, char *argv[]) {
-QCoreApplication::setKritaAttribute(KRITA_QATTRIBUTE_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_HIGH_FUNCTION_KEYS);
-}
-"
-KRITA_QT_HAS_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_HIGH_FUNCTION_KEYS
-)
-
-CHECK_CXX_SOURCE_COMPILES("
 #include <QScroller>
 #ifndef KRITA_QSCROLLER_PATCH
 #error \"QScroller filter patch not present\"
@@ -832,30 +778,6 @@ CHECK_CXX_SOURCE_COMPILES("
 int main(int argc, char *argv[]) {}
 "
 KRITA_QT_HAS_QSCROLLER_FILTER
-)
-
-CHECK_CXX_SOURCE_COMPILES("
-#include <QCoreApplication>
-int main(int argc, char *argv[]) {
-return Qt::ANDROID_INPUT_PLATFORM_DATA_SOFT_INPUT_ADJUST_NOTHING;
-}
-"
-KRITA_QT_HAS_ANDROID_INPUT_PLATFORM_DATA_SOFT_INPUT_ADJUST_NOTHING
-)
-
-
-set(CMAKE_REQUIRED_INCLUDES ${Qt${QT_MAJOR_VERSION}Gui_INCLUDE_DIRS} ${Qt${QT_MAJOR_VERSION}Gui_PRIVATE_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_LIBRARIES ${Qt${QT_MAJOR_VERSION}Gui_LIBRARIES})
-
-CHECK_CXX_SOURCE_COMPILES("
-#include <qpa/qplatformscreen.h>
-int main(int argc, char *argv[]) {
-QPlatformScreen *screen = nullptr;
-screen->setDensityAdjustment(1.0);
-return screen->densityAdjustment();
-}
-"
-KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
 )
 
 set(CMAKE_REQUIRED_INCLUDES ${Qt${QT_MAJOR_VERSION}Widgets_INCLUDE_DIRS})
@@ -904,10 +826,6 @@ set_package_properties(Qt${QT_MAJOR_VERSION}QuickWidgets PROPERTIES
         PURPOSE "Optionally used for the touch gui for Krita")
 
 if (Qt${QT_MAJOR_VERSION}QuickWidgets_FOUND)
-    # This is needed because Qt dependencies aren't added by ECM but by androideployqt,
-    # so it doesn't benefit from our patch in ECM.
-    list (APPEND ANDROID_EXTRA_LIBS $<TARGET_FILE:Qt${QT_MAJOR_VERSION}::QuickWidgets>)
-
     find_package(Qt${QT_MAJOR_VERSION}QuickControls2 ${MIN_QT_VERSION})
     set_package_properties(Qt${QT_MAJOR_VERSION}QuickControls2 PROPERTIES
             DESCRIPTION "QtQuickControls"
@@ -918,7 +836,7 @@ if (Qt${QT_MAJOR_VERSION}QuickWidgets_FOUND)
 endif()
 
 
-if (NOT WIN32 AND NOT APPLE AND NOT ANDROID AND NOT HAIKU)
+if (NOT WIN32 AND NOT APPLE AND NOT HAIKU)
     if (QT_MAJOR_VERSION STREQUAL "5")
         find_package(Qt${QT_MAJOR_VERSION} ${MIN_QT_VERSION} REQUIRED X11Extras)
     endif()
@@ -1124,26 +1042,7 @@ if(WIN32)
 endif()
 
 # set custom krita plugin installdir
-if (ANDROID)
-    # use default ABI
-    if (NOT DEFINED ANDROID_ABI)
-        set (ANDROID_ABI arm64-v8a)
-    endif()
-    if (NOT DEFINED ANDROID_SDK_ROOT)
-        message (FATAL_ERROR "ANDROID_SDK_ROOT argument is not set")
-    endif()
-
-    set (KRITA_PLUGIN_INSTALL_DIR ${KDE_INSTALL_LIBDIR})
-    # set (KDE_INSTALL_DATADIR ${CMAKE_INSTALL_PREFIX}/assets)
-
-    # From ECM
-    # Because Qt changes library suffix (to include arch), this changes name of
-    # libraries that depend on Qt, but its Find file may not necessarily be
-    # adapted for this.
-    set(CMAKE_FIND_LIBRARY_SUFFIXES "_${CMAKE_ANDROID_ARCH_ABI}.so" ".so" ".a")
-else()
-    set (KRITA_PLUGIN_INSTALL_DIR ${KDE_INSTALL_LIBDIR}/kritaplugins)
-endif()
+set (KRITA_PLUGIN_INSTALL_DIR ${KDE_INSTALL_LIBDIR}/kritaplugins)
 
 
  ###########################
@@ -1151,12 +1050,6 @@ endif()
 ## Required dependencies  ##
 ############################
 ###########################
-
-# FIXME: Still hardcoded
-if (ANDROID)
-    set (Boost_COMPILER clang)
-    find_package(unwindstack REQUIRED)
-endif()
 
 find_package(PNG REQUIRED "1.2.6")
 
@@ -1522,45 +1415,6 @@ set_package_properties(Poppler PROPERTIES
     PURPOSE "Required by the Krita PDF filter.")
 
 ##
-## Test for libav on Android
-##
-if(ANDROID)
-    find_package(PkgConfig REQUIRED)
-    set_package_properties(PkgConfig PROPERTIES
-        DESCRIPTION "pkg-config"
-        URL "https://www.freedesktop.org/wiki/Software/pkg-config/"
-        TYPE REQUIRED
-        PURPOSE "Needed to find ffmpeg libraries on Android."
-    )
-
-    pkg_check_modules(LibAV REQUIRED IMPORTED_TARGET GLOBAL
-        libavcodec
-        libavfilter
-        libavformat
-        libavutil
-        libswscale
-    )
-    if(TARGET PkgConfig::LibAV)
-        add_library(LibAV ALIAS PkgConfig::LibAV)
-    endif()
-
-    # The PkgConfig and FeatureSummary modules don't play nice with each other
-    # on their own, so this has to be set manually for the summary to show up.
-    if(TARGET LibAV)
-        set_property(GLOBAL APPEND PROPERTY PACKAGES_FOUND LibAV)
-    else()
-        set_property(GLOBAL APPEND PROPERTY PACKAGES_NOT_FOUND LibAV)
-    endif()
-
-    set_package_properties(LibAV PROPERTIES
-        DESCRIPTION "FFmpeg libraries"
-        URL "https://ffmpeg.org/"
-        TYPE REQUIRED
-        PURPOSE "Needed to render animations and timelapses on Android."
-    )
-endif()
-
-##
 ## Test for quazip
 ##
 find_package(QUAZIP 0.6)
@@ -1617,10 +1471,6 @@ set_package_properties(HarfBuzz PROPERTIES
     TYPE REQUIRED
     PURPOSE "Needed for rendering text vector shapes."
 )
-if (HarfBuzz_FOUND)
-    list(APPEND ANDROID_EXTRA_LIBS ${HarfBuzz_LIBRARIES})
-endif()
-
 # Note: We now build a patched raqm from source with Krita.
 
 ##
@@ -1721,49 +1571,5 @@ if(APPLE)
 endif()
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
-
-if (ANDROID)
-  # ECM passes this to Qt, which was already capable of detecting it..
-  set (ANDROID_SDK_COMPILE_API "36")
-
-  # To assist stdcpp-path in deployment.json file
-  set(ANDROID_SYSROOT_PREFIX "${ANDROID_TOOLCHAIN_ROOT}/sysroot/usr" CACHE STRING "" FORCE)
-
-  # copied regex from ECM's toolchain
-  string(REGEX REPLACE "-(clang)?([0-9].[0-9])?$" "" ECM_ANDROID_STL_ARCH ${ANDROID_TOOLCHAIN_NAME})
-
-  if (NOT (CMAKE_CXX_STANDARD_LIBRARIES MATCHES "[^ ]*c\\+\\+[^ ]*\\.so"))
-
-    set (KRITA_ANDROID_STL_PATH "${ANDROID_TOOLCHAIN_ROOT}/sysroot/usr/lib/${ECM_ANDROID_STL_ARCH}/lib${ANDROID_STL}.so")
-    if (NOT EXISTS ${KRITA_ANDROID_STL_PATH})
-      message(FATAL_ERROR "STL does not exist at the right location, please use NDK r20+")
-    endif()
-
-    set (CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} \"${KRITA_ANDROID_STL_PATH}\"" CACHE STRING "" FORCE)
-  endif()
-endif()
-
-if(DEFINED QTANDROID_EXPORTED_TARGET AND NOT TARGET "create-apk")
-    set (_CMAKE_ANDROID_DIR "${ECM_DIR}/../toolchain")
-    list(LENGTH QTANDROID_EXPORTED_TARGET targetsCount)
-    include(${_CMAKE_ANDROID_DIR}/ECMAndroidDeployQt.cmake)
-
-    math(EXPR last "${targetsCount}-1")
-    foreach(idx RANGE 0 ${last})
-        list(GET QTANDROID_EXPORTED_TARGET ${idx} exportedTarget)
-        list(GET ANDROID_APK_DIR ${idx} APK_DIR)
-        if(APK_DIR AND NOT EXISTS "${ANDROID_APK_DIR}/AndroidManifest.xml" AND IS_ABSOLUTE ANDROID_APK_DIR)
-            message(FATAL_ERROR "Cannot find ${APK_DIR}/AndroidManifest.xml according to ANDROID_APK_DIR. ${ANDROID_APK_DIR} ${exportedTarget}")
-        elseif(NOT APK_DIR)
-            get_filename_component(_qt5Core_install_prefix "${Qt5Core_DIR}/../../../" ABSOLUTE)
-            set(APK_DIR "${_qt5Core_install_prefix}/src/android/templates/")
-        endif()
-
-        ecm_androiddeployqt("${exportedTarget}" "${ECM_ADDITIONAL_FIND_ROOT_PATH}")
-        set_target_properties(create-apk-${exportedTarget} PROPERTIES ANDROID_APK_DIR "${APK_DIR}")
-    endforeach()
-elseif(ANDROID)
-    message(STATUS "You can export a target by specifying -DQTANDROID_EXPORTED_TARGET=<targetname> and -DANDROID_APK_DIR=<paths>")
-endif()
 
 ki18n_install(po)

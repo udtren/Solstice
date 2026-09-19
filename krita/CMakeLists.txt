@@ -4,13 +4,6 @@ add_subdirectory( integration )
 # Install the application icons following the freedesktop icon theme spec
 add_subdirectory( "pics/branding/${BRANDING}" )
 
-if (ANDROID)
-    if (QT_MAJOR_VERSION STREQUAL "5")
-        set (QtAndroidExtras_INCLUDE_DIRS ${Qt5AndroidExtras_INCLUDE_DIRS})
-        include_directories (${QtAndroidExtras_INCLUDE_DIRS})
-    endif()
-endif()
-
 set(krita_SRCS main.cc)
 
 # Set the application icon on the application
@@ -100,12 +93,7 @@ ecm_install_icons(ICONS
     "${CMAKE_CURRENT_SOURCE_DIR}/pics/mimetypes/1024-mimetypes-application-x-krita.png"
     DESTINATION ${KDE_INSTALL_ICONDIR} THEME hicolor)
 
-# Android has a different splash screen.
-if(ANDROID)
-    set(krita_splash_qrc splash-android.qrc)
-else()
-    set(krita_splash_qrc splash.qrc)
-endif()
+set(krita_splash_qrc splash.qrc)
 
 # ==============================================================================
 # KRITA5.XMLGUI UPDATE
@@ -126,17 +114,11 @@ endif()
 # make a change that applies to all systems, remove any conditions. The version
 # you specify should always be one higher than any version number you see here,
 # no matter what you're doing. Do not re-use versions.
-if(ANDROID)
-    # Android had interface scaling and supporter benefit menu options added.
-    set(KRITA5_XMLGUI_VERSION 544)
-else()
-    # Other systems aren't affected, they keep using the previous version.
-    set(KRITA5_XMLGUI_VERSION 543)
-endif()
+set(KRITA5_XMLGUI_VERSION 545)
 
 # After updating the version number properly, put the new hash that the CMake
 # error lists as the "actual hash" here.
-set(krita5_xmlgui_hash_expected "b74fdc4f3bafac700be2db906a424542")
+set(krita5_xmlgui_hash_expected "e9592f0a336dab58014cde13270d8336")
 
 # You can stop reading now, the stuff that follows doesn't need to be modified.
 # ==============================================================================
@@ -199,10 +181,7 @@ endif()
 
 qt_add_resources(krita_SRCS ${krita_QRCS})
 
-if (ANDROID AND QT_MAJOR_VERSION STREQUAL "5")
-    kis_add_library(krita SHARED ${krita_SRCS})
-    target_link_libraries(krita PRIVATE Qt5::AndroidExtras)
-elseif (WIN32)
+if (WIN32)
     # Build the main implementation into a DLL to be called by a stub EXE.
     kis_add_library(krita SHARED ${krita_SRCS})
     set_target_properties(krita PROPERTIES PREFIX "")
@@ -238,22 +217,20 @@ if (APPLE)
     set_target_properties(krita PROPERTIES MACOSX_BUNDLE_COPYRIGHT "GNU Public License, V2 or, at your option, any later version.")
 endif ()
 
-if (NOT ANDROID)
-  set(KRITAVERSION_SRCS kritaversion.cpp)
-  add_executable(krita_version ${KRITAVERSION_SRCS})
-  target_link_libraries(krita_version
+set(KRITAVERSION_SRCS kritaversion.cpp)
+add_executable(krita_version ${KRITAVERSION_SRCS})
+target_link_libraries(krita_version
     PRIVATE
         Qt${QT_MAJOR_VERSION}::Core
         kritaversion
-  )
+)
 
-  if(APPLE)
-      set_target_properties(krita_version PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@executable_path/../lib;@executable_path/../Frameworks")
-      set_property(TARGET krita_version PROPERTY MACOSX_BUNDLE OFF)
-  endif ()
+if(APPLE)
+    set_target_properties(krita_version PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@executable_path/../lib;@executable_path/../Frameworks")
+    set_property(TARGET krita_version PROPERTY MACOSX_BUNDLE OFF)
+endif ()
 
-  install(TARGETS krita_version ${INSTALL_TARGETS_DEFAULT_ARGS})
-endif()
+install(TARGETS krita_version ${INSTALL_TARGETS_DEFAULT_ARGS})
 
 
 if(APPLE)
@@ -282,12 +259,6 @@ endif()
 install(FILES org.kde.krita.desktop DESTINATION ${KDE_INSTALL_APPDIR})
 
 set(actions_files krita.action kritamenu.action)
-if (ANDROID)
-    # In-app-purchase-related actions are only relevant on Android. They
-    # wouldn't show up in the menu anyway because the application doesn't
-    # instantiate them, but they'd still appear in the keyboard shortcuts.
-    list(APPEND actions_files kritamenu_android.action)
-endif()
 install(FILES ${actions_files} DESTINATION ${KDE_INSTALL_DATADIR}/krita/actions)
 
 install(FILES  org.kde.krita.appdata.xml DESTINATION ${KDE_INSTALL_METAINFODIR} )

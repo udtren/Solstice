@@ -424,7 +424,6 @@ xsi:schemaLocation="http://www.kde.org/standards/kxmlgui/1.0  http://www.kde.org
       <Action name="buginfo"/>
       <Action name="sysinfo"/>
       <Action name="color_management_report"/>
-      <Action name="logcatdump"/>
       <Action name="crashlog"/>
       <Separator/>
       <Action name="help_about_app"/>

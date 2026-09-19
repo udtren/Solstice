@@ -1,15 +1,4 @@
 
-if (ANDROID)
-    # We explicitly set QT_OPENGL_ES_3 here because Qt for some reason does
-    # not enable this for Android.
-    # See also: https://bugreports.qt.io/browse/QTBUG-64703
-    # This is not needed for ARM GNU/Linux environments.
-    add_definitions(-DQT_OPENGL_ES_3)
-    if (QT_MAJOR_VERSION STREQUAL "5")
-        include_directories (${Qt5AndroidExtras_INCLUDE_DIRS})
-    endif()
-endif()
-
 add_subdirectory( tests )
 
 if (APPLE)
@@ -482,7 +471,6 @@ set(kritaui_LIB_SRCS
     StoryboardItem.cpp
 
     KisNodeActivationActionCreatorVisitor.cpp
-    KisAndroidFileProxy.cpp
 )
 
 if (KSeExpr_FOUND)
@@ -503,16 +491,6 @@ if(WIN32)
         ${kritaui_LIB_SRCS}
         dialogs/KisDlgCustomTabletResolution.cpp
         )
-elseif(ANDROID)
-    list(APPEND kritaui_LIB_SRCS
-        dialogs/KisDonationManagementDialog.cpp
-        widgets/KisDonationManagementWidget.cpp
-    )
-    if(KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT)
-        list(APPEND kritaui_LIB_SRCS
-            KisAndroidScaling.cpp
-        )
-    endif()
 endif()
 
     set(kritaui_LIB_SRCS
@@ -559,16 +537,6 @@ if(APPLE)
         ${kritaui_LIB_SRCS}
         input/kis_extended_modifiers_mapper_osx.mm
         osx.mm
-    )
-endif()
-
-if(ANDROID)
-    list(APPEND kritaui_LIB_SRCS
-        KisAndroidDonations.cpp
-        animation/KisAndroidMediaEncoderRunnable.cpp
-        animation/KisLibavMediaEncoderRunnable.cpp
-        animation/KisMediaEncoderFormatPreferencesDialog.cpp
-        animation/KisMediaEncoderWrapper.cpp
     )
 endif()
 
@@ -677,11 +645,6 @@ if(WIN32)
     ki18n_wrap_ui(kritaui_LIB_SRCS
         dialogs/KisDlgCustomTabletResolution.ui
     )
-elseif(ANDROID)
-    ki18n_wrap_ui(kritaui_LIB_SRCS
-        dialogs/KisDonationManagementDialog.ui
-        widgets/KisDonationManagementWidget.ui
-    )
 endif()
 
 if (KRITA_USE_SURFACE_COLOR_MANAGEMENT_API)
@@ -747,17 +710,6 @@ if(WIN32)
         PROPERTIES
         INCLUDE_DIRECTORIES "${Qt${QT_MAJOR_VERSION}Gui_PRIVATE_INCLUDE_DIRS}"
         )
-elseif(ANDROID)
-    # Private headers are required to access QPlatformScreen::densityAdjustment
-    # and QPlatformScreen::setDensityAdjustment. These are patched into our Qt
-    # to allow us to dynamically change the UI scale on Android.
-    if(KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT)
-        set_source_files_properties(
-            KisAndroidScaling.cpp
-            PROPERTIES
-            INCLUDE_DIRECTORIES "${Qt${QT_MAJOR_VERSION}Gui_PRIVATE_INCLUDE_DIRS}"
-        )
-    endif()
 endif()
 
 if (HAVE_X11)
@@ -779,15 +731,6 @@ endif()
 
 if (Mlt7_FOUND)
     target_link_libraries(kritaui PRIVATE SDL2::SDL2 Mlt7::mlt Mlt7::mlt++)
-endif()
-
-if (ANDROID)
-    target_link_libraries(kritaui PRIVATE GLESv3)
-    target_link_libraries(kritaui PUBLIC Qt${QT_MAJOR_VERSION}::Gui)
-    target_link_libraries(kritaui PRIVATE Qt${QT_MAJOR_VERSION}::AndroidExtras)
-    if(TARGET LibAV)
-        target_link_libraries(kritaui PRIVATE LibAV)
-    endif()
 endif()
 
 if (HAIKU)

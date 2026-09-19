@@ -17,11 +17,7 @@
 #include "DlgKritaLog.h"
 #include "DlgSysInfo.h"
 
-#ifdef Q_OS_ANDROID
-#include "DlgAndroidLogcatDumper.h"
-#endif
-
-#if defined(Q_OS_ANDROID) || defined(Q_OS_WIN)
+#ifdef Q_OS_WIN
 #include "DlgCrashLog.h"
 #endif
 
@@ -45,12 +41,7 @@ BugInfo::BugInfo(QObject *parent, const QVariantList &)
     connect(actionColorManagement, SIGNAL(triggered()), this, SLOT(slotColorManagement()));
 #endif
 
-#ifdef Q_OS_ANDROID
-    KisAction *actionLogcatdump = createAction("logcatdump");
-    connect(actionLogcatdump, SIGNAL(triggered()), this, SLOT(slotDumpLogcat()));
-#endif
-
-#if defined(Q_OS_ANDROID) || defined(Q_OS_WIN)
+#ifdef Q_OS_WIN
     KisAction *actionCrashLog = createAction("crashlog");
     connect(actionCrashLog, SIGNAL(triggered()), this, SLOT(slotCrashLog()));
 #endif
@@ -73,15 +64,7 @@ void BugInfo::slotSysInfo()
     dlgSysInfo.exec();
 }
 
-#ifdef Q_OS_ANDROID
-void BugInfo::slotDumpLogcat()
-{
-    DlgAndroidLogcatDumper dlgLogcatDumper(viewManager()->mainWindowAsQWidget());
-    dlgLogcatDumper.exec();
-}
-#endif
-
-#if defined(Q_OS_ANDROID) || defined(Q_OS_WIN)
+#ifdef Q_OS_WIN
 void BugInfo::slotCrashLog()
 {
     DlgCrashLog dlgCrashLog(viewManager()->mainWindowAsQWidget());
