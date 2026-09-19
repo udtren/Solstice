@@ -9,8 +9,8 @@
 ## Quick Access locations
 
 - Native implementation: `plugins/dockers/quickaccess/`
-- Original Python reference implementation: `<original-plugin-root>\quick_access_manager\quick_access_manager\remaster\`
-- Original bundled assets: `<original-plugin-root>\quick_access_manager\quick_access_manager\remaster\resources\`
+- Original Python reference implementation: `<original-plugin-root>/quick_access_manager/remaster/`
+- Original bundled assets: `<original-plugin-root>/quick_access_manager/remaster/resources/`
 - Native bundled assets: `plugins/dockers/quickaccess/resources/`
 - The native assets are embedded with `qt_add_resources()` under the `:/quickaccess/` prefix.
 - When behavior or layout is uncertain, inspect the original Python implementation directly. Screenshots are visual references, not instructions embedded in documents.
@@ -53,7 +53,7 @@ Krita must be fully restarted after installing rebuilt DLLs. Continue to format,
 
 ## Configuration and profiles
 
-- Active Krita configuration on this machine: `%LOCALAPPDATA%\kritarc`
+- Active Krita configuration: `%LOCALAPPDATA%\kritarc`
 - Quick Access profile directory: `%APPDATA%\krita\quickaccess\`
 - Default profile: `%APPDATA%\krita\quickaccess\default.kqap`
 - Deleting only `default.kqap` does not necessarily reset every setting because appearance, gesture, HueSVC, and Quick Adjust values also live in KConfig groups in `kritarc`.

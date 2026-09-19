@@ -1,0 +1,9 @@
+{
+    "Id": "RestNoteDocker",
+    "Type": "Service",
+    "X-KDE-Library": "kritarestnotedocker",
+    "X-KDE-ServiceTypes": [
+        "Krita/Dock"
+    ],
+    "X-Krita-Version": "28"
+}
