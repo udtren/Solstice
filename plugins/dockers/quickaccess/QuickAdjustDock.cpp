@@ -7,6 +7,7 @@
 
 #include "QuickAdjustKeyController.h"
 
+#include <KisMainWindow.h>
 #include <KisViewManager.h>
 #include <KoColorSpace.h>
 #include <KoCompositeOpRegistry.h>
@@ -17,6 +18,7 @@
 #include <kis_action_manager.h>
 #include <kis_canvas2.h>
 #include <kis_canvas_resource_provider.h>
+#include <kis_config.h>
 #include <kis_image.h>
 #include <kis_node.h>
 #include <kis_node_manager.h>
@@ -28,13 +30,16 @@
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
+#include <QScreen>
 #include <QSignalBlocker>
+#include <QSizePolicy>
 #include <QSlider>
 #include <QTimer>
 #include <QToolButton>
@@ -158,6 +163,7 @@ void selectBlendMode(QComboBox *combo, const QString &id)
 
 QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     : QDockWidget(parent)
+    , m_compactPopup(compactPopup)
 {
     if (!compactPopup)
         new QuickAdjustKeyController(this);
@@ -233,11 +239,9 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     auto *statusLayout = new QVBoxLayout;
     statusLayout->setContentsMargins(0, 0, 0, 0);
     statusLayout->setSpacing(2);
-    QToolButton *toolOptions =
+    m_toolOptionsToggle =
         createStatusButton(i18nc("@info:tooltip", "Show Tool Options"), QStringLiteral("tool_options"));
-    toolOptions->setVisible(adjustConfig.readEntry("ToolOptionsEnabled", false));
-    m_rotationToggle =
-        createStatusButton(i18nc("@info:tooltip", "Show brush rotation control"), QStringLiteral("rotate"));
+    m_toolOptionsToggle->setVisible(!compactPopup && adjustConfig.readEntry("ToolOptionsEnabled", false));
     m_eraseToggle = createStatusButton(i18nc("@info:tooltip", "Toggle eraser mode"), QStringLiteral("erase_mode"));
     m_alphaToggle =
         createStatusButton(i18nc("@info:tooltip", "Toggle preserve alpha"), QStringLiteral("preserve_alpha"));
@@ -246,7 +250,7 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     m_gestureToggle =
         createStatusButton(i18nc("@info:tooltip", "Toggle Quick Access gestures"), QStringLiteral("gesture"));
     for (QToolButton *button :
-         {toolOptions, m_rotationToggle, m_eraseToggle, m_alphaToggle, m_selectionToggle, m_gestureToggle}) {
+         {m_toolOptionsToggle, m_eraseToggle, m_alphaToggle, m_selectionToggle, m_gestureToggle}) {
         statusLayout->addWidget(button, 0, Qt::AlignHCenter);
         if (button != m_gestureToggle) {
             auto *line = new QFrame(root);
@@ -261,8 +265,7 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     outerLayout->addLayout(statusLayout);
     setWidget(root);
 
-    m_rotationToggle->setChecked(adjustConfig.readEntry("RotationWidgetStartVisible", false));
-    m_brushRotationRow->setVisible(compactPopup || m_rotationToggle->isChecked());
+    m_brushRotationRow->setVisible(compactPopup);
     if (compactPopup) {
         m_colorHistoryGroup->hide();
         m_brushHistoryGroup->hide();
@@ -274,10 +277,9 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
                                        .toInt(&fontOk);
     if (fontOk)
         content->setStyleSheet(QStringLiteral("font-size: %1px;").arg(qBound(6, configuredFontSize, 36)));
-    connect(toolOptions, &QToolButton::clicked, this, [this] {
-        triggerAction(QStringLiteral("show_tool_options"));
-    });
-    connect(m_rotationToggle, &QToolButton::toggled, m_brushRotationRow, &QWidget::setVisible);
+    m_toolOptionsToggle->setChecked(adjustConfig.readEntry("ToolOptionsStartVisible", false));
+    connect(m_toolOptionsToggle, &QToolButton::toggled, this, &QuickAdjustDock::setToolOptionsPadVisible);
+    setToolOptionsPadVisible(m_toolOptionsToggle->isChecked());
     connect(m_eraseToggle, &QToolButton::clicked, this, [this] {
         if (m_resourceProvider)
             m_resourceProvider->setEraserMode(!m_resourceProvider->eraserMode());
@@ -313,6 +315,11 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     setControlsEnabled(false);
 }
 
+QuickAdjustDock::~QuickAdjustDock()
+{
+    returnToolOptionsDocker();
+}
+
 QString QuickAdjustDock::observerName()
 {
     return QStringLiteral("QuickAdjustDock");
@@ -326,6 +333,7 @@ void QuickAdjustDock::setCanvas(KoCanvasBase *canvas)
     m_resourceProvider =
         m_canvas && m_canvas->viewManager() ? m_canvas->viewManager()->canvasResourceProvider() : nullptr;
     if (m_resourceProvider) {
+        ensureToolOptionsPad();
         if (!colorHistoryResetForSession) {
             m_resourceProvider->setColorHistory({});
             colorHistoryResetForSession = true;
@@ -385,6 +393,140 @@ void QuickAdjustDock::populateBlendModes(QComboBox *combo)
         const KoID op = KoCompositeOpRegistry::instance().getKoID(id);
         combo->addItem(op.name().isEmpty() ? id : op.name(), id);
     }
+    combo->setMinimumWidth(72);
+    combo->setMinimumContentsLength(8);
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    combo->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+}
+
+void QuickAdjustDock::ensureToolOptionsPad()
+{
+    if (m_compactPopup || m_toolOptionsPad || !m_canvas || !m_canvas->viewManager()
+        || !m_toolOptionsToggle->isVisible())
+        return;
+    if (!KisConfig(true).toolOptionsInDocker()) {
+        m_toolOptionsToggle->hide();
+        return;
+    }
+
+    QWidget *mainWindow = m_canvas->viewManager()->mainWindow();
+    QDockWidget *docker =
+        mainWindow ? mainWindow->findChild<QDockWidget *>(QStringLiteral("sharedtooldocker")) : nullptr;
+    if (!docker || !docker->widget()) {
+        m_toolOptionsToggle->hide();
+        return;
+    }
+
+    m_toolOptionsDocker = docker;
+    m_toolOptionsDockerWasVisible = docker->isVisible();
+    m_borrowedToolOptions = docker->widget();
+    m_toolOptionsPlaceholder = new QLabel(i18nc("@info", "Tool Options are open beside Quick Adjust."));
+    m_toolOptionsPlaceholder->hide();
+
+    m_toolOptionsPad = new QWidget(mainWindow, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    m_toolOptionsPad->setObjectName(QStringLiteral("quickAccessToolOptionsPad"));
+    m_toolOptionsPad->setAutoFillBackground(true);
+    auto *padLayout = new QVBoxLayout(m_toolOptionsPad);
+    padLayout->setContentsMargins(4, 4, 4, 4);
+    padLayout->addWidget(m_borrowedToolOptions);
+    docker->setWidget(m_toolOptionsPlaceholder);
+    docker->hide();
+    docker->toggleViewAction()->setEnabled(false);
+
+    m_toolOptionsPad->adjustSize();
+    const QSize wanted = m_toolOptionsPad->sizeHint().boundedTo(QSize(500, 700)).expandedTo(QSize(220, 200));
+    m_toolOptionsPad->resize(wanted);
+    setToolOptionsPadVisible(m_toolOptionsToggle->isChecked());
+}
+
+void QuickAdjustDock::setToolOptionsPadVisible(bool visible)
+{
+    if (!m_compactPopup && visible && !m_toolOptionsPad)
+        ensureToolOptionsPad();
+    if (m_toolOptionsPad) {
+        m_toolOptionsPad->setVisible(visible && isVisible());
+        if (visible) {
+            positionToolOptionsPad();
+            QTimer::singleShot(0, this, &QuickAdjustDock::positionToolOptionsPad);
+        }
+    }
+    if (m_toolOptionsToggle) {
+        m_toolOptionsToggle->setIcon(QIcon(QStringLiteral(":/quickaccess/quick_adjust/tool_options_%1.png")
+                                               .arg(visible ? QStringLiteral("on") : QStringLiteral("off"))));
+    }
+    KConfigGroup config = KSharedConfig::openConfig()->group(QStringLiteral("QuickAccessAdjust"));
+    config.writeEntry("ToolOptionsStartVisible", visible);
+    config.sync();
+}
+
+void QuickAdjustDock::positionToolOptionsPad()
+{
+    if (!m_toolOptionsPad)
+        return;
+    const KConfigGroup config = KSharedConfig::openConfig()->group(QStringLiteral("QuickAccessAdjust"));
+    const QString position = config.readEntry("ToolOptionsPosition", QStringLiteral("left_align_top"));
+    const QPoint dockTopLeft = mapToGlobal(QPoint(0, 0));
+    QPoint target;
+    if (position == QStringLiteral("right_align_top")) {
+        target = QPoint(dockTopLeft.x() + width() + 5, dockTopLeft.y());
+    } else if (position == QStringLiteral("bottom_left")) {
+        target = QPoint(dockTopLeft.x(), dockTopLeft.y() + height() + 5);
+    } else {
+        target = QPoint(dockTopLeft.x() - m_toolOptionsPad->width() - 5, dockTopLeft.y());
+    }
+
+    if (QScreen *screen = QGuiApplication::screenAt(dockTopLeft)) {
+        const QRect bounds = screen->availableGeometry();
+        target.setX(qBound(bounds.left(), target.x(), bounds.right() - m_toolOptionsPad->width() + 1));
+        target.setY(qBound(bounds.top(), target.y(), bounds.bottom() - m_toolOptionsPad->height() + 1));
+    }
+    m_toolOptionsPad->move(target);
+}
+
+void QuickAdjustDock::returnToolOptionsDocker()
+{
+    if (m_toolOptionsDocker && m_borrowedToolOptions) {
+        if (m_toolOptionsPad && m_toolOptionsPad->layout())
+            m_toolOptionsPad->layout()->removeWidget(m_borrowedToolOptions);
+        m_toolOptionsDocker->setWidget(m_borrowedToolOptions);
+        m_borrowedToolOptions->setParent(m_toolOptionsDocker);
+        m_toolOptionsDocker->toggleViewAction()->setEnabled(true);
+        m_toolOptionsDocker->setVisible(m_toolOptionsDockerWasVisible);
+    }
+    if (m_toolOptionsPlaceholder)
+        m_toolOptionsPlaceholder->deleteLater();
+    if (m_toolOptionsPad)
+        m_toolOptionsPad->deleteLater();
+    m_toolOptionsDocker.clear();
+    m_borrowedToolOptions.clear();
+    m_toolOptionsPlaceholder.clear();
+    m_toolOptionsPad.clear();
+}
+
+void QuickAdjustDock::moveEvent(QMoveEvent *event)
+{
+    QDockWidget::moveEvent(event);
+    positionToolOptionsPad();
+}
+
+void QuickAdjustDock::resizeEvent(QResizeEvent *event)
+{
+    QDockWidget::resizeEvent(event);
+    positionToolOptionsPad();
+}
+
+void QuickAdjustDock::showEvent(QShowEvent *event)
+{
+    QDockWidget::showEvent(event);
+    if (m_toolOptionsToggle && m_toolOptionsToggle->isChecked())
+        setToolOptionsPadVisible(true);
+}
+
+void QuickAdjustDock::hideEvent(QHideEvent *event)
+{
+    if (m_toolOptionsPad)
+        m_toolOptionsPad->hide();
+    QDockWidget::hideEvent(event);
 }
 
 QWidget *QuickAdjustDock::createColorHistoryWidget()
@@ -564,7 +706,6 @@ void QuickAdjustDock::updateStatusButtons()
         button->setChecked(active);
     };
 
-    setStateIcon(m_rotationToggle, m_brushRotationRow && m_brushRotationRow->isVisible());
     setStateIcon(m_eraseToggle, m_resourceProvider && m_resourceProvider->eraserMode());
     setStateIcon(m_alphaToggle, m_resourceProvider && m_resourceProvider->globalAlphaLock());
 

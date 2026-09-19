@@ -277,6 +277,8 @@ void upgradeLegacySettings(const QJsonObject &settings)
     config.writeEntry("DockerIconSize", defaults.value(QStringLiteral("docker_icon_size")).toInt(DefaultIconSize));
     config.writeEntry("HeaderButtonColor",
                       defaults.value(QStringLiteral("header_button_color")).toString(QStringLiteral("#828282")));
+    config.writeEntry("HeaderButtonFontColor",
+                      defaults.value(QStringLiteral("header_button_font_color")).toString(QStringLiteral("#ffffff")));
     config.writeEntry("ActiveTabFontSize", defaults.value(QStringLiteral("tab_active_font_size")).toInt(12));
     config.writeEntry("ActiveTabFontColor",
                       defaults.value(QStringLiteral("tab_active_font_color")).toString(QStringLiteral("#ffffff")));
@@ -319,11 +321,9 @@ void upgradeLegacySettings(const QJsonObject &settings)
         {QStringLiteral("color_history_enabled"), QStringLiteral("ColorHistoryEnabled")},
         {QStringLiteral("brush_history_enabled"), QStringLiteral("BrushHistoryEnabled")},
         {QStringLiteral("tool_options_enabled"), QStringLiteral("ToolOptionsEnabled")},
-        {QStringLiteral("tool_options_start_visible"), QStringLiteral("ToolOptionsStartVisible")},
-        {QStringLiteral("rotation_widget_start_visible"), QStringLiteral("RotationWidgetStartVisible")}};
+        {QStringLiteral("tool_options_start_visible"), QStringLiteral("ToolOptionsStartVisible")}};
     for (const auto &entry : booleans) {
-        const bool defaultValue = !entry.first.startsWith(QStringLiteral("tool_options"))
-            && entry.first != QStringLiteral("rotation_widget_start_visible");
+        const bool defaultValue = !entry.first.startsWith(QStringLiteral("tool_options"));
         adjustConfig.writeEntry(entry.second, adjust.value(entry.first).toBool(defaultValue));
     }
     adjustConfig.writeEntry("ColorHistoryTotal", adjust.value(QStringLiteral("color_history_total")).toInt(14));
@@ -432,6 +432,7 @@ void QuickAccessDock::buildHeader(QWidget *root)
     header->setSpacing(3);
 
     auto *menuButton = new QToolButton(root);
+    menuButton->setProperty("quickAccessHeaderButton", true);
     menuButton->setText(i18nc("@action:button", "Menu"));
     menuButton->setFixedHeight(24);
     menuButton->setPopupMode(QToolButton::InstantPopup);
@@ -442,6 +443,7 @@ void QuickAccessDock::buildHeader(QWidget *root)
         [root,
          header](const QString &assetName, const QString &themeName, const QString &fallback, const QString &toolTip) {
             auto *button = new QToolButton(root);
+            button->setProperty("quickAccessHeaderButton", true);
             const QString assetPath = bundledIconPath(QStringLiteral("system_icons"), assetName);
             button->setIcon(assetPath.isEmpty() ? QIcon::fromTheme(themeName) : QIcon(assetPath));
             if (button->icon().isNull())
@@ -705,6 +707,9 @@ void QuickAccessDock::loadProfile()
                 config.writeEntry(
                     "HeaderButtonColor",
                     defaults.value(QStringLiteral("header_button_color")).toString(QStringLiteral("#828282")));
+                config.writeEntry(
+                    "HeaderButtonFontColor",
+                    defaults.value(QStringLiteral("header_button_font_color")).toString(QStringLiteral("#ffffff")));
                 config.writeEntry("ActiveTabFontSize",
                                   defaults.value(QStringLiteral("tab_active_font_size")).toInt(12));
                 config.writeEntry(
@@ -776,7 +781,6 @@ void QuickAccessDock::loadProfile()
                 copyBool("tool_options_enabled", "ToolOptionsEnabled", false);
                 copyBool("tool_options_start_visible", "ToolOptionsStartVisible", false);
                 copyString("tool_options_position", "ToolOptionsPosition", QStringLiteral("left_align_top"));
-                copyBool("rotation_widget_start_visible", "RotationWidgetStartVisible", false);
                 adjustConfig.writeEntry(
                     "TempBrushSets",
                     QString::fromUtf8(QJsonDocument(adjust.value(QStringLiteral("temp_brush_sets")).toArray())
@@ -1365,6 +1369,7 @@ void QuickAccessDock::showSettingsDialog()
         current.columns = grid->columns;
     current.dockerIconSize = config.readEntry("DockerIconSize", DefaultIconSize);
     current.headerButtonColor = QColor(config.readEntry("HeaderButtonColor", QStringLiteral("#828282")));
+    current.headerButtonFontColor = QColor(config.readEntry("HeaderButtonFontColor", QStringLiteral("#ffffff")));
     current.activeTabFontSize = config.readEntry("ActiveTabFontSize", 12);
     current.activeTabFontColor = QColor(config.readEntry("ActiveTabFontColor", QStringLiteral("#ffffff")));
     current.activeTabBackgroundColor = QColor(config.readEntry("ActiveTabBackgroundColor", QStringLiteral("#3f3f3f")));
@@ -1400,7 +1405,8 @@ void QuickAccessDock::showSettingsDialog()
     current.preserveAlphaKey = adjustConfig.readEntry("PreserveAlphaKey", QString());
     current.selectOutlineKey = adjustConfig.readEntry("SelectOutlineKey", QString());
     current.toolOptionsEnabled = adjustConfig.readEntry("ToolOptionsEnabled", false);
-    current.rotationWidgetStartVisible = adjustConfig.readEntry("RotationWidgetStartVisible", false);
+    current.toolOptionsPosition = adjustConfig.readEntry("ToolOptionsPosition", QStringLiteral("left_align_top"));
+    current.blendModes = adjustConfig.readEntry("BlendModes", current.blendModes);
     const QJsonDocument brushSets =
         QJsonDocument::fromJson(adjustConfig.readEntry("TempBrushSets", QStringLiteral("[]")).toUtf8());
     current.tempBrushSets = brushSets.isArray() ? brushSets.array() : QJsonArray();
@@ -1428,6 +1434,7 @@ void QuickAccessDock::showSettingsDialog()
 
     config.writeEntry("DockerIconSize", updated.dockerIconSize);
     config.writeEntry("HeaderButtonColor", updated.headerButtonColor.name(QColor::HexArgb));
+    config.writeEntry("HeaderButtonFontColor", updated.headerButtonFontColor.name(QColor::HexArgb));
     config.writeEntry("ActiveTabFontSize", updated.activeTabFontSize);
     config.writeEntry("ActiveTabFontColor", updated.activeTabFontColor.name(QColor::HexArgb));
     config.writeEntry("ActiveTabBackgroundColor", updated.activeTabBackgroundColor.name(QColor::HexArgb));
@@ -1464,7 +1471,8 @@ void QuickAccessDock::showSettingsDialog()
     adjustWrite.writeEntry("PreserveAlphaKey", updated.preserveAlphaKey);
     adjustWrite.writeEntry("SelectOutlineKey", updated.selectOutlineKey);
     adjustWrite.writeEntry("ToolOptionsEnabled", updated.toolOptionsEnabled);
-    adjustWrite.writeEntry("RotationWidgetStartVisible", updated.rotationWidgetStartVisible);
+    adjustWrite.writeEntry("ToolOptionsPosition", updated.toolOptionsPosition);
+    adjustWrite.writeEntry("BlendModes", updated.blendModes);
     adjustWrite.writeEntry("TempBrushSets",
                            QString::fromUtf8(QJsonDocument(updated.tempBrushSets).toJson(QJsonDocument::Compact)));
     adjustWrite.sync();
@@ -1481,13 +1489,18 @@ void QuickAccessDock::applyAppearanceSettings()
     QColor headerColor(config.readEntry("HeaderButtonColor", QStringLiteral("#828282")));
     if (!headerColor.isValid())
         headerColor = QColor(QStringLiteral("#828282"));
+    QColor headerFontColor(config.readEntry("HeaderButtonFontColor", QStringLiteral("#ffffff")));
+    if (!headerFontColor.isValid())
+        headerFontColor = QColor(Qt::white);
     const QString headerStyle =
         QStringLiteral(
-            "QToolButton { background-color: %1; border: 1px solid palette(mid); border-radius: 2px; } "
+            "QToolButton { background-color: %1; color: %2; border: 1px solid palette(mid); border-radius: 2px; } "
             "QToolButton:hover { border-color: palette(highlight); }")
-            .arg(headerColor.name(QColor::HexArgb));
-    for (QToolButton *button : widget()->findChildren<QToolButton *>())
-        button->setStyleSheet(headerStyle);
+            .arg(headerColor.name(QColor::HexArgb), headerFontColor.name(QColor::HexArgb));
+    for (QToolButton *button : widget()->findChildren<QToolButton *>()) {
+        if (button->property("quickAccessHeaderButton").toBool())
+            button->setStyleSheet(headerStyle);
+    }
 
     const int activeSize = qBound(6, config.readEntry("ActiveTabFontSize", 12), 24);
     const int inactiveSize = qBound(6, config.readEntry("InactiveTabFontSize", 12), 24);

@@ -23,6 +23,7 @@
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QTableWidget>
+#include <QTextEdit>
 #include <QVBoxLayout>
 
 namespace
@@ -71,7 +72,9 @@ QuickAccessSettingsDialog::QuickAccessSettingsDialog(const Settings &settings, Q
     auto *headerGroup = new QGroupBox(i18nc("@title:group", "Header Buttons"), page);
     auto *headerForm = new QFormLayout(headerGroup);
     m_headerButtonColor = createColorButton(settings.headerButtonColor);
+    m_headerButtonFontColor = createColorButton(settings.headerButtonFontColor);
     headerForm->addRow(i18nc("@label", "Background color:"), m_headerButtonColor);
+    headerForm->addRow(i18nc("@label", "Font color:"), m_headerButtonFontColor);
     pageLayout->addWidget(headerGroup);
 
     auto *activeGroup = new QGroupBox(i18nc("@title:group", "Active Tab"), page);
@@ -182,10 +185,22 @@ QuickAccessSettingsDialog::QuickAccessSettingsDialog(const Settings &settings, Q
     adjustForm->addRow(i18nc("@label", "Temporary eraser key:"), m_altEraseKey);
     adjustForm->addRow(i18nc("@label", "Temporary preserve-alpha key:"), m_preserveAlphaKey);
     adjustForm->addRow(i18nc("@label", "Temporary freehand-selection key:"), m_selectOutlineKey);
-    addCheck(i18nc("@option:check", "Enable Tool Options button"), settings.toolOptionsEnabled, &m_toolOptionsEnabled);
-    addCheck(i18nc("@option:check", "Show rotation control at startup"),
-             settings.rotationWidgetStartVisible,
-             &m_rotationWidgetStartVisible);
+    addCheck(i18nc("@option:check", "Enable floating Tool Options"),
+             settings.toolOptionsEnabled,
+             &m_toolOptionsEnabled);
+    m_toolOptionsPosition = new QComboBox(adjustGroup);
+    m_toolOptionsPosition->addItem(i18nc("@item:inlistbox", "Left of docker"), QStringLiteral("left_align_top"));
+    m_toolOptionsPosition->addItem(i18nc("@item:inlistbox", "Right of docker"), QStringLiteral("right_align_top"));
+    m_toolOptionsPosition->addItem(i18nc("@item:inlistbox", "Below docker, left aligned"),
+                                   QStringLiteral("bottom_left"));
+    m_toolOptionsPosition->setCurrentIndex(qMax(0, m_toolOptionsPosition->findData(settings.toolOptionsPosition)));
+    adjustForm->addRow(i18nc("@label", "Tool Options position:"), m_toolOptionsPosition);
+    m_blendModes = new QTextEdit(adjustGroup);
+    m_blendModes->setPlainText(settings.blendModes.join(QLatin1Char('\n')));
+    m_blendModes->setPlaceholderText(i18nc("@info:placeholder", "Enter blend mode IDs, one per line"));
+    m_blendModes->setMinimumHeight(100);
+    m_blendModes->setMaximumHeight(150);
+    adjustForm->addRow(i18nc("@label", "Blending mode list:"), m_blendModes);
     pageLayout->addWidget(adjustGroup);
 
     auto *brushSetGroup = new QGroupBox(i18nc("@title:group", "Temporary Brush Sets"), page);
@@ -271,6 +286,7 @@ QuickAccessSettingsDialog::Settings QuickAccessSettingsDialog::settings() const
     result.columns = m_columns->value();
     result.dockerIconSize = m_dockerIconSize->value();
     result.headerButtonColor = buttonColor(m_headerButtonColor);
+    result.headerButtonFontColor = buttonColor(m_headerButtonFontColor);
     result.activeTabFontSize = m_activeTabFontSize->value();
     result.activeTabFontColor = buttonColor(m_activeTabFontColor);
     result.activeTabBackgroundColor = buttonColor(m_activeTabBackgroundColor);
@@ -302,7 +318,14 @@ QuickAccessSettingsDialog::Settings QuickAccessSettingsDialog::settings() const
     result.preserveAlphaKey = m_preserveAlphaKey->text().trimmed();
     result.selectOutlineKey = m_selectOutlineKey->text().trimmed();
     result.toolOptionsEnabled = m_toolOptionsEnabled->isChecked();
-    result.rotationWidgetStartVisible = m_rotationWidgetStartVisible->isChecked();
+    result.toolOptionsPosition = m_toolOptionsPosition->currentData().toString();
+    result.blendModes.clear();
+    const QStringList blendModeLines = m_blendModes->toPlainText().split(QLatin1Char('\n'));
+    for (const QString &line : blendModeLines) {
+        const QString mode = line.trimmed();
+        if (!mode.isEmpty() && !result.blendModes.contains(mode))
+            result.blendModes.append(mode);
+    }
     for (int row = 0; row < m_tempBrushSets->rowCount(); ++row) {
         const auto text = [this, row](int column) {
             const QTableWidgetItem *item = m_tempBrushSets->item(row, column);
@@ -332,7 +355,7 @@ QPushButton *QuickAccessSettingsDialog::createColorButton(const QColor &color)
     setColor(color);
     connect(button, &QPushButton::clicked, button, [button, setColor]() {
         const QColor selected =
-            QColorDialog::getColor(buttonColor(button), button, i18nc("@title:window", "Select Color"));
+            QColorDialog::getColor(buttonColor(button), button->window(), i18nc("@title:window", "Select Color"));
         if (selected.isValid())
             setColor(selected);
     });

@@ -30,6 +30,7 @@ class QuickAdjustDock : public QDockWidget, public KoCanvasObserverBase
     Q_OBJECT
 public:
     explicit QuickAdjustDock(QWidget *parent = nullptr, bool compactPopup = false);
+    ~QuickAdjustDock() override;
 
     QString observerName() override;
     void setCanvas(KoCanvasBase *canvas) override;
@@ -63,9 +64,20 @@ private:
     void updateStatusButtons();
     void triggerAction(const QString &name);
     void setControlsEnabled(bool enabled);
+    void ensureToolOptionsPad();
+    void setToolOptionsPadVisible(bool visible);
+    void positionToolOptionsPad();
+    void returnToolOptionsDocker();
     static int brushSizeToSlider(qreal size);
     static qreal sliderToBrushSize(int value);
 
+protected:
+    void moveEvent(QMoveEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
+
+private:
     QPointer<KisCanvas2> m_canvas;
     KisCanvasResourceProvider *m_resourceProvider{nullptr};
     QTimer *m_syncTimer{nullptr};
@@ -90,11 +102,17 @@ private:
     QList<QToolButton *> m_brushButtons;
     QList<KisPaintOpPresetSP> m_brushHistory;
     QHash<QString, QToolButton *> m_brushToggleButtons;
-    QToolButton *m_rotationToggle{nullptr};
+    QToolButton *m_toolOptionsToggle{nullptr};
     QToolButton *m_eraseToggle{nullptr};
     QToolButton *m_alphaToggle{nullptr};
     QToolButton *m_selectionToggle{nullptr};
     QToolButton *m_gestureToggle{nullptr};
+    QPointer<QDockWidget> m_toolOptionsDocker;
+    QPointer<QWidget> m_toolOptionsPad;
+    QPointer<QWidget> m_borrowedToolOptions;
+    QPointer<QWidget> m_toolOptionsPlaceholder;
+    bool m_toolOptionsDockerWasVisible{false};
+    bool m_compactPopup{false};
     bool m_syncing{false};
 };
 

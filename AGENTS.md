@@ -4,7 +4,7 @@
 
 - This repository is a custom, desktop-only Krita build. Android support is intentionally being removed. Do not restore Android sources, build rules, packaging, documentation, or conditional branches unless the user explicitly reverses that decision.
 - The working tree is intentionally very dirty. Existing modifications and deletions belong to the user. Never discard, reset, or rewrite unrelated changes.
-- The main ongoing task is migrating Quick Access Manager from Python into native Krita while retaining the original plugin's behavior and visual style.
+- The Quick Access Manager migration from Python to native Krita is complete for now. Treat future Quick Access work as maintenance, bug fixing, or explicitly requested refinement; preserve the native architecture and established behavior.
 
 ## Quick Access locations
 
@@ -49,7 +49,7 @@ If a change affects a shared Krita library, install that library too. For exampl
 cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\widgets\cmake_install.cmake
 ```
 
-Krita must be fully restarted after installing rebuilt DLLs. The user plans to perform comprehensive interactive testing after the migration is complete, but changes should still be formatted, compiled, unit-tested, and installed incrementally.
+Krita must be fully restarted after installing rebuilt DLLs. Continue to format, compile, unit-test, and install Quick Access changes incrementally before handing them off for interactive testing.
 
 ## Configuration and profiles
 
@@ -76,8 +76,12 @@ Krita must be fully restarted after installing rebuilt DLLs. The user plans to p
 - Quick Access grid width is fixed by its configured column count and cell size; resizing the docker must not reflow the grid.
 - Actions are stored/executed by internal action ID, while UI labels use Krita's displayed action text or a configured custom name.
 - Item Property supports custom name, colors, font size, and an icon selected through the native OS file dialog.
+- Header button background and font colors are independently configurable. Color dialogs must be parented to the settings window, not to a styled color-swatch button, to avoid leaking the swatch stylesheet into the dialog.
 - The Resource dialog follows the original structure: Actions and Dockers are editable tables; Brushes are a thumbnail grid.
 - Settings are separated into General, Popup and HueSVC, Quick Adjust, and Temporary Brushes tabs.
+- The configurable blend-mode ID list is shared by Quick Brush Adjustments and the compact HueSVC popup.
+- When enabled, Quick Brush Adjustments borrows Krita's `sharedtooldocker` contents into a floating Tool Options pad. The pad defaults to the left of the docker, remembers visibility, and must return the borrowed widget safely on teardown.
+- Brush rotation controls are available only in the compact HueSVC popup. Do not restore the rotation toggle or startup setting to the standalone Quick Brush Adjustments docker unless explicitly requested.
 - Gesture preview is a 3×3 overlay centered on the cursor. Its full layout size must be activated and fixed before calculating `cursor - half preview size`; reapply the position after showing to avoid Windows placing the top-left at the cursor.
 - Gesture configuration uses the arrow PNGs in `resources/gesture/`, with configured resource previews around the arrow buttons. Brush gestures show preset thumbnails. Actions and dockers use configured aliases/icons with native icons as fallback.
 - HueSVC and its popup share `QuickColorSelectorWidget`. The hue strip must remain a vivid, static full-saturation/default-lightness rainbow while the S/V square remains dynamic. Rectangular static hue rendering is implemented in `KisVisualRectangleSelectorShape`.

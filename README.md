@@ -1,113 +1,31 @@
-![Picture](https://krita.org/images/krita-logo-light.svg)
+# Krita Sol
 
-| CI Name     | Master | Stable | Release |
-| ------------------- | ---------------- | ------ | ------- |
-| Pipeline | [![pipeline status](https://invent.kde.org/graphics/krita/badges/master/pipeline.svg)](https://invent.kde.org/graphics/krita/-/commits/master) | [![pipeline status](https://invent.kde.org/graphics/krita/badges/krita/5.2/pipeline.svg)](https://invent.kde.org/graphics/krita/-/commits/krita/5.2) | [![Latest Release](https://invent.kde.org/graphics/krita/-/badges/release.svg)](https://invent.kde.org/graphics/krita/-/releases) |
+Krita Sol is an unofficial, desktop-focused custom build based on the Krita 6 development branch.
+It preserves Krita's painting workflow while integrating project-specific interface and productivity
+changes.
 
-Note: Nightly builds are not covered by this table atm
+## Main differences from upstream Krita
 
-Krita is a free and open source digital painting application. It is for artists who want to create professional work from start to end. Krita is used by comic book artists, illustrators, concept artists, matte and texture painters and in the digital VFX industry.
+- Android application, packaging, donation, and platform-integration code has been removed.
+- [Quick Access Manager](https://github.com/udtren/krita-quick-access-manager) has been migrated from
+  a Python plugin to a native Krita docker.
+- Additional interface and workflow refinements are maintained for this custom build.
 
-If you are reading this on GitHub, be aware that this is just a mirror. Our real code repository is provided by KDE: https://invent.kde.org/graphics/krita.git
+The native Quick Access implementation is located in
+[`plugins/dockers/quickaccess`](plugins/dockers/quickaccess/).
 
-![Picture](https://krita.org/images/hero-image-50.webp)
+## Branches
 
-### Repository Status
+| Branch | Purpose |
+| --- | --- |
+| `krita-sol` | Custom Krita Sol development and builds |
+| `krita/6.0` | Clean tracking branch for synchronizing with upstream Krita 6 |
 
-For branch: `master`
+Custom changes should be made on `krita-sol`. Keep `krita/6.0` aligned with upstream so future
+updates can be integrated cleanly.
 
-| Freeze type    | Status                                                               |
-|----------------|----------------------------------------------------------------------|
-| Feature Freeze | freeze, features are not allowed                                     |
-| String Freeze  | freeze, strings are not allowed                                      |
+## Building
 
-
-### User Manual
-https://docs.krita.org/en/user_manual.html
-
-### Development Notes and Build Instructions
-
-Please follow [the online documentation](https://docs.krita.org/en/untranslatable_pages/building_krita.html).
-
-Other developer guides, notes and wiki:
-
-https://docs.krita.org/en/untranslatable_pages.html
-
-Apidox:
-
-https://api.kde.org/legacy/krita/html/index.html
-
-### Bugs and Wishes
-
-https://bugs.kde.org/buglist.cgi?bug_status=UNCONFIRMED&bug_status=CONFIRMED&bug_status=ASSIGNED&bug_status=REOPENED&list_id=1315444&product=krita&query_format=advanced
-
-### Discussion Forum
-
-* https://krita-artists.org/
-
-### IRC channel
-
-Most of the developers hang out here. If you are interested in helping with the project this is a great place to start.
-
-libera.chat, #krita
-
-### Project Website
-
-https://www.krita.org
-
-### Nightly builds
-
-#### Unstable
-
-* https://cdn.kde.org/ci-builds/graphics/krita/master/
-
-#### Stable
-
-* https://cdn.kde.org/ci-builds/graphics/krita/krita-5.2/
-
-#### Developers builds
-
-##### Linux build with debug symbols in Qt and Krita
-
-1) Go to Jobs section of Krita's CI: https://invent.kde.org/graphics/krita/-/jobs
-2) Search for the latest `linux-debug-weekly` job
-3) Enter the job and click on Artifacts->Browse
-4) Download the AppImage
-
-##### Linux build with ASAN in Qt and Krita
-
-1) Go to Jobs section of Krita's CI: https://invent.kde.org/graphics/krita/-/jobs
-2) Search for the latest `linux-asan-weekly` job
-3) Enter the job and click on Artifacts->Browse
-4) Download the AppImage
-5) Set up environment variable for ASAN:
-    ```bash
-        export ASAN_OPTIONS=new_delete_type_mismatch=0:detect_leaks=0
-    ```
-6) Run the AppImage in the modified environment
-
-##### Windows build with ASAN in Qt and Krita
-
-1) Go to Jobs section of Krita's CI: https://invent.kde.org/graphics/krita/-/jobs
-2) Search for the latest `windows-asan-weekly` job
-3) Enter the job and click on Artifacts->Browse
-4) Download the .zip file
-5) Open terminal
-6) Set up environment variable for ASAN:
-    ```
-        set ASAN_OPTIONS=new_delete_type_mismatch=0:detect_leaks=0
-    ```
-7) Change working directory to `c:\path\where\you\downloaded\krita-5.3.0-prealpha-git12345\bin`.
-   That is important, otherwise ASAN will not be able to locate llvm-symbolizer.exe and the
-   backtraces generated by ASAN will not contain proper symbols.
-    ```
-        cd c:\path\where\you\downloaded\krita-5.3.0-prealpha-git12345\bin
-    ```
-8) Run krita
-    ```
-        krita.com
-    ```
-
-### License
-
-Krita as a whole is licensed under the GNU Public License, Version 3. Individual files may have a different, but compatible license.
+Krita Sol uses Krita's standard desktop build system. Refer to the official
+[Building Krita documentation](https://docs.krita.org/en/untranslatable_pages/building_krita.html)
+for prerequisites and platform-specific instructions.

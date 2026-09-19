@@ -9,6 +9,7 @@
 #include <QColor>
 #include <QDialog>
 #include <QJsonArray>
+#include <QStringList>
 
 class QPushButton;
 class QSpinBox;
@@ -16,6 +17,7 @@ class QCheckBox;
 class QComboBox;
 class QLineEdit;
 class QTableWidget;
+class QTextEdit;
 
 class QuickAccessSettingsDialog : public QDialog
 {
@@ -24,6 +26,7 @@ public:
         int columns{8};
         int dockerIconSize{42};
         QColor headerButtonColor{QStringLiteral("#828282")};
+        QColor headerButtonFontColor{Qt::white};
         int activeTabFontSize{12};
         QColor activeTabFontColor{Qt::white};
         QColor activeTabBackgroundColor{QStringLiteral("#3f3f3f")};
@@ -55,7 +58,17 @@ public:
         QString preserveAlphaKey;
         QString selectOutlineKey;
         bool toolOptionsEnabled{false};
-        bool rotationWidgetStartVisible{false};
+        QString toolOptionsPosition{QStringLiteral("left_align_top")};
+        QStringList blendModes{QStringLiteral("normal"),
+                               QStringLiteral("multiply"),
+                               QStringLiteral("screen"),
+                               QStringLiteral("dodge"),
+                               QStringLiteral("overlay"),
+                               QStringLiteral("soft_light_svg"),
+                               QStringLiteral("hard_light"),
+                               QStringLiteral("darken"),
+                               QStringLiteral("lighten"),
+                               QStringLiteral("greater")};
         QJsonArray tempBrushSets;
     };
 
@@ -70,6 +83,7 @@ private:
     QSpinBox *m_columns{nullptr};
     QSpinBox *m_dockerIconSize{nullptr};
     QPushButton *m_headerButtonColor{nullptr};
+    QPushButton *m_headerButtonFontColor{nullptr};
     QSpinBox *m_activeTabFontSize{nullptr};
     QPushButton *m_activeTabFontColor{nullptr};
     QPushButton *m_activeTabBackgroundColor{nullptr};
@@ -101,7 +115,8 @@ private:
     QLineEdit *m_preserveAlphaKey{nullptr};
     QLineEdit *m_selectOutlineKey{nullptr};
     QCheckBox *m_toolOptionsEnabled{nullptr};
-    QCheckBox *m_rotationWidgetStartVisible{nullptr};
+    QComboBox *m_toolOptionsPosition{nullptr};
+    QTextEdit *m_blendModes{nullptr};
     QTableWidget *m_tempBrushSets{nullptr};
 };
 
