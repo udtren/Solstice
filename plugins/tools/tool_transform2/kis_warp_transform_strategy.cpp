@@ -7,10 +7,13 @@
 #include "kis_warp_transform_strategy.h"
 
 #include <algorithm>
+#include <limits>
 
-#include <QPointF>
+#include <QLineF>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPointF>
+#include <QQueue>
 
 #include "kis_coordinates_converter.h"
 #include "tool_transform_args.h"
@@ -66,6 +69,8 @@ struct KisWarpTransformStrategy::Private
         MOVE_MODE,
         ROTATE_MODE,
         SCALE_MODE,
+        ROTATE_PIN,
+        DELETE_POINT,
         NOTHING
     };
     Mode mode {NOTHING};
@@ -83,11 +88,19 @@ struct KisWarpTransformStrategy::Private
 
     QPointF lastMousePos;
 
+    mutable QImage puppetMask;
+    mutable qint64 puppetMaskCacheKey{-1};
+    mutable QRectF puppetMaskBounds;
+    mutable int puppetMaskExpansion{-1};
+
     // cage transform also uses this logic. This helps this class know what transform type we are using
     TransformType transformType = TransformType::WARP_TRANSFORM;
     KisSignalCompressor recalculateSignalCompressor;
 
     void recalculateTransformations();
+    void drawPuppetMesh(QPainter &gc) const;
+    void updatePuppetMask() const;
+    bool puppetMaskContains(const QPointF &point) const;
     inline QPointF imageToThumb(const QPointF &pt, bool useFlakeOptimization);
 
     bool shouldCloseTheCage() const;
@@ -112,8 +125,6 @@ KisWarpTransformStrategy::~KisWarpTransformStrategy()
 void KisWarpTransformStrategy::setTransformFunction(const QPointF &mousePos, bool perspectiveModifierActive, bool shiftModifierActive, bool altModifierActive)
 {
     Q_UNUSED(shiftModifierActive);
-    Q_UNUSED(altModifierActive);
-
     const double handleRadius = KisTransformUtils::effectiveHandleGrabRadius(m_d->converter);
 
     bool cursorOverPoint = false;
@@ -132,12 +143,32 @@ void KisWarpTransformStrategy::setTransformFunction(const QPointF &mousePos, boo
         }
     }
 
-    if (cursorOverPoint) {
-        m_d->mode = perspectiveModifierActive &&
-            !m_d->currentArgs.isEditingTransformPoints() ?
-            Private::MULTIPLE_POINT_SELECTION : Private::OVER_POINT;
+    if (!cursorOverPoint && m_d->transformType == TransformType::PUPPET_TRANSFORM
+        && !m_d->currentArgs.isEditingTransformPoints()) {
+        const qreal rotationRadius = 2.4 * handleRadius;
+        const qreal ringTolerance = 0.65 * handleRadius;
+        qreal closestDistance = std::numeric_limits<qreal>::max();
+        for (int i = 0; i < points.size(); ++i) {
+            const qreal distance = QLineF(mousePos, points[i]).length();
+            const qreal distanceFromRing = qAbs(distance - rotationRadius);
+            if (distanceFromRing <= ringTolerance && distanceFromRing < closestDistance) {
+                closestDistance = distanceFromRing;
+                m_d->pointIndexUnderCursor = i;
+            }
+        }
+        if (m_d->pointIndexUnderCursor >= 0) {
+            m_d->mode = Private::ROTATE_PIN;
+            return;
+        }
+    }
 
-    } else if (!m_d->currentArgs.isEditingTransformPoints()) {
+    if (cursorOverPoint) {
+        m_d->mode = m_d->transformType == TransformType::PUPPET_TRANSFORM && altModifierActive ? Private::DELETE_POINT
+            : perspectiveModifierActive && !m_d->currentArgs.isEditingTransformPoints()
+            ? Private::MULTIPLE_POINT_SELECTION
+            : Private::OVER_POINT;
+
+    } else if (!m_d->currentArgs.isEditingTransformPoints() && m_d->transformType != TransformType::PUPPET_TRANSFORM) {
         QPolygonF polygon(m_d->currentArgs.transfPoints());
         bool insidePolygon = polygon.boundingRect().contains(mousePos);
         m_d->mode = insidePolygon ? Private::MOVE_MODE :
@@ -168,6 +199,12 @@ QCursor KisWarpTransformStrategy::getCurrentCursor() const
     case Private::SCALE_MODE:
         cursor = KisCursor::sizeVerCursor();
         break;
+    case Private::ROTATE_PIN:
+        cursor = KisCursor::rotateCursor();
+        break;
+    case Private::DELETE_POINT:
+        cursor = Qt::ForbiddenCursor;
+        break;
     case Private::NOTHING:
         cursor = KisCursor::arrowCursor();
         break;
@@ -197,6 +234,222 @@ void KisWarpTransformStrategy::setClipOriginalPointsPosition(bool value)
 
 void KisWarpTransformStrategy::setTransformType(TransformType type) {
     m_d->transformType = type;
+}
+
+void KisWarpTransformStrategy::Private::updatePuppetMask() const
+{
+    const QImage source = q->originalImage();
+    const QRectF bounds = transaction.originalRect();
+    if (source.isNull() || bounds.isEmpty()) {
+        puppetMask = QImage();
+        return;
+    }
+
+    if (puppetMaskCacheKey == source.cacheKey() && puppetMaskBounds == bounds
+        && puppetMaskExpansion == currentArgs.puppetExpansion()) {
+        return;
+    }
+
+    const int width = source.width();
+    const int height = source.height();
+    QVector<quint8> content(width * height, 0);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            content[y * width + x] = qAlpha(source.pixel(x, y)) > 8;
+        }
+    }
+
+    QVector<quint8> outside(width * height, 0);
+    QQueue<int> queue;
+    auto enqueueOutside = [&](int x, int y) {
+        const int index = y * width + x;
+        if (!content[index] && !outside[index]) {
+            outside[index] = 1;
+            queue.enqueue(index);
+        }
+    };
+    for (int x = 0; x < width; ++x) {
+        enqueueOutside(x, 0);
+        enqueueOutside(x, height - 1);
+    }
+    for (int y = 0; y < height; ++y) {
+        enqueueOutside(0, y);
+        enqueueOutside(width - 1, y);
+    }
+    while (!queue.isEmpty()) {
+        const int index = queue.dequeue();
+        const QPoint cell(index % width, index / width);
+        static const QPoint neighbours[] = {QPoint(-1, 0), QPoint(1, 0), QPoint(0, -1), QPoint(0, 1)};
+        for (const QPoint &offset : neighbours) {
+            const QPoint next = cell + offset;
+            if (next.x() >= 0 && next.x() < width && next.y() >= 0 && next.y() < height) {
+                enqueueOutside(next.x(), next.y());
+            }
+        }
+    }
+
+    for (int i = 0; i < content.size(); ++i) {
+        content[i] = !outside[i];
+    }
+
+    const int radiusX = qCeil(currentArgs.puppetExpansion() * width / bounds.width());
+    const int radiusY = qCeil(currentArgs.puppetExpansion() * height / bounds.height());
+    if (radiusX > 0) {
+        QVector<quint8> horizontal(content.size(), 0);
+        for (int y = 0; y < height; ++y) {
+            int lastContent = -width - radiusX;
+            for (int x = 0; x < width; ++x) {
+                if (content[y * width + x])
+                    lastContent = x;
+                horizontal[y * width + x] = x - lastContent <= radiusX;
+            }
+            lastContent = 2 * width + radiusX;
+            for (int x = width - 1; x >= 0; --x) {
+                if (content[y * width + x])
+                    lastContent = x;
+                horizontal[y * width + x] |= lastContent - x <= radiusX;
+            }
+        }
+        content.swap(horizontal);
+    }
+    if (radiusY > 0) {
+        QVector<quint8> vertical(content.size(), 0);
+        for (int x = 0; x < width; ++x) {
+            int lastContent = -height - radiusY;
+            for (int y = 0; y < height; ++y) {
+                if (content[y * width + x])
+                    lastContent = y;
+                vertical[y * width + x] = y - lastContent <= radiusY;
+            }
+            lastContent = 2 * height + radiusY;
+            for (int y = height - 1; y >= 0; --y) {
+                if (content[y * width + x])
+                    lastContent = y;
+                vertical[y * width + x] |= lastContent - y <= radiusY;
+            }
+        }
+        content.swap(vertical);
+    }
+
+    puppetMask = QImage(width, height, QImage::Format_Grayscale8);
+    for (int y = 0; y < height; ++y) {
+        uchar *line = puppetMask.scanLine(y);
+        for (int x = 0; x < width; ++x) {
+            line[x] = content[y * width + x] ? 255 : 0;
+        }
+    }
+    puppetMaskCacheKey = source.cacheKey();
+    puppetMaskBounds = bounds;
+    puppetMaskExpansion = currentArgs.puppetExpansion();
+}
+
+bool KisWarpTransformStrategy::Private::puppetMaskContains(const QPointF &point) const
+{
+    if (puppetMask.isNull() || !puppetMaskBounds.contains(point)) {
+        return false;
+    }
+    const int x = qBound(0,
+                         qFloor((point.x() - puppetMaskBounds.left()) * puppetMask.width() / puppetMaskBounds.width()),
+                         puppetMask.width() - 1);
+    const int y = qBound(0,
+                         qFloor((point.y() - puppetMaskBounds.top()) * puppetMask.height() / puppetMaskBounds.height()),
+                         puppetMask.height() - 1);
+    return puppetMask.constScanLine(y)[x] != 0;
+}
+
+void KisWarpTransformStrategy::Private::drawPuppetMesh(QPainter &gc) const
+{
+    if (!currentArgs.puppetShowMesh()) {
+        return;
+    }
+
+    updatePuppetMask();
+    const QRectF bounds = transaction.originalRect();
+    if (puppetMask.isNull() || bounds.isEmpty()) {
+        return;
+    }
+
+    const int columns = qBound(4, qCeil(bounds.width() / 32.0), 48);
+    const int rows = qBound(4, qCeil(bounds.height() / 32.0), 48);
+
+    QPen meshPen(QColor(72, 72, 72, 150));
+    meshPen.setCosmetic(true);
+    meshPen.setWidth(qMax(1, q->decorationThickness()));
+    gc.setPen(meshPen);
+    gc.setBrush(Qt::NoBrush);
+
+    QVector<QPointF> originalPoints;
+    QVector<QPointF> transformedPoints;
+    currentArgs.puppetControlPoints(currentArgs.origPoints(),
+                                    currentArgs.transfPoints(),
+                                    &originalPoints,
+                                    &transformedPoints);
+    auto transformMeshPoint = [&](const QPointF &point) {
+        if (currentArgs.isEditingTransformPoints() || originalPoints.isEmpty()) {
+            return point;
+        }
+        switch (currentArgs.warpType()) {
+        case KisWarpTransformWorker::AFFINE_TRANSFORM:
+            return KisWarpTransformWorker::affineTransformMath(point,
+                                                               originalPoints,
+                                                               transformedPoints,
+                                                               currentArgs.alpha());
+        case KisWarpTransformWorker::SIMILITUDE_TRANSFORM:
+            return KisWarpTransformWorker::similitudeTransformMath(point,
+                                                                   originalPoints,
+                                                                   transformedPoints,
+                                                                   currentArgs.alpha());
+        case KisWarpTransformWorker::RIGID_TRANSFORM:
+            return KisWarpTransformWorker::rigidTransformMath(point,
+                                                              originalPoints,
+                                                              transformedPoints,
+                                                              currentArgs.alpha());
+        default:
+            return point;
+        }
+    };
+
+    QPainterPath meshPath;
+    auto addClippedLine = [&](const QPointF &start, const QPointF &end) {
+        const qreal sourceDx = qAbs(end.x() - start.x()) * puppetMask.width() / bounds.width();
+        const qreal sourceDy = qAbs(end.y() - start.y()) * puppetMask.height() / bounds.height();
+        const int steps = qMax(1, qCeil(qMax(sourceDx, sourceDy)));
+        bool drawing = false;
+        for (int step = 0; step <= steps; ++step) {
+            const QPointF point = start + (end - start) * (qreal(step) / steps);
+            if (puppetMaskContains(point)) {
+                const QPointF transformedPoint = transformMeshPoint(point);
+                if (!drawing) {
+                    meshPath.moveTo(transformedPoint);
+                    drawing = true;
+                } else {
+                    meshPath.lineTo(transformedPoint);
+                }
+            } else {
+                drawing = false;
+            }
+        }
+    };
+
+    for (int row = 0; row <= rows; ++row) {
+        const qreal y = bounds.top() + bounds.height() * row / rows;
+        addClippedLine(QPointF(bounds.left(), y), QPointF(bounds.right(), y));
+    }
+    for (int column = 0; column <= columns; ++column) {
+        const qreal x = bounds.left() + bounds.width() * column / columns;
+        addClippedLine(QPointF(x, bounds.top()), QPointF(x, bounds.bottom()));
+    }
+    for (int row = 0; row < rows; ++row) {
+        for (int column = 0; column < columns; ++column) {
+            const QPointF topLeft(bounds.left() + bounds.width() * column / columns,
+                                  bounds.top() + bounds.height() * row / rows);
+            const QPointF topRight(bounds.left() + bounds.width() * (column + 1) / columns, topLeft.y());
+            const QPointF bottomLeft(topLeft.x(), bounds.top() + bounds.height() * (row + 1) / rows);
+            const QPointF bottomRight(topRight.x(), bottomLeft.y());
+            addClippedLine((row + column) % 2 ? topRight : topLeft, (row + column) % 2 ? bottomLeft : bottomRight);
+        }
+    }
+    gc.drawPath(meshPath);
 }
 
 void KisWarpTransformStrategy::drawConnectionLines(QPainter &gc,
@@ -248,6 +501,9 @@ void KisWarpTransformStrategy::paint(QPainter &gc)
                             m_d->currentArgs.isEditingTransformPoints());
     }
 
+    if (m_d->transformType == TransformType::PUPPET_TRANSFORM) {
+        m_d->drawPuppetMesh(gc);
+    }
 
     QPen mainPen(Qt::black);
     mainPen.setCosmetic(true);
@@ -276,6 +532,24 @@ void KisWarpTransformStrategy::paint(QPainter &gc)
             gc.setOpacity(1.0);
 
             for (int i = 0; i < numPoints; ++i) {
+                if (m_d->transformType == TransformType::PUPPET_TRANSFORM
+                    && !m_d->currentArgs.isEditingTransformPoints()) {
+                    const qreal ringRadius = 24.0 / handlesExtraScale;
+                    const QRectF ringRect(-ringRadius, -ringRadius, 2.0 * ringRadius, 2.0 * ringRadius);
+                    gc.setPen(outlinePen);
+                    const QPointF direction(qCos(m_d->currentArgs.puppetRotation(i)) * ringRadius,
+                                            qSin(m_d->currentArgs.puppetRotation(i)) * ringRadius);
+                    gc.drawEllipse(ringRect
+                                       .adjusted(-2.0 / handlesExtraScale,
+                                                 -2.0 / handlesExtraScale,
+                                                 2.0 / handlesExtraScale,
+                                                 2.0 / handlesExtraScale)
+                                       .translated(m_d->currentArgs.transfPoints()[i]));
+                    gc.drawLine(m_d->currentArgs.transfPoints()[i], m_d->currentArgs.transfPoints()[i] + direction);
+                    gc.setPen(mainPen);
+                    gc.drawEllipse(ringRect.translated(m_d->currentArgs.transfPoints()[i]));
+                    gc.drawLine(m_d->currentArgs.transfPoints()[i], m_d->currentArgs.transfPoints()[i] + direction);
+                }
                 gc.setPen(outlinePen);
                 gc.drawEllipse(handleRect2.translated(m_d->currentArgs.transfPoints()[i]));
                 gc.setPen(mainPen);
@@ -375,12 +649,9 @@ bool KisWarpTransformStrategy::beginPrimaryAction(const QPointF &pt)
     const bool isEditingPoints = m_d->currentArgs.isEditingTransformPoints();
     bool retval = false;
 
-    if (m_d->mode == Private::OVER_POINT ||
-        m_d->mode == Private::MULTIPLE_POINT_SELECTION ||
-        m_d->mode == Private::MOVE_MODE ||
-        m_d->mode == Private::ROTATE_MODE ||
-        m_d->mode == Private::SCALE_MODE) {
-
+    if (m_d->mode == Private::OVER_POINT || m_d->mode == Private::MULTIPLE_POINT_SELECTION
+        || m_d->mode == Private::MOVE_MODE || m_d->mode == Private::ROTATE_MODE || m_d->mode == Private::SCALE_MODE
+        || m_d->mode == Private::ROTATE_PIN || m_d->mode == Private::DELETE_POINT) {
         retval = true;
 
     } else if (isEditingPoints) {
@@ -390,6 +661,7 @@ bool KisWarpTransformStrategy::beginPrimaryAction(const QPointF &pt)
 
         m_d->currentArgs.refOriginalPoints().append(newPos);
         m_d->currentArgs.refTransformedPoints().append(newPos);
+        m_d->currentArgs.setPuppetRotation(m_d->currentArgs.origPoints().size() - 1, 0.0);
 
         m_d->mode = Private::OVER_POINT;
         m_d->pointIndexUnderCursor = m_d->currentArgs.origPoints().size() - 1;
@@ -399,7 +671,12 @@ bool KisWarpTransformStrategy::beginPrimaryAction(const QPointF &pt)
         retval = true;
     }
 
-    if (m_d->mode == Private::OVER_POINT) {
+    if (m_d->mode == Private::DELETE_POINT) {
+        m_d->currentArgs.removePuppetPoint(m_d->pointIndexUnderCursor);
+        m_d->pointsInAction.clear();
+        m_d->pointIndexUnderCursor = -1;
+        m_d->recalculateSignalCompressor.start();
+    } else if (m_d->mode == Private::OVER_POINT) {
         m_d->pointPosOnClick =
             m_d->currentArgs.transfPoints()[m_d->pointIndexUnderCursor];
         m_d->pointWasDragged = false;
@@ -456,16 +733,25 @@ void KisWarpTransformStrategy::continuePrimaryAction(const QPointF &pt, bool shi
     Q_UNUSED(altModifierActive);
 
     // toplevel code switches to HOVER mode if nothing is selected
-    KIS_ASSERT_RECOVER_RETURN(m_d->mode == Private::MOVE_MODE ||
-                              m_d->mode == Private::ROTATE_MODE ||
-                              m_d->mode == Private::SCALE_MODE ||
-                              (m_d->mode == Private::OVER_POINT &&
-                               m_d->pointIndexUnderCursor >= 0 &&
-                               m_d->pointsInAction.size() == 1) ||
-                              (m_d->mode == Private::MULTIPLE_POINT_SELECTION &&
-                               m_d->pointIndexUnderCursor >= 0));
+    KIS_ASSERT_RECOVER_RETURN(
+        m_d->mode == Private::MOVE_MODE || m_d->mode == Private::ROTATE_MODE || m_d->mode == Private::SCALE_MODE
+        || m_d->mode == Private::ROTATE_PIN || m_d->mode == Private::DELETE_POINT
+        || (m_d->mode == Private::OVER_POINT && m_d->pointIndexUnderCursor >= 0 && m_d->pointsInAction.size() == 1)
+        || (m_d->mode == Private::MULTIPLE_POINT_SELECTION && m_d->pointIndexUnderCursor >= 0));
 
-    if (m_d->mode == Private::OVER_POINT) {
+    if (m_d->mode == Private::DELETE_POINT) {
+        return;
+    } else if (m_d->mode == Private::ROTATE_PIN) {
+        const QPointF center = m_d->currentArgs.transfPoint(m_d->pointIndexUnderCursor);
+        const QPointF oldDirection = m_d->lastMousePos - center;
+        const QPointF newDirection = pt - center;
+        if (!qFuzzyIsNull(QLineF(QPointF(), oldDirection).length())
+            && !qFuzzyIsNull(QLineF(QPointF(), newDirection).length())) {
+            const qreal angle = KisAlgebra2D::angleBetweenVectors(oldDirection, newDirection);
+            m_d->currentArgs.setPuppetRotation(m_d->pointIndexUnderCursor,
+                                               m_d->currentArgs.puppetRotation(m_d->pointIndexUnderCursor) + angle);
+        }
+    } else if (m_d->mode == Private::OVER_POINT) {
         if (m_d->currentArgs.isEditingTransformPoints()) {
             QPointF newPos = m_d->clipOriginalPointsPosition ?
                 KisTransformUtils::clipInRect(pt, m_d->transaction.originalRect()) :
@@ -629,12 +915,21 @@ QImage KisWarpTransformStrategy::calculateTransformedImage(ToolTransformArgs &cu
                                                            const QPointF &srcOffset,
                                                            QPointF *dstOffset)
 {
-    return KisWarpTransformWorker::transformQImage(
-        currentArgs.warpType(),
-        origPoints, transfPoints,
-        currentArgs.alpha(),
-        srcImage,
-        srcOffset, dstOffset);
+    QVector<QPointF> effectiveOriginalPoints = origPoints;
+    QVector<QPointF> effectiveTransformedPoints = transfPoints;
+    if (m_d->transformType == TransformType::PUPPET_TRANSFORM) {
+        currentArgs.puppetControlPoints(origPoints,
+                                        transfPoints,
+                                        &effectiveOriginalPoints,
+                                        &effectiveTransformedPoints);
+    }
+    return KisWarpTransformWorker::transformQImage(currentArgs.warpType(),
+                                                   effectiveOriginalPoints,
+                                                   effectiveTransformedPoints,
+                                                   currentArgs.alpha(),
+                                                   srcImage,
+                                                   srcOffset,
+                                                   dstOffset);
 }
 
 #include "moc_kis_warp_transform_strategy.cpp"

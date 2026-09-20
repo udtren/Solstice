@@ -17,6 +17,8 @@
 #include "KisAnimatedTransformMaskParamsHolder.h"
 #include "kis_keyframe_channel.h"
 
+#include <QDomDocument>
+
 #include <KoToolRegistry.h>
 
 void KisAnimatedTransformParametersTest::initTestCase()
@@ -115,5 +117,57 @@ void KisAnimatedTransformParametersTest::testTransformKeyframing()
     p.image->waitForDone();
 }
 
+void KisAnimatedTransformParametersTest::testPuppetTransformSerialization()
+{
+    ToolTransformArgs args;
+    args.setMode(ToolTransformArgs::PUPPET);
+    args.setDefaultPoints(false);
+    args.setWarpType(KisWarpTransformWorker::RIGID_TRANSFORM);
+    args.setAlpha(1.5);
+    args.setPoints({QPointF(10.0, 20.0), QPointF(30.0, 40.0)}, {QPointF(12.0, 23.0), QPointF(30.0, 40.0)});
+    args.setPuppetRotation(0, 0.7853981633974483);
+    args.setPuppetShowMesh(false);
+    args.setPuppetExpansion(7);
+
+    QDomDocument document;
+    QDomElement element = document.createElement(QStringLiteral("transform"));
+    document.appendChild(element);
+    args.toXML(&element);
+
+    const ToolTransformArgs restored = ToolTransformArgs::fromXML(element);
+    QCOMPARE(restored.mode(), ToolTransformArgs::PUPPET);
+    QCOMPARE(restored.defaultPoints(), false);
+    QCOMPARE(restored.warpType(), KisWarpTransformWorker::RIGID_TRANSFORM);
+    QCOMPARE(restored.alpha(), 1.5);
+    QCOMPARE(restored.origPoints(), args.origPoints());
+    QCOMPARE(restored.transfPoints(), args.transfPoints());
+    QCOMPARE(restored.puppetRotation(0), 0.7853981633974483);
+    QCOMPARE(restored.puppetRotation(1), 0.0);
+    QCOMPARE(restored.puppetShowMesh(), false);
+    QCOMPARE(restored.puppetExpansion(), 7);
+    QVERIFY(!restored.isIdentity());
+
+    QVector<QPointF> expandedOriginalPoints;
+    QVector<QPointF> expandedTransformedPoints;
+    restored.puppetControlPoints(restored.origPoints(),
+                                 restored.transfPoints(),
+                                 &expandedOriginalPoints,
+                                 &expandedTransformedPoints);
+    QCOMPARE(expandedOriginalPoints.size(), 16);
+    QCOMPARE(expandedTransformedPoints.size(), 16);
+    QVERIFY(expandedTransformedPoints[1] - restored.transfPoints()[0]
+            != expandedOriginalPoints[1] - restored.origPoints()[0]);
+    for (int i = 5; i < 10; ++i) {
+        QCOMPARE(expandedTransformedPoints[i], expandedOriginalPoints[i]);
+    }
+    QVERIFY(expandedTransformedPoints[10] - restored.transfPoints()[0]
+            != expandedOriginalPoints[10] - restored.origPoints()[0]);
+
+    ToolTransformArgs rotationOnly;
+    rotationOnly.setMode(ToolTransformArgs::PUPPET);
+    rotationOnly.setPoints({QPointF(10.0, 20.0)}, {QPointF(10.0, 20.0)});
+    rotationOnly.setPuppetRotation(0, 0.25);
+    QVERIFY(!rotationOnly.isIdentity());
+}
 
 KISTEST_MAIN(KisAnimatedTransformParametersTest)

@@ -23,7 +23,8 @@ class QImage;
 enum TransformType {
     WARP_TRANSFORM,
     CAGE_TRANSFORM,
-    MESH_TRANSFORM
+    MESH_TRANSFORM,
+    PUPPET_TRANSFORM
 };
 
 class KisWarpTransformStrategy : public KisSimplifiedActionPolicyStrategy

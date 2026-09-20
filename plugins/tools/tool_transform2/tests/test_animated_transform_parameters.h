@@ -16,6 +16,7 @@ class KisAnimatedTransformParametersTest : public QObject
 private Q_SLOTS:
     void initTestCase();
     void testTransformKeyframing();
+    void testPuppetTransformSerialization();
 };
 
 #endif

@@ -80,6 +80,7 @@ public Q_SLOTS:
 
     void slotSetFreeTransformModeButtonClicked(bool);
     void slotSetWarpModeButtonClicked(bool);
+    void slotSetPuppetModeButtonClicked(bool);
     void slotSetCageModeButtonClicked(bool);
     void slotCageOptionsChanged(int);
 
@@ -88,7 +89,8 @@ public Q_SLOTS:
     void slotButtonBoxClicked(QAbstractButton *button);
 
     void slotSetMeshModeButtonClicked(bool);
-
+    void slotPuppetShowMeshChanged(bool value);
+    void slotPuppetExpansionChanged(int value);
 
     void slotEditCagePoints(bool value);
 

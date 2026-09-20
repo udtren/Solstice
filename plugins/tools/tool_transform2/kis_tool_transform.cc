@@ -81,40 +81,42 @@
 #include "strokes/transform_stroke_strategy.h"
 #include "strokes/inplace_transform_stroke_strategy.h"
 
-KisToolTransform::KisToolTransform(KoCanvasBase * canvas)
+KisToolTransform::KisToolTransform(KoCanvasBase *canvas)
     : KisTool(canvas, KisCursor::rotateCursor())
-    , m_warpStrategy(
-        new KisWarpTransformStrategy(
-            dynamic_cast<KisCanvas2*>(canvas)->coordinatesConverter(),
-            dynamic_cast<KisCanvas2*>(canvas)->snapGuide(),
-            m_currentArgs, m_transaction))
-    , m_cageStrategy(
-        new KisCageTransformStrategy(
-            dynamic_cast<KisCanvas2*>(canvas)->coordinatesConverter(),
-            dynamic_cast<KisCanvas2*>(canvas)->snapGuide(),
-            m_currentArgs, m_transaction))
-    , m_liquifyStrategy(
-        new KisLiquifyTransformStrategy(
-            dynamic_cast<KisCanvas2*>(canvas)->coordinatesConverter(),
-            m_currentArgs, m_transaction, canvas->resourceManager()))
-    , m_meshStrategy(
-        new KisMeshTransformStrategy(
-            dynamic_cast<KisCanvas2*>(canvas)->coordinatesConverter(),
-            dynamic_cast<KisCanvas2*>(canvas)->snapGuide(),
-            m_currentArgs, m_transaction))
-    , m_freeStrategy(
-        new KisFreeTransformStrategy(
-            dynamic_cast<KisCanvas2*>(canvas)->coordinatesConverter(),
-            dynamic_cast<KisCanvas2*>(canvas)->snapGuide(),
-            m_currentArgs, m_transaction))
+    , m_warpStrategy(new KisWarpTransformStrategy(dynamic_cast<KisCanvas2 *>(canvas)->coordinatesConverter(),
+                                                  dynamic_cast<KisCanvas2 *>(canvas)->snapGuide(),
+                                                  m_currentArgs,
+                                                  m_transaction))
+    , m_puppetStrategy(new KisWarpTransformStrategy(dynamic_cast<KisCanvas2 *>(canvas)->coordinatesConverter(),
+                                                    dynamic_cast<KisCanvas2 *>(canvas)->snapGuide(),
+                                                    m_currentArgs,
+                                                    m_transaction))
+    , m_cageStrategy(new KisCageTransformStrategy(dynamic_cast<KisCanvas2 *>(canvas)->coordinatesConverter(),
+                                                  dynamic_cast<KisCanvas2 *>(canvas)->snapGuide(),
+                                                  m_currentArgs,
+                                                  m_transaction))
+    , m_liquifyStrategy(new KisLiquifyTransformStrategy(dynamic_cast<KisCanvas2 *>(canvas)->coordinatesConverter(),
+                                                        m_currentArgs,
+                                                        m_transaction,
+                                                        canvas->resourceManager()))
+    , m_meshStrategy(new KisMeshTransformStrategy(dynamic_cast<KisCanvas2 *>(canvas)->coordinatesConverter(),
+                                                  dynamic_cast<KisCanvas2 *>(canvas)->snapGuide(),
+                                                  m_currentArgs,
+                                                  m_transaction))
+    , m_freeStrategy(new KisFreeTransformStrategy(dynamic_cast<KisCanvas2 *>(canvas)->coordinatesConverter(),
+                                                  dynamic_cast<KisCanvas2 *>(canvas)->snapGuide(),
+                                                  m_currentArgs,
+                                                  m_transaction))
     , m_perspectiveStrategy(
-        new KisPerspectiveTransformStrategy(
-            dynamic_cast<KisCanvas2*>(canvas)->coordinatesConverter(),
-            dynamic_cast<KisCanvas2*>(canvas)->snapGuide(),
-            m_currentArgs, m_transaction))
+          new KisPerspectiveTransformStrategy(dynamic_cast<KisCanvas2 *>(canvas)->coordinatesConverter(),
+                                              dynamic_cast<KisCanvas2 *>(canvas)->snapGuide(),
+                                              m_currentArgs,
+                                              m_transaction))
 {
     m_canvas = dynamic_cast<KisCanvas2*>(canvas);
     Q_ASSERT(m_canvas);
+
+    m_puppetStrategy->setTransformType(TransformType::PUPPET_TRANSFORM);
 
     setObjectName("tool_transform");
     m_optionsWidget = 0;
@@ -143,6 +145,8 @@ KisToolTransform::KisToolTransform(KoCanvasBase * canvas)
 
     connect(m_warpStrategy.data(), SIGNAL(requestCanvasUpdate()), SLOT(canvasUpdateRequested()));
     connect(m_warpStrategy.data(), SIGNAL(requestImageRecalculation()), SLOT(requestImageRecalculation()));
+    connect(m_puppetStrategy.data(), SIGNAL(requestCanvasUpdate()), SLOT(canvasUpdateRequested()));
+    connect(m_puppetStrategy.data(), SIGNAL(requestImageRecalculation()), SLOT(requestImageRecalculation()));
     connect(m_cageStrategy.data(), SIGNAL(requestCanvasUpdate()), SLOT(canvasUpdateRequested()));
     connect(m_cageStrategy.data(), SIGNAL(requestImageRecalculation()), SLOT(requestImageRecalculation()));
     connect(m_liquifyStrategy.data(), SIGNAL(requestCanvasUpdate()), SLOT(canvasUpdateRequested()));
@@ -269,6 +273,8 @@ KisTransformStrategyBase* KisToolTransform::currentStrategy() const
         return m_freeStrategy.data();
     } else if (m_currentArgs.mode() == ToolTransformArgs::WARP) {
         return m_warpStrategy.data();
+    } else if (m_currentArgs.mode() == ToolTransformArgs::PUPPET) {
+        return m_puppetStrategy.data();
     } else if (m_currentArgs.mode() == ToolTransformArgs::CAGE) {
         return m_cageStrategy.data();
     } else if (m_currentArgs.mode() == ToolTransformArgs::LIQUIFY) {
@@ -570,6 +576,9 @@ KisToolTransform::TransformToolMode KisToolTransform::transformMode() const
     case ToolTransformArgs::MESH:
         mode = MeshTransformMode;
         break;
+    case ToolTransformArgs::PUPPET:
+        mode = PuppetTransformMode;
+        break;
     default:
         KIS_ASSERT_RECOVER_NOOP(0 && "unexpected transform mode");
     }
@@ -669,6 +678,9 @@ ToolTransformArgs::TransformMode KisToolTransform::toArgsMode(KisToolTransform::
     case MeshTransformMode:
         mode = ToolTransformArgs::MESH;
         break;
+    case PuppetTransformMode:
+        mode = ToolTransformArgs::PUPPET;
+        break;
     default:
         KIS_ASSERT_RECOVER_NOOP(0 && "unexpected transform mode");
     }
@@ -693,6 +705,8 @@ void KisToolTransform::setTransformMode(KisToolTransform::TransformToolMode newM
             m_optionsWidget->slotSetPerspectiveModeButtonClicked( true );
         } else if( newMode == MeshTransformMode ) {
             m_optionsWidget->slotSetMeshModeButtonClicked( true );
+        } else if (newMode == PuppetTransformMode) {
+            m_optionsWidget->slotSetPuppetModeButtonClicked(true);
         }
 
         Q_EMIT transformModeChanged();
@@ -797,6 +811,7 @@ void KisToolTransform::initThumbnailImage(KisPaintDeviceSP previewDevice)
     m_freeStrategy->setThumbnailImage(origImg, thumbToImageTransform);
     m_perspectiveStrategy->setThumbnailImage(origImg, thumbToImageTransform);
     m_warpStrategy->setThumbnailImage(origImg, thumbToImageTransform);
+    m_puppetStrategy->setThumbnailImage(origImg, thumbToImageTransform);
     m_cageStrategy->setThumbnailImage(origImg, thumbToImageTransform);
     m_liquifyStrategy->setThumbnailImage(origImg, thumbToImageTransform);
     m_meshStrategy->setThumbnailImage(origImg, thumbToImageTransform);

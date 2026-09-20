@@ -281,6 +281,18 @@ void KisTransformUtils::transformDevice(const ToolTransformArgs &config,
 
 namespace {
 
+void warpControlPoints(const ToolTransformArgs &config,
+                       QVector<QPointF> *originalPoints,
+                       QVector<QPointF> *transformedPoints)
+{
+    if (config.mode() == ToolTransformArgs::PUPPET) {
+        config.puppetControlPoints(config.origPoints(), config.transfPoints(), originalPoints, transformedPoints);
+    } else {
+        *originalPoints = config.origPoints();
+        *transformedPoints = config.transfPoints();
+    }
+}
+
 void transformDeviceImpl(const ToolTransformArgs &config,
                          KisPaintDeviceSP srcDevice,
                          KisPaintDeviceSP dstDevice,
@@ -288,14 +300,14 @@ void transformDeviceImpl(const ToolTransformArgs &config,
                          bool cropDst,
                          bool forceSubPixelTranslation)
 {
-    if (config.mode() == ToolTransformArgs::WARP) {
+    if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
         KoUpdaterPtr updater = helper->updater();
 
-        KisWarpTransformWorker worker(config.warpType(),
-                                      config.origPoints(),
-                                      config.transfPoints(),
-                                      config.alpha(),
-                                      updater);
+        QVector<QPointF> originalPoints;
+        QVector<QPointF> transformedPoints;
+        warpControlPoints(config, &originalPoints, &transformedPoints);
+
+        KisWarpTransformWorker worker(config.warpType(), originalPoints, transformedPoints, config.alpha(), updater);
         worker.run(srcDevice, dstDevice);
     } else if (config.mode() == ToolTransformArgs::CAGE) {
         KoUpdaterPtr updater = helper->updater();
@@ -387,12 +399,11 @@ QRect KisTransformUtils::needRect(const ToolTransformArgs &config,
 {
     QRect result = rc;
 
-    if (config.mode() == ToolTransformArgs::WARP) {
-        KisWarpTransformWorker worker(config.warpType(),
-                                      config.origPoints(),
-                                      config.transfPoints(),
-                                      config.alpha(),
-                                      0);
+    if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
+        QVector<QPointF> originalPoints;
+        QVector<QPointF> transformedPoints;
+        warpControlPoints(config, &originalPoints, &transformedPoints);
+        KisWarpTransformWorker worker(config.warpType(), originalPoints, transformedPoints, config.alpha(), 0);
 
         result = worker.approxNeedRect(rc, srcBounds);
 
@@ -420,12 +431,11 @@ QRect KisTransformUtils::changeRect(const ToolTransformArgs &config,
 {
     QRect result = rc;
 
-    if (config.mode() == ToolTransformArgs::WARP) {
-        KisWarpTransformWorker worker(config.warpType(),
-                                      config.origPoints(),
-                                      config.transfPoints(),
-                                      config.alpha(),
-                                      0);
+    if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
+        QVector<QPointF> originalPoints;
+        QVector<QPointF> transformedPoints;
+        warpControlPoints(config, &originalPoints, &transformedPoints);
+        KisWarpTransformWorker worker(config.warpType(), originalPoints, transformedPoints, config.alpha(), 0);
 
         result = worker.approxChangeRect(rc);
 
@@ -530,6 +540,13 @@ ToolTransformArgs KisTransformUtils::resetArgsForMode(ToolTransformArgs::Transfo
         args.setMode(ToolTransformArgs::WARP);
         KisTransformUtils::setDefaultWarpPoints(-1, &transaction, &args);
         args.setEditingTransformPoints(false);
+    } else if (mode == ToolTransformArgs::PUPPET) {
+        args.setMode(ToolTransformArgs::PUPPET);
+        args.setDefaultPoints(false);
+        args.setWarpType(KisWarpTransformWorker::RIGID_TRANSFORM);
+        args.setWarpCalculation(KisWarpTransformWorker::WarpCalculation::DRAW);
+        args.setPoints({}, {});
+        args.setEditingTransformPoints(true);
     } else if (mode == ToolTransformArgs::CAGE) {
         args.setMode(ToolTransformArgs::CAGE);
         args.setEditingTransformPoints(true);

@@ -108,7 +108,8 @@ public:
         CageTransformMode,
         LiquifyTransformMode,
         PerspectiveTransformMode,
-        MeshTransformMode
+        MeshTransformMode,
+        PuppetTransformMode
     };
     Q_ENUMS(TransformToolMode)
 
@@ -312,6 +313,7 @@ private:
     QRectF m_refRect;
 
     QScopedPointer<KisWarpTransformStrategy> m_warpStrategy;
+    QScopedPointer<KisWarpTransformStrategy> m_puppetStrategy;
     QScopedPointer<KisCageTransformStrategy> m_cageStrategy;
     QScopedPointer<KisLiquifyTransformStrategy> m_liquifyStrategy;
     QScopedPointer<KisMeshTransformStrategy> m_meshStrategy;

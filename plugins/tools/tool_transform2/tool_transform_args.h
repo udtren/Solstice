@@ -42,6 +42,7 @@ public:
                         LIQUIFY,
                         PERSPECTIVE_4POINT,
                         MESH,
+                        PUPPET,
                         N_MODES};
 
     /**
@@ -146,10 +147,7 @@ public:
     inline bool defaultPoints() const {
         return m_defaultPoints;
     }
-    inline void setPoints(QVector<QPointF> origPoints, QVector<QPointF> transfPoints) {
-        m_origPoints = QVector<QPointF>(origPoints);
-        m_transfPoints = QVector<QPointF>(transfPoints);
-    }
+    void setPoints(QVector<QPointF> origPoints, QVector<QPointF> transfPoints);
     inline void setWarpType(KisWarpTransformWorker::WarpType warpType) {
         m_warpType = warpType;
     }
@@ -166,6 +164,26 @@ public:
     inline void setDefaultPoints(bool defaultPoints) {
         m_defaultPoints = defaultPoints;
     }
+
+    inline bool puppetShowMesh() const
+    {
+        return m_puppetShowMesh;
+    }
+    void setPuppetShowMesh(bool value);
+
+    inline int puppetExpansion() const
+    {
+        return m_puppetExpansion;
+    }
+    void setPuppetExpansion(int value);
+
+    qreal puppetRotation(int index) const;
+    void setPuppetRotation(int index, qreal value);
+    void removePuppetPoint(int index);
+    void puppetControlPoints(const QVector<QPointF> &originalPoints,
+                             const QVector<QPointF> &transformedPoints,
+                             QVector<QPointF> *expandedOriginalPoints,
+                             QVector<QPointF> *expandedTransformedPoints) const;
 
     //"free transform"-related
     inline QPointF transformedCenter() const {
@@ -339,9 +357,12 @@ private:
                           // which density is given by numPoints()
     QVector<QPointF> m_origPoints;
     QVector<QPointF> m_transfPoints;
+    QVector<qreal> m_puppetRotations;
     KisWarpTransformWorker::WarpType m_warpType {KisWarpTransformWorker::WarpType_::RIGID_TRANSFORM};
     KisWarpTransformWorker::WarpCalculation m_warpCalculation {KisWarpTransformWorker::WarpCalculation::DRAW}; // DRAW or GRID
     double m_alpha {1.0};
+    bool m_puppetShowMesh{true};
+    int m_puppetExpansion{2};
 
     //'free transform'-related
     // basically the arguments taken by the transform worker

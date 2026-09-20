@@ -321,11 +321,14 @@ KisToolTransformConfigWidget::KisToolTransformConfigWidget(TransformTransactionP
     // Mode switch buttons
     connect(freeTransformButton, SIGNAL(clicked(bool)), this, SLOT(slotSetFreeTransformModeButtonClicked(bool)));
     connect(warpButton, SIGNAL(clicked(bool)), this, SLOT(slotSetWarpModeButtonClicked(bool)));
+    connect(puppetButton, SIGNAL(clicked(bool)), this, SLOT(slotSetPuppetModeButtonClicked(bool)));
     connect(cageButton, SIGNAL(clicked(bool)), this, SLOT(slotSetCageModeButtonClicked(bool)));
     connect(perspectiveTransformButton, SIGNAL(clicked(bool)), this, SLOT(slotSetPerspectiveModeButtonClicked(bool)));
     connect(liquifyButton, SIGNAL(clicked(bool)), this, SLOT(slotSetLiquifyModeButtonClicked(bool)));
     connect(meshButton, SIGNAL(clicked(bool)), this, SLOT(slotSetMeshModeButtonClicked(bool)));
-
+    connect(puppetShowMeshCheckBox, SIGNAL(toggled(bool)), this, SLOT(slotPuppetShowMeshChanged(bool)));
+    connect(puppetExpansionSpinBox, SIGNAL(valueChanged(int)), this, SLOT(slotPuppetExpansionChanged(int)));
+    connect(puppetExpansionSpinBox, SIGNAL(editingFinished()), this, SLOT(notifyEditingFinished()));
 
     tooBigLabelWidget->hide();
 
@@ -340,6 +343,7 @@ void KisToolTransformConfigWidget::slotUpdateIcons()
 {
     freeTransformButton->setIcon(KisIconUtils::loadIcon("transform_icons_main"));
     warpButton->setIcon(KisIconUtils::loadIcon("transform_icons_warp"));
+    puppetButton->setIcon(KisIconUtils::loadIcon("transform_icons_warp"));
     cageButton->setIcon(KisIconUtils::loadIcon("transform_icons_cage"));
     perspectiveTransformButton->setIcon(KisIconUtils::loadIcon("transform_icons_perspective"));
     liquifyButton->setIcon(KisIconUtils::loadIcon("transform_icons_liquify_main"));
@@ -597,6 +601,10 @@ void KisToolTransformConfigWidget::updateConfig(const ToolTransformArgs &config)
 
         stackedWidget->setCurrentIndex(1);
         warpButton->setChecked(true);
+        puppetOptionsWidget->hide();
+        defaultRadioButton->show();
+        densityBox->show();
+        groupBox->setToolTip(QString());
 
         if (config.defaultPoints()) {
             densityBox->setValue(std::sqrt(config.numPoints()));
@@ -610,8 +618,21 @@ void KisToolTransformConfigWidget::updateConfig(const ToolTransformArgs &config)
 
         updateLockPointsButtonCaption();
 
-    } else if (config.mode() == ToolTransformArgs::CAGE) {
+    } else if (config.mode() == ToolTransformArgs::PUPPET) {
+        stackedWidget->setCurrentIndex(1);
+        puppetButton->setChecked(true);
+        puppetOptionsWidget->show();
+        defaultRadioButton->hide();
+        densityBox->hide();
+        customRadioButton->setChecked(true);
+        customWarpWidget->setEnabled(true);
+        groupBox->setToolTip(i18n("Click the canvas to add pins. Alt-click a pin to delete it."));
+        cmbWarpType->setCurrentIndex((int)config.warpType());
+        puppetShowMeshCheckBox->setChecked(config.puppetShowMesh());
+        puppetExpansionSpinBox->setValue(config.puppetExpansion());
+        updateLockPointsButtonCaption();
 
+    } else if (config.mode() == ToolTransformArgs::CAGE) {
         // default UI options
         resetUIOptions();
 
@@ -634,7 +655,6 @@ void KisToolTransformConfigWidget::updateConfig(const ToolTransformArgs &config)
         }
 
     } else if (config.mode() == ToolTransformArgs::LIQUIFY) {
-
         stackedWidget->setCurrentIndex(3);
         liquifyButton->setChecked(true);
 
@@ -809,6 +829,31 @@ void KisToolTransformConfigWidget::slotSetWarpModeButtonClicked(bool value)
     lblTransformType->setText(warpButton->toolTip());
 
     Q_EMIT sigResetTransform(ToolTransformArgs::WARP);
+}
+
+void KisToolTransformConfigWidget::slotSetPuppetModeButtonClicked(bool value)
+{
+    if (!value)
+        return;
+
+    lblTransformType->setText(puppetButton->toolTip());
+    Q_EMIT sigResetTransform(ToolTransformArgs::PUPPET);
+}
+
+void KisToolTransformConfigWidget::slotPuppetShowMeshChanged(bool value)
+{
+    if (m_uiSlotsBlocked)
+        return;
+    m_transaction->currentConfig()->setPuppetShowMesh(value);
+    notifyConfigChanged();
+}
+
+void KisToolTransformConfigWidget::slotPuppetExpansionChanged(int value)
+{
+    if (m_uiSlotsBlocked)
+        return;
+    m_transaction->currentConfig()->setPuppetExpansion(value);
+    notifyConfigChanged();
 }
 
 void KisToolTransformConfigWidget::slotSetCageModeButtonClicked(bool value)

@@ -9,6 +9,10 @@
 #include "tool_transform_args.h"
 
 #include <QDomElement>
+#include <QLineF>
+#include <QtMath>
+
+#include <limits>
 
 #include <ksharedconfig.h>
 #include <kconfig.h>
@@ -29,6 +33,154 @@ ToolTransformArgs::ToolTransformArgs()
     m_meshShowHandles = configGroup.readEntry("meshShowHandles", true);
     m_meshSymmetricalHandles = configGroup.readEntry("meshSymmetricalHandles", true);
     m_meshScaleHandles = configGroup.readEntry("meshScaleHandles", false);
+    m_puppetShowMesh = configGroup.readEntry("puppetShowMesh", true);
+    m_puppetExpansion = configGroup.readEntry("puppetExpansion", 2);
+}
+
+void ToolTransformArgs::setPuppetShowMesh(bool value)
+{
+    m_puppetShowMesh = value;
+    KSharedConfig::openConfig()->group("KisToolTransform").writeEntry("puppetShowMesh", value);
+}
+
+void ToolTransformArgs::setPuppetExpansion(int value)
+{
+    m_puppetExpansion = qBound(0, value, 64);
+    KSharedConfig::openConfig()->group("KisToolTransform").writeEntry("puppetExpansion", m_puppetExpansion);
+}
+
+void ToolTransformArgs::setPoints(QVector<QPointF> origPoints, QVector<QPointF> transfPoints)
+{
+    m_origPoints = origPoints;
+    m_transfPoints = transfPoints;
+    m_puppetRotations.resize(qMin(m_origPoints.size(), m_transfPoints.size()));
+}
+
+qreal ToolTransformArgs::puppetRotation(int index) const
+{
+    return index >= 0 && index < m_puppetRotations.size() ? m_puppetRotations[index] : 0.0;
+}
+
+void ToolTransformArgs::setPuppetRotation(int index, qreal value)
+{
+    if (index < 0 || index >= m_origPoints.size()) {
+        return;
+    }
+    m_puppetRotations.resize(m_origPoints.size());
+    m_puppetRotations[index] = value;
+}
+
+void ToolTransformArgs::removePuppetPoint(int index)
+{
+    if (index < 0 || index >= m_origPoints.size() || index >= m_transfPoints.size()) {
+        return;
+    }
+    m_origPoints.removeAt(index);
+    m_transfPoints.removeAt(index);
+    if (index < m_puppetRotations.size()) {
+        m_puppetRotations.removeAt(index);
+    }
+}
+
+void ToolTransformArgs::puppetControlPoints(const QVector<QPointF> &originalPoints,
+                                            const QVector<QPointF> &transformedPoints,
+                                            QVector<QPointF> *expandedOriginalPoints,
+                                            QVector<QPointF> *expandedTransformedPoints) const
+{
+    KIS_SAFE_ASSERT_RECOVER_RETURN(originalPoints.size() == transformedPoints.size());
+    expandedOriginalPoints->clear();
+    expandedTransformedPoints->clear();
+    expandedOriginalPoints->reserve(originalPoints.size() * 8);
+    expandedTransformedPoints->reserve(transformedPoints.size() * 8);
+
+    QVector<QVector<int>> pinGraph(originalPoints.size());
+    if (originalPoints.size() > 1) {
+        QVector<bool> connected(originalPoints.size(), false);
+        QVector<qreal> closestDistance(originalPoints.size(), std::numeric_limits<qreal>::max());
+        QVector<int> closestPin(originalPoints.size(), -1);
+        closestDistance[0] = 0.0;
+
+        for (int edge = 0; edge < originalPoints.size(); ++edge) {
+            int nextPin = -1;
+            for (int i = 0; i < originalPoints.size(); ++i) {
+                if (!connected[i] && (nextPin < 0 || closestDistance[i] < closestDistance[nextPin])) {
+                    nextPin = i;
+                }
+            }
+            if (nextPin < 0) {
+                break;
+            }
+            connected[nextPin] = true;
+            if (closestPin[nextPin] >= 0) {
+                pinGraph[nextPin].append(closestPin[nextPin]);
+                pinGraph[closestPin[nextPin]].append(nextPin);
+            }
+            for (int i = 0; i < originalPoints.size(); ++i) {
+                if (!connected[i]) {
+                    const qreal distance = QLineF(originalPoints[nextPin], originalPoints[i]).length();
+                    if (distance < closestDistance[i]) {
+                        closestDistance[i] = distance;
+                        closestPin[i] = nextPin;
+                    }
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < originalPoints.size(); ++i) {
+        qreal nearestDistance = std::numeric_limits<qreal>::max();
+        for (int j = 0; j < originalPoints.size(); ++j) {
+            if (i != j) {
+                nearestDistance = qMin(nearestDistance, QLineF(originalPoints[i], originalPoints[j]).length());
+            }
+        }
+        const qreal radius = nearestDistance == std::numeric_limits<qreal>::max()
+            ? 32.0
+            : qBound<qreal>(8.0, nearestDistance * 0.28, 64.0);
+        const qreal angle = puppetRotation(i);
+        const qreal cosine = qCos(angle);
+        const qreal sine = qSin(angle);
+        const QPointF offsets[] = {QPointF(),
+                                   QPointF(radius, 0.0),
+                                   QPointF(-radius, 0.0),
+                                   QPointF(0.0, radius),
+                                   QPointF(0.0, -radius)};
+
+        for (const QPointF &offset : offsets) {
+            expandedOriginalPoints->append(originalPoints[i] + offset);
+            const QPointF rotatedOffset(offset.x() * cosine - offset.y() * sine,
+                                        offset.x() * sine + offset.y() * cosine);
+            expandedTransformedPoints->append(transformedPoints[i] + rotatedOffset);
+        }
+    }
+
+    // A terminal pin owns the open-ended part of the artwork beyond it. Adding
+    // progressively distant guide points along that branch makes a pin rotation
+    // propagate through the unpinned limb/body instead of remaining a tiny local
+    // twist. A newly placed pin in that branch splits the graph and stops the
+    // propagation naturally.
+    for (int i = 0; i < originalPoints.size(); ++i) {
+        if (pinGraph[i].size() != 1) {
+            continue;
+        }
+        const QPointF neighbourDirection = originalPoints[i] - originalPoints[pinGraph[i][0]];
+        const qreal neighbourDistance = QLineF(QPointF(), neighbourDirection).length();
+        if (qFuzzyIsNull(neighbourDistance)) {
+            continue;
+        }
+        const QPointF direction = neighbourDirection / neighbourDistance;
+        const qreal angle = puppetRotation(i);
+        const qreal cosine = qCos(angle);
+        const qreal sine = qSin(angle);
+        const qreal guideDistances[] = {0.75 * neighbourDistance, 1.5 * neighbourDistance, 3.0 * neighbourDistance};
+        for (qreal guideDistance : guideDistances) {
+            const QPointF offset = direction * guideDistance;
+            const QPointF rotatedOffset(offset.x() * cosine - offset.y() * sine,
+                                        offset.x() * sine + offset.y() * cosine);
+            expandedOriginalPoints->append(originalPoints[i] + offset);
+            expandedTransformedPoints->append(transformedPoints[i] + rotatedOffset);
+        }
+    }
 }
 
 void ToolTransformArgs::setFilterId(const QString &id) {
@@ -66,8 +218,11 @@ void ToolTransformArgs::init(const ToolTransformArgs& args)
     m_boundsRotation = args.boundsRotation();
     m_origPoints = args.origPoints(); //it's a copy
     m_transfPoints = args.transfPoints();
+    m_puppetRotations = args.m_puppetRotations;
     m_warpType = args.warpType();
     m_alpha = args.alpha();
+    m_puppetShowMesh = args.m_puppetShowMesh;
+    m_puppetExpansion = args.m_puppetExpansion;
     m_defaultPoints = args.defaultPoints();
     m_keepAspectRatio = args.keepAspectRatio();
     m_filter = args.m_filter;
@@ -106,6 +261,7 @@ void ToolTransformArgs::clear()
 {
     m_origPoints.clear();
     m_transfPoints.clear();
+    m_puppetRotations.clear();
     m_meshTransform = KisBezierTransformMesh();
 }
 
@@ -134,46 +290,29 @@ ToolTransformArgs& ToolTransformArgs::operator=(const ToolTransformArgs& args)
 
 bool ToolTransformArgs::operator==(const ToolTransformArgs& other) const
 {
-    return
-        m_mode == other.m_mode &&
-        m_defaultPoints == other.m_defaultPoints &&
-        m_origPoints == other.m_origPoints &&
-        m_transfPoints == other.m_transfPoints &&
-        m_warpType == other.m_warpType &&
-        m_alpha == other.m_alpha &&
-        m_transformedCenter == other.m_transformedCenter &&
-        m_originalCenter == other.m_originalCenter &&
-        m_rotationCenterOffset == other.m_rotationCenterOffset &&
-        m_transformAroundRotationCenter == other.m_transformAroundRotationCenter &&
-        m_aX == other.m_aX &&
-        m_aY == other.m_aY &&
-        m_aZ == other.m_aZ &&
-        m_cameraPos == other.m_cameraPos &&
-        m_scaleX == other.m_scaleX &&
-        m_scaleY == other.m_scaleY &&
-        m_shearX == other.m_shearX &&
-        m_shearY == other.m_shearY &&
-        m_boundsRotation == other.m_boundsRotation &&
-        m_keepAspectRatio == other.m_keepAspectRatio &&
-        m_flattenedPerspectiveTransform == other.m_flattenedPerspectiveTransform &&
-        m_editTransformPoints == other.m_editTransformPoints &&
-        (m_liquifyProperties == other.m_liquifyProperties ||
-         *m_liquifyProperties == *other.m_liquifyProperties) &&
-        m_meshTransform == other.m_meshTransform &&
+    return m_mode == other.m_mode && m_defaultPoints == other.m_defaultPoints && m_origPoints == other.m_origPoints
+        && m_transfPoints == other.m_transfPoints && m_warpType == other.m_warpType && m_alpha == other.m_alpha
+        && m_puppetRotations == other.m_puppetRotations && m_puppetShowMesh == other.m_puppetShowMesh
+        && m_puppetExpansion == other.m_puppetExpansion && m_transformedCenter == other.m_transformedCenter
+        && m_originalCenter == other.m_originalCenter && m_rotationCenterOffset == other.m_rotationCenterOffset
+        && m_transformAroundRotationCenter == other.m_transformAroundRotationCenter && m_aX == other.m_aX
+        && m_aY == other.m_aY && m_aZ == other.m_aZ && m_cameraPos == other.m_cameraPos && m_scaleX == other.m_scaleX
+        && m_scaleY == other.m_scaleY && m_shearX == other.m_shearX && m_shearY == other.m_shearY
+        && m_boundsRotation == other.m_boundsRotation && m_keepAspectRatio == other.m_keepAspectRatio
+        && m_flattenedPerspectiveTransform == other.m_flattenedPerspectiveTransform
+        && m_editTransformPoints == other.m_editTransformPoints
+        && (m_liquifyProperties == other.m_liquifyProperties || *m_liquifyProperties == *other.m_liquifyProperties)
+        && m_meshTransform == other.m_meshTransform &&
 
         // pointer types
 
         m_externalSource == other.m_externalSource &&
 
-        ((m_filter && other.m_filter &&
-          m_filter->id() == other.m_filter->id())
-         || m_filter == other.m_filter) &&
+        ((m_filter && other.m_filter && m_filter->id() == other.m_filter->id()) || m_filter == other.m_filter) &&
 
-        ((m_liquifyWorker && other.m_liquifyWorker &&
-          *m_liquifyWorker == *other.m_liquifyWorker)
-         || m_liquifyWorker == other.m_liquifyWorker) &&
-            m_pixelPrecision == other.m_pixelPrecision &&
-            m_previewPixelPrecision == other.m_previewPixelPrecision;
+        ((m_liquifyWorker && other.m_liquifyWorker && *m_liquifyWorker == *other.m_liquifyWorker)
+         || m_liquifyWorker == other.m_liquifyWorker)
+        && m_pixelPrecision == other.m_pixelPrecision && m_previewPixelPrecision == other.m_previewPixelPrecision;
 }
 
 bool ToolTransformArgs::isSameMode(const ToolTransformArgs& other) const
@@ -203,9 +342,12 @@ bool ToolTransformArgs::isSameMode(const ToolTransformArgs& other) const
         result &= m_shearY == other.m_shearY;
         result &= m_flattenedPerspectiveTransform == other.m_flattenedPerspectiveTransform;
 
-    } else if(m_mode == WARP || m_mode == CAGE) {
+    } else if (m_mode == WARP || m_mode == CAGE || m_mode == PUPPET) {
         result &= m_origPoints == other.m_origPoints;
         result &= m_transfPoints == other.m_transfPoints;
+        if (m_mode == PUPPET) {
+            result &= m_puppetRotations == other.m_puppetRotations;
+        }
 
     } else if (m_mode == LIQUIFY) {
         result &= m_liquifyProperties &&
@@ -292,7 +434,7 @@ void ToolTransformArgs::transformSrcAndDst(const QTransform &t)
 
         m_flattenedPerspectiveTransform = t.inverted() * m_flattenedPerspectiveTransform * t;
 
-    } else if(m_mode == WARP || m_mode == CAGE) {
+    } else if (m_mode == WARP || m_mode == CAGE || m_mode == PUPPET) {
         for (auto &pt : m_origPoints) {
             pt = t.map(pt);
         }
@@ -314,7 +456,7 @@ void ToolTransformArgs::translateDstSpace(const QPointF &offset)
 {
     if (m_mode == FREE_TRANSFORM || m_mode == PERSPECTIVE_4POINT) {
         m_transformedCenter += offset;
-    } else if(m_mode == WARP || m_mode == CAGE) {
+    } else if (m_mode == WARP || m_mode == CAGE || m_mode == PUPPET) {
         for (auto &pt : m_transfPoints) {
             pt += offset;
         }
@@ -338,10 +480,18 @@ bool ToolTransformArgs::isIdentity() const
             return (m_transformedCenter == m_originalCenter && m_scaleX == 1
                     && m_scaleY == 1 && m_shearX == 0 && m_shearY == 0
                     && m_flattenedPerspectiveTransform.isIdentity());
-    } else if(m_mode == WARP || m_mode == CAGE) {
+    } else if (m_mode == WARP || m_mode == CAGE || m_mode == PUPPET) {
         for (int i = 0; i < m_origPoints.size(); ++i)
             if (m_origPoints[i] != m_transfPoints[i])
                 return false;
+
+        if (m_mode == PUPPET) {
+            for (qreal rotation : m_puppetRotations) {
+                if (!qFuzzyIsNull(rotation)) {
+                    return false;
+                }
+            }
+        }
 
         return true;
     } else if (m_mode == LIQUIFY) {
@@ -406,7 +556,7 @@ void ToolTransformArgs::toXML(QDomElement *e) const
 
         KisDomUtils::saveValue(&freeEl, "filterId", m_filter->id());
 
-    } else if (m_mode == WARP || m_mode == CAGE) {
+    } else if (m_mode == WARP || m_mode == CAGE || m_mode == PUPPET) {
         QDomElement warpEl = doc.createElement("warp_transform");
         e->appendChild(warpEl);
 
@@ -416,6 +566,12 @@ void ToolTransformArgs::toXML(QDomElement *e) const
 
         KisDomUtils::saveValue(&warpEl, "warpType", (int)m_warpType); // limited!
         KisDomUtils::saveValue(&warpEl, "alpha", m_alpha);
+
+        if (m_mode == PUPPET) {
+            KisDomUtils::saveValue(&warpEl, "rotations", m_puppetRotations);
+            KisDomUtils::saveValue(&warpEl, "showMesh", m_puppetShowMesh);
+            KisDomUtils::saveValue(&warpEl, "expansion", m_puppetExpansion);
+        }
 
         if(m_mode == CAGE){
             KisDomUtils::saveValue(&warpEl,"pixelPrecision",m_pixelPrecision);
@@ -499,7 +655,7 @@ ToolTransformArgs ToolTransformArgs::fromXML(const QDomElement &e)
             result = (bool) args.m_filter;
         }
 
-    } else if (args.m_mode == WARP || args.m_mode == CAGE) {
+    } else if (args.m_mode == WARP || args.m_mode == CAGE || args.m_mode == PUPPET) {
         QDomElement warpEl;
 
         int warpType = 0;
@@ -522,6 +678,13 @@ ToolTransformArgs ToolTransformArgs::fromXML(const QDomElement &e)
 
             (void) KisDomUtils::loadValue(warpEl, "pixelPrecision", &args.m_pixelPrecision);
             (void) KisDomUtils::loadValue(warpEl, "previewPixelPrecision", &args.m_previewPixelPrecision);
+        }
+
+        if (args.m_mode == PUPPET) {
+            (void)KisDomUtils::loadValue(warpEl, "rotations", &args.m_puppetRotations);
+            args.m_puppetRotations.resize(args.m_origPoints.size());
+            (void)KisDomUtils::loadValue(warpEl, "showMesh", &args.m_puppetShowMesh);
+            (void)KisDomUtils::loadValue(warpEl, "expansion", &args.m_puppetExpansion);
         }
 
         if (result && warpType >= 0 && warpType < KisWarpTransformWorker::N_MODES) {
