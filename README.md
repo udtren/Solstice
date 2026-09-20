@@ -31,51 +31,27 @@ The following external Python plugins have been reimplemented as native Krita fe
 
 ### Quick Access Manager
 
-[Quick Access Manager](https://github.com/udtren/krita-quick-access-manager) is now a set of native dockers and popup tools. It provides configurable action, docker, and brush grids; editable profiles; gesture menus; Quick Brush Adjustments; a compact HueSVC selector; and hold-based temporary brush shortcuts. Existing profile aliases, custom labels, colors, icons, and legacy JSON fields remain supported.
-
-Native implementation: [`plugins/dockers/quickaccess`](plugins/dockers/quickaccess/)
+[`Quick Access Manager documentation`](docs/quick-access.md)
 
 ### Rest Note
 
-Rest Note is now a native timer docker with working, paused, idle, eye-break, and full-break states. It retains the original plugin's icons and configuration, keeps the small eye-break notification on Krita's current screen, and limits the large break overlay to the Krita window instead of covering the entire monitor.
-
-Native implementation: [`plugins/dockers/restnote`](plugins/dockers/restnote/)
+[`Rest Note documentation`](docs/rest-note.md)
 
 ### Asset Library
 
-Asset Library is now a native docker for browsing configured folders, opening assets, and inserting them as paint, vector, or file layers. It preserves the original folder and layout configuration while adding cached, asynchronous thumbnail loading for large libraries. The same configuration and asset operations are also exposed through the independent **Asset Library** tab on Krita's welcome page.
-
-Native implementations: [`plugins/dockers/assetlibrary`](plugins/dockers/assetlibrary/) and [`libs/ui/KisWelcomeAssetLibraryWidget.cpp`](libs/ui/KisWelcomeAssetLibraryWidget.cpp)
+[`Asset Library documentation`](docs/asset-library.md)
 
 ### Vision ML
 
-Krita Vision Tools has been migrated from a Python/`ctypes` plugin into native selection tools and filters. It provides point-based and box-based segment selection, Smart Fill, and Background Removal. MobileSAM, MI-GAN, and BiRefNet GGUF models run through the embedded `vision.cpp` runtime, using either the portable CPU backend or Vulkan acceleration on supported GPUs. BiRefNet Dynamic is preferred for background removal when installed, with the bundled BiRefNet Lite model as fallback.
-
-Native implementation and model documentation: [`plugins/visionml`](plugins/visionml/) and [`plugins/visionml/README.md`](plugins/visionml/README.md)
+[`Vision ML documentation`](docs/vision-ml.md)
 
 ## New Features
 
 ### Puppet Warp
-<img src="images/puppet_warp_1.png" alt="Puppet Warp mesh" width="80%">
 
-Solstice adds a native **Puppet Warp** mode to Krita's Transform Tool for posing characters and reshaping artwork with pins. Puppet Warp generates a mesh that follows the artwork's visible shape, including the interiors of closed line art, and allows the mesh boundary to be expanded when extra working space is needed.
+<img src="/images/puppet_warp_1.png" alt="Puppet Warp mesh" width="50%">
 
-To use it:
-
-1. Select the layer or area to transform, activate the Transform Tool, and choose **Puppet**.
-2. Leave **Draw** active and click the artwork to place pins at joints and areas that should remain
-   stable.
-3. Click **Lock Points** when the pins are ready.
-4. Drag a pin's center to move that part of the artwork.
-5. Drag the pin's outer ring to rotate the artwork around it.
-6. Alt-click a pin center to remove it, then apply or reset the transform normally.
-
-Untouched pins anchor their surrounding regions. Rotation also propagates through an unpinned branch:
-for example, rotating a terminal hip pin can turn the upper body while pins below it continue to hold the legs. Placing another pin farther along that branch creates a new boundary and limits the effect.
-
-The **Show mesh** option toggles only the overlay. **Expansion** controls how far the generated mesh extends beyond the detected artwork; at 0 px, the overlay is clipped closely to the artwork rather than extending by whole grid cells.
-
-Implementation notes, current limitations, testing instructions, and the future improvement roadmap are documented in [`docs/puppet-warp.md`](docs/puppet-warp.md).
+[`Puppet Warp documentation`](docs/puppet-warp.md)
 
 ## Branches
 
