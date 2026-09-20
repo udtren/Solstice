@@ -3,14 +3,55 @@
 Solstice is an unofficial, desktop-focused custom build based on the Krita 6 development branch.
 It preserves Krita's painting workflow while integrating project-specific interface and productivity changes.
 
+## Table of Contents
+
+- [Main differences from upstream Krita](#main-differences-from-upstream-krita)
+- [Ported Plugin](#ported-plugin)
+  - [Quick Access Manager](#quick-access-manager)
+  - [Rest Note](#rest-note)
+  - [Asset Library](#asset-library)
+  - [Vision ML](#vision-ml)
+- [New Features](#new-features)
+  - [Puppet Warp](#puppet-warp)
+- [Branches](#branches)
+- [Building](#building)
+
 ## Main differences from upstream Krita
 
-- Android application, packaging, donation, and platform-integration code has been removed.
-- [Quick Access Manager](https://github.com/udtren/krita-quick-access-manager) has been migrated from a Python plugin to a native Krita docker.
-- Additional interface and workflow refinements are maintained for this custom build.
+- Solstice is desktop-only. Krita's Android application, Android build and packaging rules, donation integration, and related platform-specific code have been removed.
+- Selected third-party Python plugins have been migrated into native C++ Krita plugins. They participate in Krita's normal plugin lifecycle and no longer depend on Python, PyQt, or private Python-side tool injection.
+- The welcome page includes an **Asset Library** tab alongside **Recent Images**. It shares the native Asset Library configuration and features without embedding the docker itself.
+- The Transform Tool includes a native **Puppet Warp** mode with movable and rotatable pins, artwork-aware mesh visualization, configurable expansion, and serialized transform state.
+- Native AI-assisted selection, background removal, and smart fill are available through Vision ML, with CPU fallback and optional Vulkan GPU acceleration.
+- Quick-access, color-selection, brush-adjustment, timer, and asset-management workflows are integrated as maintained native features of this custom build.
 
-The native Quick Access implementation is located in
-[`plugins/dockers/quickaccess`](plugins/dockers/quickaccess/).
+## Ported Plugin
+
+The following external Python plugins have been reimplemented as native Krita features. The native versions preserve compatibility with their existing user configuration where practical.
+
+### Quick Access Manager
+
+[Quick Access Manager](https://github.com/udtren/krita-quick-access-manager) is now a set of native dockers and popup tools. It provides configurable action, docker, and brush grids; editable profiles; gesture menus; Quick Brush Adjustments; a compact HueSVC selector; and hold-based temporary brush shortcuts. Existing profile aliases, custom labels, colors, icons, and legacy JSON fields remain supported.
+
+Native implementation: [`plugins/dockers/quickaccess`](plugins/dockers/quickaccess/)
+
+### Rest Note
+
+Rest Note is now a native timer docker with working, paused, idle, eye-break, and full-break states. It retains the original plugin's icons and configuration, keeps the small eye-break notification on Krita's current screen, and limits the large break overlay to the Krita window instead of covering the entire monitor.
+
+Native implementation: [`plugins/dockers/restnote`](plugins/dockers/restnote/)
+
+### Asset Library
+
+Asset Library is now a native docker for browsing configured folders, opening assets, and inserting them as paint, vector, or file layers. It preserves the original folder and layout configuration while adding cached, asynchronous thumbnail loading for large libraries. The same configuration and asset operations are also exposed through the independent **Asset Library** tab on Krita's welcome page.
+
+Native implementations: [`plugins/dockers/assetlibrary`](plugins/dockers/assetlibrary/) and [`libs/ui/KisWelcomeAssetLibraryWidget.cpp`](libs/ui/KisWelcomeAssetLibraryWidget.cpp)
+
+### Vision ML
+
+Krita Vision Tools has been migrated from a Python/`ctypes` plugin into native selection tools and filters. It provides point-based and box-based segment selection, Smart Fill, and Background Removal. MobileSAM, MI-GAN, and BiRefNet GGUF models run through the embedded `vision.cpp` runtime, using either the portable CPU backend or Vulkan acceleration on supported GPUs. BiRefNet Dynamic is preferred for background removal when installed, with the bundled BiRefNet Lite model as fallback.
+
+Native implementation and model documentation: [`plugins/visionml`](plugins/visionml/) and [`plugins/visionml/README.md`](plugins/visionml/README.md)
 
 ## New Features
 
