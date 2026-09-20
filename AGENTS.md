@@ -51,6 +51,7 @@ future updates can be integrated cleanly.
 - Rest Note: `docs/agent/rest-note.md`
 - Asset Library: `docs/agent/asset-library.md`
 - Vision ML: `docs/agent/vision-ml.md`
+- Lazy Tools: `docs/agent/lazy-tools.md`
 - Puppet Warp: `docs/agent/puppet-warp.md`
 - Solstice visual branding checklist:
   `docs/agent/solstice-visual-branding-todo.md`

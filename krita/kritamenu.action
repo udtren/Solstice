@@ -1984,6 +1984,35 @@
 
   <Actions category="BrushesAndStuff">
     <text>Brushes and Stuff</text>
+    <Action name="create_selection_mask_alternative">
+      <text>Create Selection Mask Alternative</text>
+      <toolTip>Save the current selection in Selection_Mask_Group</toolTip>
+      <activationFlags>1</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable>
+    </Action>
+    <Action name="create_selection_mask_popup">
+      <text>Create Selection Mask Popup</text>
+      <toolTip>Show saved selection masks</toolTip>
+      <activationFlags>1</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable>
+    </Action>
+    <Action name="fast_image_export">
+      <text>Fast Image Export...</text>
+      <toolTip>Export active or open documents with PNG or JPEG options</toolTip>
+      <activationFlags>1</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable>
+    </Action>
+    <Action name="screen_color_picker">
+      <text>Pick Color from Anywhere</text>
+      <toolTip>Pick the screen color under the cursor (Win+Shift+C)</toolTip>
+      <activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable>
+    </Action>
+    <Action name="set_foreground_color1"><text>Set Foreground Color 1</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
+    <Action name="set_foreground_color2"><text>Set Foreground Color 2</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
+    <Action name="set_foreground_color3"><text>Set Foreground Color 3</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
+    <Action name="set_foreground_color4"><text>Set Foreground Color 4</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
+    <Action name="set_foreground_color5"><text>Set Foreground Color 5</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
+    <Action name="set_foreground_color6"><text>Set Foreground Color 6</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
+    <Action name="set_foreground_color7"><text>Set Foreground Color 7</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
+    <Action name="set_foreground_color8"><text>Set Foreground Color 8</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
+    <Action name="set_foreground_color9"><text>Set Foreground Color 9</text><activationFlags>0</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable></Action>
     <Action name="gradients">
       <icon></icon>
       <text>&amp;Gradients</text>

@@ -45,6 +45,22 @@
       <number>0</number>
      </property>
      <item>
+      <widget class="QComboBox" name="cmbColorLabel">
+       <property name="minimumSize"><size><width>42</width><height>32</height></size></property>
+       <property name="maximumSize"><size><width>42</width><height>32</height></size></property>
+       <property name="toolTip"><string>Set color label for selected layers</string></property>
+       <property name="iconSize"><size><width>18</width><height>18</height></size></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="cmbColorVisibility">
+       <property name="minimumSize"><size><width>42</width><height>32</height></size></property>
+       <property name="maximumSize"><size><width>42</width><height>32</height></size></property>
+       <property name="toolTip"><string>Toggle visibility of layers with a color label</string></property>
+       <property name="iconSize"><size><width>18</width><height>18</height></size></property>
+      </widget>
+     </item>
+     <item>
       <widget class="KisCompositeOpComboBox" name="cmbComposite">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">

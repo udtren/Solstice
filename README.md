@@ -11,6 +11,7 @@ It preserves Krita's painting workflow while integrating project-specific interf
   - [Rest Note](#rest-note)
   - [Asset Library](#asset-library)
   - [Vision ML](#vision-ml)
+  - [Lazy Tools](#lazy-tools)
 - [New Features](#new-features)
   - [Puppet Warp](#puppet-warp)
 - [Building](#building)
@@ -43,6 +44,10 @@ The following external Python plugins have been reimplemented as native Krita fe
 ### Vision ML
 
 [`Vision ML documentation`](docs/vision-ml.md)
+
+### Lazy Tools
+
+[`Lazy Tools documentation`](docs/lazy-tools.md)
 
 ## New Features
 

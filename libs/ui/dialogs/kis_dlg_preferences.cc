@@ -226,6 +226,23 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
 {
     KisConfig cfg(true);
 
+    chkColorPickFromAnywhere->setChecked(cfg.readEntry<bool>("Solstice/ColorPickFromAnywhere", true));
+    chkDisableTopMenuShortcuts->setChecked(cfg.readEntry<bool>("Solstice/DisableTopMenuShortcuts", true));
+    const QColor defaultSlotColors[] = {
+        Qt::black, Qt::white, QColor(238, 50, 51), QColor(255, 170, 63), QColor(247, 229, 61),
+        QColor(151, 202, 63), QColor(91, 173, 220), QColor(191, 106, 209), QColor(118, 119, 114)
+    };
+    KisColorButton *slotButtons[] = {
+        btnForegroundColor1, btnForegroundColor2, btnForegroundColor3,
+        btnForegroundColor4, btnForegroundColor5, btnForegroundColor6,
+        btnForegroundColor7, btnForegroundColor8, btnForegroundColor9
+    };
+    for (int i = 0; i < 9; ++i) {
+        const QColor color = cfg.readEntry<QColor>(
+            QStringLiteral("Solstice/ForegroundColor%1").arg(i + 1), defaultSlotColors[i]);
+        slotButtons[i]->setColor(KoColor(color, KoColorSpaceRegistry::instance()->rgb8()));
+    }
+
     // HACK ALERT!
     // QScrollArea contents are opaque at multiple levels
     // The contents themselves AND the viewport widget
@@ -2785,6 +2802,9 @@ void KisDlgPreferences::switchTab(PageDesc page)
         case Resources:
             tab = m_general->Resources;
             break;
+        case CustomGeneral:
+            tab = m_general->Custom;
+            break;
         case MiscellaneousGeneral:
             tab = m_general->Miscellaneous;
             break;
@@ -2892,6 +2912,17 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
         cfg.setIgnoreHighFunctionKeys(m_general->chkIgnoreHighFunctionKeys->isChecked());
 
         cfg.writeEntry<bool>("use_custom_system_font", m_general->chkUseCustomFont->isChecked());
+        cfg.writeEntry<bool>("Solstice/ColorPickFromAnywhere", m_general->chkColorPickFromAnywhere->isChecked());
+        cfg.writeEntry<bool>("Solstice/DisableTopMenuShortcuts", m_general->chkDisableTopMenuShortcuts->isChecked());
+        KisColorButton *slotButtons[] = {
+            m_general->btnForegroundColor1, m_general->btnForegroundColor2, m_general->btnForegroundColor3,
+            m_general->btnForegroundColor4, m_general->btnForegroundColor5, m_general->btnForegroundColor6,
+            m_general->btnForegroundColor7, m_general->btnForegroundColor8, m_general->btnForegroundColor9
+        };
+        for (int i = 0; i < 9; ++i) {
+            cfg.writeEntry<QColor>(QStringLiteral("Solstice/ForegroundColor%1").arg(i + 1),
+                                   slotButtons[i]->color().toQColor());
+        }
         if (m_general->chkUseCustomFont->isChecked()) {
             cfg.writeEntry<QString>("custom_system_font", m_general->cmbCustomFont->currentFont().family());
             cfg.writeEntry<int>("custom_font_size", m_general->intFontSize->value());

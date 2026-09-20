@@ -77,6 +77,7 @@
 #include "kis_signals_blocker.h"
 #include "kis_color_filter_combo.h"
 #include "kis_node_filter_proxy_model.h"
+#include "kis_node_view_color_scheme.h"
 #include <KisSpinBoxI18nHelper.h>
 
 #include "kis_selection.h"
@@ -173,6 +174,38 @@ LayerBox::LayerBox()
     setWidget(mainWidget);
 
     m_wdgLayerBox->setupUi(mainWidget);
+
+    const QStringList colorNames = {
+        i18n("None"), i18n("Blue"), i18n("Green"), i18n("Yellow"), i18n("Orange"),
+        i18n("Brown"), i18n("Red"), i18n("Purple"), i18n("Grey")
+    };
+    const QVector<QColor> labelColors = KisNodeViewColorScheme::instance()->allColorLabels();
+    for (int index = 0; index < colorNames.size(); ++index) {
+        QPixmap pixmap(18, 18);
+        if (index == 0) {
+            pixmap.fill(Qt::transparent);
+            QPainter painter(&pixmap);
+            painter.setPen(palette().color(QPalette::Mid));
+            painter.drawRect(pixmap.rect().adjusted(0, 0, -1, -1));
+            painter.drawLine(2, 15, 15, 2);
+        } else {
+            pixmap.fill(labelColors.value(index));
+        }
+        m_wdgLayerBox->cmbColorLabel->addItem(QIcon(pixmap), QString(), index);
+        m_wdgLayerBox->cmbColorLabel->setItemData(index, colorNames[index], Qt::ToolTipRole);
+        if (index > 0) {
+            m_wdgLayerBox->cmbColorVisibility->addItem(QIcon(pixmap), QString(), index);
+            m_wdgLayerBox->cmbColorVisibility->setItemData(index - 1, colorNames[index], Qt::ToolTipRole);
+        }
+    }
+    connect(m_wdgLayerBox->cmbColorLabel,
+            QOverload<int>::of(&QComboBox::activated),
+            this,
+            &LayerBox::slotColorLabelChanged);
+    connect(m_wdgLayerBox->cmbColorVisibility,
+            QOverload<int>::of(&QComboBox::activated),
+            this,
+            &LayerBox::slotColorVisibilityChanged);
 
     QStyle *newStyle = QStyleFactory::create(m_wdgLayerBox->listLayers->style()->objectName());
     // proxy style steals the ownership of the style and deletes it later
@@ -709,6 +742,8 @@ void LayerBox::updateUI()
     m_wdgLayerBox->cmbComposite->setEnabled(activeNode && activeNode->isEditable(false));
 
     if (activeNode) {
+        KisSignalsBlocker blocker(m_wdgLayerBox->cmbColorLabel);
+        m_wdgLayerBox->cmbColorLabel->setCurrentIndex(activeNode->colorLabelIndex());
         if (activeNode->inherits("KisColorizeMask") || activeNode->inherits("KisLayer")) {
 
             m_wdgLayerBox->doubleOpacity->setEnabled(true);
@@ -1143,23 +1178,24 @@ void LayerBox::slotColorLabelChanged(int label)
     KisNodeList selectedNodes = m_nodeManager->selectedNodes();
 
     Q_FOREACH(KisNodeSP selectedNode, selectedNodes) {
-        //Always apply label to selected nodes..
         selectedNode->setColorLabelIndex(label);
-
-        //Apply label only to unlabelled children..
-        KisNodeList children = selectedNode->childNodes(QStringList(), KoProperties());
-
-        auto applyLabelFunc =
-                [label](KisNodeSP child) {
-            if (child->colorLabelIndex() == 0) {
-                child->setColorLabelIndex(label);
-            }
-        };
-
-        Q_FOREACH(KisNodeSP child, children) {
-            KisLayerUtils::recursiveApplyNodes(child, applyLabelFunc);
-        }
     }
+}
+
+void LayerBox::slotColorVisibilityChanged(int index)
+{
+    if (!m_image) {
+        return;
+    }
+
+    const int label = m_wdgLayerBox->cmbColorVisibility->itemData(index).toInt();
+    const auto toggleMatchingNodes = [label](KisNodeSP node) {
+        if (node && node->parent() && node->colorLabelIndex() == label) {
+            node->setVisible(!node->visible());
+        }
+    };
+    KisLayerUtils::recursiveApplyNodes(m_image->root(), toggleMatchingNodes);
+    m_image->refreshGraphAsync();
 }
 
 void LayerBox::updateAvailableLabels()

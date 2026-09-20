@@ -410,6 +410,7 @@ public:
         Tools,
         Animation,
         Resources,
+        CustomGeneral,
         MiscellaneousGeneral
     };
     enum ColorTabs {

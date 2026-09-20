@@ -125,6 +125,7 @@
 #include <KisImageBarrierLock.h>
 #include <KisTextPropertiesManager.h>
 #include <kis_selection.h>
+#include "KisSolsticeLazyTools.h"
 
 #ifdef Q_OS_WIN
 #include "KisWindowsPackageUtils.h"
@@ -168,6 +169,7 @@ public:
         , actionCollection(_actionCollection)
         , mirrorManager(_q)
         , inputManager(_q)
+        , solsticeLazyTools(_q)
         , zoomRotationMessageTimer(Qt::CoarseTimer)
     {
         KisViewManager::initializeResourceManager(&canvasResourceManager);
@@ -234,6 +236,7 @@ public:
     KisInputManager inputManager;
     KisIdleTasksManager idleTasksManager;
     KisTextPropertiesManager textPropertyManager;
+    KisSolsticeLazyTools solsticeLazyTools;
 
     KisSignalAutoConnectionsStore viewConnections;
     KSelectAction *actionAuthor {nullptr}; // Select action for author profile.
@@ -731,6 +734,8 @@ KisUndoAdapter * KisViewManager::undoAdapter()
 void KisViewManager::createActions()
 {
     KisConfig cfg(true);
+
+    d->solsticeLazyTools.createActions();
 
     d->saveIncremental = actionManager()->createAction("save_incremental_version");
     connect(d->saveIncremental, SIGNAL(triggered()), this, SLOT(slotSaveIncremental()));

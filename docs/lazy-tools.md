@@ -1,0 +1,48 @@
+# Lazy Tools
+
+Solstice includes native versions of the core productivity features from the
+Lazy Tools Python plugin. No separate Lazy Tools docker or Python installation
+is required.
+
+## Layers docker
+
+Two compact color controls appear before the blending-mode control:
+
+- The first assigns a color label only to the explicitly selected layers.
+  Selecting a group does not change any of its child layers.
+- The second toggles visibility for every layer with the chosen color label.
+
+Krita's existing layer-list filter button remains available for filtering the
+docker by name or color without changing layer visibility.
+
+## Shortcut actions
+
+The following actions can be assigned under **Settings > Configure Krita >
+Keyboard Shortcuts**:
+
+- **Create Selection Mask Alternative** saves the current selection in a
+  hidden `Selection_Mask_Group` at the bottom of the layer stack.
+- **Create Selection Mask Popup** opens a thumbnail grid for creating,
+  refreshing, and restoring saved selections.
+- **Set Foreground Color 1** through **Set Foreground Color 9** select the
+  corresponding configurable color slot.
+- **Fast Image Export** opens an export dialog for PNG or JPEG, the active
+  document or all open documents, and the source, configured, or newly chosen
+  output folder.
+
+Documents must already have a file name for Fast Image Export. PNG compression
+and alpha handling, JPEG quality, and the configured output folder are retained
+between uses.
+
+## Custom settings
+
+Open **Settings > Configure Krita > General > Custom** to configure the nine
+foreground-color slots and these default-enabled options:
+
+- **Color Pick from Anywhere** registers the fixed Windows system-wide shortcut
+  `Win+Shift+C`. It samples the pixel under the cursor, including from another
+  application, and makes it Krita's foreground color.
+- **Disable top menu shortcuts** removes mnemonic activation from Krita's top
+  menu labels. Disable the option to restore normal menu mnemonics.
+
+Color Pick from Anywhere is available only on Windows.

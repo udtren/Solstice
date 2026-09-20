@@ -118,6 +118,7 @@ private Q_SLOTS:
     void selectionChanged(const QModelIndexList &selection);
     void slotNodeManagerChangedSelection(const QList<KisNodeSP> &nodes);
     void slotColorLabelChanged(int index);
+    void slotColorVisibilityChanged(int index);
     void slotUpdateIcons();
     void toggleActiveLayerSolo();
     void updateLayerOpMenu(const QModelIndex &index, QMenu &menu);
@@ -216,4 +217,3 @@ public:
 };
 
 #endif // KIS_LAYERBOX_H
-

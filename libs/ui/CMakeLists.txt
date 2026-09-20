@@ -165,6 +165,7 @@ set(kritaui_LIB_SRCS
     KisImageThumbnailStrokeStrategy.cpp
     KisTextPropertiesManager.cpp
     KisLongPressEventFilter.cpp
+    KisSolsticeLazyTools.cpp
 
     opengl/kis_opengl.cpp
     opengl/kis_opengl_canvas2.cpp
