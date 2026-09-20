@@ -13,6 +13,7 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
@@ -20,6 +21,7 @@
 #include <QGroupBox>
 #include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
@@ -28,6 +30,7 @@
 #include <QScreen>
 #include <QScrollArea>
 #include <QSpinBox>
+#include <QTextStream>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -40,6 +43,7 @@
 
 #include <KoColor.h>
 #include <KoColorSpaceRegistry.h>
+#include <KoResourcePaths.h>
 
 #include "KisDocument.h"
 #include "KisMainWindow.h"
@@ -55,6 +59,8 @@
 #include "kis_image.h"
 #include "kis_node.h"
 #include "kis_node_commands_adapter.h"
+#include "kis_node_manager.h"
+#include "kis_node_view_color_scheme.h"
 #include "kis_properties_configuration.h"
 #include "kis_selection.h"
 #include "kis_selection_mask.h"
@@ -195,6 +201,185 @@ QColor defaultForegroundColor(int slot)
                                     QColor(118, 119, 114)};
     return colors[qBound(1, slot, 9) - 1];
 }
+
+int colorLabelIndex(const QString &name)
+{
+    static const QHash<QString, int> labels = {
+        {QStringLiteral("blue"), 1},
+        {QStringLiteral("green"), 2},
+        {QStringLiteral("yellow"), 3},
+        {QStringLiteral("orange"), 4},
+        {QStringLiteral("brown"), 5},
+        {QStringLiteral("red"), 6},
+        {QStringLiteral("purple"), 7},
+        {QStringLiteral("grey"), 8},
+        {QStringLiteral("gray"), 8},
+    };
+    return labels.value(name.trimmed().toLower(), 0);
+}
+
+QString colorLabelName(int index)
+{
+    static const QStringList names = {QString(),
+                                      QStringLiteral("Blue"),
+                                      QStringLiteral("Green"),
+                                      QStringLiteral("Yellow"),
+                                      QStringLiteral("Orange"),
+                                      QStringLiteral("Brown"),
+                                      QStringLiteral("Red"),
+                                      QStringLiteral("Purple"),
+                                      QStringLiteral("Grey")};
+    return names.value(index);
+}
+
+QString renamePresetPath()
+{
+    return QDir(KoResourcePaths::getAppDataLocation())
+        .filePath(QStringLiteral("lazy_tools/config/name_color_list.txt"));
+}
+
+class RenameLayerDialog : public QDialog
+{
+public:
+    explicit RenameLayerDialog(KisViewManager *viewManager)
+        : QDialog(viewManager->mainWindowAsQWidget())
+        , m_viewManager(viewManager)
+    {
+        setWindowTitle(i18n("Rename Layer"));
+        setMinimumSize(240, 200);
+
+        KisConfig cfg(true);
+        const int columns = qMax(1, cfg.readEntry<int>("Solstice/RenameGridColumns", 3));
+        resize(qMax(240, cfg.readEntry<int>("Solstice/RenameDialogWidth", 500)),
+               qMax(200, cfg.readEntry<int>("Solstice/RenameDialogHeight", 800)));
+
+        auto *layout = new QVBoxLayout(this);
+        auto *scrollArea = new QScrollArea(this);
+        scrollArea->setWidgetResizable(true);
+        auto *presetsWidget = new QWidget(scrollArea);
+        auto *grid = new QGridLayout(presetsWidget);
+        grid->setContentsMargins(0, 0, 0, 0);
+        grid->setSpacing(4);
+        grid->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+
+        QFile presetFile(renamePresetPath());
+        if (presetFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            int buttonIndex = 0;
+            QTextStream stream(&presetFile);
+            while (!stream.atEnd()) {
+                const QString line = stream.readLine().trimmed();
+                if (line.isEmpty()) {
+                    continue;
+                }
+                const qsizetype comma = line.indexOf(QLatin1Char(','));
+                const QString name = (comma < 0 ? line : line.left(comma)).trimmed();
+                const int label = comma < 0 ? 0 : colorLabelIndex(line.mid(comma + 1));
+                if (name.isEmpty()) {
+                    continue;
+                }
+                auto *button = new QPushButton(name, presetsWidget);
+                button->setMinimumHeight(28);
+                if (label > 0) {
+                    QPixmap pixmap(14, 14);
+                    pixmap.fill(KisNodeViewColorScheme::instance()->colorFromLabelIndex(label));
+                    button->setIcon(QIcon(pixmap));
+                }
+                connect(button, &QPushButton::clicked, this, [this, name, label] {
+                    apply(name, label);
+                });
+                grid->addWidget(button, buttonIndex / columns, buttonIndex % columns);
+                ++buttonIndex;
+            }
+            for (int column = 0; column < columns; ++column) {
+                grid->setColumnStretch(column, 1);
+            }
+        }
+        scrollArea->setWidget(presetsWidget);
+        layout->addWidget(scrollArea);
+
+        auto *manualLayout = new QHBoxLayout;
+        m_colorCombo = new QComboBox(this);
+        const QVector<QColor> colors = KisNodeViewColorScheme::instance()->allColorLabels();
+        for (int index = 0; index <= 8; ++index) {
+            QPixmap pixmap(14, 14);
+            pixmap.fill(index == 0 ? Qt::white : colors.value(index));
+            m_colorCombo->addItem(QIcon(pixmap), QString(), index);
+            m_colorCombo->setItemData(index, index == 0 ? i18n("None") : colorLabelName(index), Qt::ToolTipRole);
+        }
+        m_nameInput = new QLineEdit(this);
+        m_nameInput->setPlaceholderText(i18n("Layer name"));
+        m_savePreset = new QCheckBox(i18n("Save"), this);
+        manualLayout->addWidget(m_colorCombo);
+        manualLayout->addWidget(m_nameInput);
+        manualLayout->addWidget(m_savePreset);
+        layout->addLayout(manualLayout);
+
+        auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+        layout->addWidget(buttons);
+        connect(buttons, &QDialogButtonBox::accepted, this, [this] {
+            const QString name = m_nameInput->text().trimmed();
+            if (name.isEmpty()) {
+                return;
+            }
+            const int label = m_colorCombo->currentData().toInt();
+            if (m_savePreset->isChecked()) {
+                savePreset(name, label);
+            }
+            apply(name, label);
+        });
+        connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+        connect(m_nameInput, &QLineEdit::returnPressed, buttons->button(QDialogButtonBox::Ok), &QPushButton::click);
+        m_nameInput->setFocus();
+    }
+
+    ~RenameLayerDialog() override
+    {
+        KisConfig cfg(false);
+        cfg.writeEntry("Solstice/RenameDialogWidth", width());
+        cfg.writeEntry("Solstice/RenameDialogHeight", height());
+    }
+
+private:
+    void apply(const QString &name, int label)
+    {
+        KisNodeSP node = m_viewManager->activeNode();
+        if (!node || name.isEmpty()) {
+            return;
+        }
+        m_viewManager->nodeManager()->setNodeName(node, name);
+        node->setColorLabelIndex(label);
+        accept();
+    }
+
+    void savePreset(const QString &name, int label)
+    {
+        const QString path = renamePresetPath();
+        QDir().mkpath(QFileInfo(path).absolutePath());
+
+        QStringList lines;
+        QFile input(path);
+        if (input.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream stream(&input);
+            while (!stream.atEnd()) {
+                lines << stream.readLine();
+            }
+        }
+        const QString newLine = label > 0 ? QStringLiteral("%1, %2").arg(name, colorLabelName(label)) : name;
+        if (!lines.contains(newLine)) {
+            lines << newLine;
+            QFile output(path);
+            if (output.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+                QTextStream stream(&output);
+                stream << lines.join(QLatin1Char('\n'));
+            }
+        }
+    }
+
+    KisViewManager *m_viewManager{nullptr};
+    QComboBox *m_colorCombo{nullptr};
+    QLineEdit *m_nameInput{nullptr};
+    QCheckBox *m_savePreset{nullptr};
+};
 
 class SelectionMaskPopup : public QDialog
 {
@@ -457,6 +642,10 @@ void KisSolsticeLazyTools::createActions()
     connect(action, &QAction::triggered, this, [this] {
         showFastExportDialog();
     });
+    action = m_viewManager->actionManager()->createAction("rename_alternative");
+    connect(action, &QAction::triggered, this, [this] {
+        showRenameDialog();
+    });
     action = m_viewManager->actionManager()->createAction("screen_color_picker");
     connect(action, &QAction::triggered, this, [this] {
         pickColorFromScreen();
@@ -526,6 +715,13 @@ void KisSolsticeLazyTools::setForegroundColor(int slot)
 void KisSolsticeLazyTools::showFastExportDialog()
 {
     (new FastExportDialog(m_viewManager))->show();
+}
+
+void KisSolsticeLazyTools::showRenameDialog()
+{
+    RenameLayerDialog dialog(m_viewManager);
+    dialog.move(QCursor::pos());
+    dialog.exec();
 }
 
 void KisSolsticeLazyTools::pickColorFromScreen()

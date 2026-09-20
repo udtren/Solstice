@@ -34,11 +34,11 @@ QuickColorSelectorWidget::QuickColorSelectorWidget(QWidget *parent)
     layout->setSpacing(6);
 
     auto *swatches = new QWidget(this);
-    swatches->setFixedSize(64, 58);
+    swatches->setFixedSize(48, 44);
     m_background = new QToolButton(swatches);
     m_foreground = new QToolButton(swatches);
-    m_background->setGeometry(22, 18, 38, 38);
-    m_foreground->setGeometry(2, 0, 38, 38);
+    m_background->setGeometry(18, 14, 28, 28);
+    m_foreground->setGeometry(2, 0, 28, 28);
     m_background->setToolTip(i18nc("@info:tooltip", "Background color; click to swap colors"));
     m_foreground->setToolTip(i18nc("@info:tooltip", "Foreground color; click to swap colors"));
     layout->addWidget(swatches, 0, Qt::AlignLeft);

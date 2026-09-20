@@ -1999,6 +1999,11 @@
       <toolTip>Export active or open documents with PNG or JPEG options</toolTip>
       <activationFlags>1</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable>
     </Action>
+    <Action name="rename_alternative">
+      <text>Rename Alternative</text>
+      <toolTip>Rename the active layer using saved name and color presets</toolTip>
+      <activationFlags>1</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable>
+    </Action>
     <Action name="screen_color_picker">
       <text>Pick Color from Anywhere</text>
       <toolTip>Pick the screen color under the cursor (Win+Shift+C)</toolTip>

@@ -100,7 +100,8 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
 - HueSVC and its popup share `QuickColorSelectorWidget`. The hue strip remains
   a vivid static full-saturation/default-lightness rainbow while the S/V square
   is dynamic. Rectangular static hue rendering is in
-  `KisVisualRectangleSelectorShape`.
+  `KisVisualRectangleSelectorShape`. The foreground/background controls use
+  overlapping 28 px swatches inside a 48 × 44 px top-left container.
 - Quick Adjust color history updates only from actual foreground-color use or
   painting and resets once per Krita process, not on every selector change.
 - Temporary Brushes are hold actions: save the current preset and size on

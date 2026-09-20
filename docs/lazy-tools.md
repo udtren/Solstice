@@ -29,6 +29,9 @@ Keyboard Shortcuts**:
 - **Fast Image Export** opens an export dialog for PNG or JPEG, the active
   document or all open documents, and the source, configured, or newly chosen
   output folder.
+- **Rename Alternative** opens a preset-based rename dialog at the mouse
+  cursor. A preset changes the active layer's name and optional color label.
+  Manual names can be saved as new presets.
 
 Documents must already have a file name for Fast Image Export. PNG compression
 and alpha handling, JPEG quality, and the configured output folder are retained
@@ -46,3 +49,8 @@ foreground-color slots and these default-enabled options:
   menu labels. Disable the option to restore normal menu mnemonics.
 
 Color Pick from Anywhere is available only on Windows.
+
+Rename presets remain compatible with the Python plugin and are stored in
+`lazy_tools/config/name_color_list.txt` inside Krita's user data directory.
+Each line uses `layer name` or `layer name, Color`; supported color names are
+Blue, Green, Yellow, Orange, Brown, Red, Purple, and Grey.

@@ -43,6 +43,10 @@ DLLs on Windows.
   `exportDocumentSync`, and skip unnamed documents rather than inventing paths.
 - Foreground slot colors and export options are persisted under `Solstice/` in
   `kritarc`.
+- Rename Alternative reads and appends presets in the legacy-compatible
+  `lazy_tools/config/name_color_list.txt` user-data path. Layer renaming uses
+  `KisNodeManager::setNodeName()` so the name change is undoable; color labels
+  apply only to the active node.
 - The Layers docker visibility selector intentionally changes canvas-layer
   visibility. Do not confuse it with Krita's existing filter button, which only
   filters rows shown in the docker.
@@ -64,3 +68,6 @@ DLLs on Windows.
    hotkey is released.
 7. Toggle top-menu shortcut suppression on and off and verify menu labels and
    Alt-key behavior are restored correctly.
+8. Trigger Rename Alternative near each screen edge, apply plain and colored
+   presets, save a manual preset, and verify the layer name change can be
+   undone without affecting child layers.
