@@ -13,7 +13,6 @@ It preserves Krita's painting workflow while integrating project-specific interf
   - [Vision ML](#vision-ml)
 - [New Features](#new-features)
   - [Puppet Warp](#puppet-warp)
-- [Branches](#branches)
 - [Building](#building)
 
 ## Main differences from upstream Krita
@@ -52,16 +51,6 @@ The following external Python plugins have been reimplemented as native Krita fe
 <img src="/images/puppet_warp_1.png" alt="Puppet Warp mesh" width="50%">
 
 [`Puppet Warp documentation`](docs/puppet-warp.md)
-
-## Branches
-
-| Branch | Purpose |
-| --- | --- |
-| `krita-sol` | Custom Krita Sol development and builds |
-| `krita/6.0` | Clean tracking branch for synchronizing with upstream Krita 6 |
-
-Custom changes should be made on `krita-sol`. Keep `krita/6.0` aligned with upstream so future
-updates can be integrated cleanly.
 
 ## Building
 

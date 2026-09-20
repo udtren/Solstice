@@ -17,6 +17,16 @@
   preview/final-render consistency, serialized state, and current interaction
   unless the user requests a behavior change.
 
+## Branch policy
+
+| Branch | Purpose |
+| --- | --- |
+| `krita-sol` | Custom Krita Sol development and builds |
+| `krita/6.0` | Clean tracking branch for synchronizing with upstream Krita 6 |
+
+Make custom changes on `krita-sol`. Keep `krita/6.0` aligned with upstream so
+future updates can be integrated cleanly.
+
 ## Documentation organization
 
 - Treat `README.md` as a concise project index. Feature entries contain only a
