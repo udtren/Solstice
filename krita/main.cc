@@ -1,24 +1,25 @@
 /*
-* SPDX-FileCopyrightText: 1999 Matthias Elter <me@kde.org>
-* SPDX-FileCopyrightText: 2002 Patrick Julien <freak@codepimps.org>
-* SPDX-FileCopyrightText: 2015 Boudewijn Rempt <boud@valdyas.org>
-*
-*  SPDX-License-Identifier: GPL-2.0-or-later
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public License
-*  along with this program; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-*/
+ * SPDX-FileCopyrightText: 1999 Matthias Elter <me@kde.org>
+ * SPDX-FileCopyrightText: 2002 Patrick Julien <freak@codepimps.org>
+ * SPDX-FileCopyrightText: 2015 Boudewijn Rempt <boud@valdyas.org>
+ *
+ *  SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
 
 #include <KLocalizedTranslator>
 #include <QByteArray>
 #include <QDate>
 #include <QDir>
+#include <QImageReader>
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QMessageBox>
@@ -31,10 +32,10 @@
 #include <QString>
 #include <QThread>
 #include <QTranslator>
-#include <QImageReader>
 
 #include <kaboutdata.h>
 
+#include "KritaVersionWrapper.h"
 #include <KisApplication.h>
 #include <KisMainWindow.h>
 #include <KisSupportedArchitectures.h>
@@ -45,35 +46,34 @@
 #include <kis_debug.h>
 #include <kis_image_config.h>
 #include <opengl/kis_opengl.h>
-#include "KritaVersionWrapper.h"
 
 #include "KisApplicationArguments.h"
 #include "KisDocument.h"
 #include "KisPart.h"
 #include "KisUiFont.h"
+#include "config-qt-patches-present.h"
 #include "input/KisQtWidgetsTweaker.h"
 #include "kis_splash_screen.h"
-#include "config-qt-patches-present.h"
 
 #ifdef Q_OS_ANDROID
-#include <QtAndroid>
 #include <KisAndroidCrashHandler.h>
 #include <KisAndroidUtils.h>
+#include <QtAndroid>
 #endif
 
 #if defined Q_OS_WIN
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 // this include is Qt5-only, the switch to WinTab is embedded in Qt
-#  include "config_qt5_has_wintab_switch.h"
+#include "config_qt5_has_wintab_switch.h"
 #else
-#  include <QtGui/private/qguiapplication_p.h>
-#  include <QtGui/qpa/qplatformintegration.h>
+#include <QtGui/private/qguiapplication_p.h>
+#include <QtGui/qpa/qplatformintegration.h>
 #endif
-#include <windows.h>
-#include <winuser.h>
-#include <dialogs/KisDlgCustomTabletResolution.h>
 #include "config-high-dpi-scale-factor-rounding-policy.h"
 #include "config-set-has-border-in-full-screen-default.h"
+#include <dialogs/KisDlgCustomTabletResolution.h>
+#include <windows.h>
+#include <winuser.h>
 #ifdef HAVE_SET_HAS_BORDER_IN_FULL_SCREEN_DEFAULT
 #include <QtPlatformHeaders/QWindowsWindowFunctions>
 #endif
@@ -86,9 +86,9 @@
 #endif
 
 #ifdef Q_OS_HAIKU
-#include <unistd.h>
-#include <sys/types.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #if defined HAVE_KCRASH
@@ -115,13 +115,15 @@ void tryInitDrMingw()
     using ExcHndlSetLogFileNameA_type = BOOL(APIENTRY *)(const char *);
 
     // No need to call ExcHndlInit since the crash handler is installed on DllMain
-    const auto myExcHndlSetLogFileNameA = cast_to_function<ExcHndlSetLogFileNameA_type>(hMod.resolve("ExcHndlSetLogFileNameA"));
+    const auto myExcHndlSetLogFileNameA =
+        cast_to_function<ExcHndlSetLogFileNameA_type>(hMod.resolve("ExcHndlSetLogFileNameA"));
     if (!myExcHndlSetLogFileNameA) {
         return;
     }
 
     // Set the log file path to %LocalAppData%\kritacrash.log
-    const QString logFile = QDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)).absoluteFilePath("kritacrash.log");
+    const QString logFile = QDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation))
+                                .absoluteFilePath("kritacrash.log");
     const QByteArray logFilePath = QDir::toNativeSeparators(logFile).toLocal8Bit();
     myExcHndlSetLogFileNameA(logFilePath.data());
 }
@@ -147,7 +149,8 @@ void resetRotation()
         qWarning() << "Failed to load user32.dll! This really should not happen.";
         return;
     }
-    auto pSetDisplayAutoRotationPreferences = cast_to_function<pSetDisplayAutoRotationPreferences_t>(user32Lib.resolve("SetDisplayAutoRotationPreferences"));
+    auto pSetDisplayAutoRotationPreferences =
+        cast_to_function<pSetDisplayAutoRotationPreferences_t>(user32Lib.resolve("SetDisplayAutoRotationPreferences"));
     if (!pSetDisplayAutoRotationPreferences) {
         dbgKrita << "Failed to load function SetDisplayAutoRotationPreferences";
         return;
@@ -159,17 +162,15 @@ void resetRotation()
 #endif
 
 #ifdef Q_OS_ANDROID
-extern "C" JNIEXPORT void JNICALL
-Java_org_krita_android_JNIWrappers_saveState(JNIEnv* /*env*/,
-                                             jobject /*obj*/,
-                                             jint    /*n*/)
+extern "C" JNIEXPORT void
+    JNICALL Java_org_krita_android_JNIWrappers_saveState(JNIEnv * /*env*/, jobject /*obj*/, jint /*n*/)
 {
-    if (!KisPart::exists()) return;
+    if (!KisPart::exists())
+        return;
 
     KisPart *kisPart = KisPart::instance();
     QList<QPointer<KisDocument>> list = kisPart->documents();
-    for (QPointer<KisDocument> &doc: list)
-    {
+    for (QPointer<KisDocument> &doc : list) {
         doc->autoSaveOnPause();
     }
 
@@ -178,10 +179,9 @@ Java_org_krita_android_JNIWrappers_saveState(JNIEnv* /*env*/,
     kritarc.setValue("canvasState", "OPENGL_SUCCESS");
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_org_krita_android_JNIWrappers_hasMainWindowLoaded(JNIEnv * /*env*/,
-                                                       jobject /*obj*/,
-                                                       jint /*n*/)
+extern "C" JNIEXPORT jboolean JNICALL Java_org_krita_android_JNIWrappers_hasMainWindowLoaded(JNIEnv * /*env*/,
+                                                                                             jobject /*obj*/,
+                                                                                             jint /*n*/)
 {
     if (!KisPart::exists()) {
         return false;
@@ -191,20 +191,21 @@ Java_org_krita_android_JNIWrappers_hasMainWindowLoaded(JNIEnv * /*env*/,
     return (bool)mainWindow;
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_org_krita_android_JNIWrappers_openFileFromIntent(JNIEnv* /*env*/,
-                                                      jobject /*obj*/,
-                                                      jstring str)
+extern "C" JNIEXPORT void JNICALL Java_org_krita_android_JNIWrappers_openFileFromIntent(JNIEnv * /*env*/,
+                                                                                        jobject /*obj*/,
+                                                                                        jstring str)
 {
     QAndroidJniObject jUri(str);
     if (jUri.isValid()) {
         QString uri = jUri.toString();
-        QMetaObject::invokeMethod(KisApplication::instance(), "fileOpenRequested",
-                                  Qt::QueuedConnection, Q_ARG(QString, uri));
+        QMetaObject::invokeMethod(KisApplication::instance(),
+                                  "fileOpenRequested",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(QString, uri));
     }
 }
 
-#define MAIN_EXPORT __attribute__ ((visibility ("default")))
+#define MAIN_EXPORT __attribute__((visibility("default")))
 #define MAIN_FN main
 #elif defined Q_OS_WIN
 #define MAIN_EXPORT __declspec(dllexport)
@@ -253,19 +254,20 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 
     // A per-user unique string, without /, because QLocalServer cannot use names with a / in it
     QString key = "Krita5" + QStandardPaths::writableLocation(QStandardPaths::HomeLocation).replace("/", "_");
-    key = key.replace(":", "_").replace("\\","_");
+    key = key.replace(":", "_").replace("\\", "_");
 
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
 
     QCoreApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings, true);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    //Does nothing on Qt6.
+    // Does nothing on Qt6.
     QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 #endif
     QCoreApplication::setAttribute(Qt::AA_DisableShaderDiskCache, true);
 
     // In Qt6, QImageReader has an allocation limit to prevent large memory allocations.
-    // However in Qt5 this doesn't exist, and can easily trigger in KisFileIconCreator while creating icons on large thumbnails.
+    // However in Qt5 this doesn't exist, and can easily trigger in KisFileIconCreator while creating icons on large
+    // thumbnails.
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QImageReader::setAllocationLimit(0);
 #endif
@@ -290,24 +292,20 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 
 #ifdef Q_OS_ANDROID
     const QString write_permission = "android.permission.WRITE_EXTERNAL_STORAGE";
-    const QStringList permissions = { write_permission };
-    const QtAndroid::PermissionResultMap resultHash =
-            QtAndroid::requestPermissionsSync(QStringList(permissions));
+    const QStringList permissions = {write_permission};
+    const QtAndroid::PermissionResultMap resultHash = QtAndroid::requestPermissionsSync(QStringList(permissions));
 
     if (resultHash[write_permission] == QtAndroid::PermissionResult::Denied) {
         // TODO: show a dialog and graciously exit
         dbgKrita << "Permission denied by the user";
-    }
-    else {
+    } else {
         dbgKrita << "Permission granted";
     }
 
     KisAndroidCrashHandler::handler_init();
 
-    qputenv("FONTCONFIG_PATH",
-            QFile::encodeName(KoResourcePaths::getApplicationRoot()) + "/share/etc/fonts/");
-    qputenv("XDG_CACHE_HOME",
-            QFile::encodeName(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)));
+    qputenv("FONTCONFIG_PATH", QFile::encodeName(KoResourcePaths::getApplicationRoot()) + "/share/etc/fonts/");
+    qputenv("XDG_CACHE_HOME", QFile::encodeName(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)));
 #endif
 
 /**
@@ -336,8 +334,8 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
     if (isInAppimage) {
         QString appimageMountDir = qgetenv("APPDIR");
 
-        {   // MLT
-            //Plugins Path is where mlt should expect to find its plugin libraries.
+        { // MLT
+            // Plugins Path is where mlt should expect to find its plugin libraries.
             const QString mltLibs = "/usr/lib/mlt-7";
             const QString mltData = "/usr/share/mlt-7";
 
@@ -416,19 +414,20 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 #endif
 
 #ifdef HAVE_X11
-    if (!qEnvironmentVariableIsSet("QT_XCB_GL_INTEGRATION")) {
-        if (KisConfig::preferXcbEglProvider(&kritarc)) {
-            qputenv("QT_XCB_GL_INTEGRATION", "xcb_egl");
+        if (!qEnvironmentVariableIsSet("QT_XCB_GL_INTEGRATION")) {
+            if (KisConfig::preferXcbEglProvider(&kritarc)) {
+                qputenv("QT_XCB_GL_INTEGRATION", "xcb_egl");
+            }
         }
-    }
 #endif
 
-if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
+        if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
             enableOpenGLDebug = true;
         } else {
             enableOpenGLDebug = kritarc.value("EnableOpenGLDebug", false).toBool();
         }
-        if (enableOpenGLDebug && (qgetenv("KRITA_OPENGL_DEBUG") == "sync" || kritarc.value("OpenGLDebugSynchronous", false).toBool())) {
+        if (enableOpenGLDebug
+            && (qgetenv("KRITA_OPENGL_DEBUG") == "sync" || kritarc.value("OpenGLDebugSynchronous", false).toBool())) {
             openGLDebugSynchronous = true;
         }
 
@@ -444,8 +443,7 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
 #endif
         preferredRenderer = KisOpenGL::convertConfigToOpenGLRenderer(preferredRendererString);
 
-        const KisConfig::CanvasSurfaceBitDepthMode bitDepthMode =
-            KisConfig::canvasSurfaceBitDepthMode(&kritarc);
+        const KisConfig::CanvasSurfaceBitDepthMode bitDepthMode = KisConfig::canvasSurfaceBitDepthMode(&kritarc);
 
         const KisOpenGL::RendererConfig config =
             KisOpenGL::selectSurfaceConfig(preferredRenderer, rootSurfaceFormat, bitDepthMode, enableOpenGLDebug);
@@ -454,60 +452,60 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
         KisOpenGL::setDebugSynchronous(openGLDebugSynchronous);
 
 #if defined Q_OS_WIN || defined Q_OS_MACOS
-    qputenv("QT_WIDGETS_RHI", "1");
-    qputenv("QT_WIDGETS_RHI_BACKEND", "opengl");
-    qputenv("QSG_RHI_BACKEND", "opengl");
+        qputenv("QT_WIDGETS_RHI", "1");
+        qputenv("QT_WIDGETS_RHI_BACKEND", "opengl");
+        qputenv("QSG_RHI_BACKEND", "opengl");
 #endif
 
 #if defined Q_OS_WIN && QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    if (config.rendererId() == KisOpenGL::RendererOpenGLES) {
-        /**
-         * Activate anti-flickering workarounds in Qt for ANGLE backend.
-         * They should **not** be activated for openGL backend, because
-         * it may cause flickering :)
-         */
-        if (!qEnvironmentVariableIsSet("QT_USE_PREMATURE_RESIZE_EVENTS")) {
-            qInfo() << "INFO: activating QT_USE_PREMATURE_RESIZE_EVENTS...";
-            qputenv("QT_USE_PREMATURE_RESIZE_EVENTS", "1");
+        if (config.rendererId() == KisOpenGL::RendererOpenGLES) {
+            /**
+             * Activate anti-flickering workarounds in Qt for ANGLE backend.
+             * They should **not** be activated for openGL backend, because
+             * it may cause flickering :)
+             */
+            if (!qEnvironmentVariableIsSet("QT_USE_PREMATURE_RESIZE_EVENTS")) {
+                qInfo() << "INFO: activating QT_USE_PREMATURE_RESIZE_EVENTS...";
+                qputenv("QT_USE_PREMATURE_RESIZE_EVENTS", "1");
+            }
+            if (!qEnvironmentVariableIsSet("QT_ANGLE_MANUALLY_UPDATE_SURFACE_SIZE")) {
+                qInfo() << "INFO: activating QT_ANGLE_MANUALLY_UPDATE_SURFACE_SIZE...";
+                qputenv("QT_ANGLE_MANUALLY_UPDATE_SURFACE_SIZE", "1");
+            }
+            if (!qEnvironmentVariableIsSet("QT_PREFILL_RHI_SURFACE")) {
+                qInfo() << "INFO: activating QT_PREFILL_RHI_SURFACE...";
+                qputenv("QT_PREFILL_RHI_SURFACE", "1");
+            }
         }
-        if (!qEnvironmentVariableIsSet("QT_ANGLE_MANUALLY_UPDATE_SURFACE_SIZE")) {
-            qInfo() << "INFO: activating QT_ANGLE_MANUALLY_UPDATE_SURFACE_SIZE...";
-            qputenv("QT_ANGLE_MANUALLY_UPDATE_SURFACE_SIZE", "1");
-        }
-        if (!qEnvironmentVariableIsSet("QT_PREFILL_RHI_SURFACE")) {
-            qInfo() << "INFO: activating QT_PREFILL_RHI_SURFACE...";
-            qputenv("QT_PREFILL_RHI_SURFACE", "1");
-        }
-    }
 #endif
 
 #if defined Q_OS_WIN
-    /**
-     * Disabling accessibility at the runtime is currently available on Windows only
-     */
-    if (!qEnvironmentVariableIsSet("QT_DISABLE_ACCESSIBILITY")) {
-        if (kritarc.value("DisableAccessibilityInQt", false).toBool()) {
-            qInfo() << "INFO: activating QT_DISABLE_ACCESSIBILITY via kritadisplayrc...";
-            qputenv("QT_DISABLE_ACCESSIBILITY", "1");
+        /**
+         * Disabling accessibility at the runtime is currently available on Windows only
+         */
+        if (!qEnvironmentVariableIsSet("QT_DISABLE_ACCESSIBILITY")) {
+            if (kritarc.value("DisableAccessibilityInQt", false).toBool()) {
+                qInfo() << "INFO: activating QT_DISABLE_ACCESSIBILITY via kritadisplayrc...";
+                qputenv("QT_DISABLE_ACCESSIBILITY", "1");
+            }
+        } else {
+            if (qEnvironmentVariableIntValue("QT_DISABLE_ACCESSIBILITY")) {
+                qInfo() << "INFO: QT_DISABLE_ACCESSIBILITY is activated via environment...";
+            }
         }
-    } else {
-        if (qEnvironmentVariableIntValue("QT_DISABLE_ACCESSIBILITY")) {
-            qInfo() << "INFO: QT_DISABLE_ACCESSIBILITY is activated via environment...";
-        }
-    }
 #endif
 
 #if KRITA_QT_HAS_UPDATE_COMPRESSION_PATCH
-    if (!qEnvironmentVariableIsSet("QT_BACKING_STORE_USE_FAST_QIMAGE_TRANSFER")) {
-        qputenv("QT_BACKING_STORE_USE_FAST_QIMAGE_TRANSFER", "1");
-    }
-
-    if (!qEnvironmentVariableIsSet("QT_FRAME_RATE_OVERRIDE")) {
-        KisImageConfig cfg(true);
-        if (!cfg.detectFpsLimit()) {
-            qputenv("QT_FRAME_RATE_OVERRIDE", QString::number(cfg.fpsLimit()).toLatin1());
+        if (!qEnvironmentVariableIsSet("QT_BACKING_STORE_USE_FAST_QIMAGE_TRANSFER")) {
+            qputenv("QT_BACKING_STORE_USE_FAST_QIMAGE_TRANSFER", "1");
         }
-    }
+
+        if (!qEnvironmentVariableIsSet("QT_FRAME_RATE_OVERRIDE")) {
+            KisImageConfig cfg(true);
+            if (!cfg.detectFpsLimit()) {
+                qputenv("QT_FRAME_RATE_OVERRIDE", QString::number(cfg.fpsLimit()).toLatin1());
+            }
+        }
 #endif
 
 #ifdef Q_OS_WIN
@@ -519,7 +517,6 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     if (logUsage) {
         KisUsageLogger::initialize();
     }
-
 
 #if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
     {
@@ -533,7 +530,7 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
         qputenv("XDG_DATA_DIRS", QString(QFile::encodeName(root + "share") + ":" + originalXdgDataDirs).toUtf8());
     }
 #elif defined(Q_OS_HAIKU)
-	qputenv("KRITA_PLUGIN_PATH", QString(QFile::encodeName(root + "lib")).toUtf8());
+    qputenv("KRITA_PLUGIN_PATH", QString(QFile::encodeName(root + "lib")).toUtf8());
     qputenv("XDG_DATA_DIRS", QString(QFile::encodeName(root + "share") + ":" + qgetenv("XDG_DATA_DIRS")).toUtf8());
 #else
     qputenv("XDG_DATA_DIRS", QFile::encodeName(QDir(root + "share").absolutePath()));
@@ -566,13 +563,12 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
 #endif
 
         const QStringList rtlLanguages = QStringList()
-                << "ar" << "dv" << "he" << "ha" << "ku" << "fa" << "ps" << "ur" << "yi";
+            << "ar" << "dv" << "he" << "ha" << "ku" << "fa" << "ps" << "ur" << "yi";
 
         if (rtlLanguages.contains(firstLanguage)) {
             rightToLeft = true;
         }
-    }
-    else {
+    } else {
         dbgLocale << "Qt UI languages:" << QLocale::system().uiLanguages() << qgetenv("LANG");
 
         // And if there isn't one, check the one set by the system.
@@ -582,12 +578,11 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
         // QLocale::uiLanguages() fails on Android, so if the fallback locale is being
         // used we, try to fetch the device's default locale.
         if (locale.name() == QLocale::c().name()) {
-            QAndroidJniObject localeJniObj = QAndroidJniObject::callStaticObjectMethod(
-                "java/util/Locale", "getDefault", "()Ljava/util/Locale;");
+            QAndroidJniObject localeJniObj =
+                QAndroidJniObject::callStaticObjectMethod("java/util/Locale", "getDefault", "()Ljava/util/Locale;");
 
             if (localeJniObj.isValid()) {
-                QAndroidJniObject tag = localeJniObj.callObjectMethod("toLanguageTag",
-                                                                      "()Ljava/lang/String;");
+                QAndroidJniObject tag = localeJniObj.callObjectMethod("toLanguageTag", "()Ljava/lang/String;");
                 if (tag.isValid()) {
                     locale = QLocale(tag.toString());
                 }
@@ -597,18 +592,15 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
         if (locale.name() != QStringLiteral("en")) {
             QStringList uiLanguages = locale.uiLanguages();
             for (QString &uiLanguage : uiLanguages) {
-
                 // This list of language codes that can have a specifier should
                 // be extended whenever we have translations that need it; right
                 // now, only en, pt, zh are in this situation.
 
                 if (uiLanguage.startsWith("en") || uiLanguage.startsWith("pt")) {
                     uiLanguage.replace(QChar('-'), QChar('_'));
-                }
-                else if (uiLanguage.startsWith("zh-Hant") || uiLanguage.startsWith("zh-TW")) {
+                } else if (uiLanguage.startsWith("zh-Hant") || uiLanguage.startsWith("zh-TW")) {
                     uiLanguage = "zh_TW";
-                }
-                else if (uiLanguage.startsWith("zh-Hans") || uiLanguage.startsWith("zh-CN")) {
+                } else if (uiLanguage.startsWith("zh-Hans") || uiLanguage.startsWith("zh-CN")) {
                     uiLanguage = "zh_CN";
                 }
             }
@@ -652,12 +644,10 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     const bool forceWinTab = !KisConfig::useWin8PointerInputNoApp(&kritarc);
     QCoreApplication::setAttribute(Qt::AA_MSWindowsUseWinTabAPI, forceWinTab);
 
-    if (qEnvironmentVariableIsEmpty("QT_WINTAB_DESKTOP_RECT") &&
-        qEnvironmentVariableIsEmpty("QT_IGNORE_WINTAB_MAPPING")) {
-
+    if (qEnvironmentVariableIsEmpty("QT_WINTAB_DESKTOP_RECT")
+        && qEnvironmentVariableIsEmpty("QT_IGNORE_WINTAB_MAPPING")) {
         QRect customTabletRect;
-        KisDlgCustomTabletResolution::Mode tabletMode =
-            KisDlgCustomTabletResolution::getTabletMode(&customTabletRect);
+        KisDlgCustomTabletResolution::Mode tabletMode = KisDlgCustomTabletResolution::getTabletMode(&customTabletRect);
         KisDlgCustomTabletResolution::applyConfiguration(tabletMode, customTabletRect);
     }
 #endif
@@ -673,7 +663,6 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     }
 #endif
 
-
     installTranslators(app);
 
     KisUsageLogger::writeHeader();
@@ -685,12 +674,10 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     }
 #endif
 
-
     if (!language.isEmpty()) {
         if (rightToLeft) {
             KisApplication::setLayoutDirection(Qt::RightToLeft);
-        }
-        else {
+        } else {
             KisApplication::setLayoutDirection(Qt::LeftToRight);
         }
     }
@@ -724,21 +711,24 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
 
     /// Initialize application info, it will be used by both, Qt and
     /// DrKonqi of the host system
-    KAboutData aboutData("krita",
-                            "Krita",
-                            KritaVersionWrapper::versionString(true),
-                            "", // TODO: "short description" needs new string exception
-                            KAboutLicense::GPL,
-                            i18nc("@info:credit", "© 1999–2026 The Krita Developers"));
-    aboutData.setHomepage(QStringLiteral("https://krita.org"));
-    aboutData.setOrganizationDomain("krita.org");
+    KAboutData aboutData(
+        "krita",
+        "Solstice",
+        KritaVersionWrapper::versionString(true),
+        "", // TODO: "short description" needs new string exception
+        KAboutLicense::GPL,
+        i18nc("@info:credit",
+              "© 1999–2026 The Krita Developers; Solstice modifications © 2026 The Solstice Contributors"));
+    aboutData.setHomepage(QStringLiteral("https://github.com/udtren/Solstice"));
+    aboutData.setOrganizationDomain("github.com");
 
     // this call sets corresponding fields of QApplication as well
     KAboutData::setApplicationData(aboutData);
 
     // Note: Qt docs suggest we set organization name, but if we do, we get resource
     // paths of the form of krita/krita, which is weird.
-    KIS_SAFE_ASSERT_RECOVER(app.organizationName().isEmpty()) {
+    KIS_SAFE_ASSERT_RECOVER(app.organizationName().isEmpty())
+    {
         app.setOrganizationName("");
     }
 
@@ -746,18 +736,17 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     QDir appdir(KoResourcePaths::getApplicationRoot());
     QString path = qgetenv("PATH");
     qputenv("PATH",
-            QFile::encodeName(
-                QDir::toNativeSeparators(appdir.absolutePath() + "/bin") + ";" +
-                QDir::toNativeSeparators(appdir.absolutePath() + "/lib") + ";" +
-                QDir::toNativeSeparators(appdir.absolutePath()) + ";" +
-                path)
-            );
+            QFile::encodeName(QDir::toNativeSeparators(appdir.absolutePath() + "/bin") + ";"
+                              + QDir::toNativeSeparators(appdir.absolutePath() + "/lib") + ";"
+                              + QDir::toNativeSeparators(appdir.absolutePath()) + ";" + path));
 
     dbgKrita << "PATH" << qgetenv("PATH");
 #endif
 
     if (KisApplication::applicationDirPath().contains(KRITA_BUILD_DIR)) {
-        qFatal("FATAL: You're trying to run krita from the build location. You can only run Krita from the installation location.");
+        qFatal(
+            "FATAL: You're trying to run krita from the build location. You can only run Krita from the installation "
+            "location.");
     }
 
 #if defined HAVE_KCRASH
@@ -797,7 +786,7 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
 #ifdef Q_OS_MACOS
     // HACK: Sandboxed macOS cannot use QSharedMemory on Qt<6
     else if (KisMacosEntitlements().sandbox()) {
-        if(iskritaRunningActivate()) {
+        if (iskritaRunningActivate()) {
             return 0;
         }
     }
@@ -825,13 +814,14 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
         // TODO QT6: update minimum requirement
         if (osVersion.majorVersion() < QOperatingSystemVersion::Windows7.majorVersion()) {
             if (cfg.readEntry("WarnedAboutUnsupportedWindows", false)) {
-                QMessageBox::information(nullptr,
-                                         i18nc("@title:window", "Krita: Warning"),
-                                         i18n("You are running an unsupported version of Windows: %1.\n"
-                                              "This is not recommended. Do not report any bugs.\n"
-                                              "Please update to a supported version of Windows: Windows 7, 8, 8.1 or 10.", osVersion.name()));
+                QMessageBox::information(
+                    nullptr,
+                    i18nc("@title:window", "Krita: Warning"),
+                    i18n("You are running an unsupported version of Windows: %1.\n"
+                         "This is not recommended. Do not report any bugs.\n"
+                         "Please update to a supported version of Windows: Windows 7, 8, 8.1 or 10.",
+                         osVersion.name()));
                 cfg.writeEntry("WarnedAboutUnsupportedWindows", true);
-
             }
         }
     }
@@ -851,24 +841,19 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     KisApplication::setAttribute(Qt::AA_CompressHighFrequencyEvents, false);
 
     // Set up remote arguments.
-    QObject::connect(&app, &KisApplication::messageReceived,
-                     &app, &KisApplication::remoteArguments);
+    QObject::connect(&app, &KisApplication::messageReceived, &app, &KisApplication::remoteArguments);
 
     // Hardware information
     KisUsageLogger::writeSysInfo("\nHardware Information\n");
-    KisUsageLogger::writeSysInfo(QString("  GPU Acceleration: %1").arg(kritarc.value("OpenGLRenderer", "auto").toString()));
+    KisUsageLogger::writeSysInfo(
+        QString("  GPU Acceleration: %1").arg(kritarc.value("OpenGLRenderer", "auto").toString()));
     KisUsageLogger::writeSysInfo(QString("  Memory: %1 Mb").arg(KisImageConfig::totalRAM()));
     KisUsageLogger::writeSysInfo(QString("  Number of Cores: %1").arg(QThread::idealThreadCount()));
     KisUsageLogger::writeSysInfo(QString("  Swap Location: %1").arg(KisImageConfig(true).swapDir()));
+    KisUsageLogger::writeSysInfo(QString("  Built for: %1").arg(KisSupportedArchitectures::baseArchName()));
+    KisUsageLogger::writeSysInfo(QString("  Base instruction set: %1").arg(KisSupportedArchitectures::bestArchName()));
     KisUsageLogger::writeSysInfo(
-        QString("  Built for: %1")
-            .arg(KisSupportedArchitectures::baseArchName()));
-    KisUsageLogger::writeSysInfo(
-        QString("  Base instruction set: %1")
-            .arg(KisSupportedArchitectures::bestArchName()));
-    KisUsageLogger::writeSysInfo(
-        QString("  Supported instruction sets: %1")
-            .arg(KisSupportedArchitectures::supportedInstructionSets()));
+        QString("  Supported instruction sets: %1").arg(KisSupportedArchitectures::supportedInstructionSets()));
     KisUsageLogger::writeSysInfo("");
 
     KisConfig(true).logImportantSettings();
@@ -894,7 +879,7 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     KisPart::instance()->unloadPlaybackEngine();
 
 #ifdef Q_OS_HAIKU
-	kill(::getpid(), SIGKILL);
+    kill(::getpid(), SIGKILL);
 #endif
 
     return state;
@@ -916,7 +901,7 @@ void removeInstalledTranslators(KisApplication &app)
 
     // ECMQmLoader creates all QTranslator's parented to the active QApp.
     QList<QTranslator *> translators = app.findChildren<QTranslator *>(QString(), Qt::FindDirectChildrenOnly);
-    Q_FOREACH(const auto &translator, translators) {
+    Q_FOREACH (const auto &translator, translators) {
         KisApplication::removeTranslator(translator);
     }
     dbgLocale << "Removed" << translators.size() << "QTranslator's";
@@ -958,8 +943,8 @@ void installQtTranslations(KisApplication &app)
 #endif
     dbgLocale << "Qt translations path:" << translationsPath;
 
-    Q_FOREACH(const auto &localeToLoad, localeList) {
-        Q_FOREACH(const auto &catalog, qtCatalogs) {
+    Q_FOREACH (const auto &localeToLoad, localeList) {
+        Q_FOREACH (const auto &catalog, qtCatalogs) {
             QTranslator *translator = new QTranslator(&app);
             if (translator->load(localeToLoad, catalog, QString(), translationsPath)) {
                 dbgLocale << "Loaded Qt translations for" << localeToLoad << catalog;
@@ -1019,8 +1004,9 @@ void installEcmTranslations(KisApplication &app)
 
     while (langIter.hasPrevious()) {
         const QString &localeDirName = langIter.previous();
-        Q_FOREACH(const auto &catalog, ecmCatalogs) {
-            QString subPath = QStringLiteral("locale/") % localeDirName % QStringLiteral("/LC_MESSAGES/") % catalog % QStringLiteral(".qm");
+        Q_FOREACH (const auto &catalog, ecmCatalogs) {
+            QString subPath = QStringLiteral("locale/") % localeDirName % QStringLiteral("/LC_MESSAGES/") % catalog
+                % QStringLiteral(".qm");
 #if defined(Q_OS_ANDROID)
             const QString fullPath = QStringLiteral("assets:/") + subPath;
 #else

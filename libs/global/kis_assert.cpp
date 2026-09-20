@@ -6,17 +6,17 @@
 
 #include "kis_assert.h"
 
-#include <QString>
-#include <QMessageBox>
-#include <QThread>
-#include <QProcessEnvironment>
-#include <QCoreApplication>
 #include <QApplication>
+#include <QCoreApplication>
+#include <QMessageBox>
+#include <QProcessEnvironment>
+#include <QString>
+#include <QThread>
 
-#include <klocalizedstring.h>
-#include <KisUsageLogger.h>
-#include <string>
 #include "config-safe-asserts.h"
+#include <KisUsageLogger.h>
+#include <klocalizedstring.h>
+#include <string>
 
 /**
  * TODO: Add automatic saving of the documents
@@ -33,26 +33,23 @@
 
 void kis_assert_common(const char *assertion, const char *file, int line, bool abort, bool isIgnorable)
 {
-    QString shortMessage =
-        QString("%4ASSERT (krita): \"%1\" in file %2, line %3")
-        .arg(assertion)
-        .arg(file)
-        .arg(line)
-        .arg(isIgnorable ? "SAFE " : "");
+    QString shortMessage = QString("%4ASSERT (krita): \"%1\" in file %2, line %3")
+                               .arg(assertion)
+                               .arg(file)
+                               .arg(line)
+                               .arg(isIgnorable ? "SAFE " : "");
 
-    QString longMessage =
-        QString(
-            "Krita has encountered an internal error:\n\n"
-            "%1\n\n"
-            "Please report a bug to developers!\n\n"
-            "Press Ignore to try to continue.\n"
-            "Press Abort to see developers information (all unsaved data will be lost)")
-        .arg(shortMessage);
+    QString longMessage = QString(
+                              "Krita has encountered an internal error:\n\n"
+                              "%1\n\n"
+                              "Please report a bug to developers!\n\n"
+                              "Press Ignore to try to continue.\n"
+                              "Press Abort to see developers information (all unsaved data will be lost)")
+                              .arg(shortMessage);
 
     KisUsageLogger::log(shortMessage);
 
-    bool disableAssertMsg =
-        QProcessEnvironment::systemEnvironment().value("KRITA_NO_ASSERT_MSG", "0").toInt();
+    bool disableAssertMsg = QProcessEnvironment::systemEnvironment().value("KRITA_NO_ASSERT_MSG", "0").toInt();
 
     // disable message box if the assert happened in non-gui thread
     // or if the GUI is not yet instantiated
@@ -74,15 +71,14 @@ void kis_assert_common(const char *assertion, const char *file, int line, bool a
     disableAssertMsg |= shouldIgnoreAsserts || forceCrashOnSafeAsserts;
 
     QMessageBox::StandardButton button =
-        isIgnorable && !forceCrashOnSafeAsserts ?
-            QMessageBox::Ignore : QMessageBox::Abort;
+        isIgnorable && !forceCrashOnSafeAsserts ? QMessageBox::Ignore : QMessageBox::Abort;
 
     if (!disableAssertMsg) {
-        button =
-            QMessageBox::critical(qApp->activeWindow(), i18nc("@title:window", "Krita: Internal Error"),
-                                  longMessage,
-                                  QMessageBox::Ignore | QMessageBox::Abort,
-                                  QMessageBox::Ignore);
+        button = QMessageBox::critical(qApp->activeWindow(),
+                                       i18nc("@title:window", "Solstice: Internal Error"),
+                                       longMessage,
+                                       QMessageBox::Ignore | QMessageBox::Abort,
+                                       QMessageBox::Ignore);
     }
 
     if (button == QMessageBox::Abort || abort) {
@@ -93,7 +89,6 @@ void kis_assert_common(const char *assertion, const char *file, int line, bool a
         qWarning("%s", shortMessage.toLatin1().data());
     }
 }
-
 
 void kis_assert_recoverable(const char *assertion, const char *file, int line)
 {
@@ -110,14 +105,9 @@ void kis_assert_exception(const char *assertion, const char *file, int line)
     kis_assert_common(assertion, file, line, true, false);
 }
 
-void kis_assert_x_exception(const char *assertion,
-                            const char *where,
-                            const char *what,
-                            const char *file, int line)
+void kis_assert_x_exception(const char *assertion, const char *where, const char *what, const char *file, int line)
 {
-    QString res =
-        QString("ASSERT failure in %1: \"%2\" (%3)")
-        .arg(where, what, assertion);
+    QString res = QString("ASSERT failure in %1: \"%2\" (%3)").arg(where, what, assertion);
 
     kis_assert_common(res.toLatin1().data(), file, line, true, false);
 }

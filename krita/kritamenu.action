@@ -1784,10 +1784,10 @@
     <text>Settings</text>
     <Action name="options_configure">
       <icon>configure</icon>
-      <text>&amp;Configure Krita...</text>
+      <text>&amp;Configure Solstice...</text>
       <whatsThis></whatsThis>
-      <toolTip>Configure Krita</toolTip>
-      <iconText>Configure Krita</iconText>
+      <toolTip>Configure Solstice</toolTip>
+      <iconText>Configure Solstice</iconText>
       <activationFlags>0</activationFlags>
       <activationConditions>0</activationConditions>
       <shortcut></shortcut>
@@ -1942,10 +1942,10 @@
     <text>Help</text>
     <Action name="help_contents">
       <icon>help-contents</icon>
-      <text>Krita &amp;Handbook</text>
+      <text>Upstream Krita &amp;Handbook</text>
       <whatsThis></whatsThis>
-      <toolTip>Krita Handbook</toolTip>
-      <iconText>Krita Handbook</iconText>
+      <toolTip>Upstream Krita Handbook</toolTip>
+      <iconText>Upstream Krita Handbook</iconText>
       <shortcut>F1</shortcut>
       <isCheckable>false</isCheckable>
       <statusTip></statusTip>
@@ -1962,10 +1962,10 @@
     </Action>
     <Action name="help_about_app">
       <icon>krita</icon>
-      <text>&amp;About Krita</text>
+      <text>&amp;About Solstice</text>
       <whatsThis></whatsThis>
-      <toolTip>About Krita</toolTip>
-      <iconText>About Krita</iconText>
+      <toolTip>About Solstice</toolTip>
+      <iconText>About Solstice</iconText>
       <shortcut></shortcut>
       <isCheckable>false</isCheckable>
       <statusTip></statusTip>

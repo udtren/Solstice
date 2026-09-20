@@ -26,7 +26,6 @@ struct KStandardActionInfo {
     const char *psIconName;
 };
 
-
 /**
  * TODO: this file is wrong! QT_TRANSLATE_NOOP macro is **not** used by KDE macros,
  * hence the strings defined in `g_rgActionInfo` are **never** translated!
@@ -105,7 +104,7 @@ static constexpr KStandardActionInfo g_rgActionInfo[] = {
     { ShowStatusbar, KStandardShortcut::ShowStatusbar, "options_show_statusbar", QT_TRANSLATE_NOOP("KStandardActions", "Show St&atusbar"), QT_TRANSLATE_NOOP("KStandardActions", "Show or hide statusbar"), {} },
     { FullScreen,    KStandardShortcut::FullScreen, "fullscreen", QT_TRANSLATE_NOOP("KStandardActions", "F&ull Screen Mode"), {}, "view-fullscreen" },
     { KeyBindings,   KStandardShortcut::KeyBindings, "options_configure_keybinding", QT_TRANSLATE_NOOP("KStandardActions", "Configure Keyboard S&hortcuts…"), {}, "configure-shortcuts" },
-    { Preferences,   KStandardShortcut::Preferences, "options_configure", QT_TRANSLATE_NOOP("KStandardActions", "&Configure Krita..."), {}, "configure" },
+    { Preferences,   KStandardShortcut::Preferences, "options_configure", QT_TRANSLATE_NOOP("KStandardActions", "&Configure Solstice..."), {}, "configure" },
     { ConfigureToolbars, KStandardShortcut::ConfigureToolbars, "options_configure_toolbars", QT_TRANSLATE_NOOP("KStandardActions", "Configure Tool&bars…"), {}, "configure-toolbars" },
     { ConfigureNotifications, KStandardShortcut::ConfigureNotifications, "options_configure_notifications", QT_TRANSLATE_NOOP("KStandardActions", "Configure &Notifications…"), {}, "preferences-desktop-notification" },
 
@@ -115,11 +114,10 @@ static constexpr KStandardActionInfo g_rgActionInfo[] = {
     { WhatsThis,     KStandardShortcut::WhatsThis, "help_whats_this", QT_TRANSLATE_NOOP("KStandardActions", "What's &This?"), {}, "help-contextual" },
     { ReportBug,     KStandardShortcut::ReportBug, "help_report_bug", QT_TRANSLATE_NOOP("KStandardActions", "&Report Bug..."), {}, "tools-report-bug" },
     { SwitchApplicationLanguage, KStandardShortcut::SwitchApplicationLanguage, "switch_application_language", QT_TRANSLATE_NOOP("KStandardActions", "Switch Application &Language..."), {}, "preferences-desktop-locale" },
-    { AboutApp,      KStandardShortcut::AccelNone, "help_about_app", QT_TRANSLATE_NOOP("KStandardActions", "&About Krita"), {}, nullptr },
+    { AboutApp,      KStandardShortcut::AccelNone, "help_about_app", QT_TRANSLATE_NOOP("KStandardActions", "&About Solstice"), {}, nullptr },
     { AboutKDE,      KStandardShortcut::AccelNone, "help_about_kde", QT_TRANSLATE_NOOP("KStandardActions", "About &KDE"), {}, "kde" },
     { ActionNone,    KStandardShortcut::AccelNone, {}, {}, {}, {} },
     };
-
 
 // clang-format on
 
@@ -141,7 +139,7 @@ static inline QStringList internal_stdNames()
     for (uint i = 0; g_rgActionInfo[i].id != ActionNone; i++)
         if (g_rgActionInfo[i].psLabel) {
             if (QByteArray(g_rgActionInfo[i].psLabel).contains("%1"))
-                // Prevents i18n from complaining about unsubstituted placeholder.
+            // Prevents i18n from complaining about unsubstituted placeholder.
             {
                 result.append(i18n(g_rgActionInfo[i].psLabel, QString()));
             } else {
@@ -157,7 +155,10 @@ class AutomaticAction : public QAction
     Q_OBJECT
 
 public:
-    AutomaticAction(const QIcon &icon, const QString &text, const QList<QKeySequence> &shortcut, const char *slot,
+    AutomaticAction(const QIcon &icon,
+                    const QString &text,
+                    const QList<QKeySequence> &shortcut,
+                    const char *slot,
                     QObject *parent);
 public Q_SLOTS:
     inline void cut()
@@ -187,9 +188,8 @@ public Q_SLOTS:
             QMetaObject::invokeMethod(qApp->focusWidget(), slot);
         }
     }
-
 };
 
-}
+} // namespace KStandardAction
 
 #endif

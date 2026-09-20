@@ -191,7 +191,7 @@ KisWelcomePageWidget::KisWelcomePageWidget(QWidget *parent)
         new ShowNewsAction(i18n("Enable news and check for new releases"), newsOptionsMenu);
     newsOptionsMenu->addAction(showNewsAction);
     showNewsAction->setToolTip(
-        i18n("Show news about Krita: this needs internet to retrieve information from the krita.org website"));
+        i18n("Show upstream Krita news: this needs internet to retrieve information from the krita.org website"));
     showNewsAction->setCheckable(true);
 
     newsOptionsMenu->addSection(i18n("Language"));
@@ -400,12 +400,12 @@ void KisWelcomePageWidget::slotUpdateThemeColors()
     supportKritaLink->setText(QString("<a style=\"color: " + blendedColor.name()
                                       + " \" href=\"https://krita.org/support-us/donations?" + analyticsString
                                       + "donations" + "\">")
-                                  .append(i18n("Support Krita"))
+                                  .append(i18n("Support Upstream Krita"))
                                   .append("</a>"));
 
     kritaWebsiteLink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://www.krita.org?"
                                       + analyticsString + "marketing-site" + "\">")
-                                  .append(i18n("Krita Website"))
+                                  .append(i18n("Upstream Krita Website"))
                                   .append("</a>"));
 
     sourceCodeLink->setText(
@@ -780,7 +780,7 @@ void KisWelcomePageWidget::slotSetUpdateStatus(KisUpdaterStatus updateStatus)
 
 void KisWelcomePageWidget::slotShowUpdaterErrorDetails()
 {
-    QMessageBox::warning(qApp->activeWindow(), i18nc("@title:window", "Krita"), m_updaterStatus.updaterOutput());
+    QMessageBox::warning(qApp->activeWindow(), i18nc("@title:window", "Solstice"), m_updaterStatus.updaterOutput());
 }
 
 void KisWelcomePageWidget::updateVersionUpdaterFrame()
@@ -799,7 +799,7 @@ void KisWelcomePageWidget::updateVersionUpdaterFrame()
     if (m_updaterStatus.status() == UpdaterStatus::StatusID::UPDATE_AVAILABLE) {
         updaterFrame->setVisible(true);
         updaterFrame->setEnabled(true);
-        versionLabelText = i18n("New version of Krita is available.");
+        versionLabelText = i18n("A new upstream Krita version is available.");
         versionNotificationLabel->setVisible(true);
         updateIcon->setIcon(KisIconUtils::loadIcon("update-medium"));
 
@@ -893,7 +893,7 @@ void KisWelcomePageWidget::initDonations()
     } else {
         QVector<QString> headlines = {
             i18n("Become a Supporter!"),
-            i18n("Support Krita!"),
+            i18n("Support Upstream Krita!"),
         };
         QVector<QString> subtitles = {
             i18n("Supporters get brush packs and more."),

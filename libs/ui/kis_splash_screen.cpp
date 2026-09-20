@@ -7,26 +7,25 @@
 #include "kis_splash_screen.h"
 
 #include <QApplication>
-#include <QScreen>
-#include <QGraphicsDropShadowEffect>
-#include <QPixmap>
-#include <QPainter>
 #include <QCheckBox>
-#include <kis_debug.h>
 #include <QFile>
+#include <QGraphicsDropShadowEffect>
+#include <QPainter>
+#include <QPixmap>
 #include <QScreen>
-#include <QWindow>
 #include <QSvgWidget>
+#include <QWindow>
+#include <kis_debug.h>
 
-#include <KisPart.h>
 #include <KisApplication.h>
+#include <KisPart.h>
 
 #include <kis_icon.h>
 
-#include <klocalizedstring.h>
 #include <kconfig.h>
-#include <ksharedconfig.h>
 #include <kconfiggroup.h>
+#include <klocalizedstring.h>
+#include <ksharedconfig.h>
 
 #ifdef Q_OS_MACOS
 #include "libs/macosutils/KisMacosEntitlements.h"
@@ -43,10 +42,9 @@ static void addDropShadow(QWidget *widget)
 
 KisSplashScreen::KisSplashScreen(bool themed, QWidget *parent, Qt::WindowFlags f)
     : QWidget(parent, Qt::SplashScreen | Qt::FramelessWindowHint | f)
-      , m_themed(themed)
-      , m_versionHtml(qApp->applicationVersion().toHtmlEscaped())
+    , m_themed(themed)
+    , m_versionHtml(qApp->applicationVersion().toHtmlEscaped())
 {
-
     setupUi(this);
 #ifndef Q_OS_MACOS
     setWindowIcon(KisIconUtils::loadIcon("krita-branding"));
@@ -64,7 +62,8 @@ KisSplashScreen::KisSplashScreen(bool themed, QWidget *parent, Qt::WindowFlags f
 
     m_artCreditsLabel = new QLabel(lblSplash);
     m_artCreditsLabel->setTextFormat(Qt::PlainText);
-    m_artCreditsLabel->setStyleSheet(QStringLiteral("QLabel { color: #fff; background-color: transparent; font: 10pt; }"));
+    m_artCreditsLabel->setStyleSheet(
+        QStringLiteral("QLabel { color: #fff; background-color: transparent; font: 10pt; }"));
     m_artCreditsLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
     addDropShadow(m_artCreditsLabel);
 
@@ -76,7 +75,7 @@ KisSplashScreen::KisSplashScreen(bool themed, QWidget *parent, Qt::WindowFlags f
     chkShowAtStartup->hide();
     connect(chkShowAtStartup, SIGNAL(toggled(bool)), this, SLOT(toggleShowAtStartup(bool)));
 
-    KConfigGroup cfg( KSharedConfig::openConfig(), "SplashScreen");
+    KConfigGroup cfg(KSharedConfig::openConfig(), "SplashScreen");
     bool hideSplash = cfg.readEntry("HideSplashAfterStartup", false);
     chkShowAtStartup->setChecked(hideSplash);
 
@@ -109,7 +108,8 @@ void KisSplashScreen::updateSplashImage()
     Source source = getImageSource();
     QPixmap img(source.resourcePath);
 
-    if (img.isNull() || img.height() == 0) return;
+    if (img.isNull() || img.height() == 0)
+        return;
 
     // Preserve aspect ratio of splash.
     const int height = splashHeight;
@@ -161,13 +161,15 @@ void KisSplashScreen::updateText()
 {
     QString color = colorString();
 
-    KConfigGroup cfg2( KSharedConfig::openConfig(), "RecentFiles");
+    KConfigGroup cfg2(KSharedConfig::openConfig(), "RecentFiles");
     int i = 1;
 
-    QString recent = i18n("<html>"
-                          "<head/>"
-                          "<body>"
-                          "<p><b><span style=\" color:%1;\">Recent Files</span></b></p>", color);
+    QString recent = i18n(
+        "<html>"
+        "<head/>"
+        "<body>"
+        "<p><b><span style=\" color:%1;\">Recent Files</span></b></p>",
+        color);
 
     QString path;
     QStringList recentfiles;
@@ -186,7 +188,11 @@ void KisSplashScreen::updateText()
             name = metrics.elidedText(name, Qt::ElideMiddle, lblRecent->width());
 
             if (!url.isLocalFile() || QFile::exists(url.toLocalFile())) {
-                recentfiles.insert(0, QString("<p><a href=\"%1\"><span style=\"color:%3;\">%2</span></a></p>").arg(path).arg(name).arg(color));
+                recentfiles.insert(0,
+                                   QString("<p><a href=\"%1\"><span style=\"color:%3;\">%2</span></a></p>")
+                                       .arg(path)
+                                       .arg(name)
+                                       .arg(color));
             }
         }
 
@@ -194,53 +200,76 @@ void KisSplashScreen::updateText()
     } while (!path.isEmpty() || i <= 8);
 
     recent += recentfiles.join("\n");
-    recent += "</body>"
+    recent +=
+        "</body>"
         "</html>";
     lblRecent->setText(recent);
 }
 
-void KisSplashScreen::displayLinks(bool show) {
-
+void KisSplashScreen::displayLinks(bool show)
+{
     if (show) {
         QString color = colorString();
         QStringList lblLinksText;
-        lblLinksText    << "<html>"
-                        << "<head/>"
-                        << "<body><table style=\"width:100%\" cellpadding=\"30\"><tr><td>"
-                        << i18n("<p><span style=\" color:%1;\"><b>Using Krita</b></span></p>",color);
+        lblLinksText << "<html>"
+                     << "<head/>"
+                     << "<body><table style=\"width:100%\" cellpadding=\"30\"><tr><td>"
+                     << i18n("<p><span style=\" color:%1;\"><b>Using Solstice</b></span></p>", color);
 
 #ifdef Q_OS_MACOS
         // macOS store version should not contain external links containing donation buttons or forms
         if (!KisMacosEntitlements().sandbox()) {
 #endif
 
-            lblLinksText    << i18n("<p><a href=\"https://krita.org/support-us/\"><span style=\" text-decoration: underline; color:%1;\">Support Krita's Development!</span></a></p>",color)
-                            << i18n("<p><a href=\"https://krita.org/\"><span style=\" text-decoration: underline; color:%1;\">Krita Website</span></a></p>",color);
+            lblLinksText << i18n(
+                "<p><a href=\"https://github.com/udtren/Solstice\"><span style=\" text-decoration: underline; "
+                "color:%1;\">Solstice Website</span></a></p>",
+                color)
+                         << i18n(
+                                "<p><a href=\"https://krita.org/support-us/\"><span style=\" text-decoration: "
+                                "underline; color:%1;\">Support Upstream Krita</span></a></p>",
+                                color);
 #ifdef Q_OS_MACOS
         }
 #endif
-        lblLinksText    << i18n("<p><a href=\"https://docs.krita.org/en/user_manual/getting_started.html\"><span style=\" text-decoration: underline; color:%1;\">Getting Started</span></a></p>",color)
-                        << i18n("<p><a href=\"https://docs.krita.org/\"><span style=\" text-decoration: underline; color:%1;\">Manual</span></a></p>",color)
-                        << "</td><td>"
-                        << i18n("<p><span style=\" color:%1;\"><b>Coding Krita</b></span></p>",color)
-                        << i18n("<p><a href=\"https://krita-artists.org\"><span style=\" text-decoration: underline; color:%1;\">User Community</span></a></p>",color)
-                        << i18n("<p><a href=\"https://invent.kde.org/graphics/krita\"><span style=\" text-decoration: underline; color:%1;\">Source Code</span></a></p>",color)
-                        << i18n("<p><a href=\"https://api.kde.org/krita/html/classKrita.html\"><span style=\" text-decoration: underline; color:%1;\">Scripting API</span></a></p>",color)
-                        << i18n("<p><a href=\"https://scripting.krita.org/lessons/introduction\"><span style=\" text-decoration: underline; color:%1;\">Scripting School</span></a></p>",color)
-                        << "</td></tr></table></body>"
-                        << "</html>";
-
+        lblLinksText << i18n(
+            "<p><a href=\"https://docs.krita.org/en/user_manual/getting_started.html\"><span style=\" text-decoration: "
+            "underline; color:%1;\">Getting Started</span></a></p>",
+            color)
+                     << i18n(
+                            "<p><a href=\"https://docs.krita.org/\"><span style=\" text-decoration: underline; "
+                            "color:%1;\">Manual</span></a></p>",
+                            color)
+                     << "</td><td>" << i18n("<p><span style=\" color:%1;\"><b>Coding Solstice</b></span></p>", color)
+                     << i18n(
+                            "<p><a href=\"https://krita-artists.org\"><span style=\" text-decoration: underline; "
+                            "color:%1;\">User Community</span></a></p>",
+                            color)
+                     << i18n(
+                            "<p><a href=\"https://github.com/udtren/Solstice\"><span style=\" text-decoration: "
+                            "underline; color:%1;\">Source Code</span></a></p>",
+                            color)
+                     << i18n(
+                            "<p><a href=\"https://api.kde.org/krita/html/classKrita.html\"><span style=\" "
+                            "text-decoration: underline; color:%1;\">Scripting API</span></a></p>",
+                            color)
+                     << i18n(
+                            "<p><a href=\"https://scripting.krita.org/lessons/introduction\"><span style=\" "
+                            "text-decoration: underline; color:%1;\">Scripting School</span></a></p>",
+                            color)
+                     << "</td></tr></table></body>"
+                     << "</html>";
 
         lblLinks->setTextFormat(Qt::RichText);
         lblLinks->setText(lblLinksText.join(""));
 
-        filesLayout->setContentsMargins(10,10,10,10);
-        actionControlsLayout->setContentsMargins(5,5,5,5);
+        filesLayout->setContentsMargins(10, 10, 10, 10);
+        actionControlsLayout->setContentsMargins(5, 5, 5, 5);
 
     } else {
         // eliminating margins here allows for the splash screen image to take the entire area with nothing underneath
-        filesLayout->setContentsMargins(0,0,0,0);
-        actionControlsLayout->setContentsMargins(0,0,0,0);
+        filesLayout->setContentsMargins(0, 0, 0, 0);
+        actionControlsLayout->setContentsMargins(0, 0, 0, 0);
     }
 
     lblLinks->setVisible(show);
@@ -253,8 +282,8 @@ void KisSplashScreen::displayLinks(bool show) {
     }
 }
 
-
-void KisSplashScreen::displayRecentFiles(bool show) {
+void KisSplashScreen::displayRecentFiles(bool show)
+{
     lblRecent->setVisible(show);
     line->setVisible(show);
 }
@@ -263,7 +292,8 @@ void KisSplashScreen::setLoadingText(QString text)
 {
     int larger = 12;
     int notAsLarge = larger - 1;
-    QString htmlText = QStringLiteral("<span style='font: %3pt;'><span style='font: bold %4pt;'>%1</span><br><i>%2</i></span>")
+    QString htmlText =
+        QStringLiteral("<span style='font: %3pt;'><span style='font: bold %4pt;'>%1</span><br><i>%2</i></span>")
             .arg(m_versionHtml, text.toHtmlEscaped(), QString::number(notAsLarge), QString::number(larger));
     m_loadingTextLabel->setText(htmlText);
 }
@@ -296,7 +326,6 @@ KisSplashScreen::Source KisSplashScreen::getImageSource()
     return Source{resourcePath, artistCredit};
 }
 
-
 QString KisSplashScreen::colorString() const
 {
     QString color = "#FFFFFF";
@@ -306,7 +335,6 @@ QString KisSplashScreen::colorString() const
 
     return color;
 }
-
 
 void KisSplashScreen::repaint()
 {
@@ -348,7 +376,7 @@ void KisSplashScreen::show()
 
 void KisSplashScreen::toggleShowAtStartup(bool toggle)
 {
-    KConfigGroup cfg( KSharedConfig::openConfig(), "SplashScreen");
+    KConfigGroup cfg(KSharedConfig::openConfig(), "SplashScreen");
     cfg.writeEntry("HideSplashAfterStartup", toggle);
 }
 

@@ -32,7 +32,7 @@ public:
 KisAboutApplication::KisAboutApplication(QWidget *parent)
     : KoDialog(parent)
 {
-    setWindowTitle(i18n("About Krita"));
+    setWindowTitle(i18n("About Solstice"));
     setButtons(KoDialog::Close);
 
     WdgAboutApplication *wdgTab = new WdgAboutApplication(this);
@@ -43,11 +43,12 @@ KisAboutApplication::KisAboutApplication(QWidget *parent)
 
     wdgTab->aboutTab->layout()->addWidget(splash);
 
-    QString authors = i18n("<html>"
-                          "<head/>"
-                          "<body>"
-                          "<h1 align=\"center\">Created By</h1></p>"
-                          "<p>");
+    QString authors = i18n(
+        "<html>"
+        "<head/>"
+        "<body>"
+        "<h1 align=\"center\">Upstream Krita Developers</h1></p>"
+        "<p>");
 
     QFile fileDevelopers(":/developers.txt");
     Q_ASSERT(fileDevelopers.exists());
@@ -65,7 +66,6 @@ KisAboutApplication::KisAboutApplication(QWidget *parent)
     if (aboutData.translators().isEmpty()) {
         aboutData.setTranslator(i18nc("NAME OF TRANSLATORS", "Your names"),
                                 i18nc("EMAIL OF TRANSLATORS", "Your emails"));
-
     }
 
     QString translatorHtml = i18n(
@@ -91,7 +91,7 @@ KisAboutApplication::KisAboutApplication(QWidget *parent)
 
     QString sponsors = i18n(
         "<html><head/><body>"
-        "<h1 align=\"center\">Development Fund</h1>"
+        "<h1 align=\"center\">Upstream Krita Development Fund</h1>"
         "<p align=\"center\"> <a href=\"https://intel.com\"><img src=\":/intel.png\"></a> "
         "<h2 align=\"center\">One Time Sponsors</h2>"
         "<p align=\"center\"> <a href=\"https://www.unrealengine.com/en-US/megagrants\"><img src=\":/epic.png\"></a> "
@@ -102,11 +102,12 @@ KisAboutApplication::KisAboutApplication(QWidget *parent)
         "</body></html>");
     wdgTab->lblKickstarter->setText(sponsors);
 
-    QString credits = i18n("<html>"
-                          "<head/>"
-                          "<body>"
-                          "<h1 align=\"center\">Thanks To</h1>"
-                          "<p>");
+    QString credits = i18n(
+        "<html>"
+        "<head/>"
+        "<body>"
+        "<h1 align=\"center\">Thanks To</h1>"
+        "<p>");
 
     QFile fileCredits(":/credits.txt");
     Q_ASSERT(fileCredits.exists());
@@ -115,7 +116,6 @@ KisAboutApplication::KisAboutApplication(QWidget *parent)
         KisPortingUtils::setUtf8OnStream(creditsText);
 
         Q_FOREACH (const QString &credit, creditsText.readAll().split('\n', Qt::SkipEmptyParts)) {
-
             if (credit.contains(":")) {
                 QList<QString> creditSplit = credit.split(':');
                 credits.append(creditSplit.at(0));
@@ -125,29 +125,38 @@ KisAboutApplication::KisAboutApplication(QWidget *parent)
         }
         credits.chop(2);
     }
-    credits.append(i18n(".</p><p><i>For supporting Krita development with advice, icons, brush sets and more.</i></p></body></html>"));
+    credits.append(
+        i18n(".</p><p><i>For supporting upstream Krita development with advice, icons, brush sets and "
+             "more.</i></p></body></html>"));
 
     wdgTab->lblCredits->setText(credits);
 
-    QString license = i18n("<html>"
-                           "<head/>"
-                           "<body>"
-                           "<h1 align=\"center\"><b>Your Rights</b></h1>"
-                           "<p>Krita is released under the GNU General Public License (version 3 or any later version).</p>"
-                           "<p>This license grants people a number of freedoms:</p>"
-                           "<ul>"
-                           "<li>You are free to use Krita, for any purpose</li>"
-                           "<li>You are free to distribute Krita</li>"
-                           "<li>You can study how Krita works and change it</li>"
-                           "<li>You can distribute changed versions of Krita</li>"
-                           "</ul>"
-                           "<p>The Krita Foundation and its projects on krita.org are <b>committed</b> to preserving Krita as free software.</p>"
-                           "<h1 align=\"center\">Your artwork</h1>"
-                           "<p>What you create with Krita is your sole property. All your artwork is free for you to use as you like.</p>"
-                           "<p>That means that Krita can be used commercially, for any purpose. There are no restrictions whatsoever.</p>"
-                           "<p>Krita’s GNU GPL license guarantees you this freedom. Nobody is ever permitted to take it away, in contrast "
-                           "to trial or educational versions of commercial software that will forbid your work in commercial situations.</p>"
-                           "<br/><hr/><pre>");
+    QString license = i18n(
+        "<html>"
+        "<head/>"
+        "<body>"
+        "<h1 align=\"center\"><b>Your Rights</b></h1>"
+        "<p>Solstice is an independent distribution based on Krita. It is not affiliated with or endorsed by the Krita "
+        "Foundation.</p>"
+        "<p>Solstice is released under the GNU General Public License (version 3 or any later version).</p>"
+        "<p>This license grants people a number of freedoms:</p>"
+        "<ul>"
+        "<li>You are free to use Solstice, for any purpose</li>"
+        "<li>You are free to distribute Solstice</li>"
+        "<li>You can study how Solstice works and change it</li>"
+        "<li>You can distribute changed versions of Solstice</li>"
+        "</ul>"
+        "<p>The upstream Krita project and its contributors retain their respective copyrights and credits.</p>"
+        "<h1 align=\"center\">Your artwork</h1>"
+        "<p>What you create with Solstice is your sole property. All your artwork is free for you to use as you "
+        "like.</p>"
+        "<p>That means that Solstice can be used commercially, for any purpose. There are no restrictions "
+        "whatsoever.</p>"
+        "<p>Solstice’s GNU GPL license guarantees you this freedom. Nobody is ever permitted to take it away, in "
+        "contrast "
+        "to trial or educational versions of commercial software that will forbid your work in commercial "
+        "situations.</p>"
+        "<br/><hr/><pre>");
 
     QFile licenseFile(":/LICENSE");
     Q_ASSERT(licenseFile.exists());
@@ -164,18 +173,19 @@ KisAboutApplication::KisAboutApplication(QWidget *parent)
         QTextStream thirdPartyText(&thirdPartyFile);
         KisPortingUtils::setUtf8OnStream(thirdPartyText);
 
-        QString thirdPartyHtml = i18n("<html>"
-                                      "<head/>"
-                                      "<body>"
-                                      "<h1 align=\"center\"><b>Third-party Libraries used by Krita</b></h1>"
-                                      "<p>Krita is built on the following free software libraries:</p><p><ul>");
+        QString thirdPartyHtml = i18n(
+            "<html>"
+            "<head/>"
+            "<body>"
+            "<h1 align=\"center\"><b>Third-party Libraries used by Solstice</b></h1>"
+            "<p>Solstice, through its Krita base, is built on the following free software libraries:</p><p><ul>");
 
         Q_FOREACH (const QString &lib, thirdPartyText.readAll().split('\n', Qt::SkipEmptyParts)) {
-
             if (!lib.startsWith("#")) {
                 QStringList parts = lib.split(',');
                 if (parts.size() >= 3) {
-                    thirdPartyHtml.append(QString("<li><a href=\"%2\">%1</a>: %3</li>").arg(parts[0], parts[1], parts[2]));
+                    thirdPartyHtml.append(
+                        QString("<li><a href=\"%2\">%1</a>: %3</li>").arg(parts[0], parts[1], parts[2]));
                 }
             }
         }

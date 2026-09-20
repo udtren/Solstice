@@ -83,7 +83,7 @@ bool ItemExecutor::executeScript(const Item &item, QString *error)
 #ifdef HAVE_QUICKACCESS_PYTHON
     if (!Py_IsInitialized()) {
         if (error)
-            *error = i18n("Krita's Python engine is not initialized. Enable Python support and restart Krita.");
+            *error = i18n("Solstice's Python engine is not initialized. Enable Python support and restart Solstice.");
         return false;
     }
     const QByteArray source = file.readAll();
@@ -128,7 +128,7 @@ bool ItemExecutor::executeScript(const Item &item, QString *error)
     return ok;
 #else
     if (error)
-        *error = i18n("This Krita build does not include Python support.");
+        *error = i18n("This Solstice build does not include Python support.");
     return false;
 #endif
 }
