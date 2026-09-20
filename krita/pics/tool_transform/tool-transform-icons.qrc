@@ -14,6 +14,7 @@
         <file>dark_transform_icons_liquify_rotateCCW.svg</file>
         <file>dark_transform_icons_main.svg</file>
         <file>dark_transform_icons_perspective.svg</file>
+        <file>dark_transform_icons_puppet.svg</file>
         <file>dark_transform_icons_warp.svg</file>
         <file>dark_transform_icons_penPressure.svg</file>
         <file>dark_krita_tool_transform_recursive.svg</file>
@@ -32,6 +33,7 @@
         <file>light_transform_icons_liquify_rotateCCW.svg</file>
         <file>light_transform_icons_main.svg</file>
         <file>light_transform_icons_perspective.svg</file>
+        <file>light_transform_icons_puppet.svg</file>
         <file>light_transform_icons_warp.svg</file>
         <file>light_transform_icons_penPressure.svg</file>
         <file>light_krita_tool_transform_recursive.svg</file>
