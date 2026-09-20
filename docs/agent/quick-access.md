@@ -89,7 +89,12 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   and safely returns the borrowed widget on teardown.
 - Brush rotation controls exist only in the compact HueSVC popup. Do not add
   the rotation toggle or startup setting back to the standalone Quick Brush
-  Adjustments docker unless explicitly requested.
+  Adjustments docker unless explicitly requested. The popup adjustment panel
+  is a fixed-width single column ordered as brush size, opacity, flow, blend
+  mode, rotation dial/value/reset, layer opacity, layer blend mode, and the
+  2×2 pressure toggles. Do not reuse the standalone docker's two-column
+  brush/layer layout there, and do not add its status-button strip or separator
+  frames to the popup.
 - Gesture preview is a 3×3 overlay centered on the cursor. Activate and fix the
   complete layout before calculating `cursor - half preview size`, then reapply
   position after showing so Windows does not place its top-left at the cursor.

@@ -655,7 +655,7 @@ void QuickAccessDock::showColorPopup()
         adjust = new QuickAdjustDock(popup, true);
         adjust->setFeatures(QDockWidget::NoDockWidgetFeatures);
         adjust->setTitleBarWidget(new QWidget(adjust));
-        adjust->setMaximumWidth(qBound(160, hueConfig.readEntry("ControlsPanelWidth", 220), 600));
+        adjust->setFixedWidth(qBound(160, hueConfig.readEntry("ControlsPanelWidth", 220), 600));
         adjust->setCanvas(m_canvas);
         layout->addWidget(adjust, 0, Qt::AlignVCenter);
     }

@@ -197,38 +197,53 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     m_rotationDial->valueChanged = [this](int value) {
         m_brushRotation->setValue(value);
     };
-    layout->addWidget(m_brushSize->parentWidget());
-    brushLayout->addWidget(m_brushOpacity->parentWidget());
-    brushLayout->addWidget(m_brushFlow->parentWidget());
     m_brushSize->parentWidget()->setVisible(adjustConfig.readEntry("SizeSliderEnabled", true));
     m_brushOpacity->parentWidget()->setVisible(adjustConfig.readEntry("OpacitySliderEnabled", true));
     m_brushFlow->parentWidget()->setVisible(adjustConfig.readEntry("FlowSliderEnabled", true));
 
-    auto *brushFooter = new QHBoxLayout;
     m_brushBlend = new QComboBox(brushGroup);
     populateBlendModes(m_brushBlend);
     auto *reset = new QPushButton(QIcon(QStringLiteral(":/quickaccess/system_icons/reset.png")), QString(), brushGroup);
     reset->setToolTip(i18nc("@info:tooltip", "Reload the current brush preset"));
     reset->setFixedSize(24, 24);
-    brushFooter->addWidget(m_brushBlend, 1);
-    brushFooter->addWidget(reset);
-    brushLayout->addLayout(brushFooter);
     auto *layerGroup = new QWidget(root);
     auto *layerLayout = new QVBoxLayout(layerGroup);
     layerLayout->setContentsMargins(0, 0, 0, 0);
     layerLayout->setSpacing(4);
     m_layerOpacity = createSliderRow(i18nc("@label", "Opacity"), 0, 100, &m_layerOpacityValue);
-    layerLayout->addWidget(m_layerOpacity->parentWidget());
     m_layerOpacity->parentWidget()->setVisible(adjustConfig.readEntry("LayerOpacitySliderEnabled", true));
     m_layerBlend = new QComboBox(layerGroup);
     populateBlendModes(m_layerBlend);
-    layerLayout->addWidget(m_layerBlend);
-    auto *brushAndLayer = new QHBoxLayout;
-    brushAndLayer->setSpacing(8);
-    brushAndLayer->addWidget(brushGroup, 1);
-    brushAndLayer->addWidget(layerGroup, 1);
-    layout->addLayout(brushAndLayer);
-    layout->addWidget(m_brushRotationRow);
+    if (compactPopup) {
+        layout->addWidget(m_brushSize->parentWidget());
+        layout->addWidget(m_brushOpacity->parentWidget());
+        layout->addWidget(m_brushFlow->parentWidget());
+        layout->addWidget(m_brushBlend);
+        m_brushRotation->hide();
+        if (auto *rotationLayout = qobject_cast<QHBoxLayout *>(m_brushRotationRow->layout())) {
+            rotationLayout->addStretch();
+            rotationLayout->addWidget(reset);
+        }
+        layout->addWidget(m_brushRotationRow);
+        layout->addWidget(m_layerOpacity->parentWidget());
+        layout->addWidget(m_layerBlend);
+    } else {
+        layout->addWidget(m_brushSize->parentWidget());
+        brushLayout->addWidget(m_brushOpacity->parentWidget());
+        brushLayout->addWidget(m_brushFlow->parentWidget());
+        auto *brushFooter = new QHBoxLayout;
+        brushFooter->addWidget(m_brushBlend, 1);
+        brushFooter->addWidget(reset);
+        brushLayout->addLayout(brushFooter);
+        layerLayout->addWidget(m_layerOpacity->parentWidget());
+        layerLayout->addWidget(m_layerBlend);
+        auto *brushAndLayer = new QHBoxLayout;
+        brushAndLayer->setSpacing(8);
+        brushAndLayer->addWidget(brushGroup, 1);
+        brushAndLayer->addWidget(layerGroup, 1);
+        layout->addLayout(brushAndLayer);
+        layout->addWidget(m_brushRotationRow);
+    }
     m_colorHistoryGroup = createColorHistoryWidget();
     m_brushHistoryGroup = createBrushHistoryWidget();
     m_colorHistoryGroup->setVisible(adjustConfig.readEntry("ColorHistoryEnabled", true));
@@ -238,9 +253,12 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     layout->addStretch();
     outerLayout->addWidget(content, 1);
 
-    auto *statusLayout = new QVBoxLayout;
-    statusLayout->setContentsMargins(0, 0, 0, 0);
-    statusLayout->setSpacing(2);
+    QVBoxLayout *statusLayout = nullptr;
+    if (!compactPopup) {
+        statusLayout = new QVBoxLayout;
+        statusLayout->setContentsMargins(0, 0, 0, 0);
+        statusLayout->setSpacing(2);
+    }
     m_toolOptionsToggle =
         createStatusButton(i18nc("@info:tooltip", "Show Tool Options"), QStringLiteral("tool_options"));
     m_toolOptionsToggle->setVisible(!compactPopup && adjustConfig.readEntry("ToolOptionsEnabled", false));
@@ -253,6 +271,10 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
         createStatusButton(i18nc("@info:tooltip", "Toggle Quick Access gestures"), QStringLiteral("gesture"));
     for (QToolButton *button :
          {m_toolOptionsToggle, m_eraseToggle, m_alphaToggle, m_selectionToggle, m_gestureToggle}) {
+        if (compactPopup) {
+            button->hide();
+            continue;
+        }
         statusLayout->addWidget(button, 0, Qt::AlignHCenter);
         if (button != m_gestureToggle) {
             auto *line = new QFrame(root);
@@ -260,18 +282,19 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
             line->setFixedWidth(14);
             statusLayout->addWidget(line, 0, Qt::AlignHCenter);
         }
-        if (compactPopup)
-            button->hide();
     }
-    statusLayout->addStretch();
-    outerLayout->addLayout(statusLayout);
+    if (statusLayout) {
+        statusLayout->addStretch();
+        outerLayout->addLayout(statusLayout);
+    }
     setWidget(root);
 
-    m_brushRotationRow->setVisible(compactPopup);
     if (compactPopup) {
         m_colorHistoryGroup->hide();
         m_brushHistoryGroup->hide();
         layout->insertWidget(layout->count() - 1, createBrushToggleWidget());
+    } else {
+        m_brushRotationRow->hide();
     }
     bool fontOk = false;
     const int configuredFontSize = adjustConfig.readEntry("FontSize", QStringLiteral("12px"))
