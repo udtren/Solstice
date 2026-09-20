@@ -99,6 +99,18 @@
       <isCheckable>false</isCheckable>
       <statusTip></statusTip>
     </Action>
+    <Action name="dninosores_export_region">
+      <icon>document-export</icon>
+      <text>Export Region...</text>
+      <whatsThis>If part of the document is selected, export the selection. If nothing is selected, export everything in the current layer's bounding box.</whatsThis>
+      <toolTip>If part of the document is selected, export the selection. If nothing is selected, export everything in the current layer's bounding box.</toolTip>
+      <iconText>Export Region</iconText>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>Alt+Shift+E</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
     <Action name="file_export_advanced">
       <icon>document-export</icon>
       <text>Export Advanced...</text>

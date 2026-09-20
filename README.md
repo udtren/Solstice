@@ -1,3 +1,5 @@
+## Solstice
+
 Solstice is an unofficial, desktop-focused custom build based on the Krita 6 development branch.
 It preserves Krita's painting workflow while integrating project-specific interface and productivity
 changes.

@@ -154,7 +154,11 @@ VisionModels::VisionModels()
 
     configureModel(VisionMLTask::segmentation, "sam/MobileSAM-F16.gguf");
     configureModel(VisionMLTask::inpainting, "migan/MIGAN-512-places2-F16.gguf");
-    configureModel(VisionMLTask::background_removal, "birefnet/BiRefNet-lite-F16.gguf");
+    const QString dynamicBiRefNet = QStringLiteral("birefnet/BiRefNet-dynamic-F16.gguf");
+    const QString defaultBiRefNet = resolveModelPath(dynamicBiRefNet).isEmpty()
+        ? QStringLiteral("birefnet/BiRefNet-lite-F16.gguf")
+        : dynamicBiRefNet;
+    configureModel(VisionMLTask::background_removal, defaultBiRefNet);
 
     QString err = initialize(backendType);
     if (!err.isEmpty()) {

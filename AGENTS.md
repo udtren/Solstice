@@ -34,7 +34,7 @@
 - Native inference runtime: `plugins/visionml/thirdparty/vision.cpp/`, pinned from `Acly/vision.cpp` revision `26a752912d49f6c4ff4545b35a1bdf7400d349ed`.
 - Vision ML is a normal native Krita tool/filter plugin. Do not restore the Python `ctypes` loader, its private `KoToolManager` injection, or installation under `pykrita`.
 - Installed default models live under `share/krita/visionml/models/`. User-added models live under `%APPDATA%/krita/visionml/models/`; the old `%APPDATA%/krita/pykrita/vision_tools/models/` location remains a read-only compatibility fallback.
-- The default native models are MobileSAM F16, BiRefNet-lite F16, and MI-GAN 512 F16. BiRefNet Dynamic is the recommended optional high-quality background-removal model; do not bundle BRIA RMBG weights because their model license restricts commercial use.
+- The bundled native models are MobileSAM F16, BiRefNet-lite F16, and MI-GAN 512 F16. When installed, BiRefNet Dynamic is the preferred default for background removal; otherwise the implementation falls back to bundled BiRefNet Lite. Do not bundle BRIA RMBG weights because their model license restricts commercial use.
 - Vulkan inference is built only when the Vulkan SDK and `glslc` are available. CPU-only builds must remain functional and expose the unavailable GPU backend as disabled in the UI.
 - The development machine has a copy-only LunarG Vulkan SDK 1.4.357.0 at `<krita-dev-root>\VulkanSDK\1.4.357.0`. It is intentionally not added to the system PATH or registry.
 - The installed Vulkan runtime has been verified against the NVIDIA RTX PRO 6000 Blackwell: GGML detects FP16, BF16, integer dot products, and NVIDIA cooperative-matrix support.
@@ -140,7 +140,7 @@ Krita must be fully restarted after installing rebuilt DLLs. A running Krita pro
 - Quick Access grid width is fixed by its configured column count and cell size; resizing the docker must not reflow the grid.
 - Actions are stored/executed by internal action ID, while UI labels use Krita's displayed action text or a configured custom name.
 - Item Property supports custom name, colors, font size, and an icon selected through the native OS file dialog.
-- Header button background and font colors are independently configurable. Color dialogs must be parented to the settings window, not to a styled color-swatch button, to avoid leaking the swatch stylesheet into the dialog.
+- Header button background and font colors are independently configurable. Color dialogs from settings and item-property windows must be parented to the containing window, not to a styled color-swatch button, to avoid leaking the swatch stylesheet into the dialog.
 - The Resource dialog follows the original structure: Actions and Dockers are editable tables; Brushes are a thumbnail grid.
 - Settings are separated into General, Popup and HueSVC, Quick Adjust, and Temporary Brushes tabs.
 - The configurable blend-mode ID list is shared by Quick Brush Adjustments and the compact HueSVC popup.

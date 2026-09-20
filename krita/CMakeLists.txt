@@ -114,11 +114,11 @@ set(krita_splash_qrc splash.qrc)
 # make a change that applies to all systems, remove any conditions. The version
 # you specify should always be one higher than any version number you see here,
 # no matter what you're doing. Do not re-use versions.
-set(KRITA5_XMLGUI_VERSION 545)
+set(KRITA5_XMLGUI_VERSION 546)
 
 # After updating the version number properly, put the new hash that the CMake
 # error lists as the "actual hash" here.
-set(krita5_xmlgui_hash_expected "e9592f0a336dab58014cde13270d8336")
+set(krita5_xmlgui_hash_expected "7076128fa8a6e82bc93c29271adb6e75")
 
 # You can stop reading now, the stuff that follows doesn't need to be modified.
 # ==============================================================================

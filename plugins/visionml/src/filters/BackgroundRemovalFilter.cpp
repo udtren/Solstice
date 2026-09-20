@@ -35,7 +35,7 @@ public:
         layout->addWidget(m_modelSelectWidget);
 
         QLabel *modelHint = new QLabel(
-            i18n("For higher-quality large-image masks, add BiRefNet-dynamic-F16.gguf with the folder button."),
+            i18n("BiRefNet Dynamic gives higher-quality large-image masks; Lite is faster and uses less memory."),
             this);
         modelHint->setWordWrap(true);
         layout->addWidget(modelHint);

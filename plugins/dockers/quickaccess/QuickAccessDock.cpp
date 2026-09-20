@@ -281,7 +281,7 @@ QPushButton *createColorButton(const QColor &initial, QWidget *parent)
     setColor(initial.isValid() ? initial : QColor(Qt::white));
     QObject::connect(button, &QPushButton::clicked, button, [button, setColor]() {
         const QColor current(button->property("quickAccessColor").toString());
-        const QColor chosen = QColorDialog::getColor(current, button, i18nc("@title:window", "Select Color"));
+        const QColor chosen = QColorDialog::getColor(current, button->window(), i18nc("@title:window", "Select Color"));
         if (chosen.isValid())
             setColor(chosen);
     });

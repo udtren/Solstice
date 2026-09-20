@@ -384,6 +384,12 @@ private Q_SLOTS:
      */
     void slotExportFile();
 
+    /**
+     * Export the current selection, or the opaque bounds of the active node
+     * when there is no selection.
+     */
+    void slotExportRegion();
+
     void slotExportAdvance();
 
     /**

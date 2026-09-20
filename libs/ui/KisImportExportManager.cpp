@@ -687,7 +687,11 @@ bool KisImportExportManager::askUserAboutExportConfiguration(
             layout->addWidget(chkAlsoAsKra);
         }
 
-        KoDialog dlg(qApp->activeWindow());
+        QWidget *dialogParent = KisPart::instance()->currentMainwindow();
+        if (!dialogParent) {
+            dialogParent = qApp->activeWindow();
+        }
+        KoDialog dlg(dialogParent);
         dlg.setMainWidget(page);
         page->setParent(&dlg);
         dlg.setButtons(KoDialog::Ok | KoDialog::Cancel);

@@ -15,6 +15,8 @@
 #include <QApplication>
 #include <QByteArray>
 #include <QCloseEvent>
+#include <QDir>
+#include <QFileInfo>
 #include <QStandardPaths>
 #include <QDesktopServices>
 #include <QScreen>
@@ -50,6 +52,7 @@
 
 #include <kactioncollection.h>
 #include <kactionmenu.h>
+#include <KConfigGroup>
 #include <kis_debug.h>
 #include <kedittoolbar.h>
 #include <khelpmenu.h>
@@ -58,6 +61,12 @@
 #include <kis_workspace_resource.h>
 #include <input/kis_input_manager.h>
 #include "dialogs/KisDlgCreateNewDocument.h"
+#include "KisImageBarrierLock.h"
+#include "kis_iterator_ng.h"
+#include "kis_paint_device.h"
+#include "kis_paint_layer.h"
+#include "kis_pixel_selection.h"
+#include "kis_selection.h"
 #include "kis_selection_manager.h"
 #include "kis_icon_utils.h"
 #include <krecentfilesaction.h>
@@ -87,6 +96,7 @@
 #include "toolbox/KoToolBoxFactory.h"
 #include <KoDockRegistry.h>
 #include <KoPluginLoader.h>
+#include <KoColor.h>
 #include <KoColorSpaceEngine.h>
 #include <KoUpdater.h>
 #include <KisResourceModel.h>
@@ -1903,6 +1913,147 @@ void KisMainWindow::slotExportFile()
         Q_EMIT documentSaved();
     }
 }
+
+void KisMainWindow::slotExportRegion()
+{
+    KisView *sourceView = activeView();
+    KisImageSP sourceImage = sourceView ? sourceView->image() : nullptr;
+    KisDocument *sourceDocument = sourceView ? sourceView->document() : nullptr;
+    if (!sourceImage || !sourceDocument) {
+        return;
+    }
+
+    if (!viewManager()->blockUntilOperationsFinished(sourceImage)) {
+        return;
+    }
+
+    QRect exportBounds;
+    KisPaintDeviceSP exportDevice;
+    {
+        KisImageBarrierLock lock(sourceImage);
+
+        KisPixelSelectionSP exportMask;
+        if (KisSelectionSP selection = sourceImage->globalSelection()) {
+            exportMask = selection->projection();
+        } else {
+            KisNodeSP activeNode = viewManager()->activeNode();
+            if (!activeNode) {
+                return;
+            }
+
+            KisPaintDeviceSP nodeDevice = activeNode->projection();
+            if (!nodeDevice)
+                nodeDevice = activeNode->paintDevice();
+            if (!nodeDevice)
+                nodeDevice = activeNode->original();
+            if (!nodeDevice) {
+                return;
+            }
+
+            exportMask = new KisPixelSelection();
+            exportMask->copyAlphaFrom(nodeDevice, nodeDevice->exactBounds());
+        }
+
+        exportBounds = exportMask->selectedExactRect() & sourceImage->bounds();
+        if (exportBounds.isEmpty()) {
+            return;
+        }
+
+        exportDevice = new KisPaintDevice(*sourceImage->projection());
+
+        const KoColorSpace *colorSpace = exportDevice->colorSpace();
+        KisSequentialIterator deviceIt(exportDevice, exportBounds);
+        KisSequentialConstIterator maskIt(exportMask, exportBounds);
+
+        while (deviceIt.nextPixel() && maskIt.nextPixel()) {
+            colorSpace->applyAlphaU8Mask(deviceIt.rawData(), maskIt.oldRawData(), 1);
+        }
+
+        const bool hasOpaqueDefaultPixel = exportDevice->defaultPixel() != KoColor::createTransparent(colorSpace);
+        if (hasOpaqueDefaultPixel && exportBounds != sourceImage->bounds()) {
+            exportDevice->setDefaultPixel(KoColor::createTransparent(colorSpace));
+            exportDevice->purgeDefaultPixels();
+        }
+
+        exportDevice->crop(exportBounds);
+        exportDevice->moveTo(exportDevice->offset() - exportBounds.topLeft());
+    }
+
+    QScopedPointer<KisDocument> exportDocument(KisPart::instance()->createDocument());
+    KisImageSP exportImage = new KisImage(exportDocument->createUndoStore(),
+                                          exportBounds.width(),
+                                          exportBounds.height(),
+                                          sourceImage->colorSpace(),
+                                          i18n("Export Region"));
+    exportImage->setResolution(sourceImage->xRes(), sourceImage->yRes());
+    exportImage->addNode(new KisPaintLayer(exportImage, i18n("Exported Region"), OPACITY_OPAQUE_U8, exportDevice),
+                         exportImage->rootLayer());
+    exportDocument->setCurrentImage(exportImage);
+    exportDocument->documentInfo()->setAboutInfo("title", sourceDocument->caption());
+    exportImage->initialRefreshGraph();
+    exportImage->waitForDone();
+
+    QStringList mimeFilters = KisImportExportManager::supportedMimeTypes(KisImportExportManager::Export);
+    KoFileDialog dialog(this, KoFileDialog::SaveFile, "ExportRegion");
+    dialog.setCaption(i18n("Exporting Region"));
+
+    QString proposedMimeType = QString::fromLatin1(d->lastExportedFormat);
+    if (proposedMimeType.isEmpty()) {
+        proposedMimeType = KisConfig(true).exportMimeType(false);
+    }
+
+    QString proposedDirectory;
+    if (!d->lastExportLocation.isEmpty() && !d->lastExportLocation.contains(QDir::tempPath())) {
+        proposedDirectory = QFileInfo(d->lastExportLocation).absolutePath();
+    } else {
+        KConfigGroup group = KSharedConfig::openConfig()->group("File Dialogs");
+        proposedDirectory = group.readEntry("SaveAs", QString());
+        if (proposedDirectory.isEmpty()) {
+            proposedDirectory = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+        }
+    }
+
+    QString proposedName = QFileInfo(sourceDocument->path()).completeBaseName();
+    if (proposedName.isEmpty()) {
+        proposedName = sourceDocument->documentInfo()->aboutInfo("title");
+    }
+    if (proposedName.isEmpty()) {
+        proposedName = i18n("Untitled");
+    }
+
+    QString proposedPath = QDir(proposedDirectory).filePath(proposedName);
+    const QStringList suffixes = KisMimeDatabase::suffixesForMimeType(proposedMimeType);
+    if (!suffixes.isEmpty()) {
+        QString proposedSuffix = suffixes.first();
+        proposedSuffix.remove("*,");
+        proposedPath += "." + proposedSuffix;
+    }
+    dialog.setDefaultDir(proposedPath, true);
+    dialog.setMimeTypeFilters(mimeFilters, proposedMimeType);
+
+    const QString exportPath = dialog.filename();
+    if (exportPath.isEmpty()) {
+        return;
+    }
+
+    const QByteArray outputFormat = KisMimeDatabase::mimeTypeForFile(exportPath, false).toLatin1();
+    if (outputFormat.isEmpty()) {
+        return;
+    }
+
+    if (!exportDocument->exportDocumentSync(exportPath, outputFormat)) {
+        if (!exportDocument->errorMessage().isEmpty()) {
+            QMessageBox::critical(this,
+                                  i18nc("@title:window", "Krita"),
+                                  i18n("Could not export %1\nReason: %2", exportPath, exportDocument->errorMessage()));
+        }
+        return;
+    }
+
+    d->lastExportLocation = exportPath;
+    d->lastExportedFormat = outputFormat;
+}
+
 void KisMainWindow::slotExportAdvance()
 {
     if (saveDocument(d->activeView->document(), true, true,true)) {
@@ -3120,6 +3271,9 @@ void KisMainWindow::createActions()
 
     d->exportFile  = actionManager->createAction("file_export_file");
     connect(d->exportFile, SIGNAL(triggered(bool)), this, SLOT(slotExportFile()));
+
+    KisAction *exportRegion = actionManager->createAction("dninosores_export_region");
+    connect(exportRegion, SIGNAL(triggered(bool)), this, SLOT(slotExportRegion()));
 
     d->exportFileAdvance  = actionManager->createAction("file_export_advanced");
     connect(d->exportFileAdvance, SIGNAL(triggered(bool)), this, SLOT(slotExportAdvance()));

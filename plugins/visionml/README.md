@@ -15,7 +15,9 @@ The build downloads and checksum-verifies these default models:
 Installed models are stored in `share/krita/visionml/models`. Additional GGUF
 models can be placed in the user data directory under `visionml/models`.
 BiRefNet Dynamic is the recommended optional model for higher-quality masks on
-large images; it is significantly larger and slower than the lite default.
+large images; it is significantly larger than the bundled Lite model. When the
+Dynamic model is installed, Krita prefers it by default and retains Lite as the
+fallback.
 
 SAM 2 can produce better promptable masks, but it is not currently supported
 by `vision.cpp` and its official inference stack adds PyTorch/CUDA. BRIA RMBG
