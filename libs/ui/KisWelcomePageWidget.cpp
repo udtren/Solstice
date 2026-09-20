@@ -66,7 +66,6 @@
 #include <utils/KisManualUpdater.h>
 #endif
 
-#include <KritaVersionWrapper.h>
 #include <klocalizedstring.h>
 
 #include "opengl/kis_opengl.h"
@@ -127,8 +126,6 @@ KisWelcomePageWidget::KisWelcomePageWidget(QWidget *parent)
     setupUi(this);
 
     // URLs that go to web browser...
-    devBuildIcon->setIcon(KisIconUtils::loadIcon("warning"));
-    devBuildLabel->setVisible(false);
     updaterFrame->setVisible(false);
     versionNotificationLabel->setVisible(false);
     bnVersionUpdate->setVisible(false);
@@ -433,9 +430,6 @@ void KisWelcomePageWidget::slotUpdateThemeColors()
     recentDocsStackedWidget->setStyleSheet("QStackedWidget#recentDocsStackedWidget" + frameQss);
     newsFrame->setStyleSheet("QFrame#newsFrame" + frameQss);
 
-    // show the dev version labels, if dev version is detected
-    showDevVersionHighlight();
-
 #ifdef ENABLE_UPDATERS
     updateVersionUpdaterFrame(); // updater frame
 #endif
@@ -643,26 +637,6 @@ void KisWelcomePageWidget::setupNewsLangSelection(QMenu *newsOptionsMenu)
     }
 }
 
-void KisWelcomePageWidget::showDevVersionHighlight()
-{
-    // always flag development version
-    if (isDevelopmentBuild()) {
-        QString devBuildLabelText =
-            QString("<a style=\"color: " + blendedColor.name()
-                    + " \" href=\"https://docs.krita.org/en/untranslatable_pages/triaging_bugs.html?" + analyticsString
-                    + "dev-build" + "\">")
-                .append(i18n("DEV BUILD"))
-                .append("</a>");
-
-        devBuildLabel->setText(devBuildLabelText);
-        devBuildIcon->setVisible(true);
-        devBuildLabel->setVisible(true);
-    } else {
-        devBuildIcon->setVisible(false);
-        devBuildLabel->setVisible(false);
-    }
-}
-
 void KisWelcomePageWidget::updateShortcutLink(QToolButton *button, QLabel *label, QAction *action)
 {
     if (action) {
@@ -700,11 +674,6 @@ void KisWelcomePageWidget::slotRecentDocContextMenuRequest(const QPoint &pos)
     if (index.isValid() && triggered == actionForget) {
         m_mainWindow->removeRecentFile(index.data(Qt::ToolTipRole).toString());
     }
-}
-
-bool KisWelcomePageWidget::isDevelopmentBuild()
-{
-    return KritaVersionWrapper::isDevelopersBuild();
 }
 
 void KisWelcomePageWidget::slotNewFileClicked()

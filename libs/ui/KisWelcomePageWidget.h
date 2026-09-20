@@ -85,8 +85,6 @@ private Q_SLOTS:
     void slotUpdateDonationState();
 #endif
 
-    bool isDevelopmentBuild();
-
     QFont largerFont();
 
 protected:
@@ -102,8 +100,6 @@ protected:
 
 private:
     void setupNewsLangSelection(QMenu *newsOptionMenu);
-    void showDevVersionHighlight();
-
     static void updateShortcutLink(QToolButton *button, QLabel *label, QAction *action);
 
 #ifdef ENABLE_UPDATERS
