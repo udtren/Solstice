@@ -1,6 +1,4 @@
-# Krita Sol
-
-Krita Sol is an unofficial, desktop-focused custom build based on the Krita 6 development branch.
+Solstice is an unofficial, desktop-focused custom build based on the Krita 6 development branch.
 It preserves Krita's painting workflow while integrating project-specific interface and productivity
 changes.
 
@@ -26,6 +24,6 @@ updates can be integrated cleanly.
 
 ## Building
 
-Krita Sol uses Krita's standard desktop build system. Refer to the official
+Solstice uses Krita's standard desktop build system. Refer to the official
 [Building Krita documentation](https://docs.krita.org/en/untranslatable_pages/building_krita.html)
 for prerequisites and platform-specific instructions.

@@ -1,0 +1,23 @@
+build
+install
+.vscode
+.vtune
+.debug
+.dev
+.env
+.install
+tests/results
+tests/reference
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.gguf
+*.zip
+*.tar.gz
+*.egg-info
+/*.png
+__pycache__
+
+# Don't sync Python dependencies for now, latest versions should work
+uv.lock

@@ -66,6 +66,7 @@ private:
     void setControlsEnabled(bool enabled);
     void ensureToolOptionsPad();
     void setToolOptionsPadVisible(bool visible);
+    void resizeToolOptionsPad();
     void positionToolOptionsPad();
     void returnToolOptionsDocker();
     static int brushSizeToSlider(qreal size);

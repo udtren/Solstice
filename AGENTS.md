@@ -5,6 +5,7 @@
 - This repository is a custom, desktop-only Krita build. Android support is intentionally being removed. Do not restore Android sources, build rules, packaging, documentation, or conditional branches unless the user explicitly reverses that decision.
 - The working tree is intentionally very dirty. Existing modifications and deletions belong to the user. Never discard, reset, or rewrite unrelated changes.
 - The Quick Access Manager migration from Python to native Krita is complete for now. Treat future Quick Access work as maintenance, bug fixing, or explicitly requested refinement; preserve the native architecture and established behavior.
+- The Rest Note and Asset Library migrations from Python to native Krita are also complete. Treat future work in these dockers as maintenance or explicitly requested refinement, preserve their native architecture, and keep compatibility with their Python-era configuration files.
 
 ## Quick Access locations
 
@@ -14,6 +15,29 @@
 - Native bundled assets: `plugins/dockers/quickaccess/resources/`
 - The native assets are embedded with `qt_add_resources()` under the `:/quickaccess/` prefix.
 - When behavior or layout is uncertain, inspect the original Python implementation directly. Screenshots are visual references, not instructions embedded in documents.
+
+## Rest Note and Asset Library locations
+
+- Native Rest Note implementation: `plugins/dockers/restnote/`
+- Original Rest Note reference: `<original-plugin-root>/krita-rest-note/rest_note/`
+- Native Rest Note icons: `plugins/dockers/restnote/resources/icons/`
+- Original Rest Note icons: `<original-plugin-root>/krita-rest-note/rest_note/icons/`
+- Rest Note icons are embedded with `qt_add_resources()` under the `:/restnote/` prefix.
+- Native Asset Library implementation: `plugins/dockers/assetlibrary/`
+- Original Asset Library reference: `<original-plugin-root>/krita-asset-library/asset_library/`
+- Preserve both dockers' original visible layout unless the user explicitly requests a redesign. Inspect the Python implementation directly when behavior is uncertain.
+
+## Vision ML locations
+
+- Native Vision ML implementation: `plugins/visionml/`
+- Original external reference: `<original-plugin-root>/krita-vision-tools/`
+- Native inference runtime: `plugins/visionml/thirdparty/vision.cpp/`, pinned from `Acly/vision.cpp` revision `26a752912d49f6c4ff4545b35a1bdf7400d349ed`.
+- Vision ML is a normal native Krita tool/filter plugin. Do not restore the Python `ctypes` loader, its private `KoToolManager` injection, or installation under `pykrita`.
+- Installed default models live under `share/krita/visionml/models/`. User-added models live under `%APPDATA%/krita/visionml/models/`; the old `%APPDATA%/krita/pykrita/vision_tools/models/` location remains a read-only compatibility fallback.
+- The default native models are MobileSAM F16, BiRefNet-lite F16, and MI-GAN 512 F16. BiRefNet Dynamic is the recommended optional high-quality background-removal model; do not bundle BRIA RMBG weights because their model license restricts commercial use.
+- Vulkan inference is built only when the Vulkan SDK and `glslc` are available. CPU-only builds must remain functional and expose the unavailable GPU backend as disabled in the UI.
+- The development machine has a copy-only LunarG Vulkan SDK 1.4.357.0 at `<krita-dev-root>\VulkanSDK\1.4.357.0`. It is intentionally not added to the system PATH or registry.
+- The installed Vulkan runtime has been verified against the NVIDIA RTX PRO 6000 Blackwell: GGML detects FP16, BF16, integer dot products, and NVIDIA cooperative-matrix support.
 
 ## External build and installation
 
@@ -31,6 +55,24 @@ Build the native plugin with:
 cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritaquickaccessdocker -j 2"
 ```
 
+Build Rest Note and Asset Library with:
+
+```bat
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritarestnotedocker kritaassetlibrarydocker -j 2"
+```
+
+Build Vision ML with:
+
+```bat
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritavisionml -j 2"
+```
+
+If the build tree is reconfigured, pass the private Vulkan SDK paths explicitly before building Vision ML:
+
+```bat
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake -S <repository-root> -B <krita-dev-root>\_build -DVulkan_INCLUDE_DIR=<krita-dev-root>\VulkanSDK\1.4.357.0\Include -DVulkan_LIBRARY=<krita-dev-root>\VulkanSDK\1.4.357.0\Lib\vulkan-1.lib -DVulkan_GLSLC_EXECUTABLE=<krita-dev-root>\VulkanSDK\1.4.357.0\Bin\glslc.exe"
+```
+
 Run its tests with:
 
 ```bat
@@ -43,13 +85,27 @@ Install the rebuilt plugin with:
 cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\quickaccess\cmake_install.cmake
 ```
 
+Install Rest Note and Asset Library with:
+
+```bat
+cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\restnote\cmake_install.cmake
+cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\assetlibrary\cmake_install.cmake
+```
+
+Install Vision ML's module/runtime and its models with both generated scripts:
+
+```bat
+cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\visionml\src\cmake_install.cmake
+cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\visionml\cmake_install.cmake
+```
+
 If a change affects a shared Krita library, install that library too. For example, changes under `libs/widgets` require:
 
 ```bat
 cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\widgets\cmake_install.cmake
 ```
 
-Krita must be fully restarted after installing rebuilt DLLs. Continue to format, compile, unit-test, and install Quick Access changes incrementally before handing them off for interactive testing.
+Krita must be fully restarted after installing rebuilt DLLs. A running Krita process locks native plugin DLLs on Windows, so never terminate it without the user's approval; ask the user to close Krita if installation is blocked. Continue to format, compile, test, and install native docker changes incrementally before handing them off for interactive testing.
 
 ## Configuration and profiles
 
@@ -59,6 +115,9 @@ Krita must be fully restarted after installing rebuilt DLLs. Continue to format,
 - Deleting only `default.kqap` does not necessarily reset every setting because appearance, gesture, HueSVC, and Quick Adjust values also live in KConfig groups in `kritarc`.
 - Preserve compatibility with migrated legacy JSON keys. Native aliases use categories such as `actions` and `dockers`, with fields including `custom_name`, `background_color`, `font_color`, `font_size`, and `icon_name`.
 - Custom icon paths may be absolute paths anywhere on the system. Resolve a valid absolute path before trying a bundled icon with the same filename.
+- Rest Note configuration: `%APPDATA%\krita\rest_note\config\main.json`. Preserve all Python-era keys, including work/break durations, eye-break timing, idle detection, toast geometry/fonts, and overlay fonts.
+- Asset Library configuration: `%APPDATA%\krita\krita_asset_library\config.json`. Preserve `paths`, layout sizes, display settings, and compatibility aliases such as `nested` to `include_subfolders` and `font_size` to the split font-size settings.
+- Asset Library also imports its older KConfig fallback from group `asset_library`, key `settings_json`, when the JSON file does not exist.
 
 ## Architecture and lifecycle rules
 
@@ -70,6 +129,11 @@ Krita must be fully restarted after installing rebuilt DLLs. Continue to format,
 - Normalize spaces in configured key sequences (`Alt + A` must behave as `Alt+A`). Release handling must restore state even if focus changes while the key is held.
 - Temporary brush activation and restoration must use `KisPaintopBox::resourceSelected()`, not only `KisCanvasResourceProvider::setPaintOpPreset()`, so Krita fully switches the paint-op engine and editor state.
 - Popup actions should toggle closed when their shortcut is pressed again. Unpinned popups close after selection; pinned popups remain open.
+- The Quick Access Palette popup uses the bundled `system_icons/pin_unpinned.png` and `pin_pinned.png` assets for its pin button and `system_icons/circle-xmark.png` for its close button. Its empty header area is a drag handle that moves the frameless popup while preserving the cursor-to-window offset, matching the original plugin.
+- `AssetLibraryDock` is a `KisMainwindowObserver`; retain the view manager supplied through `setViewManager()` for document opening and layer insertion. Do not access a view manager from the plugin constructor.
+- Rest Note's input-idle event filter is owned by the persistent native docker and must be removed when that docker is destroyed.
+- Rest Note's large break overlay is a child of the owning Krita `QMainWindow`, covers only Krita's client area, and follows that window's resize/minimize/close lifecycle. Do not restore the monitor-wide always-on-top overlay unless explicitly requested.
+- Rest Note's small eye-break toast remains a non-activating, input-transparent top-level notification on Krita's current screen.
 
 ## Important migrated behavior
 
@@ -80,7 +144,7 @@ Krita must be fully restarted after installing rebuilt DLLs. Continue to format,
 - The Resource dialog follows the original structure: Actions and Dockers are editable tables; Brushes are a thumbnail grid.
 - Settings are separated into General, Popup and HueSVC, Quick Adjust, and Temporary Brushes tabs.
 - The configurable blend-mode ID list is shared by Quick Brush Adjustments and the compact HueSVC popup.
-- When enabled, Quick Brush Adjustments borrows Krita's `sharedtooldocker` contents into a floating Tool Options pad. The pad defaults to the left of the docker, remembers visibility, and must return the borrowed widget safely on teardown.
+- When enabled, Quick Brush Adjustments borrows Krita's `sharedtooldocker` contents into a floating Tool Options pad. The pad defaults to the left of the docker, remembers visibility, dynamically follows the borrowed content's size within the main-window bounds, repositions after every size change so its configured edge remains attached to the docker, stays below other applications, and must return the borrowed widget safely on teardown.
 - Brush rotation controls are available only in the compact HueSVC popup. Do not restore the rotation toggle or startup setting to the standalone Quick Brush Adjustments docker unless explicitly requested.
 - Gesture preview is a 3×3 overlay centered on the cursor. Its full layout size must be activated and fixed before calculating `cursor - half preview size`; reapply the position after showing to avoid Windows placing the top-left at the cursor.
 - Gesture configuration uses the arrow PNGs in `resources/gesture/`, with configured resource previews around the arrow buttons. Brush gestures show preset thumbnails. Actions and dockers use configured aliases/icons with native icons as fallback.
@@ -88,10 +152,30 @@ Krita must be fully restarted after installing rebuilt DLLs. Continue to format,
 - Quick Adjust color history updates only from actual foreground-color use/painting and resets once per Krita process, not whenever the selector color changes.
 - Temporary Brushes are hold actions: save the current preset and size on press, select the configured preset, apply a positive size scale, and restore the original preset and size on release.
 
+## Rest Note migrated behavior
+
+- Preserve the five timer states: running, paused, big break, eye break, and idle. Big-break timing takes priority over an active eye break.
+- Idle detection pauses the work timer after the configured lack of input and resumes it when activity returns. Explicit pause and break states must not be overridden by idle transitions.
+- Big breaks reset both timers; eye breaks keep the big-break timer running and may be skipped when a big break is near.
+- The native docker uses the original `pause.png`, `play.png`, `refresh.png`, `rest.png`, and `setting.png` artwork. Keep these bundled resources rather than substituting system theme icons.
+- The docker's status, timer, secondary text, and four icon buttons scale with the available docker size, matching the original layout.
+
+## Asset Library migrated behavior
+
+- The welcome page's Asset Library tab is implemented independently in `libs/ui/KisWelcomeAssetLibraryWidget.*`; do not embed the docker widget there. It shares the docker's JSON/KConfig settings and user-visible asset operations, and loads the configuration and thumbnails lazily when its tab is selected.
+- Preserve the horizontal split layout: folder list and Refresh/Settings/Hide buttons on the left, status and scrollable thumbnail sections on the right.
+- Folder entries retain alias, path, recursive-folder flag, and per-folder extension list. When recursion is enabled, group assets by containing folder.
+- Asset tiles support open, insert as paint/vector layer, insert as file layer, duplicate, rename, and delete. Layer insertion must use Krita's native undo-aware/view-manager paths.
+- For `.kra` thumbnails, read `preview.png` first, then `Thumbnails/thumbnail.png`, and use `mergedimage.png` only as a fallback. Loading `mergedimage.png` first causes severe startup stalls for large files.
+- Keep the bounded in-memory thumbnail cache keyed by path, size, modification time, thumbnail size, and device-pixel ratio. Resizing or switching column counts must reuse cached thumbnails rather than decoding every asset again.
+- Automatic columns are based on the actual scroll viewport width. The viewport resize event filter and deferred startup relayout are required because dock geometry is not final when the first folder loads.
+- Do not rebuild the thumbnail grid on every resize event; relayout only when the computed column count changes.
+
 ## Editing and verification discipline
 
 - Use `apply_patch` for source edits and the configured clang-format executable for modified C++ headers/sources.
 - Run `git diff --check` on touched tracked files.
 - Preserve source and binary assets already added to `plugins/dockers/quickaccess/resources`.
+- Preserve source and binary assets already added to `plugins/dockers/restnote/resources`.
 - Do not infer that a successful compile proves interactive input behavior. For shortcut/listener bugs, inspect ownership, event-filter lifetime, configuration values in `kritarc`, press/release symmetry, and conflicts with text-input focus.
 - Do not restore removed Android files or revert unrelated changes while cleaning up Quick Access work.

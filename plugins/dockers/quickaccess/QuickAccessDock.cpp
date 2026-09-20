@@ -50,6 +50,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QShortcut>
@@ -68,6 +69,62 @@ namespace
 {
 constexpr int DefaultIconSize = 42;
 constexpr int SeparatorEdgeMargin = 5;
+
+QPoint globalMousePosition(const QMouseEvent *event)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return event->globalPosition().toPoint();
+#else
+    return event->globalPos();
+#endif
+}
+
+class PopupDragBar : public QWidget
+{
+public:
+    explicit PopupDragBar(QWidget *target, QWidget *parent = nullptr)
+        : QWidget(parent)
+        , m_target(target)
+    {
+    }
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton && m_target) {
+            m_dragOffset = globalMousePosition(event) - m_target->frameGeometry().topLeft();
+            m_dragging = true;
+            event->accept();
+            return;
+        }
+        QWidget::mousePressEvent(event);
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        if (m_dragging && (event->buttons() & Qt::LeftButton) && m_target) {
+            m_target->move(globalMousePosition(event) - m_dragOffset);
+            event->accept();
+            return;
+        }
+        QWidget::mouseMoveEvent(event);
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton && m_dragging) {
+            m_dragging = false;
+            event->accept();
+            return;
+        }
+        QWidget::mouseReleaseEvent(event);
+    }
+
+private:
+    QPointer<QWidget> m_target;
+    QPoint m_dragOffset;
+    bool m_dragging{false};
+};
 
 class QuickColorPopup : public QFrame
 {
@@ -394,30 +451,35 @@ QuickAccessDock::~QuickAccessDock() = default;
 
 void QuickAccessDock::buildPopupHeader(QWidget *root)
 {
-    auto *bar = new QWidget(root);
+    auto *bar = new PopupDragBar(this, root);
     auto *header = new QHBoxLayout(bar);
     header->setContentsMargins(0, 0, 0, 0);
     header->setSpacing(2);
     header->addStretch();
 
-    auto *pin = new QToolButton(bar);
-    pin->setCheckable(true);
-    pin->setAutoRaise(true);
-    pin->setIcon(QIcon::fromTheme(QStringLiteral("window-pin")));
-    if (pin->icon().isNull())
-        pin->setText(QStringLiteral("P"));
-    pin->setToolTip(i18nc("@info:tooltip", "Keep popup open after selecting an item"));
-    pin->setFixedSize(22, 22);
-    connect(pin, &QToolButton::toggled, this, &QuickAccessDock::setPopupPinned);
-    header->addWidget(pin);
+    m_popupPinButton = new QToolButton(bar);
+    m_popupPinButton->setCheckable(true);
+    m_popupPinButton->setAutoRaise(true);
+    const QString unpinnedIcon = bundledIconPath(QStringLiteral("system_icons"), QStringLiteral("pin_unpinned.png"));
+    m_popupPinButton->setIcon(unpinnedIcon.isEmpty() ? QIcon::fromTheme(QStringLiteral("window-pin"))
+                                                     : QIcon(unpinnedIcon));
+    if (m_popupPinButton->icon().isNull())
+        m_popupPinButton->setText(QStringLiteral("P"));
+    m_popupPinButton->setToolTip(i18nc("@info:tooltip", "Keep popup open after selecting an item"));
+    m_popupPinButton->setFixedSize(22, 22);
+    m_popupPinButton->setIconSize(QSize(16, 16));
+    connect(m_popupPinButton, &QToolButton::toggled, this, &QuickAccessDock::setPopupPinned);
+    header->addWidget(m_popupPinButton);
 
     auto *closeButton = new QToolButton(bar);
     closeButton->setAutoRaise(true);
-    closeButton->setIcon(QIcon::fromTheme(QStringLiteral("window-close")));
+    const QString closeIcon = bundledIconPath(QStringLiteral("system_icons"), QStringLiteral("circle-xmark.png"));
+    closeButton->setIcon(closeIcon.isEmpty() ? QIcon::fromTheme(QStringLiteral("window-close")) : QIcon(closeIcon));
     if (closeButton->icon().isNull())
         closeButton->setText(QStringLiteral("×"));
     closeButton->setToolTip(i18nc("@info:tooltip", "Close"));
     closeButton->setFixedSize(22, 22);
+    closeButton->setIconSize(QSize(16, 16));
     connect(closeButton, &QToolButton::clicked, this, &QWidget::close);
     header->addWidget(closeButton);
 
@@ -631,6 +693,14 @@ void QuickAccessDock::setPopupPinned(bool pinned)
     if (!m_popupMode || m_popupPinned == pinned)
         return;
     m_popupPinned = pinned;
+    if (m_popupPinButton) {
+        const QString iconName = pinned ? QStringLiteral("pin_pinned.png") : QStringLiteral("pin_unpinned.png");
+        const QString iconPath = bundledIconPath(QStringLiteral("system_icons"), iconName);
+        m_popupPinButton->setIcon(iconPath.isEmpty() ? QIcon::fromTheme(QStringLiteral("window-pin"))
+                                                     : QIcon(iconPath));
+        m_popupPinButton->setToolTip(pinned ? i18nc("@info:tooltip", "Allow popup to close after selecting an item")
+                                            : i18nc("@info:tooltip", "Keep popup open after selecting an item"));
+    }
     const QPoint position = pos();
     setWindowFlag(Qt::Popup, !pinned);
     setWindowFlag(Qt::Tool, pinned);

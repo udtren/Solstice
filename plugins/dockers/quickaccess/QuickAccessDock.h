@@ -92,6 +92,7 @@ private:
     QPointer<QAction> m_palettePopupAction;
     QPointer<QuickAccessDock> m_palettePopup;
     QPointer<QWidget> m_colorPopup;
+    QPointer<QToolButton> m_popupPinButton;
     bool m_rebuilding{false};
     bool m_popupMode{false};
     bool m_popupPinned{false};

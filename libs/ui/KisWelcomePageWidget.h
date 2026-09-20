@@ -7,26 +7,28 @@
 #ifndef KISWELCOMEPAGEWIDGET_H
 #define KISWELCOMEPAGEWIDGET_H
 
-#include "kritaui_export.h"
 #include "KisViewManager.h"
-#include <KisUpdaterBase.h>
+#include "kritaui_export.h"
 #include <KisKineticScroller.h>
+#include <KisUpdaterBase.h>
 
-#include <QAction>
-#include <QWidget>
 #include "ui_KisWelcomePage.h"
-#include <QStandardItemModel>
-#include <QScopedPointer>
+#include <QAction>
 #include <QFont>
+#include <QScopedPointer>
+#include <QStandardItemModel>
+#include <QWidget>
 
 #include "config-updaters.h"
 class RecentItemDelegate;
 class KisMainWindow;
+class KisWelcomeAssetLibraryWidget;
+class QTabWidget;
 
 // Custom QAction to bridge a QLabel::linkActivated signal to a QAction::setChecked signal
 class ShowNewsAction : public QAction
 {
-  Q_OBJECT
+    Q_OBJECT
 public:
     using QAction::QAction;
 private Q_SLOTS:
@@ -38,11 +40,11 @@ class KRITAUI_EXPORT KisWelcomePageWidget : public QWidget, public Ui::KisWelcom
 {
     Q_OBJECT
 
-    public:
+public:
     explicit KisWelcomePageWidget(QWidget *parent);
     ~KisWelcomePageWidget() override;
 
-    void setMainWindow(KisMainWindow* m_mainWindow);
+    void setMainWindow(KisMainWindow *m_mainWindow);
 
 public Q_SLOTS:
     /// if a document is placed over this area, a dotted line will appear as an indicator
@@ -69,7 +71,10 @@ private Q_SLOTS:
      */
     void slotRecentFilesModelIsUpToDate();
 
-    void slotScrollerStateChanged(QScroller::State state){ KisKineticScroller::updateCursor(this, state); }
+    void slotScrollerStateChanged(QScroller::State state)
+    {
+        KisKineticScroller::updateCursor(this, state);
+    }
 
 #ifdef ENABLE_UPDATERS
     void slotRunVersionUpdate();
@@ -85,16 +90,15 @@ private Q_SLOTS:
     QFont largerFont();
 
 protected:
-
     // QWidget overrides
-    void dragEnterEvent(QDragEnterEvent * event) override;
-    void dropEvent(QDropEvent * event) override;
-    void dragMoveEvent(QDragMoveEvent * event) override;
-    void dragLeaveEvent(QDragLeaveEvent * event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
     void changeEvent(QEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
     bool eventFilter(QObject *watched, QEvent *event) override;
-
 
 private:
     void setupNewsLangSelection(QMenu *newsOptionMenu);
@@ -110,14 +114,13 @@ private:
     void initDonations();
 #endif
 
-    KisMainWindow *m_mainWindow {nullptr};
+    KisMainWindow *m_mainWindow{nullptr};
 
     /// help us see how many people are clicking startup screen links
     /// you can see the results in Matomo (stats.kde.org)
     /// this will be listed in the "Acquisition" section of Matomo
     /// just append some text to this to associate it with an event/page
     const QString analyticsString = "pk_campaign=startup-sceen&pk_kwd=";
-
 
     // keeping track of link colors with theme change
     QColor textColor;
@@ -129,10 +132,11 @@ private:
     QScopedPointer<KisUpdaterBase> m_versionUpdater;
     KisUpdaterStatus m_updaterStatus;
 #endif
-    bool m_networkIsAllowed {false};
+    bool m_networkIsAllowed{false};
 
     QScopedPointer<RecentItemDelegate> recentItemDelegate;
-
+    QTabWidget *m_contentTabs{nullptr};
+    KisWelcomeAssetLibraryWidget *m_assetLibraryWidget{nullptr};
 };
 
 #endif // KISWELCOMEPAGEWIDGET_H

@@ -8,23 +8,24 @@
 
 #include "KisWelcomePageWidget.h"
 #include "KisRecentDocumentsModelWrapper.h"
-#include <QDesktopServices>
-#include <QMimeData>
-#include <QPixmap>
-#include <QMessageBox>
-#include <QTemporaryFile>
+#include "KisWelcomeAssetLibraryWidget.h"
 #include <QBuffer>
-#include <QNetworkAccessManager>
-#include <QEventLoop>
+#include <QDesktopServices>
 #include <QDomDocument>
+#include <QEventLoop>
+#include <QMessageBox>
+#include <QMimeData>
+#include <QNetworkAccessManager>
+#include <QPixmap>
+#include <QTemporaryFile>
 
 #include "KisRemoteFileFetcher.h"
+#include "dialogs/KisDlgCreateNewDocument.h"
 #include "kactioncollection.h"
 #include "kis_action.h"
 #include "kis_action_manager.h"
-#include "dialogs/KisDlgCreateNewDocument.h"
-#include <KisMimeDatabase.h>
 #include <KisApplication.h>
+#include <KisMimeDatabase.h>
 
 #include "KConfigGroup"
 #include "KSharedConfig"
@@ -33,24 +34,25 @@
 #include <QListWidgetItem>
 #include <QMenu>
 #include <QScrollBar>
+#include <QTabWidget>
 
-#include "kis_clipboard.h"
-#include "kis_icon_utils.h"
-#include <kis_painting_tweaks.h>
-#include "KoStore.h"
-#include "kis_config.h"
 #include "KisDocument.h"
+#include "KisMainWindow.h"
+#include "KoStore.h"
+#include "kis_clipboard.h"
+#include "kis_config.h"
+#include "kis_icon_utils.h"
+#include <KisKineticScroller.h>
+#include <KisPart.h>
 #include <kis_image.h>
 #include <kis_paint_device.h>
-#include <KisPart.h>
-#include <KisKineticScroller.h>
-#include "KisMainWindow.h"
+#include <kis_painting_tweaks.h>
 
 #include <utils/KisUpdaterBase.h>
 
 #include <QCoreApplication>
-#include <kis_debug.h>
 #include <QDir>
+#include <kis_debug.h>
 
 #include <array>
 
@@ -64,14 +66,14 @@
 #include <utils/KisManualUpdater.h>
 #endif
 
-#include <klocalizedstring.h>
 #include <KritaVersionWrapper.h>
+#include <klocalizedstring.h>
 
+#include "opengl/kis_opengl.h"
 #include <KisUsageLogger.h>
 #include <QSysInfo>
 #include <kis_config.h>
 #include <kis_image_config.h>
-#include "opengl/kis_opengl.h"
 
 #ifdef Q_OS_WIN
 #include <KisWindowsPackageUtils.h>
@@ -97,11 +99,11 @@ void ShowNewsAction::enableFromLink(QString unused_url)
     Q_EMIT setChecked(true);
 }
 
-
 // class to override item height for Breeze since qss seems to not work
 class RecentItemDelegate : public QStyledItemDelegate
 {
     int itemHeight = 0;
+
 public:
     RecentItemDelegate(QObject *parent = 0)
         : QStyledItemDelegate(parent)
@@ -113,12 +115,11 @@ public:
         this->itemHeight = itemHeight;
     }
 
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &/*index*/) const override
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex & /*index*/) const override
     {
         return QSize(option.rect.width(), itemHeight);
     }
 };
-
 
 KisWelcomePageWidget::KisWelcomePageWidget(QWidget *parent)
     : QWidget(parent)
@@ -141,27 +142,56 @@ KisWelcomePageWidget::KisWelcomePageWidget(QWidget *parent)
     recentDocumentsListView->setViewMode(QListView::IconMode);
     recentDocumentsListView->setSelectionMode(QAbstractItemView::NoSelection);
 
-//    m_recentItemDelegate.reset(new RecentItemDelegate(this));
-//    m_recentItemDelegate->setItemHeight(KisRecentDocumentsModelWrapper::ICON_SIZE_LENGTH);
-//    recentDocumentsListView->setItemDelegate(m_recentItemDelegate.data());
-    recentDocumentsListView->setIconSize(QSize(KisRecentDocumentsModelWrapper::ICON_SIZE_LENGTH, KisRecentDocumentsModelWrapper::ICON_SIZE_LENGTH));
+    //    m_recentItemDelegate.reset(new RecentItemDelegate(this));
+    //    m_recentItemDelegate->setItemHeight(KisRecentDocumentsModelWrapper::ICON_SIZE_LENGTH);
+    //    recentDocumentsListView->setItemDelegate(m_recentItemDelegate.data());
+    recentDocumentsListView->setIconSize(
+        QSize(KisRecentDocumentsModelWrapper::ICON_SIZE_LENGTH, KisRecentDocumentsModelWrapper::ICON_SIZE_LENGTH));
     recentDocumentsListView->setVerticalScrollMode(QListView::ScrollPerPixel);
     recentDocumentsListView->verticalScrollBar()->setSingleStep(50);
     {
-        QScroller* scroller = KisKineticScroller::createPreconfiguredScroller(recentDocumentsListView);
+        QScroller *scroller = KisKineticScroller::createPreconfiguredScroller(recentDocumentsListView);
         if (scroller) {
-            connect(scroller, SIGNAL(stateChanged(QScroller::State)), this, SLOT(slotScrollerStateChanged(QScroller::State)));
+            connect(scroller,
+                    SIGNAL(stateChanged(QScroller::State)),
+                    this,
+                    SLOT(slotScrollerStateChanged(QScroller::State)));
         }
     }
     recentDocumentsListView->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(recentDocumentsListView, SIGNAL(customContextMenuRequested(QPoint)), SLOT(slotRecentDocContextMenuRequest(QPoint)));
+    connect(recentDocumentsListView,
+            SIGNAL(customContextMenuRequested(QPoint)),
+            SLOT(slotRecentDocContextMenuRequest(QPoint)));
+
+    verticalLayout_2->removeItem(horizontalLayout_10);
+    verticalLayout_2->removeWidget(recentDocsStackedWidget);
+    recentDocumentsLabel->hide();
+
+    m_contentTabs = new QTabWidget(widgetRecentImagesColumn);
+    auto *recentPage = new QWidget(m_contentTabs);
+    auto *recentLayout = new QVBoxLayout(recentPage);
+    recentLayout->setContentsMargins(0, 0, 0, 0);
+    recentLayout->addLayout(horizontalLayout_10);
+    recentDocsStackedWidget->setParent(recentPage);
+    recentLayout->addWidget(recentDocsStackedWidget, 1);
+    m_contentTabs->addTab(recentPage, i18n("Recent Images"));
+
+    m_assetLibraryWidget = new KisWelcomeAssetLibraryWidget(m_contentTabs);
+    m_contentTabs->addTab(m_assetLibraryWidget, i18n("Asset Library"));
+    verticalLayout_2->addWidget(m_contentTabs, 1);
+    connect(m_contentTabs, &QTabWidget::currentChanged, this, [this](int index) {
+        if (m_contentTabs->widget(index) == m_assetLibraryWidget)
+            m_assetLibraryWidget->reloadSettings();
+    });
 
     // News widget...
     QMenu *newsOptionsMenu = new QMenu(this);
     newsOptionsMenu->setToolTipsVisible(true);
-    ShowNewsAction *showNewsAction = new ShowNewsAction(i18n("Enable news and check for new releases"), newsOptionsMenu);
+    ShowNewsAction *showNewsAction =
+        new ShowNewsAction(i18n("Enable news and check for new releases"), newsOptionsMenu);
     newsOptionsMenu->addAction(showNewsAction);
-    showNewsAction->setToolTip(i18n("Show news about Krita: this needs internet to retrieve information from the krita.org website"));
+    showNewsAction->setToolTip(
+        i18n("Show news about Krita: this needs internet to retrieve information from the krita.org website"));
     showNewsAction->setCheckable(true);
 
     newsOptionsMenu->addSection(i18n("Language"));
@@ -192,7 +222,6 @@ KisWelcomePageWidget::KisWelcomePageWidget(QWidget *parent)
     KisConfig cfg(true);
     m_networkIsAllowed = cfg.readEntry<bool>("FetchNews", false);
 
-
 #ifdef ENABLE_UPDATERS
 #ifndef Q_OS_ANDROID
     // Setup version updater, but do not check for them, unless the user explicitly
@@ -213,28 +242,29 @@ KisWelcomePageWidget::KisWelcomePageWidget(QWidget *parent)
     }
 #elif defined Q_OS_WIN
     if (!KisWindowsPackageUtils::isRunningInPackage() && !qEnvironmentVariableIsSet("STEAMAPPID")) {
- 		m_versionUpdater.reset(new KisManualUpdater());
+        m_versionUpdater.reset(new KisManualUpdater());
         KisUsageLogger::log("Non-store package - creating updater");
     } else {
         KisUsageLogger::log("detected appx or steam package - not creating the updater");
     }
 #else
-	// always create updater for MacOS
+    // always create updater for MacOS
     m_versionUpdater.reset(new KisManualUpdater());
 #endif // Q_OS_*
-	if (!m_versionUpdater.isNull()) {
-		connect(bnVersionUpdate, SIGNAL(clicked()), this, SLOT(slotRunVersionUpdate()));
-		connect(bnErrorDetails, SIGNAL(clicked()), this, SLOT(slotShowUpdaterErrorDetails()));
-		connect(m_versionUpdater.data(), SIGNAL(sigUpdateCheckStateChange(KisUpdaterStatus)),
-				this, SLOT(slotSetUpdateStatus(const KisUpdaterStatus&)));
+    if (!m_versionUpdater.isNull()) {
+        connect(bnVersionUpdate, SIGNAL(clicked()), this, SLOT(slotRunVersionUpdate()));
+        connect(bnErrorDetails, SIGNAL(clicked()), this, SLOT(slotShowUpdaterErrorDetails()));
+        connect(m_versionUpdater.data(),
+                SIGNAL(sigUpdateCheckStateChange(KisUpdaterStatus)),
+                this,
+                SLOT(slotSetUpdateStatus(const KisUpdaterStatus &)));
 
         if (m_networkIsAllowed) { // only if the user wants them
-			m_versionUpdater->checkForUpdate();
-		}
-	}
+            m_versionUpdater->checkForUpdate();
+        }
+    }
 #endif // ifndef Q_OS_ANDROID
 #endif // ENABLE_UPDATERS
-
 
     showNewsAction->setChecked(m_networkIsAllowed);
     newsWidget->setVisible(m_networkIsAllowed);
@@ -248,10 +278,11 @@ KisWelcomePageWidget::~KisWelcomePageWidget()
 {
 }
 
-void KisWelcomePageWidget::setMainWindow(KisMainWindow* mainWin)
+void KisWelcomePageWidget::setMainWindow(KisMainWindow *mainWin)
 {
     if (mainWin) {
         m_mainWindow = mainWin;
+        m_assetLibraryWidget->setMainWindow(mainWin);
 
         // set the shortcut links from actions (only if a shortcut exists)
         KisActionManager *actionManager = mainWin->viewManager()->actionManager();
@@ -279,7 +310,6 @@ void KisWelcomePageWidget::setMainWindow(KisMainWindow* mainWin)
     }
 }
 
-
 void KisWelcomePageWidget::showDropAreaIndicator(bool show)
 {
     if (!show) {
@@ -291,7 +321,8 @@ void KisWelcomePageWidget::showDropAreaIndicator(bool show)
         QColor blendedColor = KisPaintingTweaks::blendColors(textColor, backgroundColor, 0.8);
 
         // QColor.name() turns it into a hex/web format
-        QString dropFrameStyle = QString("QFrame#dropAreaIndicator { border: 2px dotted ").append(blendedColor.name()).append(" }") ;
+        QString dropFrameStyle =
+            QString("QFrame#dropAreaIndicator { border: 2px dotted ").append(blendedColor.name()).append(" }");
         dropFrameBorder->setStyleSheet(dropFrameStyle);
     }
 }
@@ -326,7 +357,8 @@ void KisWelcomePageWidget::slotUpdateThemeColors()
 
     // make drop area QFrame have a dotted line
     dropFrameBorder->setObjectName("dropAreaIndicator");
-    QString dropFrameStyle = QString("QFrame#dropAreaIndicator { border: 4px dotted ").append(blendedColor.name()).append("}");
+    QString dropFrameStyle =
+        QString("QFrame#dropAreaIndicator { border: 4px dotted ").append(blendedColor.name()).append("}");
     dropFrameBorder->setStyleSheet(dropFrameStyle);
 
     // only show drop area when we have a document over the empty area
@@ -351,28 +383,44 @@ void KisWelcomePageWidget::slotUpdateThemeColors()
     kdeIcon->setIcon(KisIconUtils::loadIcon(QStringLiteral("kde")));
 
     // HTML links seem to be a bit more stubborn with theme changes... setting inline styles to help with color change
-    userCommunityLink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://krita-artists.org\">")
-                               .append(i18n("User Community")).append("</a>"));
+    userCommunityLink->setText(
+        QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://krita-artists.org\">")
+            .append(i18n("User Community"))
+            .append("</a>"));
 
-    gettingStartedLink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://docs.krita.org/user_manual/getting_started.html\">")
-                                .append(i18n("Getting Started")).append("</a>"));
+    gettingStartedLink->setText(QString("<a style=\"color: " + blendedColor.name()
+                                        + " \" href=\"https://docs.krita.org/user_manual/getting_started.html\">")
+                                    .append(i18n("Getting Started"))
+                                    .append("</a>"));
 
     manualLink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://docs.krita.org\">")
-                        .append(i18n("User Manual")).append("</a>"));
+                            .append(i18n("User Manual"))
+                            .append("</a>"));
 
-    supportKritaLink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://krita.org/support-us/donations?" + analyticsString + "donations" + "\">")
-                              .append(i18n("Support Krita")).append("</a>"));
+    supportKritaLink->setText(QString("<a style=\"color: " + blendedColor.name()
+                                      + " \" href=\"https://krita.org/support-us/donations?" + analyticsString
+                                      + "donations" + "\">")
+                                  .append(i18n("Support Krita"))
+                                  .append("</a>"));
 
-    kritaWebsiteLink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://www.krita.org?" + analyticsString + "marketing-site" + "\">")
-                              .append(i18n("Krita Website")).append("</a>"));
+    kritaWebsiteLink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://www.krita.org?"
+                                      + analyticsString + "marketing-site" + "\">")
+                                  .append(i18n("Krita Website"))
+                                  .append("</a>"));
 
-    sourceCodeLink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://invent.kde.org/graphics/krita\">")
-                            .append(i18n("Source Code")).append("</a>"));
+    sourceCodeLink->setText(
+        QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://invent.kde.org/graphics/krita\">")
+            .append(i18n("Source Code"))
+            .append("</a>"));
 
-    poweredByKDELink->setText(QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://userbase.kde.org/What_is_KDE\">")
-                              .append(i18n("Powered by KDE")).append("</a>"));
+    poweredByKDELink->setText(
+        QString("<a style=\"color: " + blendedColor.name() + " \" href=\"https://userbase.kde.org/What_is_KDE\">")
+            .append(i18n("Powered by KDE"))
+            .append("</a>"));
 
-    QString translationNoFeed = i18n("You can <a href=\"ignored\" style=\"color: COLOR_PLACEHOLDER; text-decoration: underline;\">enable news</a> from krita.org in various languages with the menu above");
+    QString translationNoFeed = i18n(
+        "You can <a href=\"ignored\" style=\"color: COLOR_PLACEHOLDER; text-decoration: underline;\">enable news</a> "
+        "from krita.org in various languages with the menu above");
     labelNoFeed->setText(translationNoFeed.replace("COLOR_PLACEHOLDER", blendedColor.name()));
 
     const QColor faintTextColor = KisPaintingTweaks::blendColors(textColor, backgroundColor, 0.4);
@@ -407,9 +455,8 @@ void KisWelcomePageWidget::slotUpdateThemeColors()
 void KisWelcomePageWidget::dragEnterEvent(QDragEnterEvent *event)
 {
     showDropAreaIndicator(true);
-    if (event->mimeData()->hasUrls() ||
-        event->mimeData()->hasFormat("application/x-krita-node-internal-pointer") ||
-        event->mimeData()->hasFormat("application/x-qt-image")) {
+    if (event->mimeData()->hasUrls() || event->mimeData()->hasFormat("application/x-krita-node-internal-pointer")
+        || event->mimeData()->hasFormat("application/x-qt-image")) {
         return event->accept();
     }
 
@@ -451,16 +498,15 @@ void KisWelcomePageWidget::dragMoveEvent(QDragMoveEvent *event)
 {
     m_mainWindow->dragMoveEvent(event);
 
-    if (event->mimeData()->hasUrls() ||
-        event->mimeData()->hasFormat("application/x-krita-node-internal-pointer") ||
-        event->mimeData()->hasFormat("application/x-qt-image")) {
+    if (event->mimeData()->hasUrls() || event->mimeData()->hasFormat("application/x-krita-node-internal-pointer")
+        || event->mimeData()->hasFormat("application/x-qt-image")) {
         return event->accept();
     }
 
     return event->ignore();
 }
 
-void KisWelcomePageWidget::dragLeaveEvent(QDragLeaveEvent */*event*/)
+void KisWelcomePageWidget::dragLeaveEvent(QDragLeaveEvent * /*event*/)
 {
     showDropAreaIndicator(false);
     m_mainWindow->dragLeave();
@@ -473,6 +519,13 @@ void KisWelcomePageWidget::changeEvent(QEvent *event)
     }
 }
 
+void KisWelcomePageWidget::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    if (m_contentTabs && m_contentTabs->currentWidget() == m_assetLibraryWidget)
+        m_assetLibraryWidget->reloadSettings();
+}
+
 bool KisWelcomePageWidget::eventFilter(QObject *watched, QEvent *event)
 {
     if (watched == recentDocumentsListView && event->type() == QEvent::Leave) {
@@ -481,7 +534,8 @@ bool KisWelcomePageWidget::eventFilter(QObject *watched, QEvent *event)
     return QWidget::eventFilter(watched, event);
 }
 
-namespace {
+namespace
+{
 
 QString getAutoNewsLang()
 {
@@ -519,30 +573,28 @@ void KisWelcomePageWidget::setupNewsLangSelection(QMenu *newsOptionsMenu)
         const QString siteCode;
         const QString name;
     };
-    static const std::array<Lang, 22> newsLangs = {{
-        {QString("en"), QStringLiteral("English")},
-        {QString("jp"), QStringLiteral("日本語")},
-        {QString("zh"), QStringLiteral("中文 (简体)")},
-        {QString("zh-tw"), QStringLiteral("中文 (台灣正體)")},
-        {QString("zh-hk"), QStringLiteral("廣東話 (香港)")},
-        {QString("ca"), QStringLiteral("Català")},
-        {QString("ca@valencia"), QStringLiteral("Català de Valencia")},
-        {QString("cs"), QStringLiteral("Čeština")},
-        {QString("de"), QStringLiteral("Deutsch")},
-        {QString("eo"), QStringLiteral("Esperanto")},
-        {QString("es"), QStringLiteral("Español")},
-        {QString("eu"), QStringLiteral("Euskara")},
-        {QString("fr"), QStringLiteral("Français")},
-        {QString("it"), QStringLiteral("Italiano")},
-        {QString("lt"), QStringLiteral("lietuvių")},
-        {QString("nl"), QStringLiteral("Nederlands")},
-        {QString("pt"), QStringLiteral("Português")},
-        {QString("sk"), QStringLiteral("Slovenský")},
-        {QString("sl"), QStringLiteral("Slovenski")},
-        {QString("sv"), QStringLiteral("Svenska")},
-        {QString("tr"), QStringLiteral("Türkçe")},
-        {QString("uk"), QStringLiteral("Українська")}
-    }};
+    static const std::array<Lang, 22> newsLangs = {{{QString("en"), QStringLiteral("English")},
+                                                    {QString("jp"), QStringLiteral("日本語")},
+                                                    {QString("zh"), QStringLiteral("中文 (简体)")},
+                                                    {QString("zh-tw"), QStringLiteral("中文 (台灣正體)")},
+                                                    {QString("zh-hk"), QStringLiteral("廣東話 (香港)")},
+                                                    {QString("ca"), QStringLiteral("Català")},
+                                                    {QString("ca@valencia"), QStringLiteral("Català de Valencia")},
+                                                    {QString("cs"), QStringLiteral("Čeština")},
+                                                    {QString("de"), QStringLiteral("Deutsch")},
+                                                    {QString("eo"), QStringLiteral("Esperanto")},
+                                                    {QString("es"), QStringLiteral("Español")},
+                                                    {QString("eu"), QStringLiteral("Euskara")},
+                                                    {QString("fr"), QStringLiteral("Français")},
+                                                    {QString("it"), QStringLiteral("Italiano")},
+                                                    {QString("lt"), QStringLiteral("lietuvių")},
+                                                    {QString("nl"), QStringLiteral("Nederlands")},
+                                                    {QString("pt"), QStringLiteral("Português")},
+                                                    {QString("sk"), QStringLiteral("Slovenský")},
+                                                    {QString("sl"), QStringLiteral("Slovenski")},
+                                                    {QString("sv"), QStringLiteral("Svenska")},
+                                                    {QString("tr"), QStringLiteral("Türkçe")},
+                                                    {QString("uk"), QStringLiteral("Українська")}}};
 
     static const QString newsLangConfigName = QStringLiteral("FetchNewsLanguages");
 
@@ -595,11 +647,12 @@ void KisWelcomePageWidget::showDevVersionHighlight()
 {
     // always flag development version
     if (isDevelopmentBuild()) {
-        QString devBuildLabelText = QString("<a style=\"color: " +
-                                           blendedColor.name() +
-                                           " \" href=\"https://docs.krita.org/en/untranslatable_pages/triaging_bugs.html?"
-                                           + analyticsString + "dev-build" + "\">")
-                                  .append(i18n("DEV BUILD")).append("</a>");
+        QString devBuildLabelText =
+            QString("<a style=\"color: " + blendedColor.name()
+                    + " \" href=\"https://docs.krita.org/en/untranslatable_pages/triaging_bugs.html?" + analyticsString
+                    + "dev-build" + "\">")
+                .append(i18n("DEV BUILD"))
+                .append("</a>");
 
         devBuildLabel->setText(devBuildLabelText);
         devBuildIcon->setVisible(true);
@@ -630,7 +683,7 @@ void KisWelcomePageWidget::updateShortcutLink(QToolButton *button, QLabel *label
 void KisWelcomePageWidget::recentDocumentClicked(QModelIndex index)
 {
     QString fileUrl = index.data(Qt::ToolTipRole).toString();
-    m_mainWindow->openDocument(fileUrl, KisMainWindow::None );
+    m_mainWindow->openDocument(fileUrl, KisMainWindow::None);
 }
 
 void KisWelcomePageWidget::slotRecentDocContextMenuRequest(const QPoint &pos)
@@ -696,9 +749,9 @@ void KisWelcomePageWidget::slotRecentFilesModelIsUpToDate()
 #ifdef ENABLE_UPDATERS
 void KisWelcomePageWidget::slotToggleUpdateChecks(bool state)
 {
-	if (m_versionUpdater.isNull()) {
-		return;
-	}
+    if (m_versionUpdater.isNull()) {
+        return;
+    }
 
     m_networkIsAllowed = state;
 
@@ -710,13 +763,13 @@ void KisWelcomePageWidget::slotToggleUpdateChecks(bool state)
 }
 void KisWelcomePageWidget::slotRunVersionUpdate()
 {
-	if (m_versionUpdater.isNull()) {
-		return;
-	}
+    if (m_versionUpdater.isNull()) {
+        return;
+    }
 
     if (m_networkIsAllowed) {
-		m_versionUpdater->doUpdate();
-	}
+        m_versionUpdater->doUpdate();
+    }
 }
 
 void KisWelcomePageWidget::slotSetUpdateStatus(KisUpdaterStatus updateStatus)
@@ -754,7 +807,8 @@ void KisWelcomePageWidget::updateVersionUpdaterFrame()
             bnVersionUpdate->setVisible(true);
         } else {
             // build URL for label
-            QString downloadLink = QString(" <a style=\"color: %1; text-decoration: underline\" href=\"%2?%3\">Download Krita %4</a>")
+            QString downloadLink =
+                QString(" <a style=\"color: %1; text-decoration: underline\" href=\"%2?%3\">Download Krita %4</a>")
                     .arg(blendedColor.name())
                     .arg(m_updaterStatus.downloadLink())
                     .arg(analyticsString + "version-update")
@@ -763,11 +817,9 @@ void KisWelcomePageWidget::updateVersionUpdaterFrame()
             versionLabelText.append(downloadLink);
         }
 
-    } else if (
-               (m_updaterStatus.status() == UpdaterStatus::StatusID::UPTODATE)
+    } else if ((m_updaterStatus.status() == UpdaterStatus::StatusID::UPTODATE)
                || (m_updaterStatus.status() == UpdaterStatus::StatusID::CHECK_ERROR)
-               || (m_updaterStatus.status() == UpdaterStatus::StatusID::IN_PROGRESS)
-               ){
+               || (m_updaterStatus.status() == UpdaterStatus::StatusID::IN_PROGRESS)) {
         // no notifications, if uptodate
         // also, stay silent on check error - we do not want to generate lots of user support issues
         // because of failing wifis and proxies over the world
@@ -982,7 +1034,7 @@ void KisWelcomePageWidget::slotUpdateDonationState()
         qWarning("KisWelcomePageWidget::slotUpdateDonationState: android donations is null");
     }
 
-    if(pageVisible) {
+    if (pageVisible) {
         stkSupport->setCurrentWidget(pageVisible);
         wdgAndroidSupportBanner->hide();
         stkSupport->show();

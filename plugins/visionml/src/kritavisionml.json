@@ -1,0 +1,9 @@
+{
+    "Id": "Vision ML Tools",
+    "Type": "Service",
+    "X-KDE-Library": "kritavisionml",
+    "X-KDE-ServiceTypes": [
+        "Krita/Tool"
+    ],
+    "X-Krita-Version": "28"
+}

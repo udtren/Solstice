@@ -38,9 +38,11 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QScreen>
+#include <QScrollArea>
 #include <QSignalBlocker>
 #include <QSizePolicy>
 #include <QSlider>
+#include <QStyle>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -423,7 +425,7 @@ void QuickAdjustDock::ensureToolOptionsPad()
     m_toolOptionsPlaceholder = new QLabel(i18nc("@info", "Tool Options are open beside Quick Adjust."));
     m_toolOptionsPlaceholder->hide();
 
-    m_toolOptionsPad = new QWidget(mainWindow, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    m_toolOptionsPad = new QWidget(mainWindow, Qt::Tool | Qt::FramelessWindowHint);
     m_toolOptionsPad->setObjectName(QStringLiteral("quickAccessToolOptionsPad"));
     m_toolOptionsPad->setAutoFillBackground(true);
     auto *padLayout = new QVBoxLayout(m_toolOptionsPad);
@@ -433,10 +435,22 @@ void QuickAdjustDock::ensureToolOptionsPad()
     docker->hide();
     docker->toggleViewAction()->setEnabled(false);
 
-    m_toolOptionsPad->adjustSize();
-    const QSize wanted = m_toolOptionsPad->sizeHint().boundedTo(QSize(500, 700)).expandedTo(QSize(220, 200));
-    m_toolOptionsPad->resize(wanted);
+    padLayout->invalidate();
+    padLayout->activate();
+    resizeToolOptionsPad();
     setToolOptionsPadVisible(m_toolOptionsToggle->isChecked());
+
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState state) {
+        if (!m_toolOptionsPad)
+            return;
+        if (state != Qt::ApplicationActive) {
+            m_toolOptionsPad->hide();
+        } else if (m_toolOptionsToggle && m_toolOptionsToggle->isChecked() && isVisible()) {
+            resizeToolOptionsPad();
+            m_toolOptionsPad->show();
+            positionToolOptionsPad();
+        }
+    });
 }
 
 void QuickAdjustDock::setToolOptionsPadVisible(bool visible)
@@ -444,10 +458,15 @@ void QuickAdjustDock::setToolOptionsPadVisible(bool visible)
     if (!m_compactPopup && visible && !m_toolOptionsPad)
         ensureToolOptionsPad();
     if (m_toolOptionsPad) {
-        m_toolOptionsPad->setVisible(visible && isVisible());
+        resizeToolOptionsPad();
+        m_toolOptionsPad->setVisible(visible && isVisible()
+                                     && QGuiApplication::applicationState() == Qt::ApplicationActive);
         if (visible) {
             positionToolOptionsPad();
-            QTimer::singleShot(0, this, &QuickAdjustDock::positionToolOptionsPad);
+            QTimer::singleShot(0, this, [this] {
+                resizeToolOptionsPad();
+                positionToolOptionsPad();
+            });
         }
     }
     if (m_toolOptionsToggle) {
@@ -457,6 +476,55 @@ void QuickAdjustDock::setToolOptionsPadVisible(bool visible)
     KConfigGroup config = KSharedConfig::openConfig()->group(QStringLiteral("QuickAccessAdjust"));
     config.writeEntry("ToolOptionsStartVisible", visible);
     config.sync();
+}
+
+void QuickAdjustDock::resizeToolOptionsPad()
+{
+    if (!m_toolOptionsPad || !m_borrowedToolOptions)
+        return;
+
+    QSize contentSize = m_borrowedToolOptions->sizeHint();
+    QScrollArea *scrollArea = qobject_cast<QScrollArea *>(m_borrowedToolOptions.data());
+    if (scrollArea && scrollArea->widget()) {
+        QWidget *contents = scrollArea->widget();
+        contents->ensurePolished();
+        if (contents->layout()) {
+            contents->layout()->invalidate();
+            contents->layout()->activate();
+        }
+        contentSize = contents->sizeHint();
+        const int frame = scrollArea->frameWidth() * 2;
+        contentSize += QSize(frame, frame);
+    }
+    if (!contentSize.isValid() || contentSize.isEmpty())
+        contentSize = m_borrowedToolOptions->minimumSizeHint();
+    contentSize = contentSize.expandedTo(QSize(1, 1));
+
+    QSize maximumSize;
+    if (m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->mainWindow())
+        maximumSize = m_canvas->viewManager()->mainWindow()->centralWidget()->size();
+    if ((!maximumSize.isValid() || maximumSize.isEmpty()) && m_toolOptionsPad->screen())
+        maximumSize = m_toolOptionsPad->screen()->availableGeometry().size();
+
+    const QMargins margins = m_toolOptionsPad->layout()->contentsMargins();
+    const QSize marginSize(margins.left() + margins.right(), margins.top() + margins.bottom());
+    if (maximumSize.isValid() && !maximumSize.isEmpty()) {
+        const QSize maximumContent = (maximumSize - marginSize - QSize(8, 8)).expandedTo(QSize(1, 1));
+        if (scrollArea) {
+            const int scrollBarExtent = style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+            if (contentSize.height() > maximumContent.height())
+                contentSize.rwidth() += scrollBarExtent;
+            if (contentSize.width() > maximumContent.width())
+                contentSize.rheight() += scrollBarExtent;
+        }
+        contentSize = contentSize.boundedTo(maximumContent);
+    }
+
+    const QSize wanted = contentSize + marginSize;
+    if (wanted != m_toolOptionsPad->size()) {
+        m_toolOptionsPad->resize(wanted);
+        positionToolOptionsPad();
+    }
 }
 
 void QuickAdjustDock::positionToolOptionsPad()
@@ -784,6 +852,7 @@ void QuickAdjustDock::syncFromCanvas()
         selectBlendMode(m_layerBlend, node->compositeOpId());
     }
     updateStatusButtons();
+    resizeToolOptionsPad();
     m_syncing = false;
 }
 

@@ -23,6 +23,7 @@
 #include <QIcon>
 #include <QJsonDocument>
 #include <QLabel>
+#include <QMainWindow>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
@@ -107,12 +108,17 @@ private:
 class BreakOverlay : public QWidget
 {
 public:
-    BreakOverlay(const RestNoteConfig &config, QScreen *screen, std::function<void()> finished)
-        : m_finished(std::move(finished))
+    BreakOverlay(const RestNoteConfig &config, QWidget *host, std::function<void()> finished)
+        : QWidget(host)
+        , m_host(host)
+        , m_finished(std::move(finished))
     {
-        setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
         setAttribute(Qt::WA_TranslucentBackground);
-        setGeometry((screen ? screen : QGuiApplication::primaryScreen())->geometry());
+        setFocusPolicy(Qt::StrongFocus);
+        if (m_host) {
+            setGeometry(m_host->rect());
+            m_host->installEventFilter(this);
+        }
 
         auto *layout = new QVBoxLayout(this);
         layout->setAlignment(Qt::AlignCenter);
@@ -154,6 +160,15 @@ public:
     }
 
 protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (watched == m_host && (event->type() == QEvent::Resize || event->type() == QEvent::Show)) {
+            setGeometry(m_host->rect());
+            raise();
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
     void paintEvent(QPaintEvent *) override
     {
         QPainter painter(this);
@@ -172,6 +187,7 @@ private:
     }
 
     int m_alpha{0};
+    QPointer<QWidget> m_host;
     std::function<void()> m_finished;
 };
 
@@ -578,6 +594,19 @@ QScreen *RestNoteDock::currentScreen() const
     return QGuiApplication::primaryScreen();
 }
 
+QWidget *RestNoteDock::mainWindowHost() const
+{
+    QWidget *candidate = const_cast<RestNoteDock *>(this);
+    while (candidate) {
+        if (qobject_cast<QMainWindow *>(candidate))
+            return candidate;
+        candidate = candidate->parentWidget();
+    }
+
+    candidate = QApplication::activeWindow();
+    return qobject_cast<QMainWindow *>(candidate) ? candidate : window();
+}
+
 void RestNoteDock::startBigBreak()
 {
     if (auto *toast = dynamic_cast<MicroToast *>(m_microToast.data()))
@@ -588,10 +617,12 @@ void RestNoteDock::startBigBreak()
     m_microRemaining = m_config.microIntervalSeconds();
     m_remaining = 0;
     m_state = State::Break;
-    m_overlay = new BreakOverlay(m_config, currentScreen(), [this]() {
+    m_overlay = new BreakOverlay(m_config, mainWindowHost(), [this]() {
         endBigBreak();
     });
     m_overlay->show();
+    m_overlay->raise();
+    m_overlay->setFocus(Qt::OtherFocusReason);
     refreshDisplay();
 }
 

@@ -74,6 +74,7 @@ private:
     void endMicroBreak();
     void cancelTransientWindows();
     void showSettings();
+    QWidget *mainWindowHost() const;
     QScreen *currentScreen() const;
 
     RestNoteConfig m_config;
