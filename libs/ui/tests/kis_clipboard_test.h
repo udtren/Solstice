@@ -14,6 +14,7 @@ class KisClipboardTest : public QObject
     Q_OBJECT
 private Q_SLOTS:
     void testRoundTrip();
+    void testUnavailableBitmapSource();
 };
 
 #endif /* __KIS_CLIPBOARD_TEST_H */

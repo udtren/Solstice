@@ -135,6 +135,13 @@ protected:
     void leaveEvent(QEvent *event) override
     {
         QFrame::leaveEvent(event);
+
+        // A combo box opens its list as a separate Qt::Popup window. Moving
+        // the pointer into that window sends Leave to this popup even though
+        // the user is still interacting with one of its child controls.
+        if (QApplication::activePopupWidget())
+            return;
+
         close();
     }
 };
@@ -641,7 +648,7 @@ void QuickAccessDock::showColorPopup()
     }
     if (!m_canvas)
         return;
-    auto *popup = new QuickColorPopup(nullptr, Qt::Popup | Qt::FramelessWindowHint);
+    auto *popup = new QuickColorPopup(nullptr, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     popup->setAttribute(Qt::WA_DeleteOnClose);
     auto *layout = new QHBoxLayout(popup);
     layout->setContentsMargins(6, 6, 6, 6);
@@ -665,6 +672,8 @@ void QuickAccessDock::showColorPopup()
     popup->move(QCursor::pos() - QPoint(popup->width() / 4, popup->height() / 3));
     m_colorPopup = popup;
     popup->show();
+    popup->raise();
+    popup->activateWindow();
 }
 
 void QuickAccessDock::toggleGestures()

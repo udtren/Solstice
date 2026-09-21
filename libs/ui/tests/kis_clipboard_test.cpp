@@ -51,5 +51,22 @@ void KisClipboardTest::testRoundTrip()
     QVERIFY(TestUtil::comparePaintDevices(errorPoint, dev, newDev));
 }
 
+void KisClipboardTest::testUnavailableBitmapSource()
+{
+    const auto source = KisClipboard::instance()->askUserForSourceWithData(QImage(), {});
+
+    QVERIFY(!source.first);
+    QCOMPARE(source.second, KisClipboard::PASTE_FORMAT_ASK);
+
+    const KisPaintDeviceSP clip =
+        KisClipboard::instance()->clipFromBoardContentsWithData(QImage(),
+                                                                {},
+                                                                QRect(),
+                                                                false,
+                                                                -1,
+                                                                false,
+                                                                {true, KisClipboard::PASTE_FORMAT_CLIP});
+    QVERIFY(!clip);
+}
 
 SIMPLE_TEST_MAIN(KisClipboardTest)

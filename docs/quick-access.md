@@ -9,7 +9,9 @@ HueSVC places compact overlapping foreground and background color swatches at
 the selector's top-left. Clicking either swatch swaps the two colors.
 Its popup uses a fixed-width vertical adjustment panel so each brush and layer
 slider spans the panel, matching the original plugin layout. Docker-only status
-buttons and their separators are omitted from the popup.
+buttons and their separators are omitted from the popup. Opening either brush
+or layer blending-mode list keeps the HueSVC popup open while the list is in
+use.
 
 Existing profile aliases, custom labels, colors, icons, and legacy JSON fields
 remain supported where practical.

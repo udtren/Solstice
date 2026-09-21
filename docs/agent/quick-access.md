@@ -95,6 +95,10 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   2×2 pressure toggles. Do not reuse the standalone docker's two-column
   brush/layer layout there, and do not add its status-button strip or separator
   frames to the popup.
+- Match the original HueSVC popup lifecycle: the parent is a frameless,
+  always-on-top `Qt::Tool`, not a `Qt::Popup`, and closes when the pointer
+  leaves it. A combo-box drop-down is a separate `Qt::Popup`; keep HueSVC open
+  while any such popup is active so either blending-mode list remains usable.
 - Gesture preview is a 3×3 overlay centered on the cursor. Activate and fix the
   complete layout before calculating `cursor - half preview size`, then reapply
   position after showing so Windows does not place its top-left at the cursor.

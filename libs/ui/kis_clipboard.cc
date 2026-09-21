@@ -394,6 +394,10 @@ KisClipboard::askUserForSource(const QMimeData *cbData, bool useClipboardFallbac
 QPair<bool, KisClipboard::PasteFormatBehaviour>
 KisClipboard::askUserForSourceWithData(QImage qimage, const QList<QUrl> urls, bool useClipboardFallback) const
 {
+    if (qimage.isNull() && urls.isEmpty()) {
+        return {false, PASTE_FORMAT_ASK};
+    }
+
     KisConfig cfg(true);
 
     bool saveSourceSetting = false;
@@ -508,8 +512,7 @@ KisPaintDeviceSP KisClipboard::clipFromBoardContentsWithData(QImage qimage,
     }
 
     if (choice == PASTE_FORMAT_CLIP) {
-        KIS_SAFE_ASSERT_RECOVER(!qimage.isNull())
-        {
+        if (qimage.isNull()) {
             warnKrita << "Clipboard was cleared before loading image";
             return nullptr;
         }
