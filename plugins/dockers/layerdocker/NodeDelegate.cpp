@@ -95,7 +95,6 @@ NodeDelegate::NodeDelegate(NodeView *view, QObject *parent)
     connect(this, SIGNAL(resetVisibilityStasis()), SLOT(slotResetState()));
     slotConfigChanged();
 }
-
 NodeDelegate::~NodeDelegate()
 {
     delete d;
@@ -1158,8 +1157,10 @@ bool NodeDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, const Q
                     (hoveredProperty->id == KisLayerPropertiesIcons::layerError.id() ||
                      hoveredProperty->id == KisLayerPropertiesIcons::layerColorSpaceMismatch.id())) {
                 QToolTip::showText(helpEvent->globalPos(), hoveredProperty->state.toString(), d->view);
-            } else {
+            } else if (thumbnailClickRect(option, index).contains(helpEvent->pos())) {
                 d->tip.showTip(helpEvent->pos(), option, index);
+            } else {
+                d->tip.hide();
             }
         }
         return true;

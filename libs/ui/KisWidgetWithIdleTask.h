@@ -31,7 +31,7 @@ public:
         m_canvas = canvas;
 
         if (m_canvas) {
-            if (this->isVisible()) {
+            if (m_isVisibleState) {
                 m_idleTaskGuard = registerIdleTask(m_canvas);
             }
         }
