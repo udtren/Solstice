@@ -47,6 +47,20 @@ future updates can be integrated cleanly.
 
 ## Agent technical document index
 
+### General development guides
+
+Read these before adding or updating any feature:
+
+| Document | Use it for |
+| --- | --- |
+| `docs/agent/codebase-map.md` | Repository layout, library layering, key classes, and deciding which folder a change belongs in |
+| `docs/agent/extension-points.md` | Recipes and required files for dockers, view plugins, tools, filters, file formats, settings, actions, and icons |
+| `docs/agent/coding-rules.md` | Conventions, persistence/compatibility, undo and threading, lifecycle, formatting, and files to leave alone |
+| `docs/agent/development-workflow.md` | Build, test, install, hand-off checklist, and upstream synchronization |
+| `docs/agent/feature-inventory.md` | Every custom touch point in upstream files, undocumented changes, and the new-feature/document template |
+
+### Feature documents
+
 - Quick Access: `docs/agent/quick-access.md`
 - Rest Note: `docs/agent/rest-note.md`
 - Asset Library: `docs/agent/asset-library.md`
@@ -57,8 +71,9 @@ future updates can be integrated cleanly.
   `docs/agent/solstice-visual-branding-todo.md`
 
 Before changing a listed feature, read its complete agent document. When a new
-custom feature is added, create its `docs/agent/<feature>.md` technical document
-and add it to this index.
+custom feature is added, create its `docs/agent/<feature>.md` technical document,
+add it to this index, and add its touch points to
+`docs/agent/feature-inventory.md`.
 
 ## Shared development environment
 
@@ -100,7 +115,8 @@ before handing them off for interactive testing.
 
 - Use `apply_patch` for source and documentation edits.
 - Use the configured clang-format executable for modified C++ headers and
-  sources.
+  sources. Format new files entirely, but only the changed lines of existing
+  upstream files (see `docs/agent/coding-rules.md`).
 - Run `git diff --check` on touched tracked files.
 - Preserve existing user changes and unrelated source/binary assets.
 - Do not infer that compilation proves interactive input behavior. Inspect
