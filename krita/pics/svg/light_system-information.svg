@@ -1,4 +1,4 @@
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 <metadata id="metadata7">
     <rdf:RDF>
       <cc:Work>
@@ -8,7 +8,7 @@
         <dc:date>2026</dc:date>
         <dc:creator>
           <cc:Agent>
-            <dc:title>superfurryfrog and Dmitrii Utkin</dc:title>
+            <dc:title>superfurryfrog</dc:title>
           </cc:Agent>
         </dc:creator>
         <cc:license
@@ -31,11 +31,9 @@
       </cc:License>
     </rdf:RDF>
   </metadata>
-<path d="M1.31526 8.66269C1.2888 5.36316 3.33352 2.57772 6.89384 2.35094C9.75494 2.16953 12 5.36702 12 5.36702C12 5.36702 14.245 2.16953 17.1023 2.35094C20.6664 2.57772 22.7112 5.36316 22.6847 8.66269C22.6393 14.0863 16.7244 18.5765 12 21.5963C7.27557 18.5765 1.36061 14.0863 1.31526 8.66269Z" fill="url(#paint0_radial_850_2)" stroke="#D72375" stroke-width="0.5"/>
-<defs>
-<radialGradient id="paint0_radial_850_2" cx="0" cy="0" r="1" gradientTransform="matrix(14.9504 -0.195644 0.184838 14.1223 6.19165 7.01403)" gradientUnits="userSpaceOnUse">
-<stop stop-color="#FCA2CB"/>
-<stop offset="1" stop-color="#FE4B9C"/>
-</radialGradient>
-</defs>
+<path d="M9 13H7V15H9V13Z" fill="#D2D2D2"/>
+<path d="M12 15H4V16H12V15Z" fill="#D2D2D2"/>
+<path d="M14.5 2.5H1.5V12.5H14.5V2.5Z" stroke="#D2D2D2" stroke-linecap="square"/>
+<path d="M9 7H6V8H7V10H6V11H10V10H9V7Z" fill="#D2D2D2"/>
+<path d="M9.2 4.99942C9.2 5.66216 8.66274 6.19942 8 6.19942C7.33726 6.19942 6.8 5.66216 6.8 4.99942C6.8 4.33667 7.33726 3.79942 8 3.79942C8.66274 3.79942 9.2 4.33667 9.2 4.99942Z" fill="#D2D2D2"/>
 </svg>
