@@ -54,7 +54,7 @@ jobs:
       - name: Configure Release build
         run: ./build-tools/github-actions/build-windows.ps1 -Stage configure -Root "$env:CI_ROOT"
       - name: Compile and install
-        run: ./build-tools/github-actions/build-windows.ps1 -Stage build -Root "$env:CI_ROOT" -Jobs 2
+        run: ./build-tools/github-actions/build-windows.ps1 -Stage build -Root "$env:CI_ROOT" -Jobs 4
       - name: Prepare packaging tools
         run: python -m pip install --require-hashes -r build-tools/ci-scripts/requirements-windows.txt
       - name: Create unsigned ZIP

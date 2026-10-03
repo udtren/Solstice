@@ -23,3 +23,7 @@ does not establish runtime correctness or support for another GPU.
 Build logs are uploaded separately, including on failures. No personal build
 environment script, credentials, configuration, or artwork documents are
 included in the workflow.
+
+The CI dependency versions can differ from the local development build. Check
+the included dependency lock and build logs when comparing behavior. Packaging
+includes the application's QML modules as well as the Qt runtime.

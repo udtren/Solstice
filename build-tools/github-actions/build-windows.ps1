@@ -36,11 +36,14 @@ if ($Stage -eq 'configure') {
         "-DPython_EXECUTABLE=$Python", "-DPKG_CONFIG_EXECUTABLE=$Deps/bin/pkgconf.exe",
         '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_WITH_QT6=ON', '-DALLOW_UNSTABLE=QT6',
         '-DBUILD_TESTING=OFF', '-DKRITA_ENABLE_PCH=OFF', '-DFOUNDATION_BUILD=ON',
-        '-DBRANDING=Next', '-DENABLE_UPDATERS=OFF'
+        '-DBRANDING=Next', '-DENABLE_UPDATERS=OFF', '-DKDE_INSTALL_USE_QT_SYS_PATHS=ON'
     ) 'configure.log'
     $Cache = Get-Content -Raw (Join-Path $Build 'CMakeCache.txt')
     if ($Cache -notmatch '(?m)^HAVE_KRITA_GPU_ENGINE:INTERNAL=ON\r?$') {
         throw 'Configuration silently disabled the Vulkan GPU engine'
+    }
+    if ($Cache -notmatch '(?m)^KDE_INSTALL_USE_QT_SYS_PATHS:BOOL=ON\r?$') {
+        throw 'Qt install paths are required for Windows QML deployment'
     }
     $QtVersionFile = Join-Path $Deps 'lib/cmake/Qt6/Qt6ConfigVersionImpl.cmake'
     Select-String -Path $QtVersionFile -Pattern '^set\(PACKAGE_VERSION ' |

@@ -4,7 +4,7 @@
 
 `.github/workflows/windows-build.yml` is manual-only (`workflow_dispatch`),
 Windows x64, Release, unsigned ZIP plus logs. It uses GitHub-hosted
-`windows-2022`, two build workers, a 330-minute timeout, `contents: read`, and
+`windows-2022`, four build workers, a 330-minute timeout, `contents: read`, and
 SHA-pinned official actions. There are no push/PR triggers, publishing jobs,
 signing keys, self-hosted runners, or inherited KDE CI credentials.
 
@@ -41,6 +41,14 @@ must record `HAVE_KRITA_GPU_ENGINE=ON`; otherwise the workflow fails instead
 of passing with an accidentally disabled GPU engine. Vision ML is built by
 the regular application build, with Vulkan SDK available.
 
+`KDE_INSTALL_USE_QT_SYS_PATHS=ON` is required and checked during configuration.
+With separate dependency and application prefixes, ECM otherwise defaults it
+to OFF and installs QML modules under `lib/qml`. The Windows packager requires
+the Qt layout (`qml`) and correctly rejects that incompatible installation.
+The packager passes the application install tree's `qml` directory through
+`windeployqt --qmlimport` so application modules are discovered even when Qt
+is in the separate dependency prefix.
+
 Packaging reuses `packaging/windows/package-complete.py`, with noninteractive
 arguments and LLVM-MinGW runtime DLLs. It uploads the ZIP and dependency/build
 metadata as an artifact, not a GitHub Release. Build logs and CMake diagnostics
@@ -58,3 +66,17 @@ upload complete. Do not report a skipped GPU test as passed.
 No broad UI tests or `kis_kra_saver_test` run here. Interactive painting,
 Undo/Redo, save/reload and Vulkan/OpenGL sharing remain manual real-hardware
 checks. No local application restart is required for workflow-only changes.
+
+## First trial run (2026-10-03)
+
+- Commit: `70bf96017d55f9e4c7b24ce3297416a199a2264f`.
+- Run: <https://github.com/udtren/Solstice/actions/runs/37120885525>.
+- Dependency bootstrap, cache save and Release configuration completed.
+  The GPU-engine enablement check passed.
+- Qt resolved to 6.11.0. Compilation and installation succeeded in 96 minutes
+  with two workers, including the Vulkan engine and Vision ML.
+- Packaging failed before ZIP creation because `KDE_INSTALL_USE_QT_SYS_PATHS`
+  defaulted to OFF. The CI configure arguments now explicitly enable it and
+  validate the cache value before starting the long compilation step.
+- No application ZIP was produced by this run. A new end-to-end run is required
+  to verify the corrected configuration and packaging.

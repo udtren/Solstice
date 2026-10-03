@@ -546,14 +546,14 @@ shutil.copy(
 # **not** be deployed (because they are expected to be stored as binary resources),
 # but all their dependencies will be deployed to the package folder.
 #
-# Multiple QML dependencies search paths can be provided by --qmlimport switch,
-# we don't pass it explicitly and let it be deduced by windeployqt using qtpath
-# executable.
+# Include application QML modules when the dependency and application install
+# prefixes differ. windeployqt also searches Qt's own import path by default.
 
 # Here we should list all the folders/plugins in Krita that have
 # .qml files inside. Theoretically, we can just pass the entire Krita's
 # source tree, but I'm not sure it is a good idea.
-QMLDIR_ARGS = ["--qmldir", fr"{KRITA_SRC_DIR}\plugins\dockers\textproperties"]
+QMLDIR_ARGS = ["--qmldir", fr"{KRITA_SRC_DIR}\plugins\dockers\textproperties",
+               "--qmlimport", fr"{KRITA_INSTALL_DIR}\qml"]
 
 # A safeguard for the case when KDE_INSTALL_USE_QT_SYS_PATHS is not properly 
 # activated on Windows and the QML modules are installed into a default KDE's
