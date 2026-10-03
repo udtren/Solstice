@@ -552,8 +552,9 @@ shutil.copy(
 # Here we should list all the folders/plugins in Krita that have
 # .qml files inside. Theoretically, we can just pass the entire Krita's
 # source tree, but I'm not sure it is a good idea.
-QMLDIR_ARGS = ["--qmldir", fr"{KRITA_SRC_DIR}\plugins\dockers\textproperties",
-               "--qmlimport", fr"{KRITA_INSTALL_DIR}\qml"]
+QMLDIR_ARGS = ["--qmldir", fr"{KRITA_SRC_DIR}\plugins\dockers\textproperties"]
+if os.path.isdir(fr"{KRITA_INSTALL_DIR}\qml"):
+    QMLDIR_ARGS += ["--qmlimport", fr"{KRITA_INSTALL_DIR}\qml"]
 
 # A safeguard for the case when KDE_INSTALL_USE_QT_SYS_PATHS is not properly 
 # activated on Windows and the QML modules are installed into a default KDE's
@@ -702,10 +703,10 @@ if not os.environ.get('KRITACI_SKIP_SPLIT_DEBUG', '0').lower() in ['true', '1', 
 
     split_debug(fr"{pkg_root}\bin\krita.exe", r"bin\krita.exe")
     split_debug(fr"{pkg_root}\bin\krita.com", r"bin\krita.com")
-    split_debug(fr"{pkg_root}\bin\kritarunner.exe", r"bin\kritarunner.exe")
-    split_debug(fr"{pkg_root}\bin\kritarunner.com", r"bin\kritarunner.com")
-    split_debug(fr"{pkg_root}\bin\ffmpeg.exe", r"bin\ffmpeg.exe")
-    split_debug(fr"{pkg_root}\bin\ffprobe.exe", r"bin\ffmprobe.exe")
+    for executable in ("kritarunner.exe", "kritarunner.com", "ffmpeg.exe", "ffprobe.exe"):
+        executable_path = fr"{pkg_root}\bin\{executable}"
+        if os.path.isfile(executable_path):
+            split_debug(executable_path, fr"bin\{executable}")
     # Find all DLLs
     files = glob.glob(fr"{pkg_root}\**\*.dll", recursive=True)
     for f in files:

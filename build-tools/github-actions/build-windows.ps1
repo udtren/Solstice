@@ -36,7 +36,8 @@ if ($Stage -eq 'configure') {
         "-DPython_EXECUTABLE=$Python", "-DPKG_CONFIG_EXECUTABLE=$Deps/bin/pkgconf.exe",
         '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_WITH_QT6=ON', '-DALLOW_UNSTABLE=QT6',
         '-DBUILD_TESTING=OFF', '-DKRITA_ENABLE_PCH=OFF', '-DFOUNDATION_BUILD=ON',
-        '-DBRANDING=Next', '-DENABLE_UPDATERS=OFF', '-DKDE_INSTALL_USE_QT_SYS_PATHS=ON'
+        '-DBRANDING=Next', '-DENABLE_UPDATERS=OFF', '-DKDE_INSTALL_USE_QT_SYS_PATHS=ON',
+        '-DKDE_INSTALL_QMLDIR:PATH=qml'
     ) 'configure.log'
     $Cache = Get-Content -Raw (Join-Path $Build 'CMakeCache.txt')
     if ($Cache -notmatch '(?m)^HAVE_KRITA_GPU_ENGINE:INTERNAL=ON\r?$') {
@@ -44,6 +45,9 @@ if ($Stage -eq 'configure') {
     }
     if ($Cache -notmatch '(?m)^KDE_INSTALL_USE_QT_SYS_PATHS:BOOL=ON\r?$') {
         throw 'Qt install paths are required for Windows QML deployment'
+    }
+    if ($Cache -notmatch '(?m)^KDE_INSTALL_QMLDIR:PATH=qml\r?$') {
+        throw 'Application QML modules must be installed in the application prefix'
     }
     $QtVersionFile = Join-Path $Deps 'lib/cmake/Qt6/Qt6ConfigVersionImpl.cmake'
     Select-String -Path $QtVersionFile -Pattern '^set\(PACKAGE_VERSION ' |

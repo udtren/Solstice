@@ -27,3 +27,8 @@ included in the workflow.
 The CI dependency versions can differ from the local development build. Check
 the included dependency lock and build logs when comparing behavior. Packaging
 includes the application's QML modules as well as the Qt runtime.
+
+The initial CI dependency configuration uses Qt 6.11.0 and does not enable
+Python plugins: its configure step cannot find SIP and PyQt6. Native features
+and the Vulkan engine are built, but this trial is not yet a feature-complete
+replacement for the local development installation.

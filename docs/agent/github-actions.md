@@ -41,13 +41,19 @@ must record `HAVE_KRITA_GPU_ENGINE=ON`; otherwise the workflow fails instead
 of passing with an accidentally disabled GPU engine. Vision ML is built by
 the regular application build, with Vulkan SDK available.
 
-`KDE_INSTALL_USE_QT_SYS_PATHS=ON` is required and checked during configuration.
+`KDE_INSTALL_USE_QT_SYS_PATHS=ON` and `KDE_INSTALL_QMLDIR=qml` are required and
+checked during configuration.
 With separate dependency and application prefixes, ECM otherwise defaults it
 to OFF and installs QML modules under `lib/qml`. The Windows packager requires
 the Qt layout (`qml`) and correctly rejects that incompatible installation.
+The explicit relative QML directory also prevents ECM from selecting an absolute
+directory in the dependency prefix instead of the application's install tree.
 The packager passes the application install tree's `qml` directory through
 `windeployqt --qmlimport` so application modules are discovered even when Qt
-is in the separate dependency prefix.
+is in the separate dependency prefix. Only an existing import directory is
+passed: Qt 6.11's scanner returns no JSON for a nonexistent directory.
+Debug splitting, like copying, skips optional CLI tools when they are absent
+(notably `kritarunner` when Python support is disabled).
 
 Packaging reuses `packaging/windows/package-complete.py`, with noninteractive
 arguments and LLVM-MinGW runtime DLLs. It uploads the ZIP and dependency/build
@@ -80,3 +86,23 @@ checks. No local application restart is required for workflow-only changes.
   validate the cache value before starting the long compilation step.
 - No application ZIP was produced by this run. A new end-to-end run is required
   to verify the corrected configuration and packaging.
+- SIP/PyQt6 were not found with setup-python's interpreter, so Python plugin
+  support is disabled. Resolve the dependency package's Python module layout
+  and interpreter compatibility before claiming parity with local builds.
+  Eigen3 and xsimd were found through their supported-version fallbacks; the
+  earlier failed version probes are not missing-dependency failures.
+
+The corrected run is
+<https://github.com/udtren/Solstice/actions/runs/37126839545> at
+`8b18d8a13ba5fd60dee423f573f95c46ed35d54c`, using four build workers.
+Compilation and installation passed in about 66 minutes. Packaging reached
+`windeployqt` but failed because the scanner was passed the nonexistent `i/qml`
+directory; ECM had installed the modules in `deps/qml`. This was reproduced
+locally with the exact locked Qt 6.11, ICU and zlib archives: direct scanning
+without that missing path returned JSON, while the extra path returned exit 1
+and no stdout. The next revision sets a relative QML install directory, only
+passes existing import paths, and handles absent optional CLI tools.
+With an existing import directory, both the direct scanner and the Qt 6.11
+`windeployqt --dry-run` returned exit 0 in the isolated local reproduction.
+Locally, a `windeployqt --dry-run` with Qt Quick enabled found
+`org.krita.components` through the explicit application QML import path.
