@@ -82,6 +82,7 @@ Read these before adding or updating any feature:
 - GPU Engine (branch `krita-sol-gpu`): `docs/agent/gpu-engine.md`
 - Solstice visual branding checklist:
   `docs/agent/solstice-visual-branding-todo.md`
+- GitHub Actions Windows trial builds: `docs/agent/github-actions.md`
 
 Before changing a listed feature, read its complete agent document. When a new
 custom feature is added, create its `docs/agent/<feature>.md` technical document,

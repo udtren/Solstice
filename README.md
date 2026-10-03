@@ -36,6 +36,8 @@ Krita edition, and development no longer tracks upstream Krita.
 There are currently no packaged downloads in [GitHub Releases](https://github.com/udtren/Solstice/releases). 
 Solstice is currently available as source code for development builds.
 
+[Experimental Windows CI builds](docs/test-builds.md)
+
 [Temporary visual branding](docs/visual-branding.md)
 
 The primary development and default branch is `krita-sol-gpu`. For source

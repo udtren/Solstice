@@ -15,6 +15,7 @@ git diff --stat -w --ignore-cr-at-eol $(git merge-base krita-sol krita/6.0) krit
 
 | Feature | Own directory / files | Hooks in upstream files | Docs |
 | --- | --- | --- | --- |
+| GitHub Actions trial build | `.github/workflows/windows-build.yml`, `build-tools/github-actions/` | Uses existing Windows ZIP packaging script | `docs/test-builds.md`, `docs/agent/github-actions.md` |
 | Quick Access Manager | `plugins/dockers/quickaccess/` | `plugins/dockers/CMakeLists.txt` | `docs/quick-access.md`, `docs/agent/quick-access.md` |
 | Rest Note | `plugins/dockers/restnote/` | `plugins/dockers/CMakeLists.txt` | `docs/rest-note.md`, `docs/agent/rest-note.md` |
 | Asset Library | `plugins/dockers/assetlibrary/`, `libs/ui/KisWelcomeAssetLibraryWidget.*` | `plugins/dockers/CMakeLists.txt`, `libs/ui/KisWelcomePageWidget.*`, `libs/ui/forms/KisWelcomePage.ui`, `libs/ui/CMakeLists.txt` | `docs/asset-library.md`, `docs/agent/asset-library.md` |

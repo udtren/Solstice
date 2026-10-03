@@ -1,0 +1,83 @@
+name: Windows x64 trial build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-trial-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 330
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Select isolated build directory
+        run: '"CI_ROOT=$(Join-Path $env:RUNNER_TEMP solstice)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Restore dependency cache
+        id: deps
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ env.CI_ROOT }}\deps
+            ${{ env.CI_ROOT }}\llvm-mingw-20251118-ucrt-x86_64
+            ${{ env.CI_ROOT }}\vulkan
+            ${{ env.CI_ROOT }}\dependencies-ready.json
+          key: solstice-win2022-deps-v1-${{ hashFiles('build-tools/github-actions/windows-dependencies.lock.json', 'build-tools/github-actions/bootstrap-windows.py') }}
+      - name: Prepare dependencies
+        run: python build-tools/github-actions/bootstrap-windows.py --root "$env:CI_ROOT"
+      - name: Save verified dependency cache
+        if: steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ env.CI_ROOT }}\deps
+            ${{ env.CI_ROOT }}\llvm-mingw-20251118-ucrt-x86_64
+            ${{ env.CI_ROOT }}\vulkan
+            ${{ env.CI_ROOT }}\dependencies-ready.json
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+      - name: Configure Release build
+        run: ./build-tools/github-actions/build-windows.ps1 -Stage configure -Root "$env:CI_ROOT"
+      - name: Compile and install
+        run: ./build-tools/github-actions/build-windows.ps1 -Stage build -Root "$env:CI_ROOT" -Jobs 2
+      - name: Prepare packaging tools
+        run: python -m pip install --require-hashes -r build-tools/ci-scripts/requirements-windows.txt
+      - name: Create unsigned ZIP
+        run: ./build-tools/github-actions/build-windows.ps1 -Stage package -Root "$env:CI_ROOT"
+      - name: Upload trial build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Solstice-windows-x64-${{ github.run_number }}
+          path: |
+            ${{ env.CI_ROOT }}\packages\*.zip
+            ${{ env.CI_ROOT }}\packages\*.txt
+            ${{ env.CI_ROOT }}\packages\windows-dependencies.lock.json
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Windows-build-logs-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.CI_ROOT }}\logs
+            ${{ env.CI_ROOT }}\b\CMakeCache.txt
+            ${{ env.CI_ROOT }}\b\CMakeFiles\CMakeConfigureLog.yaml
+          if-no-files-found: warn
+          retention-days: 7
