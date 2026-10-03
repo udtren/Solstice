@@ -32,3 +32,9 @@ The initial CI dependency configuration uses Qt 6.11.0 and does not enable
 Python plugins: its configure step cannot find SIP and PyQt6. Native features
 and the Vulkan engine are built, but this trial is not yet a feature-complete
 replacement for the local development installation.
+
+The [first successful trial](https://github.com/udtren/Solstice/actions/runs/37131426139)
+completed on October 4, 2026 (JST), in about 48 minutes. Its downloaded ZIP
+passed checksum and archive-integrity checks, including verification that GPU,
+Vision ML, Qt and application QML files were present. Application execution
+and GPU rendering were not tested as part of this CI verification.

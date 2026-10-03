@@ -84,8 +84,8 @@ checks. No local application restart is required for workflow-only changes.
 - Packaging failed before ZIP creation because `KDE_INSTALL_USE_QT_SYS_PATHS`
   defaulted to OFF. The CI configure arguments now explicitly enable it and
   validate the cache value before starting the long compilation step.
-- No application ZIP was produced by this run. A new end-to-end run is required
-  to verify the corrected configuration and packaging.
+- No application ZIP was produced by this run; subsequent runs below verified
+  the corrected configuration and packaging.
 - SIP/PyQt6 were not found with setup-python's interpreter, so Python plugin
   support is disabled. Resolve the dependency package's Python module layout
   and interpreter compatibility before claiming parity with local builds.
@@ -100,9 +100,34 @@ Compilation and installation passed in about 66 minutes. Packaging reached
 directory; ECM had installed the modules in `deps/qml`. This was reproduced
 locally with the exact locked Qt 6.11, ICU and zlib archives: direct scanning
 without that missing path returned JSON, while the extra path returned exit 1
-and no stdout. The next revision sets a relative QML install directory, only
+and no stdout. The correction sets a relative QML install directory, only
 passes existing import paths, and handles absent optional CLI tools.
 With an existing import directory, both the direct scanner and the Qt 6.11
 `windeployqt --dry-run` returned exit 0 in the isolated local reproduction.
 Locally, a `windeployqt --dry-run` with Qt Quick enabled found
 `org.krita.components` through the explicit application QML import path.
+
+## Verified successful run (2026-10-04 JST)
+
+- Run: <https://github.com/udtren/Solstice/actions/runs/37131426139>.
+- Commit: `e7927d99f943accc2fa23e536269420cdf13c15b`.
+- All required steps succeeded: dependency cache restore, configuration,
+  compilation, installation, ZIP creation and artifact upload. Total job time
+  was 47 minutes 39 seconds; completion was 00:44 JST on October 4.
+- Artifact: `Solstice-windows-x64-3`, ID `11277529982`, 385,298,266 bytes.
+  Its downloaded SHA-256 matched GitHub's recorded digest:
+  `d39a119dc86548dc4a93c12b4084da73d56e2bfc60f9905b92375a88391bc705`.
+- Both inner ZIPs matched `SHA256SUMS.txt`. Application ZIP SHA-256:
+  `d912ab6ef82483079563f91c5145e5464b66cce7bcb1c122b439cfd990690900`.
+- Application ZIP CRC validation passed for all 5,039 entries. Twelve required
+  files were present, including the executables, GPU and Vision ML libraries,
+  Qt Core/Gui/Widgets, `platforms/qwindows.dll`, and the
+  `org.krita.components` module's `qmldir` and DLL.
+- The install log confirms application QML files are now under `i/qml`.
+- The artifact expires at 00:43 JST on October 11, 2026. A new manual run is
+  required to obtain another artifact after expiration.
+
+This verifies compilation and packaging, not application execution. GPU runtime,
+interactive behavior and Python plugin support remain outside this trial's
+verified scope. The local application, development installation and `kritarc`
+were not changed during verification.
