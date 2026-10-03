@@ -1,0 +1,64 @@
+/* SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+#ifndef KISGPUDABCOMPOSITOR_H
+#define KISGPUDABCOMPOSITOR_H
+#include "KisGpuVulkanFunctions.h"
+#include "kritagpu_export.h"
+#include <QPoint>
+#include <QRect>
+#include <QSize>
+#include <QString>
+#include <QVector>
+#include <memory>
+class KisGpuContext;
+class KisGpuCommandList;
+class KisGpuComputePipeline;
+class KisGpuBuffer;
+class KRITAGPU_EXPORT KisGpuDabCompositor
+{
+public:
+    enum class CompositeMode : quint32 {
+        Normal,
+        AlphaDarkenHard,
+        AlphaDarkenCreamy,
+        Erase
+    };
+    struct Dab {
+        const float *pixels;
+        QPoint origin;
+        QSize size;
+        float opacity;
+        float flow = 1.0f;
+        float averageOpacity = 0.0f;
+        quint32 mirrorFlags = 0; // source-coordinate reflection: horizontal=1, vertical=2
+        QRect clip; // document coordinates; null means the entire dab
+    };
+    struct Mask {
+        const quint8 *pixels;
+        QRect bounds; // contiguous 8-bit coverage in document coordinates
+    };
+    ~KisGpuDabCompositor();
+    static std::unique_ptr<KisGpuDabCompositor> create(KisGpuContext &context, QString *error = nullptr);
+    /// RGBA32F only. Wait for the previous recording before reusing this object.
+    /// The host-visible source/table/mask buffer is capped at 64 MiB.
+    /// Optional origins select sparse, distinct destination tiles instead of a
+    /// rectangular grid. There must be exactly one document origin per address.
+    bool record(KisGpuCommandList &commands,
+                const QVector<VkDeviceAddress> &tiles,
+                int gridWidth,
+                QPoint origin,
+                const QVector<Dab> &dabs,
+                CompositeMode mode,
+                const Mask *mask = nullptr,
+                quint32 channelMask = 0xf,
+                QString *error = nullptr,
+                const QVector<QPoint> &tileOrigins = {});
+
+private:
+    explicit KisGpuDabCompositor(KisGpuContext &context);
+    KisGpuContext &m_context;
+    std::unique_ptr<KisGpuComputePipeline> m_pipeline;
+    std::unique_ptr<KisGpuBuffer> m_upload;
+};
+#endif

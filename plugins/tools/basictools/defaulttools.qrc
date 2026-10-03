@@ -1,0 +1,19 @@
+<!DOCTYPE RCC>
+<!--
+  SPDX-FileCopyrightText: none
+  SPDX-License-Identifier: CC0-1.0
+-->
+<RCC version="1.0">
+    <qresource>
+        <file>tool_fill_cursor.png</file>
+        <file>tool_ellipse_cursor.png</file>
+        <file>tool_gradient_cursor.png</file>
+        <file>tool_line_cursor.png</file>
+        <file>tool_rectangle_cursor.png</file>
+        <file>tool_fill_eraser_cursor.png</file>
+        <file>tool_ellipse_eraser_cursor.png</file>
+        <file>tool_gradient_eraser_cursor.png</file>
+        <file>tool_line_eraser_cursor.png</file>
+        <file>tool_rectangle_eraser_cursor.png</file>
+    </qresource>
+</RCC>

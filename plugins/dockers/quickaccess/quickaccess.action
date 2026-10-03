@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ActionCollection version="2" name="Scripts">
+  <Actions category="Scripts">
+    <text>Quick Access</text>
+    <Action name="quick_access_palette_popup">
+      <text>Quick Access Palette Popup</text>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <isCheckable>false</isCheckable>
+    </Action>
+    <Action name="hue_svc_popup">
+      <text>HueSVC Popup</text>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <isCheckable>false</isCheckable>
+    </Action>
+    <Action name="toggle_gesture_recognition">
+      <text>Toggle Gesture Recognition</text>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <isCheckable>false</isCheckable>
+    </Action>
+    <Action name="move_quick_access_palette_docker_to_cursor">
+      <text>Move Quick Access Palette Docker to Cursor</text>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <isCheckable>false</isCheckable>
+    </Action>
+    <Action name="move_quick_adjust_docker_to_cursor">
+      <text>Move Quick Adjust Docker to Cursor</text>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <isCheckable>false</isCheckable>
+    </Action>
+  </Actions>
+</ActionCollection>

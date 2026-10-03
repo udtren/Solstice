@@ -1,0 +1,122 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#ifndef KISGPUCONTEXT_H
+#define KISGPUCONTEXT_H
+
+#include <QByteArray>
+#include <QMutex>
+#include <QString>
+#include <QVector>
+
+#include <memory>
+
+#include "KisGpuVulkanFunctions.h"
+#include "kritagpu_export.h"
+
+struct KRITAGPU_EXPORT KisGpuDeviceInfo {
+    QString name;
+    quint32 vendorId = 0;
+    quint32 deviceId = 0;
+    quint32 apiVersion = 0;
+    QString driverName;
+    QString driverInfo;
+    QByteArray deviceUuid;
+    QByteArray driverUuid;
+    float timestampPeriodNs = 0.0f;
+    quint32 maxComputeWorkGroupInvocations = 0;
+    VkDeviceSize deviceLocalBytes = 0;
+    /// Size of the largest DEVICE_LOCAL | HOST_VISIBLE heap (Resizable BAR).
+    VkDeviceSize hostVisibleDeviceLocalBytes = 0;
+    bool supportsExternalMemoryInterop = false;
+
+    bool isNvidia() const;
+    /**
+     * Heuristic: NVIDIA PCI device ids starting at 0x2B00 belong to the
+     * Blackwell (GB20x) generation. Blackwell is the only tested target.
+     */
+    bool isBlackwell() const;
+    QString summary() const;
+};
+
+/**
+ * Process-level Vulkan instance, device, and compute queue for the GPU engine.
+ *
+ * The context is created explicitly (create()) and owned by its user. It is
+ * thread-safe for submission: recording command buffers is the caller's job,
+ * while queue access and the timeline semaphore are serialized here.
+ *
+ * Every submission signals the context timeline semaphore with a strictly
+ * increasing value; wait(value) blocks until that work has completed.
+ */
+class KRITAGPU_EXPORT KisGpuContext
+{
+public:
+    struct Options {
+        /// Enables VK_LAYER_KHRONOS_validation when it is installed.
+        /// Also enabled by the KRITA_GPU_VALIDATION=1 environment variable.
+        bool enableValidation = false;
+        /// Request the Win32 external memory/semaphore extensions needed for
+        /// OpenGL interop. Missing extensions are reported, not fatal.
+        bool requestInterop = true;
+    };
+
+    ~KisGpuContext();
+
+    KisGpuContext(const KisGpuContext &) = delete;
+    KisGpuContext &operator=(const KisGpuContext &) = delete;
+
+    static std::unique_ptr<KisGpuContext> create(const Options &options, QString *errorMessage);
+    static std::unique_ptr<KisGpuContext> create(QString *errorMessage);
+
+    const KisGpuVulkanFunctions &vk() const;
+    const KisGpuDeviceInfo &deviceInfo() const;
+
+    VkInstance instance() const;
+    VkPhysicalDevice physicalDevice() const;
+    VkDevice device() const;
+    quint32 queueFamilyIndex() const;
+    bool validationEnabled() const;
+    /// Number of validation-layer errors reported so far (0 without validation).
+    int validationErrorCount() const;
+
+    /**
+     * Returns a memory type index that has all @p required flags, preferring
+     * one that also has @p preferred flags; -1 if none is compatible.
+     */
+    int findMemoryType(quint32 typeBits, VkMemoryPropertyFlags required, VkMemoryPropertyFlags preferred = 0) const;
+    VkMemoryPropertyFlags memoryTypeFlags(int memoryTypeIndex) const;
+
+    /**
+     * Submits @p commandBuffer to the compute queue.
+     *
+     * @param waitSemaphores optional extra semaphores (e.g. interop) to wait for
+     * @param signalSemaphores optional extra semaphores to signal
+     * @return timeline value signaled when the work completes, or 0 on failure
+     */
+    quint64 submit(VkCommandBuffer commandBuffer,
+                   const QVector<VkSemaphoreSubmitInfo> &waitSemaphores = {},
+                   const QVector<VkSemaphoreSubmitInfo> &signalSemaphores = {});
+    /// Submits several command buffers in one batch, executed in order.
+    quint64 submit(const QVector<VkCommandBuffer> &commandBuffers,
+                   const QVector<VkSemaphoreSubmitInfo> &waitSemaphores = {},
+                   const QVector<VkSemaphoreSubmitInfo> &signalSemaphores = {});
+
+    /// Blocks until the timeline reaches @p value. Returns false on timeout/device loss.
+    bool wait(quint64 value, quint64 timeoutNs = UINT64_MAX) const;
+    quint64 completedValue() const;
+    void waitIdle();
+
+    /// Tests: the next @p count submissions fail without reaching the queue.
+    void injectSubmitFailuresForTesting(int count);
+
+private:
+    KisGpuContext();
+
+    struct Private;
+    std::unique_ptr<Private> d;
+};
+
+#endif // KISGPUCONTEXT_H

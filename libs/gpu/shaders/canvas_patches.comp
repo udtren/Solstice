@@ -1,0 +1,162 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Writes canvas texture patches from GPU-resident projection tiles into a
+ * buffer that OpenGL uploads into the canvas textures (GPU engine phase 3.2).
+ *
+ * Each patch is written exactly like KisTextureTile::update() would upload
+ * it from CPU data: a bufWidth x bufHeight block whose center is the image
+ * patch and whose left/top/right/bottom margins repeat the edge rows and
+ * columns (texture border at the image edges); the corner blocks are zero.
+ * Pixels are display-converted:
+ *
+ *  - mode 0: no conversion (same profile; only the storage format changes);
+ *  - mode 1: RGB matrix-shaper conversion, like LCMS for two matrix-shaper
+ *    profiles: per-channel linearization (source TRC), 3x3 matrix
+ *    (inverse(dst colorants) * src colorants), per-channel delinearization
+ *    (destination TRC). Each TRC is a 1D table over [0, 1] (linearly
+ *    interpolated, input clamped) or exactly linear (table address 0).
+ *
+ * Alpha is passed through (straight alpha, like the CPU path).
+ *
+ * Variants: SRC_F16 (RGBA16F tiles), DST_F16 (RGBA16F texture data).
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+#ifdef SRC_F16
+#define SRC_PIXEL f16vec4
+#else
+#define SRC_PIXEL vec4
+#endif
+
+#ifdef DST_F16
+#define DST_PIXEL f16vec4
+#else
+#define DST_PIXEL vec4
+#endif
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer SrcPixels
+{
+    SRC_PIXEL px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) writeonly buffer DstPixels
+{
+    DST_PIXEL px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer AddressTable
+{
+    uint64_t addr[];
+};
+
+struct Patch {
+    ivec2 srcOrigin; // grid pixel coordinates of the patch center's top-left pixel
+    ivec2 centerSize;
+    ivec2 margin; // left, top
+    ivec2 bufferSize;
+    uint dstOffset; // in pixels
+    uint padding0;
+    uint padding1;
+    uint padding2;
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer PatchTable
+{
+    Patch patches[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer CurveTable
+{
+    float values[]; // 3 curves (R, G, B) of curveSize entries
+};
+
+layout(push_constant) uniform Params
+{
+    AddressTable srcTiles;
+    PatchTable patches;
+    uint64_t dst;
+    CurveTable srcCurves; // 0: linear
+    CurveTable dstCurves; // 0: linear
+    uint gridWidth;
+    uint patchCount;
+    uint mode;
+    uint curveSize;
+    vec4 matrixRow0;
+    vec4 matrixRow1;
+    vec4 matrixRow2;
+}
+params;
+
+float evalCurve(CurveTable curves, uint channel, float v)
+{
+    const float position = clamp(v, 0.0, 1.0) * float(params.curveSize - 1);
+    const uint index = min(uint(position), params.curveSize - 2);
+    const float t = position - float(index);
+    const uint base = channel * params.curveSize;
+    return mix(curves.values[base + index], curves.values[base + index + 1], t);
+}
+
+vec3 convertColor(vec3 rgb)
+{
+    if (params.mode == 0) {
+        return rgb;
+    }
+    vec3 linear = rgb;
+    if (uint64_t(params.srcCurves) != 0) {
+        linear = vec3(evalCurve(params.srcCurves, 0, rgb.r),
+                      evalCurve(params.srcCurves, 1, rgb.g),
+                      evalCurve(params.srcCurves, 2, rgb.b));
+    }
+    const vec3 converted = vec3(dot(params.matrixRow0.xyz, linear),
+                                dot(params.matrixRow1.xyz, linear),
+                                dot(params.matrixRow2.xyz, linear));
+    if (uint64_t(params.dstCurves) != 0) {
+        return vec3(evalCurve(params.dstCurves, 0, converted.r),
+                    evalCurve(params.dstCurves, 1, converted.g),
+                    evalCurve(params.dstCurves, 2, converted.b));
+    }
+    return converted;
+}
+
+void main()
+{
+    const uint patchIndex = gl_GlobalInvocationID.z;
+    if (patchIndex >= params.patchCount) {
+        return;
+    }
+    const Patch block = params.patches.patches[patchIndex];
+    const ivec2 b = ivec2(gl_GlobalInvocationID.xy);
+    if (b.x >= block.bufferSize.x || b.y >= block.bufferSize.y) {
+        return;
+    }
+
+    DstPixels dst = DstPixels(params.dst);
+    const uint dstIndex = block.dstOffset + uint(b.y) * uint(block.bufferSize.x) + uint(b.x);
+
+    // Edge repetition: side margins repeat the nearest edge row/column of the
+    // center. The corner blocks stay zero, exactly like the CPU path
+    // (KisTextureTile::update copies only center rows/columns into margins).
+    const ivec2 local = b - block.margin;
+    const bvec2 outside = bvec2(local.x < 0 || local.x >= block.centerSize.x, local.y < 0 || local.y >= block.centerSize.y);
+    if (outside.x && outside.y) {
+        dst.px[dstIndex] = DST_PIXEL(vec4(0.0));
+        return;
+    }
+    const ivec2 c = clamp(local, ivec2(0), block.centerSize - ivec2(1));
+    const ivec2 p = block.srcOrigin + c;
+    const uint tile = uint(p.y / 64) * params.gridWidth + uint(p.x / 64);
+    const uint inTile = uint(p.y % 64) * 64 + uint(p.x % 64);
+
+    const vec4 src = vec4(SrcPixels(params.srcTiles.addr[tile]).px[inTile]);
+    const vec4 result = vec4(convertColor(src.rgb), src.a);
+
+    dst.px[dstIndex] = DST_PIXEL(result);
+}

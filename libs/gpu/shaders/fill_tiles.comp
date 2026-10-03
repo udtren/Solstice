@@ -1,0 +1,54 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Fills whole 64x64 tiles with one RGBA color. One workgroup per tile.
+ * Compile with -DTILE_F16 for RGBA16F tiles.
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+#ifdef TILE_F16
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#define PIXEL f16vec4
+#define STORE_PIXEL(v) f16vec4(v)
+#else
+#define PIXEL vec4
+#define STORE_PIXEL(v) (v)
+#endif
+
+layout(local_size_x = 256) in;
+
+layout(buffer_reference, std430, buffer_reference_align = 8) writeonly buffer TilePixels
+{
+    PIXEL px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer AddressTable
+{
+    uint64_t addr[];
+};
+
+layout(push_constant) uniform Params
+{
+    AddressTable tiles;
+    uint tileCount;
+    uint padding;
+    vec4 color;
+}
+params;
+
+void main()
+{
+    const uint tile = gl_WorkGroupID.x;
+    if (tile >= params.tileCount) {
+        return;
+    }
+    TilePixels pixels = TilePixels(params.tiles.addr[tile]);
+    const PIXEL value = STORE_PIXEL(params.color);
+    for (uint index = gl_LocalInvocationID.x; index < 64 * 64; index += gl_WorkGroupSize.x) {
+        pixels.px[index] = value;
+    }
+}

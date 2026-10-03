@@ -1,0 +1,119 @@
+/* SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Ordered Normal/Alpha Darken/Erase RGBA32F dabs, one workgroup per destination tile.
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+layout(local_size_x = 256) in;
+layout(buffer_reference, std430, buffer_reference_align = 16) buffer Pixels { vec4 px[]; };
+struct Tile { uint64_t pixels; ivec2 origin; };
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer Addresses { Tile tile[]; };
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer MaskBytes { uint word[]; };
+struct Dab {
+    uint64_t pixels;
+    int x; int y; int width; int height;
+    float opacity; float flow; float averageOpacity;
+    uint mirrorFlags; uint padding1; uint padding2;
+    ivec4 clip;
+};
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer Dabs { Dab dab[]; };
+layout(push_constant) uniform Params {
+    Addresses tiles;
+    Dabs dabs;
+    uint gridWidth;
+    uint dabCount;
+    ivec2 origin;
+    uint mode;
+    uint channelMask;
+    uint64_t mask;
+    ivec2 maskOrigin;
+    ivec2 maskSize;
+} params;
+
+vec4 over(vec4 dst, vec4 src, float opacity, float coverage)
+{
+    float a = (src.a * opacity) * coverage;
+    if (a == 0.0) return dst;
+    float alpha;
+    float blend;
+    bool alphaLocked = (params.channelMask & 8) == 0;
+    if (alphaLocked || dst.a == 1.0) { alpha = dst.a; blend = a; }
+    else if (dst.a == 0.0) {
+        alpha = a; blend = 1.0;
+        // The CPU scalar Over kernel clears hidden RGB before unlocking
+        // alpha when only some color channels are enabled.
+        if ((params.channelMask & 7) != 7) dst = vec4(0.0);
+    }
+    else { alpha = dst.a + (1.0 - dst.a) * a; blend = alpha == 0.0 ? 0.0 : a / alpha; }
+    vec3 color = blend == 1.0 ? src.rgb : blend * (src.rgb - dst.rgb) + dst.rgb;
+    if ((params.channelMask & 1) == 0) color.r = dst.r;
+    if ((params.channelMask & 2) == 0) color.g = dst.g;
+    if ((params.channelMask & 4) == 0) color.b = dst.b;
+    return vec4(color, alpha);
+}
+
+vec4 alphaDarken(vec4 dst, vec4 src, Dab dab, float coverage)
+{
+    // Match KoAlphaDarkenParamsWrapper and KoOptimizedCompositeOpAlphaDarken128.
+    bool hard = params.mode == 1;
+    float opacity = hard ? dab.flow * dab.opacity : dab.opacity;
+    float averageOpacity = hard ? dab.flow * dab.averageOpacity : dab.averageOpacity;
+    float maskedAlpha = coverage * src.a;
+    float a = maskedAlpha * opacity;
+    vec3 color = dst.a == 0.0 ? src.rgb : (src.rgb - dst.rgb) * a + dst.rgb;
+    float fullFlowAlpha;
+    if (averageOpacity > opacity) {
+        fullFlowAlpha = averageOpacity > dst.a
+            ? (averageOpacity - a) * (dst.a / averageOpacity) + a : dst.a;
+    } else {
+        fullFlowAlpha = opacity > dst.a ? (opacity - dst.a) * maskedAlpha + dst.a : dst.a;
+    }
+    float alpha = fullFlowAlpha;
+    if (dab.flow != 1.0) {
+        float zeroFlowAlpha = hard ? a + dst.a - a * dst.a : dst.a;
+        alpha = (fullFlowAlpha - zeroFlowAlpha) * dab.flow + zeroFlowAlpha;
+    }
+    return vec4(color, alpha);
+}
+
+void main()
+{
+    uint tile = gl_WorkGroupID.x;
+    ivec2 tileOrigin = params.tiles.tile[tile].origin;
+    Pixels dst = Pixels(params.tiles.tile[tile].pixels);
+    for (uint i = gl_LocalInvocationID.x; i < 4096; i += 256) {
+        ivec2 point = tileOrigin + ivec2(i % 64, i / 64);
+        float coverage = 1.0;
+        if (params.mask != uint64_t(0)) {
+            ivec2 p = point - params.maskOrigin;
+            if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, params.maskSize))) continue;
+            uint index = uint(p.y * params.maskSize.x + p.x);
+            uint packed = MaskBytes(params.mask).word[index / 4];
+            coverage = float((packed >> (8 * (index % 4))) & 255) * (1.0 / 255.0);
+        }
+        vec4 value = dst.px[i];
+        bool touched = false;
+        for (uint j = 0; j < params.dabCount; ++j) {
+            Dab dab = params.dabs.dab[j];
+            ivec2 clipped = point - dab.clip.xy;
+            if (any(lessThan(clipped, ivec2(0))) || any(greaterThanEqual(clipped, dab.clip.zw))) continue;
+            ivec2 p = point - ivec2(dab.x, dab.y);
+            if (p.x < 0 || p.y < 0 || p.x >= dab.width || p.y >= dab.height) continue;
+            if ((dab.mirrorFlags & 1) != 0) p.x = dab.width - 1 - p.x;
+            if ((dab.mirrorFlags & 2) != 0) p.y = dab.height - 1 - p.y;
+            vec4 source = Pixels(dab.pixels).px[p.y * dab.width + p.x];
+            if (params.mode == 3) {
+                // KoCompositeOpErase: mask first, then opacity. Preserve RGB,
+                // including hidden RGB when alpha reaches zero. Flow is unused.
+                float erased = (source.a * coverage) * dab.opacity;
+                value.a = (1.0 - erased) * value.a;
+            } else {
+                value = params.mode == 0 ? over(value, source, dab.opacity, coverage)
+                                        : alphaDarken(value, source, dab, coverage);
+            }
+            touched = true;
+        }
+        if (touched) dst.px[i] = value;
+    }
+}

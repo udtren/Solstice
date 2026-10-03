@@ -1,0 +1,111 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Flattens a stack of layers with the "normal" (COMPOSITE_OVER) blend mode.
+ *
+ * One workgroup processes one 64x64 tile. Every invocation keeps the running
+ * result of its pixels in registers while iterating over all layers, so each
+ * layer pixel is read once and the destination is written once.
+ *
+ * Blending reproduces KoOptimizedCompositeOpOver128 / KoCompositeOpOver for
+ * straight (non-premultiplied) RGBA float pixels.
+ *
+ * Compile with -DTILE_F16 for RGBA16F tiles; arithmetic is always float32.
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+#ifdef TILE_F16
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#define PIXEL f16vec4
+#define LOAD_PIXEL(v) vec4(v)
+#define STORE_PIXEL(v) f16vec4(v)
+#else
+#define PIXEL vec4
+#define LOAD_PIXEL(v) (v)
+#define STORE_PIXEL(v) (v)
+#endif
+
+layout(local_size_x = 256) in;
+
+layout(buffer_reference, std430, buffer_reference_align = 8) buffer TilePixels
+{
+    PIXEL px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer AddressTable
+{
+    uint64_t addr[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer FloatTable
+{
+    float v[];
+};
+
+layout(push_constant) uniform Params
+{
+    AddressTable layerTiles; // layerCount * tileCount entries, layer-major; 0 = transparent tile
+    AddressTable dstTiles; // tileCount entries
+    FloatTable opacities; // layerCount entries, 0..1
+    uint tileCount;
+    uint layerCount;
+}
+params;
+
+const uint PixelsPerTile = 64 * 64;
+const uint PixelsPerInvocation = PixelsPerTile / gl_WorkGroupSize.x;
+
+vec4 compositeOver(vec4 dst, vec4 src, float opacity)
+{
+    const float srcAlpha = src.a * opacity;
+    if (srcAlpha == 0.0) {
+        return dst;
+    }
+
+    float newAlpha;
+    float srcBlend;
+    if (dst.a == 1.0) {
+        newAlpha = 1.0;
+        srcBlend = srcAlpha;
+    } else if (dst.a == 0.0) {
+        newAlpha = srcAlpha;
+        srcBlend = 1.0;
+    } else {
+        newAlpha = dst.a + (1.0 - dst.a) * srcAlpha;
+        srcBlend = newAlpha == 0.0 ? 0.0 : srcAlpha / newAlpha;
+    }
+
+    if (srcBlend == 1.0) {
+        return vec4(src.rgb, newAlpha);
+    }
+    return vec4(srcBlend * (src.rgb - dst.rgb) + dst.rgb, newAlpha);
+}
+
+void main()
+{
+    const uint tile = gl_WorkGroupID.x;
+    if (tile >= params.tileCount) {
+        return;
+    }
+
+    TilePixels dstTile = TilePixels(params.dstTiles.addr[tile]);
+
+    for (uint i = 0; i < PixelsPerInvocation; i++) {
+        const uint index = gl_LocalInvocationID.x + i * gl_WorkGroupSize.x;
+        vec4 result = vec4(0.0);
+
+        for (uint layer = 0; layer < params.layerCount; layer++) {
+            const uint64_t address = params.layerTiles.addr[layer * params.tileCount + tile];
+            if (address == 0) {
+                continue;
+            }
+            result = compositeOver(result, LOAD_PIXEL(TilePixels(address).px[index]), params.opacities.v[layer]);
+        }
+
+        dstTile.px[index] = STORE_PIXEL(result);
+    }
+}

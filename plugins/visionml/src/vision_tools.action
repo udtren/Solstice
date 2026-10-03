@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ActionCollection version="2" name="Tools">
+  <Actions category="tool-shortcuts">
+    <text>Tool Shortcuts</text>
+    <Action name="SelectSegmentFromPointTool">
+      <icon>tool_segmentation_point</icon>
+      <text>Segment Selection from Point</text>
+      <whatsThis></whatsThis>
+      <toolTip>Point Segmentation Selection Tool</toolTip>
+      <iconText>Point Segmentation Selection Tool</iconText>
+      <shortcut></shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+    <Action name="SelectSegmentFromRectTool">
+      <icon>tool_segmentation_rect</icon>
+      <text>Segment Selection from Box</text>
+      <whatsThis></whatsThis>
+      <toolTip>Box Segmentation Selection Tool</toolTip>
+      <iconText>Box Segmentation Selection Tool</iconText>
+      <shortcut></shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+    <Action name="VisionMLInpaintTool">
+      <icon>tool_inpaint</icon>
+      <text>Smart Fill Tool</text>
+      <whatsThis></whatsThis>
+      <toolTip>Smart Fill Tool (VisionML)</toolTip>
+      <iconText>Smart Fill Tool</iconText>
+      <shortcut></shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+  </Actions>
+</ActionCollection>

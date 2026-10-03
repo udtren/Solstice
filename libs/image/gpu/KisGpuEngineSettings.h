@@ -1,0 +1,58 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#ifndef KISGPUENGINESETTINGS_H
+#define KISGPUENGINESETTINGS_H
+
+#include <QString>
+
+#include "kritaimage_export.h"
+
+class KoColorSpace;
+
+/**
+ * User settings of the GPU engine (Solstice, docs/agent/gpu-engine.md),
+ * stored in kritarc.
+ *
+ * - Solstice/GpuEngine (bool, default false): use the GPU engine. Read once
+ *   per process (KisGpuMergeBatch::isEnabled()), so a change takes effect
+ *   after restarting Krita. The KRITA_GPU_PROJECTION environment variable
+ *   (1 or 0) overrides it for development.
+ * - Solstice/GpuEngineConvertDocuments (int, ConvertPolicy, default Ask):
+ *   what to do with a document that is opened in another color space than
+ *   RGBA float while the GPU engine is enabled.
+ */
+class KRITAIMAGE_EXPORT KisGpuEngineSettings
+{
+public:
+    enum ConvertPolicy {
+        Ask = 0,
+        Convert = 1,
+        Keep = 2,
+    };
+
+    static QString enabledKey();
+    static QString convertPolicyKey();
+
+    static bool enabledInConfig();
+    static void setEnabledInConfig(bool enabled);
+
+    static ConvertPolicy convertPolicy();
+    static void setConvertPolicy(ConvertPolicy policy);
+
+    /// True if the GPU engine composites documents in @p colorSpace (RGBA F32/F16).
+    static bool isGpuColorSpace(const KoColorSpace *colorSpace);
+
+    /**
+     * The color space a document in @p colorSpace is converted to for the
+     * GPU engine: RGBA F32 with the same profile for RGB documents (the
+     * values and their appearance stay the same), RGBA F32 with the default
+     * profile for other color models. Null if @p colorSpace is already a GPU
+     * color space.
+     */
+    static const KoColorSpace *conversionTarget(const KoColorSpace *colorSpace);
+};
+
+#endif // KISGPUENGINESETTINGS_H

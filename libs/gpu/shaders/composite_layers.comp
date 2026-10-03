@@ -1,0 +1,307 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Composites a list of layers, bottom to top, onto destination tiles
+ * (GPU engine phase 2, projection). Only pixels inside the clip rect are
+ * written; the rest of every destination tile is left untouched.
+ *
+ * Blend modes reproduce Krita's RGBA float composite ops:
+ *  - Over: KoOptimizedCompositeOpOver128
+ *  - Erase: KoCompositeOpErase, preserving RGB even at zero alpha
+ *  - the others: KoCompositeOpGenericSC with the cf* functions of
+ *    KoCompositeOpFunctions.h and their clamp policies
+ *  - KoCompositeOpBase: a destination pixel with alpha exactly 0 is cleared
+ *    when the alpha channel is locked (not all channel flags set).
+ * Krita computes intermediate values in double; this shader uses float.
+ *
+ * Compile with -DTILE_F16 for RGBA16F tiles; the result is then rounded to
+ * half after every layer, as Krita does when compositing into an F16 device.
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+#ifdef TILE_F16
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#define PIXEL f16vec4
+#define LOAD_PIXEL(v) vec4(v)
+#define STORE_PIXEL(v) f16vec4(v)
+#else
+#define PIXEL vec4
+#define LOAD_PIXEL(v) (v)
+#define STORE_PIXEL(v) (v)
+#endif
+
+// Must match KisGpuBlendOp in KisGpuLayerCompositor.h
+const uint OpOver = 0;
+const uint OpMultiply = 1;
+const uint OpScreen = 2;
+const uint OpAdd = 3;
+const uint OpSubtract = 4;
+const uint OpDarken = 5;
+const uint OpLighten = 6;
+const uint OpDifference = 7;
+const uint OpOverlay = 8;
+const uint OpHardLight = 9;
+const uint OpExclusion = 10;
+const uint OpErase = 11;
+
+const uint FlagAlphaLocked = 1;
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer MaskBytes
+{
+    uint word[];
+};
+
+layout(local_size_x = 256) in;
+
+layout(buffer_reference, std430, buffer_reference_align = 8) buffer TilePixels
+{
+    PIXEL px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer AddressTable
+{
+    uint64_t addr[];
+};
+
+struct LayerParams {
+    float opacity;
+    uint op;
+    uint flags;
+    uint channelMask;
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer LayerTable
+{
+    LayerParams layers[];
+};
+
+layout(push_constant) uniform Params
+{
+    AddressTable layerTiles; // layerCount * tileCount, layer-major; 0 = transparent tile
+    AddressTable dstTiles; // tileCount
+    LayerTable layers; // layerCount
+    uint tileCount;
+    uint layerCount;
+    uint gridWidth; // tiles per row
+    uint padding0;
+    uint padding1;
+    uint padding2;
+    ivec4 clip; // x0, y0, x1, y1 (exclusive) in grid pixel coordinates
+    uint64_t mask;
+    ivec2 maskOrigin;
+    ivec2 maskSize;
+    uvec2 maskPadding;
+}
+params;
+
+const uint PixelsPerTile = 64 * 64;
+const uint PixelsPerInvocation = PixelsPerTile / gl_WorkGroupSize.x;
+
+// qFuzzyIsNull(float)
+bool fuzzyZero(float v)
+{
+    return abs(v) <= 0.00001;
+}
+
+// qFuzzyCompare(v, 1.0f)
+bool fuzzyUnit(float v)
+{
+    return abs(v - 1.0) * 100000.0 <= min(abs(v), 1.0);
+}
+
+// qFuzzyCompare(v, 0.5f)
+bool fuzzyHalf(float v)
+{
+    return abs(v - 0.5) * 100000.0 <= min(abs(v), 0.5);
+}
+
+float hardLight(float s, float d)
+{
+    if (fuzzyHalf(s)) {
+        return d;
+    }
+    float s2 = s + s;
+    if (s > 0.5) {
+        s2 -= 1.0;
+        return s2 + d - s2 * d;
+    }
+    return s2 * d;
+}
+
+float blendChannel(uint op, float s, float d)
+{
+    switch (op) {
+    case OpMultiply:
+        return s * d;
+    case OpScreen:
+        return s + d - s * d;
+    case OpAdd:
+        return s + d;
+    case OpSubtract:
+        return d - s;
+    case OpDarken:
+        return min(s, d);
+    case OpLighten:
+        return max(s, d);
+    case OpDifference:
+        return max(s, d) - min(s, d);
+    case OpOverlay:
+        return hardLight(d, s);
+    case OpHardLight:
+        return hardLight(s, d);
+    case OpExclusion: {
+        const float x = s * d;
+        return d + s - (x + x);
+    }
+    }
+    return s;
+}
+
+vec3 blendColor(uint op, vec3 s, vec3 d)
+{
+    return vec3(blendChannel(op, s.r, d.r), blendChannel(op, s.g, d.g), blendChannel(op, s.b, d.b));
+}
+
+vec3 clampSource(uint op, vec3 s)
+{
+    // Clamp policies of the functors (KoCompositeOpGenericFunctorBase.h)
+    if (op == OpOverlay || op == OpHardLight || op == OpExclusion) {
+        return clamp(s, 0.0, 1.0);
+    }
+    return s;
+}
+
+vec3 clampDestination(uint op, vec3 d)
+{
+    if (op == OpExclusion) {
+        return clamp(d, 0.0, 1.0);
+    }
+    return d;
+}
+
+vec4 compositeOver(vec4 dst, vec4 src, float opacity, bool alphaLocked, float coverage, uint channels)
+{
+    const float srcAlpha = (src.a * opacity) * coverage;
+    if (srcAlpha == 0.0) {
+        return dst;
+    }
+    alphaLocked = alphaLocked || (channels & 8) == 0;
+
+    float newAlpha;
+    float srcBlend;
+    if (alphaLocked || dst.a == 1.0) {
+        newAlpha = dst.a;
+        srcBlend = srcAlpha;
+    } else if (dst.a == 0.0) {
+        newAlpha = srcAlpha;
+        srcBlend = 1.0;
+        // Scalar CPU Over clears hidden RGB when alpha is unlocked and
+        // only some color channels are enabled.
+        if ((channels & 7) != 7) dst = vec4(0.0);
+    } else {
+        newAlpha = dst.a + (1.0 - dst.a) * srcAlpha;
+        srcBlend = newAlpha == 0.0 ? 0.0 : srcAlpha / newAlpha;
+    }
+
+    vec3 color = srcBlend == 1.0 ? src.rgb : srcBlend * (src.rgb - dst.rgb) + dst.rgb;
+    if ((channels & 1) == 0) color.r = dst.r;
+    if ((channels & 2) == 0) color.g = dst.g;
+    if ((channels & 4) == 0) color.b = dst.b;
+    return vec4(color, newAlpha);
+}
+
+vec4 compositeGeneric(uint op, vec4 dst, vec4 src, float opacity, bool alphaLocked)
+{
+    if (alphaLocked && dst.a == 0.0) {
+        dst = vec4(0.0);
+    }
+
+    const float srcAlpha = src.a * opacity;
+    const float dstAlpha = dst.a;
+    if (fuzzyZero(srcAlpha)) {
+        return dst;
+    }
+
+    const vec3 s = clampSource(op, src.rgb);
+    if (alphaLocked) {
+        if (!fuzzyZero(dstAlpha)) {
+            const vec3 d = clampDestination(op, dst.rgb);
+            return vec4((blendColor(op, s, d) - d) * srcAlpha + d, dstAlpha);
+        }
+        return dst;
+    }
+    if (fuzzyZero(dstAlpha)) {
+        return vec4(s, srcAlpha);
+    }
+
+    const vec3 d = clampDestination(op, dst.rgb);
+    const vec3 cf = blendColor(op, s, d);
+    if (fuzzyUnit(dstAlpha)) {
+        return vec4((cf - d) * srcAlpha + d, 1.0);
+    }
+    if (fuzzyUnit(srcAlpha)) {
+        return vec4((cf - s) * dstAlpha + s, 1.0);
+    }
+
+    const float newAlpha = srcAlpha + dstAlpha - srcAlpha * dstAlpha;
+    if (fuzzyZero(newAlpha)) {
+        return vec4(dst.rgb, newAlpha);
+    }
+    const vec3 result = (1.0 - srcAlpha) * dstAlpha * d + (1.0 - dstAlpha) * srcAlpha * s + dstAlpha * srcAlpha * cf;
+    return vec4(result / newAlpha, newAlpha);
+}
+
+void main()
+{
+    const uint tile = gl_WorkGroupID.x;
+    if (tile >= params.tileCount) {
+        return;
+    }
+
+    const ivec2 tileOrigin = ivec2(int(tile % params.gridWidth), int(tile / params.gridWidth)) * 64;
+    TilePixels dstTile = TilePixels(params.dstTiles.addr[tile]);
+
+    for (uint i = 0; i < PixelsPerInvocation; i++) {
+        const uint index = gl_LocalInvocationID.x + i * gl_WorkGroupSize.x;
+        const ivec2 position = tileOrigin + ivec2(int(index % 64), int(index / 64));
+        if (any(lessThan(position, params.clip.xy)) || any(greaterThanEqual(position, params.clip.zw))) {
+            continue;
+        }
+
+        float coverage = 1.0;
+        if (params.mask != uint64_t(0)) {
+            const ivec2 p = position - params.maskOrigin;
+            if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, params.maskSize))) continue;
+            const uint maskIndex = uint(p.y * params.maskSize.x + p.x);
+            const uint packed = MaskBytes(params.mask).word[maskIndex / 4];
+            coverage = float((packed >> (8 * (maskIndex % 4))) & 255) * (1.0 / 255.0);
+        }
+        vec4 result = LOAD_PIXEL(dstTile.px[index]);
+        for (uint layer = 0; layer < params.layerCount; layer++) {
+            const uint64_t address = params.layerTiles.addr[layer * params.tileCount + tile];
+            if (address == 0) {
+                continue;
+            }
+            const LayerParams info = params.layers.layers[layer];
+            const vec4 src = LOAD_PIXEL(TilePixels(address).px[index]);
+            const bool alphaLocked = (info.flags & FlagAlphaLocked) != 0;
+            if (info.op == OpOver) {
+                result = compositeOver(result, src, info.opacity, alphaLocked, coverage, info.channelMask);
+            } else if (info.op == OpErase) {
+                // CPU KoCompositeOpErase ignores channel flags, including alpha lock.
+                result.a = (1.0 - (src.a * coverage) * info.opacity) * result.a;
+            } else {
+                result = compositeGeneric(info.op, result, src, info.opacity, alphaLocked);
+            }
+#ifdef TILE_F16
+            // Krita's F16 ops store every intermediate result as half: round
+            // after each layer, like compositing into an F16 device one by one.
+            result = vec4(f16vec4(result));
+#endif
+        }
+        dstTile.px[index] = STORE_PIXEL(result);
+    }
+}
