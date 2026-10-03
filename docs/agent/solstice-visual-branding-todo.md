@@ -4,6 +4,67 @@ This checklist covers visual assets and visual-facing integration only. Internal
 Krita compatibility identifiers, plugin APIs, MIME types, resource paths, and
 configuration filenames are intentionally outside this checklist.
 
+## Temporary gray placeholders (2026-10-03)
+
+The user requested solid gray replacements while the final brand is undecided.
+169 nonempty image assets now use opaque `#808080`, with their original pixel
+dimensions or SVG width/height/viewBox preserved:
+
+- All images in `krita/pics/branding/`, including default, Beta, Next, Plus,
+  the legacy root ICO, and every Apple `.icon/Assets` source.
+- All 30 images in `krita/pics/mimetypes/`, including the `krz` subdirectory.
+- The 3840 x 1920 PNG splash, 1920 x 960 JPEG source, and 131 x 80 SVG banner.
+- The 24 x 24 `krita/pics/svg/support-krita.svg` resource. Its upstream link
+  and text remain unchanged.
+- All MSIX images in the actual source directory
+  `packaging/windows/msix/pkg/Assets/`.
+- `packaging/macos/KritaIcon.icns` and `packaging/macos/krita_dmgBG.png`.
+
+ICO files preserve all seven sizes (16, 32, 48, 64, 96, 128, 256). ICNS images
+preserve the individual pixel sizes and Retina representations; the legacy
+16/32-pixel ARGB entries use equivalent PNG entries (`icp4`/`icp5`). The Apple
+layer composition configuration is unchanged, so macOS effects and final
+rendering still need platform verification. No packaging identity was renamed.
+
+`libs/ui/kis_splash_screen.cpp` leaves the splash artwork credit empty while
+the solid fill is used. Restore the correct artist credit with final artwork.
+Original artwork remains available in Git history. The empty seasonal splash
+file has no dimensions and is unchanged; its code path remains disabled.
+Third-party sponsor artwork, upstream links, and contributor attributions are
+unchanged. Template/store-screenshot audits remain future work, not completed
+by this mechanical image replacement.
+
+The Windows build embeds Next's SVGZ and splash QRC in `krita.dll` and
+generates application/file ICO files from the PNG sources. Rebuild `krita`,
+`krita_windows_stub_exe`, `krita_windows_stub_com`, and `krafile_dummy_obj`;
+install `libs/ui`, `krita`, and `krita/pics/branding/Next` locally with the
+application closed. Generated `krita.ico`/`kritafile.ico` are installed under
+`installer/` for packaging. NSIS uses those generated icons for shortcuts;
+there is no repository-specific NSIS header bitmap to replace.
+
+The Windows source lists in `krita/CMakeLists.txt` exclude 512/1024-pixel PNGs
+from ICO generation only. Otherwise ECM's icon conversion embedded a 1024-pixel
+PNG in a directory entry declaring 256 pixels. The high-resolution source and
+installed PNGs are retained; generated Windows ICO frames must match their
+declared dimensions as well as being gray.
+
+Verification: compare source dimensions with the pre-change Git assets, decode
+every ICO/ICNS representation, and check all raster pixels and SVG rectangles
+are opaque gray. Also inspect generated installer icons after rebuilding.
+The 169 source assets passed comparison with pre-change `HEAD`, including every
+ICO/ICNS representation. The application and Windows stubs compiled successfully.
+Both generated Windows ICOs passed pixel and declared-dimension checks at all
+seven sizes (16, 24, 32, 48, 64, 128, 256). Installation completed after the user
+closed `krita.com`; `krita.dll`, `libkritaui.dll`, both Windows stubs and both
+installer ICOs match their build SHA-256 hashes. When checking for a running
+application on Windows, check both process names `krita` and `krita.com`.
+Interactive splash/About/taskbar appearance needs a restarted application;
+macOS, Linux, MSIX packaging, icon-cache and scaling checks remain open.
+
+User-facing status: [Temporary visual branding](../visual-branding.md).
+The unchecked items below refer to final artwork and release acceptance;
+gray placeholders do not complete them.
+
 ## Brand source package
 
 - [ ] Create the canonical Solstice logo as an editable vector source.
@@ -66,7 +127,7 @@ configuration filenames are intentionally outside this checklist.
 
 - [ ] Create a Solstice installer header/banner image if the Windows NSIS theme uses one.
 - [ ] Replace installer, uninstaller, Start menu, and desktop-shortcut icons.
-- [ ] Replace MSIX tile assets under `packaging/windows/msix/Assets` if MSIX packaging is
+- [ ] Replace MSIX tile assets under `packaging/windows/msix/pkg/Assets` if MSIX packaging is
       retained.
 - [ ] Test Windows pinned shortcuts before and after an upgrade; Windows may cache the
       old Krita icon.

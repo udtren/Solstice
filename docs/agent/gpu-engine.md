@@ -36,7 +36,12 @@ compute on the GPU. User-facing status is in `docs/gpu-engine.md`.
   Phases 4.17-4.19 are implemented together: Wash Alpha Lock, Wash RGB channel
   restrictions with selections, and CPU-compatible Erase channel handling in
   both direct and Wash painting. The user confirmed the combined manual check
-  passed. Phases
+  passed. Phases 4.20-4.22 extend the existing separable layer blend modes to
+  direct brush dabs and Wash preview/final merging, including selections and
+  channel restrictions. The user confirmed their combined manual test passed.
+  Phases 4.23-4.25 pipeline brush submissions through three reusable contexts,
+  reuse upload allocations in size buckets and cap their total at 64 MiB.
+  Their combined manual check passed, as confirmed by the user. Phases
   0–3 are implemented, including real-app canvas and memory-budget checks;
   the phase 3.3 dialog checklist remains documented separately. Layer stacks of RGBA float
   images are composited on the GPU inside `KisAsyncMerger`, directly into
@@ -614,6 +619,12 @@ clean runs, and a benchmark entry in this document.
 | 4.17 | Normal Wash Alpha Lock on GPU, including selected painting. | Bundled with 4.18-4.19; all channel masks, CPU parity, COW/Undo/Redo and full strokes; user confirmed the combined manual check passed. |
 | 4.18 | Normal Wash RGB channel locks, alone or with Alpha Lock/selection. | Bundled with 4.17/4.19; hidden RGB and channel preservation tested; user confirmed the combined manual check passed. |
 | 4.19 | CPU-compatible Erase channel handling on GPU in Buildup and Wash. | Bundled with 4.17-4.18; CPU Erase ignores channel flags, including Alpha Lock; user confirmed the combined manual check passed. |
+| 4.20 | Separable GPU blend modes for RGBA32F Buildup dabs. | Bundled with 4.21-4.22; CPU pixel parity, ordered mirrors, COW/Undo/Redo and failure tests; user confirmed the combined manual test passed. |
+| 4.21 | The same blend modes for GPU Wash preview and final merge. | Shared shader math, full strokes and GPU-path counters; user confirmed the combined manual test passed. |
+| 4.22 | Selection/channel-lock parity for the added brush modes, including sparse dab tile regions. | All 16 channel masks, hidden RGB, empty/moved/inverted selection, source-region parity and failed-submit recovery; user confirmed the combined manual test passed. |
+| 4.23 | Pipeline brush submissions without a completion wait after each batch. | Three contexts retain in-flight source/mask/table bytes; real blocked-queue parity and CPU-read tests; combined manual check passed (user confirmed). |
+| 4.24 | Reuse brush upload allocations in 256 KiB buckets. | Variable-size dabs reuse existing capacity; completed-work benchmarks include explicit waits; combined manual check passed (user confirmed). |
+| 4.25 | Bound the whole brush staging ring to 64 MiB. | Drain before slot reuse or reclamation; pressure, oversized refusal, failure/CPU fallback and Undo/Redo tests; combined manual check passed (user confirmed). |
 | 4 | Brush engine: GPU dab rendering and compositing for the pixel brush (mask generation, alpha darken, indirect painting), then color smudge. | Stroke parity tests; input-to-pixel latency measured lower than CPU. |
 | 5 | Filters and transforms: blur family, levels/curves, Liquify, Transform Tool, Puppet Warp (preview/final parity). Decide fate of remaining paint ops and color models. | Per-filter parity tests; Puppet Warp invariants from `docs/agent/puppet-warp.md` hold. |
 
@@ -2046,6 +2057,164 @@ no new UI controls for them.
 Check appearance after release, ordinary mirroring, Undo/Redo, clearing the
 selection/locks and save/reopen. This bundle does not claim to resolve the
 deferred large-brush mirror latency.
+
+### Separable brush blend bundle (phases 4.20-4.22)
+
+The RGBA32F brush prototype now also accepts Multiply, Screen, Addition/Linear
+Dodge (two IDs, one kernel), Subtract, Darken, Lighten, Difference, Overlay,
+Hard Light and Exclusion. Direct Buildup dabs and Wash preview/final merging
+support these modes with selections and all 16 RGBA channel masks. Alpha
+Darken remains the unrestricted Wash temporary-target operation; its own
+restricted-channel eligibility has not changed. Layer-stack eligibility is
+unchanged, as are RGBA16F brush, LOD, wrap-around and profile fallback rules.
+
+`shaders/composite_blend.glsl` shares the existing separable blend functions
+between the layer and dab shaders. CMake explicitly tracks the include for
+both F32/F16 layer variants and the dab shader. Dab mode values 4-13 map to
+layer operations 1-10; invalid mode values refuse before recording. The shared
+wrapper applies selection before opacity and restores locked RGB channels.
+It reproduces `KoCompositeOpBase` clearing hidden RGB at exactly zero
+destination alpha for any restricted channel set, even when source alpha or
+selection coverage is zero. This differs from Normal's early-return behavior.
+
+The new tests exposed a pre-existing dense-allocation discrepancy in the
+single-pass GPU dab path: its bounding rectangle allocated gap tiles absent
+from CPU painting. Wash final jobs enumerate the temporary target's tile
+region, so restricted generic blends cleared extra hidden RGB in those gaps,
+even if final merging fell back to CPU. All GPU dab batches now union the
+tile-aligned clipped dab rectangles, as combined mirrors already did. Each
+tile has one access/workgroup, and the existing tile/staging limits remain.
+Tests assert the CPU/GPU temporary tile regions match, in addition to pixels.
+
+Coverage includes HDR/negative destination colors, exact transparent RGB,
+all channel masks with/without soft selection, fractional mirror axes,
+separate/combined mirror passes, failed submissions and budget fallback,
+COW, Undo/Redo and CPU painting after GPU work. Wash additionally checks
+inverted/moved/empty/outside selections and changed/removed selection masks.
+Complete strokes cover every added blend ID in Buildup and Wash, with soft
+selection, both mirror axes, unrestricted channels, Alpha Lock and combined
+RGB/alpha restrictions. Brush-job tests exercise selected locked painting,
+fractional axes and failed-submit recovery for Multiply, Screen and Overlay.
+
+Validation on 2026-10-03: all nine GPU suites plus the rendering queue passed
+with Vulkan validation enabled (10/10, 121.41 s). The isolated new Wash matrix
+passed 453 cases including init/cleanup after the tile-region fix. The full
+run includes existing Normal/Erase/Alpha Darken, RGBA16F layer compositing,
+canvas interop, save/reload and memory-failure regressions.
+Installed with Krita closed; all eight related DLL SHA-256 hashes match the
+build. No user configuration changed. The user subsequently confirmed the
+combined manual test passed. This confirms reported interactive correctness,
+not a measured latency improvement.
+
+Five samples after warm-up on RTX PRO 6000, validation disabled, 128px brush,
+soft selection, both mirror axes and Alpha Lock in a 1024-square, four-layer
+image with four workers, median completed stroke time (ms):
+
+| Operation | CPU | GPU projection only | GPU projection + brush |
+| --- | ---: | ---: | ---: |
+| Multiply Buildup | 11.46 | 27.58 | 25.05 |
+| Multiply Wash | 12.65 | 37.62 | 42.18 |
+| Screen Buildup | 11.98 | 30.95 | 28.43 |
+| Screen Wash | 16.40 | 37.44 | 37.49 |
+| Overlay Buildup | 16.82 | 31.73 | 21.93 |
+| Overlay Wash | 17.28 | 42.17 | 39.52 |
+
+These include GPU completion but exclude canvas/tablet input and verification
+readback. GPU brush improves some projection-only cases, but not Multiply
+Wash here, and all-CPU strokes remain faster. The bundle expands GPU coverage;
+it does not establish a general latency improvement or fix the deferred lag.
+
+Combined manual regression checklist: use the usual GPU brush launcher and an
+RGBA32F document with existing painted content. With a normal-sized pixel
+brush, try Multiply, Screen and Overlay in Buildup and Wash. Check selected
+painting, Alpha Lock, ordinary mirroring, appearance after pen release,
+Undo/Redo and save/reopen. Return to Normal and Eraser to check switching.
+Individual RGB channel masks are covered by automation; no new UI is added.
+The deferred large-brush mirrored Alpha Lock latency is not part of this work.
+
+### Bounded asynchronous brush submissions (phases 4.23-4.25)
+
+`KisGpuBrushPainter` now keeps a process-lifetime ring of three `Work` contexts
+under its existing mutex. A successful paint call publishes tile state and
+returns after submission, without calling `commands.wait()` at the end.
+Source pixels, coverage and address tables are copied into the selected
+context's upload buffer before return. Caller-owned dabs and masks can be
+changed or destroyed while work is pending. The next use of that context
+waits before resetting commands or overwriting its buffer. Queue barriers
+preserve dab order; `KisGpuTileAccess` retains tile slots and COW sources by
+timeline, and existing CPU reads wait/download the latest pixels.
+
+`KisGpuDabCompositor::requiredUploadBytes` and recording share a layout planner,
+including source deduplication and padded mask words. Capacity rounds up to
+256 KiB to avoid reallocating for every small brush-size change. A source or
+whole layout exceeding 64 MiB refuses before preparing destination tiles.
+The sum of all three context upload capacities is capped at the same 64 MiB;
+it is not a 64 MiB limit per context. Completed buffers are reclaimed first.
+If still necessary, older submissions are drained before their buffers are
+released. A growing slot frees its completed old allocation before creating
+the new one, so replacement does not temporarily double its capacity.
+This budget covers dab/selection/table buffers only, not tile-access upload
+snapshots, tile pools, projection/canvas contexts or driver allocations.
+
+No scheduler, transaction or CPU fallback policy changes. A failed submission
+still returns false with no submitted write, letting the caller replay it on
+CPU. A successfully submitted write is never replayed, even on later device
+loss. Work-context waits occur before preparing tile accesses, outside the
+backend residency lock. Testing-only reset drains contexts before destroying
+their Vulkan resources; normal process teardown retains the existing
+process-lifetime policy. Staging statistics expose bytes/context count for
+regression checks and do not change user configuration.
+
+`testPendingBatches` holds the actual Vulkan queue behind a host-signalled
+timeline semaphore. Three batches must return while the queue remains held,
+even though their original dabs and masks are overwritten or released. An
+asynchronous CPU reader and, separately, a fourth brush batch must wait until
+the gate opens. Normal, Alpha Darken, Erase and Multiply compare CPU pixels,
+COW snapshots, Undo/Redo and failed-submit CPU replay. A ten-second watchdog
+releases the gate on regression so a synchronous implementation fails rather
+than hanging. `testStagingBudgetAndReuse` crosses bucket sizes and forces ring
+reclamation with large source buffers clipped to small destinations, checks
+the aggregate cap, oversized refusal without mutation, and explicit cleanup.
+Brush microbenchmarks now warm all ring slots and include GPU completion in
+timing; submission time alone must not be reported as completed brush work.
+
+Validation on 2026-10-03: all nine GPU suites plus the rendering queue passed
+with Vulkan validation enabled (10/10, 123.73 s). The subsequently strengthened
+blocked-queue/reuse tests and completed-work benchmarks passed 21 cases,
+including init/cleanup. Installed with Krita closed; all eight related DLL
+SHA-256 hashes match the build. No user configuration changed. Combined
+interactive verification passed, as confirmed by the user on 2026-10-03.
+This confirms observed behavior, not a measured input-latency improvement.
+
+Performance comparison uses the same `KisGpuStrokeTest` executable with the
+previously installed 4.22 GPU/image DLLs or the new DLLs in separate temporary
+directories. RTX PRO 6000, validation disabled, 1024-square/four-layer image,
+four workers, GPU projection plus brush, completion included and canvas/input
+and verification readback excluded. After an initial old-then-new five-sample
+run showed mixed results, the order was reversed with ten warmed samples:
+
+| Stroke | Before (ms median) | After (ms median) |
+| --- | ---: | ---: |
+| Normal 64px Buildup | 12.11 | 12.16 |
+| Normal 64px Wash | 20.19 | 19.99 |
+| Multiply 128px Buildup, selected/mirrored/alpha locked | 23.94 | 23.39 |
+| Multiply 128px Wash, selected/mirrored/alpha locked | 37.53 | 36.35 |
+| Overlay 128px Buildup, selected/mirrored/alpha locked | 22.07 | 23.07 |
+| Overlay 128px Wash, selected/mirrored/alpha locked | 34.84 | 32.06 |
+
+Most differences are small relative to run-to-run variation. Overlay Wash
+improved in both runs (initial 37.43 to 33.20 ms); some other cases regressed
+in one run. The blocked-queue tests prove that unconditional per-batch waiting
+is removed, but these timings do not establish a general stroke speedup or
+an input-to-display latency improvement. No claim is made about the deferred
+large-brush mirror issue.
+
+Combined manual regression checklist: use the usual GPU brush launcher with
+an RGBA32F document and a normal-sized pixel brush. Draw several quick strokes
+in Buildup and Wash, then try Eraser, Multiply or Overlay, selection, Alpha Lock
+and ordinary mirroring. Check immediate Undo/Redo, switching layers/documents,
+appearance after release and save/reopen. The deferred large-brush mirrored
+Alpha Lock latency remains outside this bundle's scope.
 
 ## Risks and open questions
 

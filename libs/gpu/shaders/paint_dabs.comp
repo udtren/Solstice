@@ -1,10 +1,12 @@
 /* SPDX-FileCopyrightText: 2026 Krita contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
- * Ordered Normal/Alpha Darken/Erase RGBA32F dabs, one workgroup per destination tile.
+ * Ordered RGBA32F dabs, one workgroup per destination tile.
  */
 #version 460
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_GOOGLE_include_directive : require
+#include "composite_blend.glsl"
 layout(local_size_x = 256) in;
 layout(buffer_reference, std430, buffer_reference_align = 16) buffer Pixels { vec4 px[]; };
 struct Tile { uint64_t pixels; ivec2 origin; };
@@ -108,6 +110,9 @@ void main()
                 // including hidden RGB when alpha reaches zero. Flow is unused.
                 float erased = (source.a * coverage) * dab.opacity;
                 value.a = (1.0 - erased) * value.a;
+            } else if (params.mode >= 4) {
+                // Dab modes 4..13 map to the shared blend operations 1..10.
+                value = compositeGeneric(params.mode - 3, value, source, dab.opacity, false, coverage, params.channelMask);
             } else {
                 value = params.mode == 0 ? over(value, source, dab.opacity, coverage)
                                         : alphaDarken(value, source, dab, coverage);

@@ -54,7 +54,7 @@ public:
      *
      * Does not wait for the GPU.
      * Optional coverage is a tightly packed CPU snapshot in image coordinates,
-     * copied before return. It supports one RGBA32F Normal/Erase layer only,
+     * copied before return. It supports one RGBA32F layer in a supported blend mode,
      * including channel locks, and is limited to 16 MiB.
      *
      * @return false on failure; the projection is then unchanged

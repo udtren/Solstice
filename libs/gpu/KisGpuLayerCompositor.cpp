@@ -97,17 +97,14 @@ bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
     const VkDeviceSize paramsOffset = alignUp(dstTableOffset + dstTableBytes, 16);
     const VkDeviceSize maskOffset = paramsOffset + VkDeviceSize(layers.size()) * sizeof(LayerParams);
     const qint64 maskBytes = mask ? qint64(mask->bounds.width()) * mask->bounds.height() : 0;
-    if (mask
-        && (!mask->data || mask->bounds.isEmpty() || maskBytes > 4096 * 4096 || layers.size() != 1
-            || (layers[0].op != KisGpuBlendOp::Over && layers[0].op != KisGpuBlendOp::Erase))) {
+    if (mask && (!mask->data || mask->bounds.isEmpty() || maskBytes > 4096 * 4096 || layers.size() != 1)) {
         if (errorMessage)
             *errorMessage = QStringLiteral("unsupported or oversized layer coverage mask");
         return false;
     }
     const VkDeviceSize totalBytes = maskOffset + alignUp(VkDeviceSize(maskBytes), 4);
     for (const auto &layer : layers) {
-        if (layer.channelMask > 0xf
-            || (layer.channelMask != 0xf && layer.op != KisGpuBlendOp::Over && layer.op != KisGpuBlendOp::Erase)) {
+        if (layer.channelMask > 0xf || quint32(layer.op) > quint32(KisGpuBlendOp::Erase)) {
             if (errorMessage)
                 *errorMessage = QStringLiteral("unsupported layer channel mask");
             return false;

@@ -59,7 +59,7 @@ public:
         KisGpuBlendOp op = KisGpuBlendOp::Over;
         float opacity = 1.0f;
         bool alphaLocked = false;
-        quint32 channelMask = 0xf; // RGBA bits; partial channels are for brush Over/Erase.
+        quint32 channelMask = 0xf; // RGBA bits; partial channels are used by brushes.
     };
 
     ~KisGpuLayerCompositor();
@@ -70,7 +70,7 @@ public:
     /**
      * @param layerTiles layer-major, layerTiles[layer * tileCount + tile]; 0 skips the tile
      * @param dstTiles destination tiles (read and written)
-     * @param mask optional single-layer Normal/Erase coverage; copied into the
+     * @param mask optional single-layer coverage; copied into the
      * internal table buffer before return, with a 16 MiB limit
      */
     bool record(KisGpuCommandList &commands,

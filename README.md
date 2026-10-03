@@ -36,6 +36,8 @@ Krita edition, and development no longer tracks upstream Krita.
 There are currently no packaged downloads in [GitHub Releases](https://github.com/udtren/Solstice/releases). 
 Solstice is currently available as source code for development builds.
 
+[Temporary visual branding](docs/visual-branding.md)
+
 The primary development and default branch is `krita-sol-gpu`. For source
 builds, see the [development environment](AGENTS.md#shared-development-environment) and [build workflow](docs/agent/development-workflow.md#build). 
 Check the [supported environment](#supported-environment) before building.
@@ -66,9 +68,10 @@ The experimental engine uses Vulkan compute for supported RGBA floating-point
 layer compositing and shares data with the OpenGL canvas for display. It is
 disabled by default and falls back to CPU paths for unsupported operations.
 
-An opt-in RGBA32F pixel-brush prototype also composites Normal, Alpha Darken and Erase
-dabs on the GPU, including selected and mirrored painting. Normal/Erase
-Wash previews and final merges also have GPU paths with selection and
+An opt-in RGBA32F pixel-brush prototype also composites supported blend modes
+(including Normal, Multiply, Screen, Overlay and Erase) on the GPU, with selected
+and mirrored painting. Supported Wash previews and final merges also have GPU
+paths with selection and
 CPU-compatible channel-lock handling. Dab generation,
 filters and transforms still run on the CPU. This is an
 ongoing rewrite, not a fully GPU-based painting pipeline.

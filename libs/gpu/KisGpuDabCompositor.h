@@ -18,11 +18,23 @@ class KisGpuBuffer;
 class KRITAGPU_EXPORT KisGpuDabCompositor
 {
 public:
+    static constexpr quint64 MaxUploadBytes = quint64(64) << 20;
     enum class CompositeMode : quint32 {
         Normal,
         AlphaDarkenHard,
         AlphaDarkenCreamy,
-        Erase
+        Erase,
+        Multiply,
+        Screen,
+        Add,
+        Subtract,
+        Darken,
+        Lighten,
+        Difference,
+        Overlay,
+        HardLight,
+        Exclusion,
+        Count
     };
     struct Dab {
         const float *pixels;
@@ -40,6 +52,12 @@ public:
     };
     ~KisGpuDabCompositor();
     static std::unique_ptr<KisGpuDabCompositor> create(KisGpuContext &context, QString *error = nullptr);
+    /// Required reusable allocation, rounded to 256 KiB; zero on invalid/oversized input.
+    static quint64
+    requiredUploadBytes(int tileCount, const QVector<Dab> &dabs, const Mask *mask = nullptr, QString *error = nullptr);
+    quint64 uploadBytes() const;
+    /// Caller must first wait for the last recording to finish.
+    void releaseUpload();
     /// RGBA32F only. Wait for the previous recording before reusing this object.
     /// The host-visible source/table/mask buffer is capped at 64 MiB.
     /// Optional origins select sparse, distinct destination tiles instead of a

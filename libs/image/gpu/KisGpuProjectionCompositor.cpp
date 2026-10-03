@@ -118,9 +118,8 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     const qint32 pixelSize = projection->pixelSize();
     if (mask
         && (pixelSize != 16 || !mask->data || mask->bounds.isEmpty()
-            || qint64(mask->bounds.width()) * mask->bounds.height() > 4096 * 4096 || layers.size() != 1
-            || (layers[0].op != KisGpuBlendOp::Over && layers[0].op != KisGpuBlendOp::Erase))) {
-        return fail(QStringLiteral("coverage requires one RGBA32F Normal/Erase layer"));
+            || qint64(mask->bounds.width()) * mask->bounds.height() > 4096 * 4096 || layers.size() != 1)) {
+        return fail(QStringLiteral("coverage requires one RGBA32F layer"));
     }
     KisGpuContext &context = backend->context();
 
@@ -131,10 +130,9 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     }
 
     for (const Layer &layer : layers) {
-        if (layer.channelMask > 0xf
-            || (layer.channelMask != 0xf
-                && (pixelSize != 16 || (layer.op != KisGpuBlendOp::Over && layer.op != KisGpuBlendOp::Erase)))) {
-            return fail(QStringLiteral("restricted channels require RGBA32F Normal/Erase"));
+        if (layer.channelMask > 0xf || quint32(layer.op) > quint32(KisGpuBlendOp::Erase)
+            || (layer.channelMask != 0xf && pixelSize != 16)) {
+            return fail(QStringLiteral("unsupported blend operation or channel mask"));
         }
         if (!(*layer.device->colorSpace() == *projection->colorSpace())) {
             return fail(QStringLiteral("layer color space differs from the projection"));

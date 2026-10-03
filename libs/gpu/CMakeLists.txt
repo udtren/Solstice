@@ -10,11 +10,11 @@ if(NOT Vulkan_INCLUDE_DIRS OR NOT Vulkan_GLSLC_EXECUTABLE)
 endif()
 set(HAVE_KRITA_GPU_ENGINE ON CACHE INTERNAL "kritagpu is built")
 
-# kis_gpu_add_shader(<output-var> <name> <source> [DEFINES ...])
+# kis_gpu_add_shader(<output-var> <name> <source> [DEFINES ...] [INCLUDES ...])
 # Compiles a GLSL compute shader to SPIR-V as a comma-separated list of words
 # (<name>.spv.inc) that sources include inside an array initializer.
 function(kis_gpu_add_shader output_var name source)
-    cmake_parse_arguments(ARG "" "" "DEFINES" ${ARGN})
+    cmake_parse_arguments(ARG "" "" "DEFINES;INCLUDES" ${ARGN})
     set(defines)
     foreach(define IN LISTS ARG_DEFINES)
         list(APPEND defines "-D${define}")
@@ -25,20 +25,23 @@ function(kis_gpu_add_shader output_var name source)
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/shaders
         COMMAND ${Vulkan_GLSLC_EXECUTABLE} --target-env=vulkan1.3 -O -mfmt=num ${defines}
                 -o ${output} ${CMAKE_CURRENT_SOURCE_DIR}/${source}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source} ${ARG_INCLUDES}
         COMMENT "Compiling GPU shader ${name}"
         VERBATIM)
     set(${output_var} ${${output_var}} ${output} PARENT_SCOPE)
 endfunction()
 
 set(kritagpu_SHADERS)
-kis_gpu_add_shader(kritagpu_SHADERS paint_dabs shaders/paint_dabs.comp)
+kis_gpu_add_shader(kritagpu_SHADERS paint_dabs shaders/paint_dabs.comp
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_over_stack_rgba32f shaders/composite_over_stack.comp)
 kis_gpu_add_shader(kritagpu_SHADERS composite_over_stack_rgba16f shaders/composite_over_stack.comp DEFINES TILE_F16)
 kis_gpu_add_shader(kritagpu_SHADERS fill_tiles_rgba32f shaders/fill_tiles.comp)
 kis_gpu_add_shader(kritagpu_SHADERS fill_tiles_rgba16f shaders/fill_tiles.comp DEFINES TILE_F16)
-kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba32f shaders/composite_layers.comp)
-kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba16f shaders/composite_layers.comp DEFINES TILE_F16)
+kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba32f shaders/composite_layers.comp
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
+kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba16f shaders/composite_layers.comp DEFINES TILE_F16
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f32 shaders/canvas_patches.comp)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f16 shaders/canvas_patches.comp DEFINES DST_F16)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f16_f32 shaders/canvas_patches.comp DEFINES SRC_F16)

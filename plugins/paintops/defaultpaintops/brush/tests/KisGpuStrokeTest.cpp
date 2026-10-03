@@ -181,9 +181,42 @@ private Q_SLOTS:
         QFETCH(int, channels);
         runStroke(erase, true, channels);
     }
+    void testBlendModes_data()
+    {
+        QTest::addColumn<int>("diameter");
+        QTest::addColumn<bool>("wash");
+        QTest::addColumn<bool>("mirrors");
+        QTest::addColumn<bool>("restricted");
+        QTest::addColumn<bool>("distant");
+        QTest::addColumn<bool>("alphaOnly");
+        QTest::addColumn<int>("channels");
+        QTest::addColumn<QString>("mode");
+        for (const auto &mode : {COMPOSITE_MULT,
+                                 COMPOSITE_SCREEN,
+                                 COMPOSITE_ADD,
+                                 COMPOSITE_LINEAR_DODGE,
+                                 COMPOSITE_SUBTRACT,
+                                 COMPOSITE_DARKEN,
+                                 COMPOSITE_LIGHTEN,
+                                 COMPOSITE_DIFF,
+                                 COMPOSITE_OVERLAY,
+                                 COMPOSITE_HARD_LIGHT,
+                                 COMPOSITE_EXCLUSION})
+            for (bool wash : {false, true})
+                for (int channels : {15, 7, 5})
+                    QTest::newRow(qPrintable(QString("%1-wash%2-channels%3").arg(mode).arg(wash).arg(channels)))
+                        << 128 << wash << true << false << false << false << channels << mode;
+    }
+    void testBlendModes()
+    {
+        QFETCH(int, channels);
+        QFETCH(QString, mode);
+        runStroke(false, true, channels, mode);
+    }
 
 private:
-    void runStroke(bool erase, bool selectionOnly = false, int channelBits = -1)
+    void
+    runStroke(bool erase, bool selectionOnly = false, int channelBits = -1, const QString &modeOverride = QString())
     {
         QFETCH(int, diameter);
         QFETCH(bool, wash);
@@ -262,16 +295,17 @@ private:
                 }
                 KoCanvasResourceProvider canvasResources;
                 KisResourcesSnapshotSP resources;
-                if (erase) {
+                if (erase || !modeOverride.isEmpty()) {
+                    const QString mode = erase ? COMPOSITE_ERASE : modeOverride;
                     canvasResources.setResource(KoCanvasResource::CurrentPaintOpPreset, QVariant::fromValue(preset));
-                    canvasResources.setResource(KoCanvasResource::CurrentEffectiveCompositeOp, COMPOSITE_ERASE);
+                    canvasResources.setResource(KoCanvasResource::CurrentEffectiveCompositeOp, mode);
                     canvasResources.setResource(KoCanvasResource::Opacity, 1.0);
                     canvasResources.setResource(KoCanvasResource::ForegroundColor,
                                                 QVariant::fromValue(KoColor(Qt::black, cs)));
                     canvasResources.setResource(KoCanvasResource::BackgroundColor,
                                                 QVariant::fromValue(KoColor(Qt::white, cs)));
                     resources = new KisResourcesSnapshot(image, layer, &canvasResources);
-                    QCOMPARE(resources->compositeOpId(), COMPOSITE_ERASE);
+                    QCOMPARE(resources->compositeOpId(), mode);
                 } else {
                     resources = new KisResourcesSnapshot(image, layer);
                 }

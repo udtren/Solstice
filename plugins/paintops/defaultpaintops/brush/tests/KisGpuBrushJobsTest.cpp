@@ -110,6 +110,13 @@ private Q_SLOTS:
         QTest::newRow("combined-submit-failure") << COMPOSITE_OVER << 3 << true << true << QStringLiteral("failure");
         QTest::newRow("single-submit-failure") << COMPOSITE_OVER << 0 << false << false << QStringLiteral("failure");
         QTest::newRow("integer-owning-image") << COMPOSITE_OVER << 3 << false << false << QStringLiteral("integer");
+        for (const auto &mode : {COMPOSITE_MULT, COMPOSITE_SCREEN, COMPOSITE_OVERLAY}) {
+            QTest::newRow(qPrintable(mode + "-selected-locked")) << mode << 3 << true << true << QStringLiteral("near");
+            QTest::newRow(qPrintable(mode + "-fractional"))
+                << mode << 3 << false << false << QStringLiteral("fractional");
+            QTest::newRow(qPrintable(mode + "-failed-submit"))
+                << mode << 3 << true << true << QStringLiteral("failure");
+        }
     }
     void testJobs()
     {

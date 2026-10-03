@@ -300,7 +300,8 @@ void KisSplashScreen::setLoadingText(QString text)
 
 KisSplashScreen::Source KisSplashScreen::getImageSource()
 {
-    QString artistCredit = i18nc("Normal splash artist name", "Tyson Tan");
+    // The temporary solid-gray splash has no artwork credit.
+    QString artistCredit;
     // Loading the ginormous 4K PNG splash image increases the startup time on
     // Android by several seconds and at the same time looks really bad when
     // scaled down to a dinky size. Instead of overengineering this into an

@@ -22,14 +22,121 @@
 #include <KoCompositeOpRegistry.h>
 #include <QElapsedTimer>
 #include <QScopeGuard>
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <compositeops/KoOptimizedCompositeOpFactory.h>
+#include <condition_variable>
+#include <future>
+#include <mutex>
 #include <random>
 #include <simpletest.h>
+#include <thread>
 #include <vector>
 
 namespace
 {
+// Hold the real queue behind a host-signalled timeline semaphore. A watchdog
+// releases it on regression so an accidental synchronous paint fails the test
+// rather than hanging the suite. Production code needs no delay injection.
+class QueueGate
+{
+public:
+    explicit QueueGate(KisGpuContext &context)
+        : m_context(context)
+        , m_commands(context)
+    {
+        m_signal = reinterpret_cast<PFN_vkSignalSemaphore>(
+            context.vk().vkGetDeviceProcAddr(context.device(), "vkSignalSemaphore"));
+        if (!m_signal)
+            return;
+        VkSemaphoreTypeCreateInfo type{};
+        type.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+        type.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+        VkSemaphoreCreateInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        info.pNext = &type;
+        if (context.vk().vkCreateSemaphore(context.device(), &info, nullptr, &m_semaphore) != VK_SUCCESS)
+            return;
+        m_commands.begin();
+        VkSemaphoreSubmitInfo wait{};
+        wait.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+        wait.semaphore = m_semaphore;
+        wait.value = 1;
+        wait.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        m_submission = m_commands.submit({wait});
+        if (m_submission)
+            m_watchdog = std::thread([this]() {
+                std::unique_lock lock(m_mutex);
+                if (!m_changed.wait_for(lock, std::chrono::seconds(10), [this]() {
+                        return m_open;
+                    })) {
+                    m_timedOut = true;
+                    signal();
+                }
+            });
+    }
+    ~QueueGate()
+    {
+        open();
+        if (m_watchdog.joinable())
+            m_watchdog.join();
+        m_commands.wait();
+        if (m_semaphore)
+            m_context.vk().vkDestroySemaphore(m_context.device(), m_semaphore, nullptr);
+    }
+    bool isValid() const
+    {
+        return m_submission != 0;
+    }
+    bool timedOut() const
+    {
+        return m_timedOut.load();
+    }
+    bool open()
+    {
+        std::lock_guard lock(m_mutex);
+        const bool ok = !m_semaphore || signal();
+        m_changed.notify_all();
+        return ok;
+    }
+
+private:
+    bool signal()
+    {
+        if (m_open)
+            return true;
+        VkSemaphoreSignalInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
+        info.semaphore = m_semaphore;
+        info.value = 1;
+        m_open = m_signal(m_context.device(), &info) == VK_SUCCESS;
+        return m_open;
+    }
+    KisGpuContext &m_context;
+    KisGpuCommandList m_commands;
+    PFN_vkSignalSemaphore m_signal = nullptr;
+    VkSemaphore m_semaphore = VK_NULL_HANDLE;
+    quint64 m_submission = 0;
+    std::atomic<bool> m_timedOut{false};
+    bool m_open = false;
+    std::mutex m_mutex;
+    std::condition_variable m_changed;
+    std::thread m_watchdog;
+};
+const QStringList separableModes{COMPOSITE_MULT,
+                                 COMPOSITE_SCREEN,
+                                 COMPOSITE_ADD,
+                                 COMPOSITE_LINEAR_DODGE,
+                                 COMPOSITE_SUBTRACT,
+                                 COMPOSITE_DARKEN,
+                                 COMPOSITE_LIGHTEN,
+                                 COMPOSITE_DIFF,
+                                 COMPOSITE_OVERLAY,
+                                 COMPOSITE_HARD_LIGHT,
+                                 COMPOSITE_EXCLUSION};
+const QStringList channelModes = QStringList{COMPOSITE_OVER, COMPOSITE_ERASE} + separableModes;
+const QStringList dabModes = channelModes + QStringList{COMPOSITE_ALPHA_DARKEN};
 class PreviewPaintLayer : public KisPaintLayer
 {
 public:
@@ -106,10 +213,136 @@ private Q_SLOTS:
     }
     void cleanupTestCase()
     {
+        QVERIFY(KisGpuBrushPainter::resetStagingForTesting());
         if (auto *backend = KisGpuTileBackend::existingInstance()) {
             backend->flush();
             QCOMPARE(backend->context().validationErrorCount(), 0);
         }
+    }
+    void testPendingBatches_data()
+    {
+        QTest::addColumn<QString>("mode");
+        QTest::addColumn<bool>("wrapRing");
+        for (const auto &mode : {COMPOSITE_OVER, COMPOSITE_ALPHA_DARKEN, COMPOSITE_ERASE, COMPOSITE_MULT})
+            for (bool wrapRing : {false, true})
+                QTest::newRow(qPrintable(mode + (wrapRing ? "-reuse" : "-read"))) << mode << wrapRing;
+    }
+    void testPendingBatches()
+    {
+        QFETCH(QString, mode);
+        QFETCH(bool, wrapRing);
+        QVERIFY(KisGpuBrushPainter::resetStagingForTesting());
+        auto &context = KisGpuTileBackend::instance()->context();
+        context.waitIdle();
+        const QRect bounds(-128, -64, 256, 192);
+        KisPaintDeviceSP cpu = new KisPaintDevice(space());
+        const float background[] = {1.2f, -0.2f, 0.7f, 0.6f};
+        cpu->fill(bounds.x(),
+                  bounds.y(),
+                  bounds.width(),
+                  bounds.height(),
+                  reinterpret_cast<const quint8 *>(background));
+        KisPaintDeviceSP gpu = new KisPaintDevice(*cpu), snapshot = new KisPaintDevice(*gpu);
+        const auto before = pixels(cpu, bounds);
+        KisSelectionSP selection = new KisSelection();
+        KisPainter cpuPainter(cpu), gpuPainter(gpu);
+        cpuPainter.setCompositeOpId(mode);
+        gpuPainter.setCompositeOpId(mode);
+        cpuPainter.setSelection(selection);
+        gpuPainter.setSelection(selection);
+        KisTransaction transaction(gpu);
+        const quint64 completed = context.completedValue();
+        QueueGate gate(context);
+        QVERIFY(gate.isValid());
+        // Distinct source pixels and masks are freed/overwritten immediately
+        // after each submission, while none of the queued work can execute.
+        for (int i = 0; i < 3; ++i) {
+            selection->pixelSelection()->clear();
+            selection->pixelSelection()->select(bounds.adjusted(13 * i, 7 * i, -9 * i, -5 * i), 71 + 70 * i);
+            auto dabs = makeDabs(3 + i, 73 + i);
+            for (auto &dab : dabs) {
+                dab.opacity = 0.2 + 0.3 * i;
+                dab.averageOpacity = 0.9;
+            }
+            cpuPainter.bltFixed(bounds, dabs);
+            QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs));
+            QVERIFY2(!gate.timedOut(), "painting waited for GPU completion instead of retaining the batch");
+            QCOMPARE(context.completedValue(), completed);
+        }
+        QCOMPARE(KisGpuBrushPainter::stagingStatistics().contexts, 3);
+        std::vector<float> after;
+        std::promise<void> started;
+        auto entered = started.get_future();
+        if (wrapRing) {
+            const auto fourth = makeDabs(4, 81);
+            cpuPainter.bltFixed(bounds, fourth);
+            auto pendingPaint = std::async(std::launch::async, [&]() {
+                started.set_value();
+                return KisGpuBrushPainter::paint(&gpuPainter, fourth);
+            });
+            entered.wait();
+            // A fourth batch must wait before overwriting the first slot.
+            QVERIFY(pendingPaint.wait_for(std::chrono::milliseconds(30)) == std::future_status::timeout);
+            QVERIFY(gate.open());
+            QVERIFY(pendingPaint.get());
+            after = pixels(gpu, bounds);
+        } else {
+            auto pendingRead = std::async(std::launch::async, [&]() {
+                started.set_value();
+                return pixels(gpu, bounds);
+            });
+            entered.wait();
+            QVERIFY(pendingRead.wait_for(std::chrono::milliseconds(30)) == std::future_status::timeout);
+            QVERIFY(gate.open());
+            after = pendingRead.get();
+        }
+        QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+        command->redo();
+        QVERIFY(difference(pixels(cpu, bounds), after) <= 2e-5f);
+        QCOMPARE(pixels(snapshot, bounds), before);
+        command->undo();
+        QCOMPARE(pixels(gpu, bounds), before);
+        command->redo();
+        QCOMPARE(pixels(gpu, bounds), after);
+        // Ring wraparound and failed submission must leave the latest image
+        // intact so that the caller can safely replay the refused batch on CPU.
+        const auto dabs = makeDabs(4, 81);
+        context.injectSubmitFailuresForTesting(1);
+        QVERIFY(!KisGpuBrushPainter::paint(&gpuPainter, dabs));
+        gpuPainter.bltFixed(bounds, dabs);
+        cpuPainter.bltFixed(bounds, dabs);
+        QVERIFY(difference(pixels(cpu, bounds), pixels(gpu, bounds)) <= 2e-5f);
+    }
+    void testStagingBudgetAndReuse()
+    {
+        QVERIFY(KisGpuBrushPainter::resetStagingForTesting());
+        KisPaintDeviceSP cpu = new KisPaintDevice(space()), gpu = new KisPaintDevice(space());
+        KisPainter cpuPainter(cpu), gpuPainter(gpu);
+        const QRect clip(-75, -21, 8, 8);
+        const QVector<QRect> rects{clip};
+        quint64 smallCapacity = 0;
+        for (int size : {61, 62, 63, 64, 1400, 1400, 1400, 1600, 2000, 61}) {
+            const auto dabs = makeDabs(1, size);
+            cpuPainter.bltFixed(clip, dabs);
+            QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs, &rects));
+            const auto stats = KisGpuBrushPainter::stagingStatistics();
+            QVERIFY(stats.bytes <= KisGpuDabCompositor::MaxUploadBytes);
+            QVERIFY(stats.contexts <= 3);
+            if (size == 63)
+                smallCapacity = stats.bytes;
+            if (size == 64)
+                QCOMPARE(stats.bytes, smallCapacity); // same bucket, no new allocation
+        }
+        QVERIFY(difference(pixels(cpu, clip), pixels(gpu, clip)) <= 2e-5f);
+        const auto before = pixels(gpu, clip);
+        const auto stats = KisGpuBrushPainter::stagingStatistics();
+        const auto oversized = makeDabs(1, 2048); // 64 MiB source plus metadata
+        QVERIFY(!KisGpuBrushPainter::paint(&gpuPainter, oversized, &rects));
+        QCOMPARE(KisGpuBrushPainter::stagingStatistics().bytes, stats.bytes);
+        QCOMPARE(pixels(gpu, clip), before);
+        QVERIFY(KisGpuBrushPainter::resetStagingForTesting());
+        QCOMPARE(KisGpuBrushPainter::stagingStatistics().bytes, quint64(0));
+        QCOMPARE(KisGpuBrushPainter::stagingStatistics().contexts, 0);
     }
     void testParityUndoAndCpuWrite_data()
     {
@@ -117,6 +350,8 @@ private Q_SLOTS:
         QTest::newRow("normal") << COMPOSITE_OVER;
         QTest::newRow("alpha-darken") << COMPOSITE_ALPHA_DARKEN;
         QTest::newRow("erase") << COMPOSITE_ERASE;
+        for (const auto &mode : separableModes)
+            QTest::newRow(qPrintable(mode)) << mode;
     }
     void testParityUndoAndCpuWrite()
     {
@@ -175,7 +410,7 @@ private Q_SLOTS:
         KisPainter painter(device);
         painter.setCompositeOpId(mode);
         const auto before = pixels(device, bounds);
-        painter.setCompositeOpId(COMPOSITE_MULT);
+        painter.setCompositeOpId(COMPOSITE_DODGE);
         QVERIFY(!KisGpuBrushPainter::paint(&painter, dabs));
         painter.setCompositeOpId(mode);
         QBitArray flags(mode == COMPOSITE_ALPHA_DARKEN ? 4 : 3, true);
@@ -218,7 +453,7 @@ private Q_SLOTS:
         QTest::addColumn<bool>("fractional");
         QTest::addColumn<bool>("locked");
         QTest::addColumn<bool>("failPass");
-        for (const auto &mode : {COMPOSITE_OVER, COMPOSITE_ALPHA_DARKEN, COMPOSITE_ERASE}) {
+        for (const auto &mode : dabModes) {
             for (int mirrors : {1, 2, 3}) {
                 for (bool masked : {false, true}) {
                     for (bool fractional : {false, true}) {
@@ -650,7 +885,7 @@ private Q_SLOTS:
                 for (auto &rect : rects)
                     painter.mirrorRect(direction, &rect);
             };
-            for (int iteration = 0; iteration < 6; ++iteration) {
+            for (int iteration = 0; iteration < 8; ++iteration) {
                 auto rects = originalRects;
                 QElapsedTimer timer;
                 timer.start();
@@ -668,7 +903,9 @@ private Q_SLOTS:
                         }
                     }
                 }
-                if (iteration)
+                if (path)
+                    KisGpuTileBackend::instance()->context().waitIdle();
+                if (iteration >= 3) // warm every staging-ring slot before timing
                     timings[path] += timer.nsecsElapsed() / 5e6;
                 // Restore source storage for the next independent update. This
                 // is fixture maintenance, outside timing; combined leaves it intact.
@@ -689,7 +926,7 @@ private Q_SLOTS:
         QTest::addColumn<int>("channels");
         QTest::addColumn<bool>("masked");
         QTest::addColumn<QString>("mode");
-        for (const auto &mode : {COMPOSITE_OVER, COMPOSITE_ERASE})
+        for (const auto &mode : channelModes)
             for (int channels = 0; channels < 16; ++channels) {
                 for (bool masked : {false, true}) {
                     const auto name = QStringLiteral("%1-channels%2-selection%3").arg(mode).arg(channels).arg(masked);
@@ -748,7 +985,8 @@ private Q_SLOTS:
             const size_t alpha = i / 4 * 4 + 3;
             if (mode == COMPOSITE_ERASE
                     ? i % 4 != 3
-                    : (!(channels & (1 << (i % 4))) && (i % 4 == 3 || before[alpha] != 0 || !(channels & 8))))
+                    : (!(channels & (1 << (i % 4)))
+                       && (i % 4 == 3 || before[alpha] != 0 || (mode == COMPOSITE_OVER && !(channels & 8)))))
                 QCOMPARE(after[i], before[i]);
         }
         if (!channels && mode == COMPOSITE_OVER)
@@ -771,7 +1009,7 @@ private Q_SLOTS:
     {
         QTest::addColumn<QString>("mode");
         QTest::addColumn<QString>("shape");
-        for (const auto &mode : {COMPOSITE_OVER, COMPOSITE_ALPHA_DARKEN, COMPOSITE_ERASE}) {
+        for (const auto &mode : dabModes) {
             for (const auto &shape : {QStringLiteral("soft"),
                                       QStringLiteral("inverted"),
                                       QStringLiteral("empty"),
@@ -1025,14 +1263,48 @@ private Q_SLOTS:
         QFETCH(int, channels);
         runIndirectMerge(channels);
     }
+    void testWashBlendModes_data()
+    {
+        QTest::addColumn<bool>("locked");
+        QTest::addColumn<bool>("limitedReadback");
+        QTest::addColumn<QString>("previewPath");
+        QTest::addColumn<bool>("erase");
+        QTest::addColumn<int>("channels");
+        QTest::addColumn<QString>("mode");
+        for (const auto &mode : separableModes) {
+            for (int channels = 0; channels < 16; ++channels)
+                for (bool selected : {false, true})
+                    QTest::newRow(qPrintable(QString("%1-channels%2-selected%3").arg(mode).arg(channels).arg(selected)))
+                        << false << false << (selected ? QStringLiteral("selection") : QStringLiteral("gpu")) << false
+                        << channels << mode;
+            for (const auto &path : {"selection-inverted",
+                                     "selection-translated",
+                                     "selection-empty",
+                                     "selection-outside",
+                                     "selection-failure",
+                                     "selection-merge-failure",
+                                     "merge-budget",
+                                     "offset",
+                                     "integer"})
+                QTest::newRow(qPrintable(mode + '-' + path))
+                    << false << false << QString::fromLatin1(path) << false << 5 << mode;
+        }
+    }
+    void testWashBlendModes()
+    {
+        QFETCH(int, channels);
+        QFETCH(QString, mode);
+        runIndirectMerge(channels, mode);
+    }
 
 private:
-    void runIndirectMerge(int channelBits = -1)
+    void runIndirectMerge(int channelBits = -1, const QString &modeOverride = QString())
     {
         QFETCH(bool, locked);
         QFETCH(bool, limitedReadback);
         QFETCH(QString, previewPath);
         QFETCH(bool, erase);
+        const QString mode = modeOverride.isEmpty() ? (erase ? COMPOSITE_ERASE : COMPOSITE_OVER) : modeOverride;
         auto dabs = makeDabs(12, 89);
         for (int i = 0; i < dabs.size(); ++i)
             dabs[i].averageOpacity = i % 2 ? 0.9 : dabs[i].opacity;
@@ -1086,7 +1358,7 @@ private:
                 layer->paintDevice()->writeBytes(reinterpret_cast<const quint8 *>(data.data()), bounds);
             }
             layer->setTemporaryTarget(layer == cpu ? cpuTarget : gpuTarget);
-            layer->setTemporaryCompositeOp(erase ? COMPOSITE_ERASE : COMPOSITE_OVER);
+            layer->setTemporaryCompositeOp(mode);
             layer->setTemporaryOpacity(0.61);
             if (selected)
                 layer->setTemporarySelection(selection);
@@ -1110,6 +1382,15 @@ private:
             cpuPainter.bltFixed(bounds, dabs);
             QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs));
         }
+        // Final Wash jobs enumerate allocated tiles, including transparent
+        // pixels. Generic locked modes clear hidden RGB even at zero coverage,
+        // so allocating tiles in gaps between dabs would change the result.
+        QRegion cpuRegion, gpuRegion;
+        for (const auto &tileRect : cpuTarget->region().rects())
+            cpuRegion += tileRect;
+        for (const auto &tileRect : gpuTarget->region().rects())
+            gpuRegion += tileRect;
+        QCOMPARE(gpuRegion, cpuRegion);
         auto *backend = KisGpuTileBackend::instance();
         auto &context = backend->context();
         const auto resetReadback = qScopeGuard([&]() {
@@ -1137,7 +1418,7 @@ private:
         if (!limitedReadback)
             QCOMPARE(previewSubmissions, noCoverage ? quint64(0) : quint64(1));
         const auto previewPixels = pixels(gpuPreview, bounds);
-        const bool ignoreHiddenRgb = !erase && (channelBits < 0 || channelBits == 15);
+        const bool ignoreHiddenRgb = mode == COMPOSITE_OVER && (channelBits < 0 || channelBits == 15);
         QVERIFY(difference(pixels(cpuPreview, bounds), previewPixels, ignoreHiddenRgb) <= 2e-5f);
         if (erase) {
             for (size_t i = 0; i < before.size(); i += 4) {
@@ -1183,8 +1464,22 @@ private:
         gpuCommand.redo();
         QVERIFY(!gpu->hasTemporaryTarget());
         const auto after = pixels(gpu->paintDevice(), bounds);
-        QVERIFY(difference(pixels(cpu->paintDevice(), bounds), after, ignoreHiddenRgb) <= 2e-5f);
-        QCOMPARE(after != before, !noCoverage && (erase || channelBits != 0));
+        const auto expected = pixels(cpu->paintDevice(), bounds);
+        const float finalError = difference(expected, after, ignoreHiddenRgb);
+        if (finalError > 2e-5f) {
+            for (size_t i = 0; i < after.size(); ++i) {
+                if (std::abs(expected[i] - after[i]) > 2e-5f) {
+                    qInfo() << "first mismatch"
+                            << bounds.topLeft() + QPoint(int(i / 4) % bounds.width(), int(i / 4) / bounds.width())
+                            << "channel" << i % 4 << "CPU/GPU" << expected[i] << after[i] << "alpha CPU/GPU"
+                            << expected[i / 4 * 4 + 3] << after[i / 4 * 4 + 3] << "source regions CPU/GPU"
+                            << cpuTarget->region().rects() << gpuTarget->region().rects();
+                    break;
+                }
+            }
+        }
+        QVERIFY2(finalError <= 2e-5f, qPrintable(QString::number(finalError)));
+        QCOMPARE(after != before, !noCoverage && (mode != COMPOSITE_OVER || channelBits != 0));
         QCOMPARE(pixels(snapshot, bounds), before);
         QVERIFY(!backend->hasFailed());
         gpuCommand.undo();
@@ -1200,7 +1495,7 @@ private Q_SLOTS:
         KisPaintDeviceSP source = new KisPaintDevice(space());
         KisPainter sourcePainter(source);
         QVERIFY(KisGpuBrushPainter::paint(&sourcePainter, dabs));
-        for (const auto &mode : {COMPOSITE_OVER, COMPOSITE_ERASE}) {
+        for (const auto &mode : channelModes) {
             KisPaintDeviceSP cpu = new KisPaintDevice(space()), gpu = new KisPaintDevice(space());
             const float color[] = {1.7f, -0.3f, 0.2f, 0.8f};
             for (auto device : {cpu, gpu})
@@ -1428,8 +1723,11 @@ private Q_SLOTS:
             gpuPainter.setSelection(selection);
         }
         // Warm pipeline and destination residency, then time completed work.
-        cpuPainter.bltFixed(bounds, dabs);
-        QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs));
+        for (int i = 0; i < 3; ++i) {
+            cpuPainter.bltFixed(bounds, dabs);
+            QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs));
+        }
+        KisGpuTileBackend::instance()->context().waitIdle();
         QElapsedTimer timer;
         timer.start();
         for (int i = 0; i < 5; ++i)
@@ -1438,6 +1736,7 @@ private Q_SLOTS:
         timer.restart();
         for (int i = 0; i < 5; ++i)
             QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs));
+        KisGpuTileBackend::instance()->context().waitIdle();
         const double gpuMs = timer.nsecsElapsed() / 5e6;
         const float error = difference(pixels(cpu, bounds), pixels(gpu, bounds));
         QVERIFY2(error <= 2e-5f, qPrintable(QString::number(error)));

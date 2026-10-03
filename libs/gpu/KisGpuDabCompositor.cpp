@@ -39,12 +39,75 @@ VkDeviceSize aligned(VkDeviceSize bytes)
 {
     return (bytes + 15) & ~VkDeviceSize(15);
 }
+struct UploadLayout {
+    VkDeviceSize tableOffset = 0, maskOffset = 0, maskBytes = 0, capacity = 0;
+    QVector<VkDeviceSize> offsets;
+    QHash<const float *, VkDeviceSize> sourceOffsets;
+};
+bool planUpload(int tileCount,
+                const QVector<KisGpuDabCompositor::Dab> &dabs,
+                const KisGpuDabCompositor::Mask *mask,
+                UploadLayout &layout,
+                QString *error)
+{
+    if (tileCount <= 0 || tileCount > 65535 || dabs.isEmpty() || dabs.size() > 65536)
+        return false;
+    layout.tableOffset = aligned(VkDeviceSize(tileCount) * sizeof(TileRecord));
+    VkDeviceSize bytes = layout.tableOffset + VkDeviceSize(dabs.size()) * sizeof(DabRecord);
+    // Consecutive identical dabs commonly share their fixed paint device.
+    QHash<const float *, QSize> sourceSizes;
+    for (const auto &dab : dabs) {
+        if (!dab.pixels || dab.size.isEmpty() || dab.mirrorFlags > 3
+            || quint64(dab.size.width()) * dab.size.height() > KisGpuDabCompositor::MaxUploadBytes / 16)
+            return false;
+        if (sourceSizes.contains(dab.pixels) && sourceSizes.value(dab.pixels) != dab.size)
+            return false;
+        sourceSizes.insert(dab.pixels, dab.size);
+        if (!layout.sourceOffsets.contains(dab.pixels)) {
+            layout.sourceOffsets.insert(dab.pixels, bytes);
+            bytes += VkDeviceSize(dab.size.width()) * dab.size.height() * 16;
+        }
+        layout.offsets << layout.sourceOffsets.value(dab.pixels);
+    }
+    layout.maskOffset = bytes;
+
+    if (mask) {
+        if (!mask->pixels || mask->bounds.isEmpty())
+            return false;
+        layout.maskBytes = VkDeviceSize(mask->bounds.width()) * mask->bounds.height();
+        // The shader reads packed uint words, including the last partial word.
+        bytes += aligned(layout.maskBytes);
+    }
+    if (bytes > KisGpuDabCompositor::MaxUploadBytes) {
+        if (error)
+            *error = QStringLiteral("GPU brush staging budget reached");
+        return false;
+    }
+
+    constexpr VkDeviceSize quantum = 256 * 1024;
+    layout.capacity = (bytes + quantum - 1) & ~(quantum - 1);
+    return true;
+}
 } // namespace
 KisGpuDabCompositor::KisGpuDabCompositor(KisGpuContext &context)
     : m_context(context)
 {
 }
 KisGpuDabCompositor::~KisGpuDabCompositor() = default;
+quint64
+KisGpuDabCompositor::requiredUploadBytes(int tileCount, const QVector<Dab> &dabs, const Mask *mask, QString *error)
+{
+    UploadLayout layout;
+    return planUpload(tileCount, dabs, mask, layout, error) ? layout.capacity : 0;
+}
+quint64 KisGpuDabCompositor::uploadBytes() const
+{
+    return m_upload ? m_upload->size() : 0;
+}
+void KisGpuDabCompositor::releaseUpload()
+{
+    m_upload.reset();
+}
 std::unique_ptr<KisGpuDabCompositor> KisGpuDabCompositor::create(KisGpuContext &context, QString *error)
 {
     std::unique_ptr<KisGpuDabCompositor> result(new KisGpuDabCompositor(context));
@@ -68,41 +131,21 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
         return false;
     if (!tileOrigins.isEmpty() && tileOrigins.size() != tiles.size())
         return false;
-    if (channelMask > 0xf || (mode != CompositeMode::Normal && mode != CompositeMode::Erase && channelMask != 0xf))
+    if (quint32(mode) >= quint32(CompositeMode::Count) || channelMask > 0xf
+        || ((mode == CompositeMode::AlphaDarkenHard || mode == CompositeMode::AlphaDarkenCreamy) && channelMask != 0xf))
         return false;
-    const VkDeviceSize tableOffset = aligned(VkDeviceSize(tiles.size()) * sizeof(TileRecord));
-    VkDeviceSize bytes = tableOffset + VkDeviceSize(dabs.size()) * sizeof(DabRecord);
-    QVector<VkDeviceSize> offsets;
-    // Consecutive identical dabs commonly share their fixed paint device.
-    QHash<const float *, VkDeviceSize> sourceOffsets;
-    QHash<const float *, QSize> sourceSizes;
-    for (const auto &dab : dabs) {
-        if (!dab.pixels || dab.size.isEmpty() || dab.mirrorFlags > 3)
-            return false;
-        if (sourceSizes.contains(dab.pixels) && sourceSizes.value(dab.pixels) != dab.size)
-            return false;
-        sourceSizes.insert(dab.pixels, dab.size);
-        if (!sourceOffsets.contains(dab.pixels)) {
-            sourceOffsets.insert(dab.pixels, bytes);
-            bytes += VkDeviceSize(dab.size.width()) * dab.size.height() * 16;
-        }
-        offsets << sourceOffsets.value(dab.pixels);
-    }
-    const VkDeviceSize maskOffset = bytes;
-    VkDeviceSize maskBytes = 0;
-    if (mask) {
-        if (!mask->pixels || mask->bounds.isEmpty())
-            return false;
-        maskBytes = VkDeviceSize(mask->bounds.width()) * mask->bounds.height();
-        // The shader reads packed uint words, including the last partial word.
-        bytes += aligned(maskBytes);
-    }
-    if (bytes > (VkDeviceSize(64) << 20)) {
-        if (error)
-            *error = QStringLiteral("GPU brush staging budget reached");
+    UploadLayout layout;
+    if (!planUpload(tiles.size(), dabs, mask, layout, error))
         return false;
-    }
+    const auto bytes = layout.capacity;
+    const auto tableOffset = layout.tableOffset;
+    const auto maskOffset = layout.maskOffset;
+    const auto maskBytes = layout.maskBytes;
+    const auto &offsets = layout.offsets;
+    auto &sourceOffsets = layout.sourceOffsets;
     if (!m_upload || m_upload->size() < bytes) {
+        // Previous work has completed; do not temporarily hold both allocations.
+        m_upload.reset();
         m_upload = KisGpuBuffer::create(m_context, bytes, KisGpuBuffer::Location::Upload, error);
         if (!m_upload)
             return false;

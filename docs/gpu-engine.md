@@ -8,13 +8,13 @@ Vulkan instead of on the CPU. It is developed on the `krita-sol-gpu` branch.
 
 Layer compositing and the canvas display run on the GPU for RGBA floating
 point documents. Painting normally runs on the CPU; an opt-in prototype can
-composite Normal, Alpha Darken and Erase pixel-brush dabs on the GPU in RGBA32F
+composite supported pixel-brush blend modes on the GPU in RGBA32F
 documents, including the temporary painting buffer used by Wash mode.
 Filters and transforms still run on the CPU. The engine is off by default.
 
 Automated checks compare complete strokes and their layer projections with
 CPU drawing, including Buildup/Wash, mirror painting, selections, alpha lock
-and Undo/Redo. Normal and Erase Wash previews and final merges, including
+and Undo/Redo. Supported Wash previews and final merges, including
 selections and channel locks, can stay on the GPU with aligned tiles. Other Wash
 previews and final merges batch GPU readbacks
 to reduce transfer waits. Short-stroke measurements still show cases where the CPU is
@@ -109,19 +109,23 @@ export formats write the file directly and are not covered.)
 - The brush prototype requires `KRITA_GPU_BRUSH=1` as well as the GPU engine.
   Large groups of brush dabs are split by their pixel-data size so they can
   stay within the GPU upload budget. A single oversized dab can still use
-  the CPU. Brush size, spacing and preset complexity can still cause drawing
+  the CPU. Up to three brush batches can be queued without waiting after each
+  submission. Their reusable pixel, selection and table buffers share a
+  64 MiB limit; buffer reuse and CPU pixel access wait for pending work when
+  necessary. Tile uploads and other engine allocations are separate.
+  Brush size, spacing and preset complexity can still cause drawing
   to lag behind input; GPU painting does not yet guarantee lower latency.
-  It covers RGBA32F pixel brushes using Normal, Alpha Darken or Erase compositing,
-  with matching dab/layer profiles. Buildup and Wash are supported; Wash's
-  preview and final merge can run on the GPU when using Normal or Erase
-  blending with aligned tiles, including selections and channel locks. Soft, inverted and moved
+  It covers RGBA32F pixel brushes with matching dab/layer profiles. GPU blend
+  modes are Normal, Multiply, Screen, Addition/Linear Dodge, Subtract, Darken,
+  Lighten, Difference, Overlay, Hard Light, Exclusion and Erase. They work in
+  Buildup and in Wash's preview and final merge with aligned tiles, including
+  selections, Alpha Lock and individual RGB locks. Alpha Darken dab compositing,
+  including Wash's temporary painting buffer, is also supported with all
+  channels enabled. Soft, inverted and moved
   selections are supported; their coverage is read on the CPU and applied
-  on the GPU. Oversized selection snapshots use the CPU path. Normal Wash
-  respects Alpha Lock and individual RGB locks, including their combination
-  with selections. Direct painting also supports selections, including
-  soft edges and inverted selections; their coverage is read on the CPU
-  and applied during GPU compositing. Normal direct painting also supports
-  alpha lock and individual RGB channel locks. Dab generation remains on
+  on the GPU. Oversized selection snapshots use the CPU path. Channel locks
+  follow the existing CPU behavior, including clearing hidden color values in
+  fully transparent pixels for the added blend modes. Dab generation remains on
   the CPU. Horizontal and vertical mirror painting can also composite on
   the GPU. Both nearby and widely separated mirror passes can share one GPU
   submission, without allocating tiles in the empty space between reflections.

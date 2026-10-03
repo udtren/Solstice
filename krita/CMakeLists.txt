@@ -53,12 +53,16 @@ if (WIN32)
 endif()
 
 if (WIN32)
+    # ICO dimensions are limited to 256 pixels. Keep larger PNG sources for
+    # other platforms and installation, but do not embed them as ICO frames.
+    list(FILTER ICON_SRCS EXCLUDE REGEX "/(512|1024)-apps-krita\\.png$")
     set(krita_windows_stub_ICONS_SRCS "")
     ecm_add_app_icon(krita_windows_stub_ICONS_SRCS ICONS ${ICON_SRCS} OUTFILE_BASENAME krita)
 
     # This is used to generate an ICO file for the file icon, We don't actually
     # want to embed this icon into an EXE.
 	file(GLOB krafile_ICON_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/pics/mimetypes/*-mimetypes-application-x-krita.png")
+    list(FILTER krafile_ICON_SRCS EXCLUDE REGEX "/(512|1024)-mimetypes-application-x-krita\\.png$")
     set(krafile_dummy_ICONS_SRCS "")
     ecm_add_app_icon(krafile_dummy_ICONS_SRCS ICONS ${krafile_ICON_SRCS} OUTFILE_BASENAME kritafile)
     add_library(krafile_dummy_obj OBJECT ${krafile_dummy_ICONS_SRCS})

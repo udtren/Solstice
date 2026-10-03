@@ -10,6 +10,7 @@
 #include "kis_selection.h"
 #include <KoColorModelStandardIds.h>
 #include <KoCompositeOpRegistry.h>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <kis_debug.h>
@@ -19,6 +20,7 @@
 #include "KisGpuTileAccess.h"
 #include "KisGpuTileBackend.h"
 #include <KisGpuCommandList.h>
+#include <KisGpuContext.h>
 #include <KisGpuDabCompositor.h>
 #include <QMutexLocker>
 #include <QRegion>
@@ -32,12 +34,72 @@ QMutex s_mutex;
 struct Work {
     KisGpuCommandList commands;
     std::unique_ptr<KisGpuDabCompositor> compositor;
+    quint64 lastUse = 0;
     explicit Work(KisGpuContext &context)
         : commands(context)
         , compositor(KisGpuDabCompositor::create(context))
     {
     }
+    bool wait()
+    {
+        if (!commands.wait())
+            return false;
+        lastUse = 0;
+        return true;
+    }
 };
+struct WorkPool {
+    std::array<std::unique_ptr<Work>, 3> slots;
+    size_t next = 0;
+    quint64 bytes() const
+    {
+        quint64 result = 0;
+        for (const auto &slot : slots)
+            if (slot && slot->compositor)
+                result += slot->compositor->uploadBytes();
+        return result;
+    }
+    Work *acquire(KisGpuContext &context, quint64 required)
+    {
+        if (!required || required > KisGpuDabCompositor::MaxUploadBytes)
+            return nullptr;
+        auto &slot = slots[next];
+        if (!slot)
+            slot = std::make_unique<Work>(context);
+        if (!slot->compositor || !slot->commands.isValid() || !slot->wait())
+            return nullptr;
+        // The oldest slot is safe to reuse now. Retain its buffer if it fits;
+        // otherwise free it before allocating, including transient peak usage.
+        if (slot->compositor->uploadBytes() < required)
+            slot->compositor->releaseUpload();
+        const quint64 growth = slot->compositor->uploadBytes() ? 0 : required;
+        const auto fits = [&]() {
+            return bytes() + growth <= KisGpuDabCompositor::MaxUploadBytes;
+        };
+        const quint64 completed = context.completedValue();
+        // Prefer completed buffers; wait for older work only under pressure.
+        for (int pass = 0; pass < 2 && !fits(); ++pass) {
+            for (size_t offset = 1; offset < slots.size() && !fits(); ++offset) {
+                auto &other = slots[(next + offset) % slots.size()];
+                if (!other || !other->compositor || !other->compositor->uploadBytes()
+                    || (!pass && other->lastUse > completed))
+                    continue;
+                if (!other->wait())
+                    return nullptr;
+                other->compositor->releaseUpload();
+            }
+        }
+        auto *result = slot.get();
+        next = (next + 1) % slots.size();
+        return result;
+    }
+};
+// Process lifetime avoids loader teardown ordering, as the tile backend does.
+WorkPool &workPool()
+{
+    static WorkPool *pool = new WorkPool;
+    return *pool;
+}
 } // namespace
 #endif
 bool KisGpuBrushPainter::isEnabled()
@@ -57,8 +119,9 @@ bool KisGpuBrushPainter::supports(KisPainter *painter)
                     << painter->hasMirroring() << "lod" << painter->device()->defaultBounds()->currentLevelOfDetail();
         }
     }
-    if (painter->compositeOpId() != COMPOSITE_OVER && painter->compositeOpId() != COMPOSITE_ALPHA_DARKEN
-        && painter->compositeOpId() != COMPOSITE_ERASE)
+    KisGpuBlendOp blendOp;
+    if (painter->compositeOpId() != COMPOSITE_ALPHA_DARKEN && painter->compositeOpId() != COMPOSITE_ERASE
+        && !KisGpuProjectionCompositor::blendOpForCompositeOp(painter->compositeOpId(), &blendOp))
         return false;
     const auto device = painter->device();
     const auto *space = device->colorSpace();
@@ -110,6 +173,14 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
                 channelMask |= 1u << i;
     }
     Mode mode = painter->compositeOpId() == COMPOSITE_ERASE ? Mode::Erase : Mode::Normal;
+    KisGpuBlendOp blendOp;
+    if (KisGpuProjectionCompositor::blendOpForCompositeOp(painter->compositeOpId(), &blendOp)
+        && blendOp != KisGpuBlendOp::Over) {
+        // Both enums retain the shared shader's order for the separable modes.
+        static_assert(quint32(Mode::Multiply) == quint32(KisGpuBlendOp::Multiply) + 3);
+        static_assert(quint32(Mode::Exclusion) == quint32(KisGpuBlendOp::Exclusion) + 3);
+        mode = Mode(quint32(blendOp) + 3);
+    }
     if (alphaDarken) {
         // The CPU op fixes this process-wide setting when the color space is created.
         static const Mode alphaMode = useCreamyAlphaDarken() ? Mode::AlphaDarkenCreamy : Mode::AlphaDarkenHard;
@@ -189,22 +260,24 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     if (inputs.isEmpty())
         return true; // No intersection with the CPU rectangles or selection.
     QRegion tileRects;
-    if (combineMirrors) {
+    qint64 tileCount = 0;
+    {
         // Union on the device's tile grid: overlapping passes must share one
-        // access/workgroup, while gaps between distant reflections allocate none.
+        // access/workgroup, while gaps between dabs/reflections allocate none.
+        // Wash final merge enumerates this region. Allocating empty gap tiles
+        // would clear extra hidden RGB with restricted generic blend modes.
         const QPoint offset(painter->device()->x(), painter->device()->y());
         for (const auto &input : inputs)
             tileRects += KisGpuMergeBatch::tileAligned(input.clip.translated(-offset)).translated(offset);
-        qint64 tileCount = 0;
         for (const auto &rect : tileRects)
             tileCount += qint64(rect.width() / 64) * (rect.height() / 64);
-        if (tileCount > 4096)
+        if (tileCount > (combineMirrors ? 4096 : 8192))
             return false;
-    } else {
+    }
+    if (!combineMirrors) {
         if (qint64(bounds.width()) * bounds.height() > 4096 * 4096
             || (qint64(bounds.width()) + 127) / 64 * ((qint64(bounds.height()) + 127) / 64) > 8192)
             return false;
-        tileRects += bounds;
     }
     QByteArray maskPixels;
     KisGpuDabCompositor::Mask mask{nullptr, bounds};
@@ -220,10 +293,15 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     }
     QMutexLocker locker(&s_mutex);
     auto *backend = KisGpuTileBackend::instance();
-    // Process lifetime avoids Vulkan-loader teardown ordering, as the backend does.
-    static Work *work = new Work(backend->context());
-    if (!work->compositor || !work->commands.isValid())
+    QString error;
+    const quint64 required =
+        KisGpuDabCompositor::requiredUploadBytes(int(tileCount), inputs, selection ? &mask : nullptr, &error);
+    Work *work = workPool().acquire(backend->context(), required);
+    if (!work) {
+        if (!error.isEmpty() && qEnvironmentVariableIntValue("KRITA_GPU_BRUSH_DEBUG") == 1)
+            qInfo() << "GPU brush: recording refused" << error;
         return false;
+    }
     auto &commands = work->commands;
     commands.begin();
     std::vector<std::unique_ptr<KisGpuTileAccess>> ownedAccesses;
@@ -245,7 +323,6 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
             for (int col = grid.left(); col <= grid.right(); ++col)
                 origins << access->tileOrigin(col, row);
     }
-    QString error;
     if (!work->compositor->record(commands,
                                   addresses,
                                   1,
@@ -264,13 +341,16 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     const quint64 value = KisGpuTileAccess::submitAndFinish(commands, accesses);
     if (!value)
         return false;
+    work->lastUse = value;
     // A submitted write must never be replayed by CPU fallback, even on device loss.
     // Existing tile readback/content-loss reporting handles subsequent CPU reads.
-    commands.wait();
+    // Tile state is published at submission. CPU readers wait on tile lastUse;
+    // later GPU jobs observe queue order. Keep source/mask/table bytes alive
+    // in this ring slot until reuse instead of waiting after every batch.
     const auto count = ++s_batches;
     if (qEnvironmentVariableIntValue("KRITA_GPU_BRUSH_DEBUG") == 1) {
         // Log each path even if the user first paints many batches in another mode.
-        static std::atomic<quint32> messages[4 * 2 * 16 * 4 * 2]{};
+        static std::atomic<quint32> messages[quint32(Mode::Count) * 2 * 16 * 4 * 2]{};
         const quint32 mirrorFlags =
             (painter->hasHorizontalMirroring() ? 1u : 0u) | (painter->hasVerticalMirroring() ? 2u : 0u);
         const quint32 path = ((quint32(mode) * 32 + (selection ? 16 : 0) + channelMask) * 4 + mirrorFlags) * 2
@@ -299,11 +379,36 @@ quint64 KisGpuBrushPainter::batchCount()
     return 0;
 #endif
 }
+KisGpuBrushPainter::StagingStatistics KisGpuBrushPainter::stagingStatistics()
+{
+    StagingStatistics result;
+#ifdef HAVE_KRITA_GPU_ENGINE
+    QMutexLocker locker(&s_mutex);
+    result.bytes = workPool().bytes();
+    for (const auto &slot : workPool().slots)
+        if (slot)
+            ++result.contexts;
+#endif
+    return result;
+}
+bool KisGpuBrushPainter::resetStagingForTesting()
+{
+#ifdef HAVE_KRITA_GPU_ENGINE
+    QMutexLocker locker(&s_mutex);
+    auto &pool = workPool();
+    for (const auto &slot : pool.slots)
+        if (slot && !slot->wait())
+            return false;
+    for (auto &slot : pool.slots)
+        slot.reset();
+    pool.next = 0;
+#endif
+    return true;
+}
 bool KisGpuBrushPainter::compositeWash(KisPainter *painter, KisPaintDeviceSP source, const QRect &rect)
 {
 #ifdef HAVE_KRITA_GPU_ENGINE
-    if (!supports(painter)
-        || (painter->compositeOpId() != COMPOSITE_OVER && painter->compositeOpId() != COMPOSITE_ERASE) || !source
+    if (!supports(painter) || painter->compositeOpId() == COMPOSITE_ALPHA_DARKEN || !source
         || source == painter->device() || source->defaultPixel().opacityF() != 0.0)
         return false;
     const auto flags = painter->channelFlags();
@@ -317,7 +422,10 @@ bool KisGpuBrushPainter::compositeWash(KisPainter *painter, KisPaintDeviceSP sou
     const float opacity = float(painter->opacityF());
     if (!std::isfinite(opacity) || opacity < 0 || opacity > 1)
         return false;
-    const auto op = painter->compositeOpId() == COMPOSITE_ERASE ? KisGpuBlendOp::Erase : KisGpuBlendOp::Over;
+    KisGpuBlendOp op = KisGpuBlendOp::Erase;
+    if (painter->compositeOpId() != COMPOSITE_ERASE
+        && !KisGpuProjectionCompositor::blendOpForCompositeOp(painter->compositeOpId(), &op))
+        return false;
     QRect paintRect = rect;
     QByteArray maskPixels;
     KisGpuLayerCompositor::Mask mask;
