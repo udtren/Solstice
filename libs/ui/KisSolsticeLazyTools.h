@@ -9,6 +9,7 @@
 
 class QDialog;
 class KisViewManager;
+class KisMenuMnemonicFilter;
 
 class KisSolsticeLazyTools : public QObject
 {
@@ -29,6 +30,7 @@ private:
 
     KisViewManager *m_viewManager{nullptr};
     QPointer<QDialog> m_selectionMaskPopup;
+    QPointer<KisMenuMnemonicFilter> m_menuMnemonicFilter;
 };
 
 #endif

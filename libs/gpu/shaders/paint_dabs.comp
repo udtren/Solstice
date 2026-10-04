@@ -1,14 +1,24 @@
 /* SPDX-FileCopyrightText: 2026 Krita contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
- * Ordered RGBA32F dabs, one workgroup per destination tile.
+ * Ordered floating-point dabs, one workgroup per destination tile.
  */
 #version 460
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_GOOGLE_include_directive : require
+#ifdef TILE_F16
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#define PIXEL f16vec4
+#else
+#define PIXEL vec4
+#endif
 #include "composite_blend.glsl"
+#ifdef TILE_F16
+#include "composite_half_brush.glsl"
+#endif
 layout(local_size_x = 256) in;
-layout(buffer_reference, std430, buffer_reference_align = 16) buffer Pixels { vec4 px[]; };
+layout(buffer_reference, std430, buffer_reference_align = 16) buffer Pixels { PIXEL px[]; };
 struct Tile { uint64_t pixels; ivec2 origin; };
 layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer Addresses { Tile tile[]; };
 layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer MaskBytes { uint word[]; };
@@ -55,6 +65,28 @@ vec4 over(vec4 dst, vec4 src, float opacity, float coverage)
     return vec4(color, alpha);
 }
 
+#ifdef TILE_F16
+vec4 alphaDarkenHalf(vec4 dst, vec4 src, Dab dab, float coverage)
+{
+    // KoCompositeOpAlphaDarken<half>, including the legacy hard-flow union.
+    bool hard = params.mode == 1;
+    float flow = halfValue(dab.flow);
+    float opacity = halfValue(hard ? dab.flow * dab.opacity : dab.opacity);
+    float average = halfValue(hard ? dab.flow * dab.averageOpacity : dab.averageOpacity);
+    float masked = params.mask != uint64_t(0) ? halfValue(halfValue(coverage) * src.a) : src.a;
+    float a = halfValue(masked * opacity);
+    precise vec3 color = dst.a == 0.0 ? src.rgb : (src.rgb - dst.rgb) * a + dst.rgb;
+    float fullAlpha;
+    if (average > opacity) {
+        fullAlpha = average > dst.a ? halfLerp(a, average, halfValue(dst.a / average)) : dst.a;
+    } else {
+        fullAlpha = opacity > dst.a ? halfLerp(dst.a, opacity, masked) : dst.a;
+    }
+    float zeroAlpha = hard ? halfValue(a + dst.a - halfValue(a * dst.a)) : dst.a;
+    return vec4(color, dab.flow == 1.0 ? fullAlpha : halfLerp(zeroAlpha, fullAlpha, flow));
+}
+#endif
+
 vec4 alphaDarken(vec4 dst, vec4 src, Dab dab, float coverage)
 {
     // Match KoAlphaDarkenParamsWrapper and KoOptimizedCompositeOpAlphaDarken128.
@@ -87,14 +119,16 @@ void main()
     for (uint i = gl_LocalInvocationID.x; i < 4096; i += 256) {
         ivec2 point = tileOrigin + ivec2(i % 64, i / 64);
         float coverage = 1.0;
+        float maskByte = 255.0;
         if (params.mask != uint64_t(0)) {
             ivec2 p = point - params.maskOrigin;
             if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, params.maskSize))) continue;
             uint index = uint(p.y * params.maskSize.x + p.x);
             uint packed = MaskBytes(params.mask).word[index / 4];
+            maskByte = float((packed >> (8 * (index % 4))) & 255);
             coverage = maskCoverage((packed >> (8 * (index % 4))) & 255, params.mode >= 14);
         }
-        vec4 value = dst.px[i];
+        vec4 value = vec4(dst.px[i]);
         bool touched = false;
         for (uint j = 0; j < params.dabCount; ++j) {
             Dab dab = params.dabs.dab[j];
@@ -104,7 +138,21 @@ void main()
             if (p.x < 0 || p.y < 0 || p.x >= dab.width || p.y >= dab.height) continue;
             if ((dab.mirrorFlags & 1) != 0) p.x = dab.width - 1 - p.x;
             if ((dab.mirrorFlags & 2) != 0) p.y = dab.height - 1 - p.y;
-            vec4 source = Pixels(dab.pixels).px[p.y * dab.width + p.x];
+            vec4 source = vec4(Pixels(dab.pixels).px[p.y * dab.width + p.x]);
+#ifdef TILE_F16
+            if (params.mode == 3) {
+                value = eraseHalf(value, source, dab.opacity, coverage, params.mask != uint64_t(0));
+            } else if (params.mode == 0) {
+                value = overHalf(value, source, dab.opacity, maskByte, params.mask != uint64_t(0),
+                                 params.channelMask & 15, (params.channelMask & 16) != 0);
+            } else if (params.mode >= 4) {
+                uint op = params.mode - (params.mode < 14 ? 3 : 2);
+                value = compositeGeneric(op, value, source, dab.opacity, false, coverage, params.channelMask & 15);
+            } else {
+                value = alphaDarkenHalf(value, source, dab, coverage);
+            }
+            value = vec4(f16vec4(value)); // CPU stores after every individual dab
+#else
             if (params.mode == 3) {
                 // KoCompositeOpErase: mask first, then opacity. Preserve RGB,
                 // including hidden RGB when alpha reaches zero. Flow is unused.
@@ -119,8 +167,9 @@ void main()
                 value = params.mode == 0 ? over(value, source, dab.opacity, coverage)
                                         : alphaDarken(value, source, dab, coverage);
             }
+#endif
             touched = true;
         }
-        if (touched) dst.px[i] = value;
+        if (touched) dst.px[i] = PIXEL(value);
     }
 }

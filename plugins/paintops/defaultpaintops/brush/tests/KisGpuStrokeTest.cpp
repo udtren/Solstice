@@ -45,7 +45,21 @@ const QRect imageRect(0, 0, 1024, 1024);
 std::vector<float> pixels(KisPaintDeviceSP device)
 {
     std::vector<float> result(size_t(imageRect.width()) * imageRect.height() * 4);
-    device->readBytes(reinterpret_cast<quint8 *>(result.data()), imageRect);
+    if (device->pixelSize() == 8) {
+        QByteArray raw(imageRect.width() * imageRect.height() * 8, Qt::Uninitialized);
+        device->readBytes(reinterpret_cast<quint8 *>(raw.data()), imageRect);
+        const auto *target = KoColorSpaceRegistry::instance()->colorSpace(RGBAColorModelID.id(),
+                                                                          Float32BitsColorDepthID.id(),
+                                                                          QString());
+        device->colorSpace()->convertPixelsTo(reinterpret_cast<const quint8 *>(raw.constData()),
+                                              reinterpret_cast<quint8 *>(result.data()),
+                                              target,
+                                              imageRect.width() * imageRect.height(),
+                                              KoColorConversionTransformation::internalRenderingIntent(),
+                                              KoColorConversionTransformation::internalConversionFlags());
+    } else {
+        device->readBytes(reinterpret_cast<quint8 *>(result.data()), imageRect);
+    }
     return result;
 }
 float difference(const std::vector<float> &a, const std::vector<float> &b)
@@ -141,6 +155,27 @@ private Q_SLOTS:
     {
         runStroke(true);
     }
+    void testHalfStroke_data()
+    {
+        QTest::addColumn<int>("diameter");
+        QTest::addColumn<bool>("wash");
+        QTest::addColumn<bool>("mirrors");
+        QTest::addColumn<bool>("restricted");
+        QTest::addColumn<bool>("distant");
+        QTest::addColumn<bool>("alphaOnly");
+        QTest::addColumn<bool>("erase");
+        for (bool erase : {false, true})
+            for (bool wash : {false, true})
+                for (bool restricted : {false, true})
+                    QTest::newRow(qPrintable(
+                        QString("erase%1-wash%2-selected-locked-mirrors%3").arg(erase).arg(wash).arg(restricted)))
+                        << 128 << wash << restricted << restricted << false << false << erase;
+    }
+    void testHalfStroke()
+    {
+        QFETCH(bool, erase);
+        runStroke(erase, false, -1, QString(), false, false, true);
+    }
     void testSelectedWash_data()
     {
         QTest::addColumn<int>("diameter");
@@ -210,6 +245,34 @@ private Q_SLOTS:
         QFETCH(QString, mode);
         runStroke(false, true, channels, mode);
     }
+    void testHalfBlendModes_data()
+    {
+        QTest::addColumn<int>("diameter");
+        QTest::addColumn<bool>("wash");
+        QTest::addColumn<bool>("mirrors");
+        QTest::addColumn<bool>("restricted");
+        QTest::addColumn<bool>("distant");
+        QTest::addColumn<bool>("alphaOnly");
+        QTest::addColumn<int>("channels");
+        QTest::addColumn<QString>("mode");
+        for (const auto &mode : {COMPOSITE_MULT,         COMPOSITE_SCREEN,     COMPOSITE_ADD,
+                                 COMPOSITE_LINEAR_DODGE, COMPOSITE_SUBTRACT,   COMPOSITE_DARKEN,
+                                 COMPOSITE_LIGHTEN,      COMPOSITE_DIFF,       COMPOSITE_OVERLAY,
+                                 COMPOSITE_HARD_LIGHT,   COMPOSITE_EXCLUSION,  COMPOSITE_LINEAR_BURN,
+                                 COMPOSITE_LINEAR_LIGHT, COMPOSITE_PIN_LIGHT,  COMPOSITE_SOFT_LIGHT_SVG,
+                                 COMPOSITE_DODGE,        COMPOSITE_BURN,       COMPOSITE_COLOR,
+                                 COMPOSITE_HUE,          COMPOSITE_SATURATION, COMPOSITE_LUMINIZE})
+            for (bool wash : {false, true})
+                for (int channels : {15, 7, 5})
+                    QTest::newRow(qPrintable(QString("%1-wash%2-channels%3").arg(mode).arg(wash).arg(channels)))
+                        << 128 << wash << true << false << false << false << channels << mode;
+    }
+    void testHalfBlendModes()
+    {
+        QFETCH(int, channels);
+        QFETCH(QString, mode);
+        runStroke(false, true, channels, mode, false, false, true);
+    }
     void testTexturedMaskedStroke_data()
     {
         QTest::addColumn<int>("diameter");
@@ -244,7 +307,8 @@ private:
                    int channelBits = -1,
                    const QString &modeOverride = QString(),
                    bool masked = false,
-                   bool textured = false)
+                   bool textured = false,
+                   bool half = false)
     {
         QFETCH(int, diameter);
         QFETCH(bool, wash);
@@ -262,7 +326,8 @@ private:
             KisGpuMergeBatch::setEnabled(previousProjection);
         });
         const auto *cs = KoColorSpaceRegistry::instance()->colorSpace(RGBAColorModelID.id(),
-                                                                      Float32BitsColorDepthID.id(),
+                                                                      half ? Float16BitsColorDepthID.id()
+                                                                           : Float32BitsColorDepthID.id(),
                                                                       QString());
         QVERIFY(cs);
         auto localResources = toQShared(new KisLocalStrokeResources());
@@ -329,8 +394,9 @@ private:
                 KisPaintLayerSP layer;
                 for (int i = 0; i < 4; ++i) {
                     layer = new KisPaintLayer(image, "paint", OPACITY_OPAQUE_U8, cs);
-                    const float background[] = {0.1f + 0.1f * i, 0.15f, 0.3f, 0.4f};
-                    layer->paintDevice()->fill(0, 0, 1024, 1024, reinterpret_cast<const quint8 *>(background));
+                    KoColor background(cs);
+                    cs->fromNormalisedChannelsValue(background.data(), {0.1f + 0.1f * i, 0.15f, 0.3f, 0.4f});
+                    layer->paintDevice()->fill(imageRect, background);
                     image->addNode(layer, image->root());
                 }
                 image->initialRefreshGraph();
@@ -435,9 +501,10 @@ private:
                     referenceProjection = projection;
                 } else {
                     const float error = difference(referenceLayer, after);
-                    QVERIFY2(error <= 2e-5f, qPrintable(QString("layer path %1: %2").arg(path).arg(error)));
+                    QVERIFY2(error <= (half ? 0.002f : 2e-5f),
+                             qPrintable(QString("layer path %1: %2").arg(path).arg(error)));
                     const float projectionError = difference(referenceProjection, projection);
-                    QVERIFY2(projectionError <= 2e-5f,
+                    QVERIFY2(projectionError <= (half ? 0.004f : 2e-5f),
                              qPrintable(QString("projection path %1: %2").arg(path).arg(projectionError)));
                 }
                 if (!iteration) {
@@ -448,7 +515,7 @@ private:
                     undo->redo();
                     image->waitForDone();
                     QCOMPARE(pixels(layer->paintDevice()), after);
-                    QVERIFY(difference(pixels(image->projection()), projection) <= 2e-5f);
+                    QVERIFY(difference(pixels(image->projection()), projection) <= (half ? 0.004f : 2e-5f));
                 }
             }
         }

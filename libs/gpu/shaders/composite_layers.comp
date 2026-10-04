@@ -37,6 +37,9 @@
 
 #extension GL_GOOGLE_include_directive : require
 #include "composite_blend.glsl"
+#ifdef TILE_F16
+#include "composite_half_brush.glsl"
+#endif
 
 const uint FlagAlphaLocked = 1;
 layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer MaskBytes
@@ -141,11 +144,13 @@ void main()
         }
 
         float coverage = 1.0;
+        float maskByte = 255.0;
         if (params.mask != uint64_t(0)) {
             const ivec2 p = position - params.maskOrigin;
             if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, params.maskSize))) continue;
             const uint maskIndex = uint(p.y * params.maskSize.x + p.x);
             const uint packed = MaskBytes(params.mask).word[maskIndex / 4];
+            maskByte = float((packed >> (8 * (maskIndex % 4))) & 255);
             // Coverage is restricted to one layer by the host-side API.
             coverage = maskCoverage((packed >> (8 * (maskIndex % 4))) & 255,
                                     params.layers.layers[0].op >= OpLinearBurn);
@@ -159,6 +164,15 @@ void main()
             const LayerParams info = params.layers.layers[layer];
             const vec4 src = LOAD_PIXEL(TilePixels(address).px[index]);
             const bool alphaLocked = (info.flags & FlagAlphaLocked) != 0;
+#ifdef TILE_F16
+            if ((info.flags & 2) != 0) {
+                uint channels = alphaLocked ? info.channelMask & 7 : info.channelMask;
+                result = info.op == OpErase
+                    ? eraseHalf(result, src, info.opacity, coverage, params.mask != uint64_t(0))
+                    : overHalf(result, src, info.opacity, maskByte, params.mask != uint64_t(0), channels,
+                               (info.flags & 4) != 0);
+            } else
+#endif
             if (info.op == OpOver) {
                 result = compositeOver(result, src, info.opacity, alphaLocked, coverage, info.channelMask);
             } else if (info.op == OpErase) {

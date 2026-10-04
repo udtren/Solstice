@@ -7,6 +7,8 @@ docker plugin: layer controls extend the existing Layers docker, while actions
 and dialogs are owned by each `KisViewManager`.
 
 - Action/dialog implementation: `libs/ui/KisSolsticeLazyTools.*`
+- Top-menu lifecycle: `libs/ui/utils/KisMenuMnemonicFilter.*`
+- Focused regression: `libs/ui/tests/KisMenuMnemonicFilterTest.cpp`
 - View-manager lifecycle: `libs/ui/KisViewManager.cpp`
 - General > Custom UI: `libs/ui/forms/wdggeneralsettings.ui`
 - Settings persistence: `libs/ui/dialogs/kis_dlg_preferences.cc`
@@ -33,7 +35,18 @@ DLLs on Windows.
 - The hotkey remains fixed at `Win+Shift+C`. The General > Custom checkbox
   controls whether it is registered.
 - Top-menu mnemonic suppression stores each action's original label before
-  removing ampersands, allowing the setting to be reversed without restarting.
+  removing mnemonic markers, allowing the setting to be reversed without
+  restarting. Install `KisMenuMnemonicFilter` during `createActions()`, before
+  XMLGUI adds menus. A single zero-delay startup callback is insufficient:
+  startup can process events before menu construction, and later XMLGUI/plugin
+  changes can restore mnemonic labels. Each menu bar owns its filter; Lazy
+  Tools retains a `QPointer`. The filter synchronously handles `ActionAdded`
+  and `ActionChanged` before QMenuBar registers shortcuts, with a reentrancy
+  guard for its own `setText`. It never consumes key/shortcut/mouse events.
+  Original and suppressed text properties distinguish external title updates
+  from internal changes; toggling the setting restores the latest original.
+  Preserve escaped literal `&&`, submenu mnemonics and ordinary action
+  shortcuts. Keep the existing `Solstice/DisableTopMenuShortcuts` key/default.
 - Selection masks are stored in the hidden `Selection_Mask_Group`. Keep the
   group name compatible with the Python plugin and create masks through the
   native node command adapter so creation is undoable.
@@ -67,7 +80,29 @@ DLLs on Windows.
    verify the sampled foreground color. Toggle the option off and verify the
    hotkey is released.
 7. Toggle top-menu shortcut suppression on and off and verify menu labels and
-   Alt-key behavior are restored correctly.
+   Alt-key behavior are restored correctly. With it enabled, restart without
+   opening Settings and hold/release the user's Alt+E TempBrush shortcut over
+   a canvas: no Edit menu, temporary brush restores on release. Repeat after
+   switching documents, opening a second window and configuring toolbars.
+   Mouse-opened menus must still work. Disable the assigned Alt+E action when
+   checking restored Edit-menu mnemonics, to avoid an intentional conflict.
 8. Trigger Rename Alternative near each screen edge, apply plain and colored
    presets, save a manual preset, and verify the layer name change can be
    undone without affecting child layers.
+
+For a menu-only change, build `kritaui` and `KisMenuMnemonicFilterTest`; install
+`_build/libs/ui/cmake_install.cmake` with `CMAKE_INSTALL_LOCAL_ONLY=1`.
+Run only `libs-ui-KisMenuMnemonicFilterTest` (not the whole UI suite). This Qt
+widget test uses no application preferences and covers late construction,
+title updates, remove/reinsert, literal ampersands, separate windows, ownership,
+actual Alt+E QAction activation, mouse menus and restored Alt+E mnemonics.
+It can run with `QT_QPA_PLATFORM=offscreen`. Real TempBrush press/release and
+canvas focus still require the manual check above.
+
+2026-10-04 validation: `kritaui` and the focused test built successfully;
+offscreen Qt 6.8 tests passed 6/6 (four test functions plus init/cleanup).
+The UI DLL was installed with matching build/install SHA256 hashes after
+confirming the application was closed. Logs under `%TEMP%`:
+`solstice-menu-shortcuts-build.log`, `solstice-menu-shortcuts-test.txt`,
+`solstice-menu-shortcuts-install.log`. No user preferences were modified.
+The user subsequently confirmed the real-app startup/TempBrush check passed.

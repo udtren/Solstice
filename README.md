@@ -16,8 +16,9 @@ Krita edition, and development no longer tracks upstream Krita.
 
 - **[Experimental Vulkan engine](docs/gpu-engine.md)**: GPU-resident image
   tiles, accelerated layer compositing and canvas data preparation.
-- **GPU brush prototype**: opt-in GPU compositing for RGBA32F pixel brushes,
-  including supported selection, alpha-lock and mirror-painting paths.
+- **[GPU brush prototype](docs/gpu-engine.md)**: opt-in GPU compositing for
+  RGBA32F pixel brushes and major RGBA16F modes in Buildup and Wash, including
+  supported selection, alpha-lock and mirror-painting paths.
 - **Native productivity tools**: [Quick Access Manager](docs/quick-access.md),
   [Asset Library](docs/asset-library.md), [Rest Note](docs/rest-note.md) and
   [Lazy Tools](docs/lazy-tools.md).
@@ -84,10 +85,21 @@ An opt-in RGBA32F pixel-brush prototype also composites supported blend modes
 (including Normal, Multiply, Screen, Overlay and Erase) on the GPU, with
 selections, alpha lock and mirror painting. Supported Buildup strokes and Wash
 previews and final merges use GPU paths with CPU-compatible channel handling.
+RGBA16F also supports major modes including Normal, Multiply, Screen, Overlay,
+Soft Light (SVG), Color Dodge/Burn, HSY color modes and Erase in Buildup and
+Wash, including Wash's Alpha Darken painting buffer.
+Unsupported RGBA16F brush modes retain CPU fallback.
 Batched tile transfers and reusable upload buffers reduce transfer waits,
-including for textured and masked brushes. Dab generation, texture generation,
-masking, filters and transforms still run on the CPU. This is an ongoing
-rewrite, not a fully GPU-based painting pipeline.
+including for textured and masked brushes. Layer and Wash compositing reuse
+completed work buffers and can queue consecutive updates. Whole-tile copies
+can retain GPU pixels, and CPU filters, FFT convolution, affine transforms
+and layer flips now batch their GPU readbacks.
+
+The brush prototype requires `KRITA_GPU_BRUSH=1` in addition to enabling the
+GPU engine. Dab generation, texture generation, masking, filter calculations
+and transform calculations still run on the CPU. Large mirrored brushes with
+Alpha Lock can still catch up after pen release; further tuning of that case
+is deferred. This is an ongoing rewrite, not a fully GPU-based painting pipeline.
 
 See the [GPU Engine guide](docs/gpu-engine.md) for setup and limitations.
 Prototype benchmark results below include development work that may not yet
@@ -99,7 +111,9 @@ be included in a published build.
 performance.** They are not frame rates or pen-to-screen latency measurements.
 
 Measured on October 4, 2026, with an AMD Ryzen 9 9950X and NVIDIA RTX PRO 6000
-Blackwell (driver 596.86), using the local development build:
+Blackwell (driver 596.86), using local development builds. The operation table
+retains the earlier baseline; it has not been remeasured after the latest
+filter and transform readback changes:
 
 | Workload | CPU | GPU |
 | --- | ---: | ---: |
@@ -117,11 +131,25 @@ excludes projection work and final OpenGL texture copies. Mirror measurements
 include reflection and uploads, compare against serial CPU painting, and
 exclude dab generation, scheduling and display.
 
-**Complete short strokes can still be slower on the GPU.** In the same build,
-a queued 64px Buildup stroke took 4.51 ms on CPU versus 9.00 ms with GPU
-projection and brush compositing. This includes brush generation and completed
-projection, but not tablet input or screen presentation. GPU brush painting
-remains opt-in.
+The latest completed-stroke measurements, after projection work-buffer reuse,
+show both the remaining overhead and a workload that benefits from GPU brushes:
+
+| Queued stroke | CPU only | GPU projection and brush |
+| --- | ---: | ---: |
+| RGBA32F, 64px Normal Wash | 5.67 ms | 10.61 ms |
+| RGBA32F, 256px Normal Buildup | 8.07 ms | 10.55 ms |
+| RGBA16F, 128px Soft Light (SVG) Wash, selection and both mirrors | 74.36 ms | 13.79 ms |
+
+These use a 1024 x 1024 document, four layers and 24 queued line segments.
+Each value is the median of five-sample medians from three fresh processes.
+They include brush generation, final merging and completed projection, but
+exclude tablet input and screen presentation. These are different workloads,
+not an F16-versus-F32 comparison. See the
+[measurement details](docs/agent/gpu-engine.md#projection-context-reuse-phase-453).
+
+**Complete short strokes can still be slower on the GPU.** Work-buffer reuse
+removed an avoidable wait, but its before/after timing ranges overlap and do
+not establish a substantial stroke speedup. GPU brush painting remains opt-in.
 
 See the [current benchmark results and limitations](docs/gpu-engine.md#current-benchmarks)
 and [reproduction notes](docs/agent/gpu-engine.md#current-build-benchmark-baseline-phase-442).

@@ -82,6 +82,11 @@ public:
     void unlockForWrite();
     void unlockForRead() const;
 
+    /// Share whole-tile data without reading pixels or downloading GPU data.
+    /// The caller excludes pixel writes, as for the existing bitBlt paths.
+    /// Serializes the reference acquisition with CPU/GPU copy-on-write.
+    KisTileSP cloneShared(qint32 col, qint32 row, KisMementoManager *mm);
+
     /**
      * GPU engine: copy-on-write for a writer that modifies the tile data
      * without locking the tile (the GPU).

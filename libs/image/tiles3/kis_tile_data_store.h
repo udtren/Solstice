@@ -119,6 +119,11 @@ public:
 
     KisTileData *duplicateTileData(KisTileData *rhs);
 
+    /// GPU COW only: copy the retained CPU snapshot, without downloading GPU
+    /// pixels or taking a preclone. Caller must protect rhs from swapping and
+    /// concurrent writes (a GPU residency pin or a swap read lock).
+    KisTileData *duplicateCpuSnapshot(const KisTileData *rhs);
+
     void freeTileData(KisTileData *td);
 
     /**

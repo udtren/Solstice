@@ -60,6 +60,13 @@ enum class KisGpuBlendOp : quint32 {
     Count,
 };
 
+/// F16 brush modes covered by the dab and indirect-painting parity matrices.
+inline bool kisGpuSupportsHalfBrushBlend(KisGpuBlendOp op)
+{
+    return op <= KisGpuBlendOp::PinLight || op == KisGpuBlendOp::SoftLightSvg || op == KisGpuBlendOp::ColorDodge
+        || op == KisGpuBlendOp::ColorBurn || (op >= KisGpuBlendOp::Hue && op <= KisGpuBlendOp::Luminosity);
+}
+
 /**
  * Composites layers bottom to top onto destination tiles, writing only the
  * pixels inside a clip rect (GPU engine phase 2, projection).
@@ -83,6 +90,8 @@ public:
         float opacity = 1.0f;
         bool alphaLocked = false;
         quint32 channelMask = 0xf; // RGBA bits; partial channels are used by brushes.
+        bool halfBrush = false; // F16 Normal/Erase scalar arithmetic, for Wash only
+        bool explicitChannelFlags = false;
     };
 
     ~KisGpuLayerCompositor();

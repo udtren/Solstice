@@ -7,6 +7,7 @@
 
 #include <QBuffer>
 #include <QElapsedTimer>
+#include <QFloat16>
 #include <QObject>
 #include <QScopeGuard>
 #include <QSemaphore>
@@ -17,6 +18,12 @@
 #include <KoColorSpaceRegistry.h>
 #include <KoCompositeOpRegistry.h>
 
+#include "filter/kis_filter.h"
+#include "filter/kis_filter_configuration.h"
+#include "filter/kis_filter_registry.h"
+#include "kis_pixel_selection.h"
+#include "kis_selection.h"
+#include <KisGlobalResourcesInterface.h>
 #include <KisGpuCommandList.h>
 #include <KisGpuContext.h>
 #include <KisGpuLayerCompositor.h>
@@ -30,7 +37,10 @@
 #include "kis_paint_device_writer.h"
 #include "kis_painter.h"
 #include "kis_transaction.h"
+#include "kis_transform_worker.h"
+#include "kis_filter_strategy.h"
 #include "kis_types.h"
+#include "testing_timed_default_bounds.h"
 #include "tiles3/kis_tile.h"
 #include "tiles3/kis_tile_data_pooler.h"
 #include "tiles3/kis_tile_data_store_iterators.h"
@@ -64,9 +74,20 @@ private Q_SLOTS:
     void testGpuFillVisibleOnCpu();
     void testBulkReadback_data();
     void testBulkReadback();
+    void testCpuFiltersBatchReadback_data();
+    void testCpuFiltersBatchReadback();
+    void testCpuTransformsBatchReadback_data();
+    void testCpuTransformsBatchReadback();
+    void testTransformSequenceUndo();
     void testCompositeMatchesCpu();
     void testUndoRedo();
     void testCopyOnWriteIsolation();
+    void testGpuCopyKeepsCpuSnapshot_data();
+    void testGpuCopyKeepsCpuSnapshot();
+    void testWholeTileCopyStaysOnGpu_data();
+    void testWholeTileCopyStaysOnGpu();
+    void testPartialClearBatchesReadback_data();
+    void testPartialClearBatchesReadback();
     void testPoolerKeepsGpuTilesResident();
     void testCpuWriteAfterGpuWrite();
     void testSaveLoadRoundTrip();
@@ -500,6 +521,287 @@ void KisGpuPaintDeviceTest::testBulkReadback()
     QCOMPARE(m_backend->context().completedValue(), after);
 }
 
+void KisGpuPaintDeviceTest::testCpuFiltersBatchReadback_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("filterId");
+    QTest::addColumn<int>("path");
+    QTest::addColumn<bool>("retry");
+    for (bool f16 : {false, true})
+        for (const auto &id : {QStringLiteral("invert"), QStringLiteral("gaussian blur")})
+            for (int path = 0; path < 3; ++path)
+                for (bool retry : {false, true})
+                    QTest::newRow(qPrintable(QString("%1-f16%2-path%3-retry%4").arg(id).arg(f16).arg(path).arg(retry)))
+                        << f16 << id << path << retry;
+}
+
+void KisGpuPaintDeviceTest::testCpuFiltersBatchReadback()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QString, filterId);
+    QFETCH(int, path);
+    QFETCH(bool, retry);
+    auto filter = KisFilterRegistry::instance()->value(filterId);
+    QVERIFY2(filter, qPrintable(filterId));
+    auto config = filter->defaultConfiguration(KisGlobalResourcesInterface::instance())->cloneWithResourcesSnapshot();
+    const auto *cs = rgbaFloat(f16);
+    const QPoint offset(7, -11);
+    const QRect bounds = QRect(-64, -64, 384, 384).translated(offset);
+    const QRect patch = QRect(64, 64, 128, 128).translated(offset);
+    const QRect applyRect = QRect(1, -3, 191, 185).translated(offset);
+    KisPaintDeviceSP cpu = new KisPaintDevice(cs), gpu = new KisPaintDevice(cs);
+    auto fillBoth = [&](KisPaintDeviceSP a, KisPaintDeviceSP b, const QRect &rect, const QVector<float> &channels) {
+        KoColor color(cs);
+        cs->fromNormalisedChannelsValue(color.data(), channels);
+        a->fill(rect, color);
+        return gpuFill(b, rect, channels);
+    };
+    cpu->moveTo(offset);
+    gpu->moveTo(offset);
+    cpu->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+    gpu->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+    QVERIFY(fillBoth(cpu, gpu, bounds, {0.2f, 0.4f, 0.8f, 0.7f}));
+    QVERIFY(fillBoth(cpu, gpu, patch, {1.2f, -0.1f, 0.3f, 0.4f}));
+    KisPaintDeviceSP cpuDst = cpu, gpuDst = gpu;
+    if (path == 2) {
+        cpuDst = new KisPaintDevice(cs);
+        gpuDst = new KisPaintDevice(cs);
+        cpuDst->moveTo(offset);
+        gpuDst->moveTo(offset);
+        cpuDst->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+        gpuDst->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+        QVERIFY(fillBoth(cpuDst, gpuDst, bounds, {0.7f, 0.2f, 0.5f, 0.8f}));
+    }
+    auto read = [&](KisPaintDeviceSP device) {
+        QByteArray bytes(bounds.width() * bounds.height() * cs->pixelSize(), Qt::Uninitialized);
+        device->readBytes(reinterpret_cast<quint8 *>(bytes.data()), bounds);
+        return bytes;
+    };
+    const auto before = read(cpuDst);
+    KisPaintDeviceSP snapshot = new KisPaintDevice(*gpuDst);
+    KisSelectionSP selection;
+    if (path) {
+        selection = new KisSelection();
+        QByteArray mask(applyRect.width() * applyRect.height(), Qt::Uninitialized);
+        for (int i = 0; i < mask.size(); ++i)
+            // Fractional coverage avoids the existing F32 CPU Copy SIMD/scalar
+            // HDR-clamping difference at exactly opaque coverage.
+            mask[i] = char(1 + i % 254);
+        selection->pixelSelection()->writeBytes(reinterpret_cast<const quint8 *>(mask.constData()), applyRect);
+    }
+    filter->process(cpu, cpuDst, selection, applyRect, config);
+    const auto expected = read(cpuDst);
+    KisTransaction transaction(gpuDst);
+    if (retry)
+        m_backend->injectDownloadFailuresForTesting(1);
+    const auto firstSubmission = m_backend->context().completedValue();
+    filter->process(gpu, gpuDst, selection, applyRect, config);
+    const auto downloads = m_backend->context().completedValue() - firstSubmission;
+    qInfo() << "CPU filter readback submissions" << downloads;
+    if (!retry) {
+        const int limit = path == 2 || (path == 0 && filterId == "gaussian blur") ? 2 : 1;
+        QVERIFY2(downloads > 0 && downloads <= quint64(limit), qPrintable(QString::number(downloads)));
+    }
+    QVERIFY(!m_backend->hasFailed());
+    const auto after = read(gpuDst);
+    float maximumError = 0;
+    for (int i = 0; i < after.size(); i += f16 ? 2 : 4) {
+        float a, b;
+        if (f16) {
+            qfloat16 ah, bh;
+            std::memcpy(&ah, after.constData() + i, 2);
+            std::memcpy(&bh, expected.constData() + i, 2);
+            a = float(ah);
+            b = float(bh);
+        } else {
+            std::memcpy(&a, after.constData() + i, 4);
+            std::memcpy(&b, expected.constData() + i, 4);
+        }
+        QVERIFY(std::isfinite(a) && std::isfinite(b));
+        maximumError = qMax(maximumError, std::abs(a - b));
+    }
+    qInfo() << "CPU filter maximum error" << maximumError;
+    QVERIFY2(maximumError <= (f16 ? 1.0f / 1024 : 2e-5f), qPrintable(QString::number(maximumError)));
+    QVERIFY(after != before);
+    QCOMPARE(read(snapshot), before);
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo();
+    command->undo();
+    QCOMPARE(read(gpuDst), before);
+    command->redo();
+    QCOMPARE(read(gpuDst), after);
+    // CPU writes must be uploaded before a later GPU operation sees them.
+    KisGpuTileAccess access(gpuDst, bounds, KisGpuTileAccess::ReadOnly);
+    m_commands->begin();
+    QVERIFY(access.prepare(*m_commands));
+    QVERIFY(KisGpuTileAccess::submitAndFinish(*m_commands, {&access}));
+    QVERIFY(m_commands->wait());
+    QCOMPARE(read(gpuDst), after);
+}
+
+void KisGpuPaintDeviceTest::testCpuTransformsBatchReadback_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<int>("operation");
+    QTest::addColumn<bool>("retry");
+    const QStringList operations = {"scale",
+                                    "shear",
+                                    "rotate90",
+                                    "rotate",
+                                    "mirrorX-axis",
+                                    "mirrorY-axis",
+                                    "translate",
+                                    "scale-full",
+                                    "mirrorX-center",
+                                    "mirrorY-center",
+                                    "scale-partial"};
+    for (bool f16 : {false, true})
+        for (int operation = 0; operation < operations.size(); ++operation)
+            for (bool retry : {false, true})
+                QTest::newRow(qPrintable(QString("f16%1-%2-retry%3").arg(f16).arg(operations[operation]).arg(retry)))
+                    << f16 << operation << retry;
+}
+
+void KisGpuPaintDeviceTest::testCpuTransformsBatchReadback()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(int, operation);
+    QFETCH(bool, retry);
+    const auto *cs = rgbaFloat(f16);
+    const QPoint offset(7, -11);
+    const QRect bounds = QRect(-64, -64, 256, 256).translated(offset);
+    const QRect checkRect(-384, -384, 768, 768);
+    KisPaintDeviceSP cpu = new KisPaintDevice(cs), gpu = new KisPaintDevice(cs);
+    cpu->moveTo(offset);
+    gpu->moveTo(offset);
+    cpu->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+    gpu->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+    for (const auto &rect : {bounds, QRect(0, 64, 64, 64).translated(offset)}) {
+        const QVector<float> channels =
+            rect == bounds ? QVector<float>{0.2f, 0.4f, 0.8f, 0.7f} : QVector<float>{1.2f, -0.1f, 0.3f, 0.4f};
+        KoColor color(cs);
+        cs->fromNormalisedChannelsValue(color.data(), channels);
+        cpu->fill(rect, color);
+        QVERIFY(gpuFill(gpu, rect, channels));
+    }
+    auto read = [&](KisPaintDeviceSP device) {
+        QByteArray bytes(checkRect.width() * checkRect.height() * cs->pixelSize(), Qt::Uninitialized);
+        device->readBytes(reinterpret_cast<quint8 *>(bytes.data()), checkRect);
+        return bytes;
+    };
+    auto transform = [&](KisPaintDeviceSP device) {
+        if (operation == 8 || operation == 9) {
+            if (operation == 8)
+                KisTransformWorker::mirrorX(device);
+            else
+                KisTransformWorker::mirrorY(device);
+            return true;
+        }
+        if (operation == 4 || operation == 5) {
+            KisTransformWorker::mirror(device, 32.5, operation == 4 ? Qt::Horizontal : Qt::Vertical);
+            return true;
+        }
+        KisBicubicFilterStrategy filter;
+        const bool scale = operation == 0 || operation == 7 || operation == 10;
+        KisTransformWorker worker(device,
+                                  scale ? 0.75 : 1.0,
+                                  scale ? 1.25 : 1.0,
+                                  operation == 1 ? 0.2 : 0.0,
+                                  operation == 1 ? -0.1 : 0.0,
+                                  operation == 2       ? M_PI_2
+                                      : operation == 3 ? 0.3
+                                                       : 0.0,
+                                  13,
+                                  -9,
+                                  KoUpdaterPtr(),
+                                  &filter);
+        return operation == 7 ? worker.run()
+                              : worker.runPartial(operation == 10 ? bounds.adjusted(33, 17, -29, -19) : bounds);
+    };
+    const auto before = read(cpu);
+    KisPaintDeviceSP snapshot = new KisPaintDevice(*gpu);
+    QVERIFY(transform(cpu));
+    const auto expected = read(cpu);
+    KisTransaction transaction(gpu);
+    if (retry)
+        m_backend->injectDownloadFailuresForTesting(1);
+    const auto firstSubmission = m_backend->context().completedValue();
+    QVERIFY(transform(gpu));
+    const auto downloads = m_backend->context().completedValue() - firstSubmission;
+    qInfo() << "CPU transform readback submissions" << downloads;
+    if (!retry)
+        QCOMPARE(downloads, quint64(1));
+    QVERIFY(!m_backend->hasFailed());
+    const auto after = read(gpu);
+    QVERIFY(after == expected);
+    QVERIFY(after != before);
+    QCOMPARE(gpu->exactBounds(), cpu->exactBounds());
+    QVERIFY(read(snapshot) == before);
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo();
+    command->undo();
+    QVERIFY(read(gpu) == before);
+    command->redo();
+    QVERIFY(read(gpu) == after);
+}
+
+void KisGpuPaintDeviceTest::testTransformSequenceUndo()
+{
+    REQUIRE_GPU();
+    for (bool f16 : {false, true}) {
+        for (bool gpuBetween : {false, true}) {
+            const auto *cs = rgbaFloat(f16);
+            const QRect bounds(-64, -64, 192, 192);
+            const QRect checkRect(-256, -256, 512, 512);
+            KisPaintDeviceSP device = new KisPaintDevice(cs);
+            device->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+            QVERIFY(gpuFill(device, bounds, {0.2f, 0.3f, 0.5f, 0.7f}));
+            QVERIFY(gpuFill(device, QRect(64, 64, 64, 64), {1.2f, 0.1f, 0.4f, 0.9f}));
+            auto read = [&]() {
+                QByteArray bytes(checkRect.width() * checkRect.height() * cs->pixelSize(), Qt::Uninitialized);
+                device->readBytes(reinterpret_cast<quint8 *>(bytes.data()), checkRect);
+                return bytes;
+            };
+            const auto initial = read();
+            auto makeGpuAuthoritative = [&]() {
+                KisGpuTileAccess access(device, bounds, KisGpuTileAccess::ReadWrite);
+                m_commands->begin();
+                if (!access.prepare(*m_commands))
+                    return false;
+                return KisGpuTileAccess::submitAndFinish(*m_commands, {&access}) && m_commands->wait();
+            };
+            QVERIFY(makeGpuAuthoritative());
+            KisTransaction first(device);
+            KisTransformWorker::mirrorX(device);
+            QScopedPointer<KUndo2Command> firstCommand(first.endAndTake());
+            firstCommand->redo();
+            const auto mirrored = read();
+            QVERIFY(mirrored != initial);
+            KisTransaction second(device);
+            if (gpuBetween)
+                QVERIFY(makeGpuAuthoritative());
+            KisBicubicFilterStrategy filter;
+            KisTransformWorker worker(device, 1, 1, 0, 0, M_PI_2, 0, 0, KoUpdaterPtr(), &filter);
+            QVERIFY(worker.run());
+            QScopedPointer<KUndo2Command> secondCommand(second.endAndTake());
+            secondCommand->redo();
+            const auto rotated = read();
+            QVERIFY(rotated != mirrored);
+            secondCommand->undo();
+            QVERIFY(read() == mirrored);
+            firstCommand->undo();
+            QVERIFY(read() == initial);
+            firstCommand->redo();
+            QVERIFY(read() == mirrored);
+            secondCommand->redo();
+            QVERIFY(read() == rotated);
+            qInfo() << "Sequential mirror/rotation Undo passed: F16" << f16 << "GPU between" << gpuBetween;
+        }
+    }
+}
+
 void KisGpuPaintDeviceTest::testSupport()
 {
     KisPaintDeviceSP rgba8 = new KisPaintDevice(KoColorSpaceRegistry::instance()->rgb8());
@@ -685,6 +987,217 @@ void KisGpuPaintDeviceTest::testCopyOnWriteIsolation()
     }();
     QCOMPARE(maxDifference(gray, readPixels(shared, rect)), 0.0f);
     QVERIFY(maxDifference(gray, readPixels(device, rect)) > 0.0f);
+}
+
+void KisGpuPaintDeviceTest::testGpuCopyKeepsCpuSnapshot_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<bool>("readWrite");
+    QTest::addColumn<bool>("failSubmit");
+    for (bool f16 : {false, true})
+        for (bool readWrite : {false, true})
+            for (bool failSubmit : {false, true})
+                QTest::newRow(qPrintable(QString("f16%1-readWrite%2-fail%3").arg(f16).arg(readWrite).arg(failSubmit)))
+                    << f16 << readWrite << failSubmit;
+}
+
+void KisGpuPaintDeviceTest::testGpuCopyKeepsCpuSnapshot()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(bool, readWrite);
+    QFETCH(bool, failSubmit);
+    const QRect rect(0, 0, 64, 64);
+    const auto *cs = rgbaFloat(f16);
+    auto bytes = [&](KisPaintDeviceSP device) {
+        QByteArray result(rect.width() * rect.height() * cs->pixelSize(), 0);
+        device->readBytes(reinterpret_cast<quint8 *>(result.data()), rect);
+        return result;
+    };
+    KisPaintDeviceSP reference = new KisPaintDevice(cs);
+    QVERIFY(gpuFill(reference, rect, {0, 0, 1, 1}));
+    const QByteArray blue = bytes(reference);
+    QVERIFY(gpuFill(reference, rect, {0, 1, 0, 1}));
+    const QByteArray green = bytes(reference);
+
+    KisPaintDeviceSP device = new KisPaintDevice(cs);
+    device->fill(rect, KoColor(Qt::red, cs));
+    const QByteArray snapshot = bytes(device);
+    QVERIFY(gpuFill(device, rect, {0, 0, 1, 1}));
+    KisPaintDeviceSP shared = new KisPaintDevice(*device);
+    auto original = shared->dataManager()->getTile(0, 0, false);
+    QVERIFY(!original->tileData()->gpuState()->cpuValid());
+
+    KisTransaction transaction(device);
+    KisGpuTileAccess writer(device, rect, readWrite ? KisGpuTileAccess::ReadWrite : KisGpuTileAccess::WriteOnly);
+    m_commands->begin();
+    const quint64 before = m_backend->context().completedValue();
+    QVERIFY(writer.prepare(*m_commands));
+    // Preparing COW must not download the authoritative blue pixels or zero
+    // the retained red CPU snapshot used by content-loss recovery.
+    QCOMPARE(m_backend->context().completedValue(), before);
+    QVERIFY(!original->tileData()->gpuState()->cpuValid());
+    auto detached = device->dataManager()->getTile(0, 0, false);
+    QVERIFY(detached->tileData() != original->tileData());
+    QCOMPARE(QByteArray(reinterpret_cast<const char *>(detached->tileData()->data()), snapshot.size()), snapshot);
+    const float color[] = {0, 1, 0, 1};
+    QVERIFY((f16 ? m_fill16 : m_fill32)->record(*m_commands, writer.addresses(), color));
+    if (failSubmit)
+        m_backend->context().injectSubmitFailuresForTesting(1);
+    const quint64 value = KisGpuTileAccess::submitAndFinish(*m_commands, {&writer});
+    QCOMPARE(value == 0, failSubmit);
+    QVERIFY(m_commands->wait());
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo(); // the undo stack normally consumes the initial redo
+    const QByteArray expected = failSubmit ? blue : green;
+    QCOMPARE(bytes(device), expected);
+    QCOMPARE(bytes(shared), blue);
+    command->undo();
+    QCOMPARE(bytes(device), blue);
+    command->redo();
+    QCOMPARE(bytes(device), expected);
+    QVERIFY(!m_backend->hasFailed());
+}
+
+void KisGpuPaintDeviceTest::testWholeTileCopyStaysOnGpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<bool>("oldData");
+    QTest::addColumn<bool>("rough");
+    for (bool f16 : {false, true})
+        for (bool oldData : {false, true})
+            for (bool rough : {false, true})
+                QTest::newRow(qPrintable(QString("f16%1-old%2-rough%3").arg(f16).arg(oldData).arg(rough)))
+                    << f16 << oldData << rough;
+}
+
+void KisGpuPaintDeviceTest::testWholeTileCopyStaysOnGpu()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(bool, oldData);
+    QFETCH(bool, rough);
+    const QRect rect(0, 0, 128, 128);
+    const auto *cs = rgbaFloat(f16);
+    auto bytes = [&](KisPaintDeviceSP device) {
+        QByteArray result(rect.width() * rect.height() * cs->pixelSize(), 0);
+        device->readBytes(reinterpret_cast<quint8 *>(result.data()), rect);
+        return result;
+    };
+    KisPaintDeviceSP reference = new KisPaintDevice(cs);
+    QVERIFY(gpuFill(reference, rect, oldData ? QVector<float>{0, 0, 1, 1} : QVector<float>{0, 1, 0, 1}));
+    const QByteArray expected = bytes(reference);
+    KisPaintDeviceSP source = new KisPaintDevice(cs);
+    QVERIFY(gpuFill(source, rect, {0, 0, 1, 1}));
+    KisTransaction sourceTransaction(source);
+    QVERIFY(gpuFill(source, rect, {0, 1, 0, 1}));
+    auto current = source->dataManager()->getTile(0, 0, false);
+    bool exists = false;
+    auto old = source->dataManager()->getOldTile(0, 0, exists);
+    QVERIFY(exists);
+    QVERIFY(current->tileData() != old->tileData());
+
+    KisPaintDeviceSP target = new KisPaintDevice(cs);
+    target->fill(rect, KoColor(Qt::red, cs));
+    const QByteArray before = bytes(target);
+    KisTransaction transaction(target);
+    const quint64 submissions = m_backend->context().completedValue();
+    auto *dst = target->dataManager().data();
+    auto *src = source->dataManager().data();
+    const QRect region = rough ? QRect(7, 9, 75, 77) : rect;
+    if (rough) {
+        if (oldData)
+            dst->bitBltRoughOldData(src, region);
+        else
+            dst->bitBltRough(src, region);
+    } else {
+        if (oldData)
+            dst->bitBltOldData(src, region);
+        else
+            dst->bitBlt(src, region);
+    }
+    QCOMPARE(m_backend->context().completedValue(), submissions);
+    QVERIFY(!current->tileData()->gpuState()->cpuValid());
+    QVERIFY(!old->tileData()->gpuState()->cpuValid());
+    QCOMPARE(target->dataManager()->getTile(0, 0, false)->tileData(), (oldData ? old : current)->tileData());
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo();
+    QCOMPARE(bytes(target), expected);
+    command->undo();
+    QCOMPARE(bytes(target), before);
+    command->redo();
+    QCOMPARE(bytes(target), expected);
+    QVERIFY(gpuFill(source, rect, {1, 0, 1, 1}));
+    QCOMPARE(bytes(target), expected); // subsequent GPU COW cannot alter the copy
+    sourceTransaction.end();
+
+    // Partial tile copies still need the current pixels, preserving everything
+    // outside the requested rectangle. Compare with a CPU-current source.
+    QVERIFY(gpuFill(reference, rect, {1, 0, 1, 1}));
+    bytes(reference);
+    KisPaintDeviceSP partialReference = new KisPaintDevice(*target);
+    const QRect partial(7, 9, 75, 77);
+    partialReference->dataManager()->bitBlt(reference->dataManager().data(), partial);
+    target->dataManager()->bitBlt(source->dataManager().data(), partial);
+    QCOMPARE(bytes(target), bytes(partialReference));
+}
+
+void KisGpuPaintDeviceTest::testPartialClearBatchesReadback_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QRect>("region");
+    QTest::addColumn<bool>("failSubmit");
+    QTest::addColumn<quint64>("submissions");
+    for (bool f16 : {false, true}) {
+        QTest::newRow(qPrintable(QString("aligned-f16%1").arg(f16)))
+            << f16 << QRect(0, 0, 512, 512) << false << quint64(0);
+        QTest::newRow(qPrintable(QString("edges-f16%1").arg(f16)))
+            << f16 << QRect(-63, -61, 638, 636) << false << quint64(4);
+        QTest::newRow(qPrintable(QString("row-f16%1").arg(f16)))
+            << f16 << QRect(-63, -63, 638, 1) << false << quint64(1);
+        QTest::newRow(qPrintable(QString("retry-f16%1").arg(f16)))
+            << f16 << QRect(-63, -61, 638, 636) << true << quint64(13);
+    }
+}
+
+void KisGpuPaintDeviceTest::testPartialClearBatchesReadback()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QRect, region);
+    QFETCH(bool, failSubmit);
+    QFETCH(quint64, submissions);
+    const QRect bounds(-64, -64, 640, 640);
+    const auto *cs = rgbaFloat(f16);
+    auto bytes = [&](KisPaintDeviceSP device) {
+        QByteArray result(bounds.width() * bounds.height() * cs->pixelSize(), 0);
+        device->readBytes(reinterpret_cast<quint8 *>(result.data()), bounds);
+        return result;
+    };
+    KisPaintDeviceSP reference = new KisPaintDevice(cs);
+    QVERIFY(gpuFill(reference, bounds, {0, 0, 1, 1}));
+    const QByteArray original = bytes(reference);
+    reference->clear(region);
+    const QByteArray expected = bytes(reference);
+    KisPaintDeviceSP device = new KisPaintDevice(cs);
+    QVERIFY(gpuFill(device, bounds, {0, 0, 1, 1}));
+    KisPaintDeviceSP shared = new KisPaintDevice(*device);
+    KisTransaction transaction(device);
+    const quint64 before = m_backend->context().completedValue();
+    if (failSubmit)
+        m_backend->context().injectSubmitFailuresForTesting(1);
+    device->clear(region);
+    m_backend->context().waitIdle();
+    QCOMPARE(m_backend->context().completedValue() - before, submissions);
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo();
+    QCOMPARE(bytes(device), expected);
+    QCOMPARE(bytes(shared), original);
+    command->undo();
+    QCOMPARE(bytes(device), original);
+    command->redo();
+    QCOMPARE(bytes(device), expected);
+    QVERIFY(!m_backend->hasFailed());
 }
 
 void KisGpuPaintDeviceTest::testCpuWriteAfterGpuWrite()

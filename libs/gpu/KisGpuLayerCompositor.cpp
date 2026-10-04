@@ -112,6 +112,11 @@ bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
     const VkDeviceSize totalBytes = maskOffset + alignUp(VkDeviceSize(maskBytes), 4);
     bool extended = false;
     for (const auto &layer : layers) {
+        if (layer.halfBrush && (!m_f16 || (layer.op != KisGpuBlendOp::Over && layer.op != KisGpuBlendOp::Erase))) {
+            if (errorMessage)
+                *errorMessage = QStringLiteral("half brush arithmetic requires F16 Normal or Erase");
+            return false;
+        }
         if (layer.channelMask > 0xf || quint32(layer.op) >= quint32(KisGpuBlendOp::Count)) {
             if (errorMessage)
                 *errorMessage = QStringLiteral("unsupported layer channel mask");
@@ -147,7 +152,8 @@ bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
     for (int i = 0; i < layers.size(); i++) {
         params[i].opacity = layers[i].opacity;
         params[i].op = quint32(layers[i].op);
-        params[i].flags = layers[i].alphaLocked ? 1u : 0u;
+        params[i].flags = (layers[i].alphaLocked ? 1u : 0u) | (layers[i].halfBrush ? 2u : 0u)
+            | (layers[i].explicitChannelFlags ? 4u : 0u);
         params[i].channelMask = layers[i].channelMask;
     }
 

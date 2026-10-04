@@ -141,7 +141,11 @@ bool KisGpuBrushPainter::supports(KisPainter *painter)
         return false;
     const auto device = painter->device();
     const auto *space = device->colorSpace();
-    if (space->colorModelId() != RGBAColorModelID || space->colorDepthId() != Float32BitsColorDepthID
+    const bool half = space->colorDepthId() == Float16BitsColorDepthID;
+    if (half && painter->compositeOpId() != COMPOSITE_ERASE && painter->compositeOpId() != COMPOSITE_ALPHA_DARKEN
+        && !kisGpuSupportsHalfBrushBlend(blendOp))
+        return false;
+    if (space->colorModelId() != RGBAColorModelID || (!half && space->colorDepthId() != Float32BitsColorDepthID)
         || device->defaultBounds()->wrapAroundMode() || device->defaultBounds()->currentLevelOfDetail())
         return false;
     const QBitArray flags = painter->channelFlags();
@@ -182,11 +186,14 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     const bool alphaDarken = painter->compositeOpId() == COMPOSITE_ALPHA_DARKEN;
     quint32 channelMask = 0xf;
     const auto channelFlags = painter->channelFlags();
+    const int pixelSize = painter->device()->pixelSize();
     if (!channelFlags.isEmpty()) {
         channelMask = 0;
         for (int i = 0; i < 4; ++i)
             if (channelFlags.testBit(i))
                 channelMask |= 1u << i;
+        if (pixelSize == 8)
+            channelMask |= 16; // F16 scalar Over distinguishes explicit flags
     }
     Mode mode = painter->compositeOpId() == COMPOSITE_ERASE ? Mode::Erase : Mode::Normal;
     KisGpuBlendOp blendOp;
@@ -238,7 +245,7 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
                 if (inputs.size() >= 65536)
                     return false; // bound host metadata before preparing any tiles
                 passBounds |= clip;
-                inputs << KisGpuDabCompositor::Dab{reinterpret_cast<const float *>(dab.device->constData()),
+                inputs << KisGpuDabCompositor::Dab{dab.device->constData(),
                                                    dab.offset,
                                                    dab.device->bounds().size(),
                                                    float(dab.opacity),
@@ -313,8 +320,11 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     QMutexLocker locker(&s_mutex);
     auto *backend = KisGpuTileBackend::instance();
     QString error;
-    const quint64 required =
-        KisGpuDabCompositor::requiredUploadBytes(int(tileCount), inputs, selection ? &mask : nullptr, &error);
+    const quint64 required = KisGpuDabCompositor::requiredUploadBytes(int(tileCount),
+                                                                      inputs,
+                                                                      selection ? &mask : nullptr,
+                                                                      &error,
+                                                                      pixelSize);
     Work *work = workPool().acquire(backend->context(), required);
     if (!work) {
         if (!error.isEmpty() && qEnvironmentVariableIntValue("KRITA_GPU_BRUSH_DEBUG") == 1)
@@ -351,7 +361,8 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
                                   selection ? &mask : nullptr,
                                   channelMask,
                                   &error,
-                                  origins)) {
+                                  origins,
+                                  pixelSize)) {
         if (qEnvironmentVariableIntValue("KRITA_GPU_BRUSH_DEBUG") == 1)
             qInfo() << "GPU brush: recording refused" << error << "dabs" << dabs.size() << "passes" << passCount;
         KisGpuTileAccess::finishUnsubmitted(commands, accesses);
@@ -372,7 +383,7 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
         static std::atomic<quint32> messages[quint32(Mode::Count) * 2 * 16 * 4 * 2]{};
         const quint32 mirrorFlags =
             (painter->hasHorizontalMirroring() ? 1u : 0u) | (painter->hasVerticalMirroring() ? 2u : 0u);
-        const quint32 path = ((quint32(mode) * 32 + (selection ? 16 : 0) + channelMask) * 4 + mirrorFlags) * 2
+        const quint32 path = ((quint32(mode) * 32 + (selection ? 16 : 0) + (channelMask & 15)) * 4 + mirrorFlags) * 2
             + (combineMirrors ? 1 : 0);
         if (messages[path].fetch_add(1) < 3) {
             qInfo() << "GPU brush: batch" << count << "mode" << painter->compositeOpId() << "variant" << quint32(mode)
@@ -430,6 +441,7 @@ bool KisGpuBrushPainter::compositeWash(KisPainter *painter, KisPaintDeviceSP sou
     if (!supports(painter) || painter->compositeOpId() == COMPOSITE_ALPHA_DARKEN || !source
         || source == painter->device() || source->defaultPixel().opacityF() != 0.0)
         return false;
+    const bool half = painter->device()->pixelSize() == 8;
     const auto flags = painter->channelFlags();
     quint32 channels = 0xf;
     if (!flags.isEmpty()) {
@@ -462,7 +474,13 @@ bool KisGpuBrushPainter::compositeWash(KisPainter *painter, KisPaintDeviceSP sou
     }
     return KisGpuProjectionCompositor::composite(painter->device(),
                                                  paintRect,
-                                                 {{source, op, opacity, false, channels}},
+                                                 {{source,
+                                                   op,
+                                                   opacity,
+                                                   false,
+                                                   channels,
+                                                   half && (op == KisGpuBlendOp::Over || op == KisGpuBlendOp::Erase),
+                                                   !flags.isEmpty()}},
                                                  nullptr,
                                                  selection ? &mask : nullptr);
 #else

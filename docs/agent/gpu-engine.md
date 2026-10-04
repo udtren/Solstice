@@ -67,6 +67,23 @@ compute on the GPU. User-facing status is in `docs/gpu-engine.md`.
   Phase 4.42 refreshes all README benchmark workloads and ordinary complete
   strokes on the current build, with a strengthened canvas benchmark.
   It changes measurement coverage only; no application DLL changes.
+  Phases 4.43-4.45 reduce ordinary-stroke tile costs: GPU COW snapshot copying,
+  whole-tile sharing without readback, and batched partial-clear edge reads.
+  Controlled short-stroke results and regression coverage are documented below;
+  the user confirmed this bundle's real-app test passed.
+  Phase 4.46 adds RGBA16F Normal/Erase Buildup with selections and channel
+  locks; the user confirmed its real-app test passed. Phases 4.47-4.48 add
+  F16 Alpha Darken and Normal/Erase Wash preview/final merge; the user confirmed
+  this bundle passed. Phases 4.49-4.50 extend F16 Buildup/Wash to basic generic
+  modes through Pin Light; the user confirmed this bundle passed. Phases
+  4.51-4.52 add Soft Light SVG, Color Dodge/Burn and HSY color modes in F16
+  Buildup/Wash; the user confirmed the real-app checks passed. Other extended
+  F16 brush modes retain CPU fallback. Phase 4.53 reuses completed projection
+  work contexts first and permits three pending serial submissions; details below.
+  The user confirmed phase 4.53 and the CPU filter/FFT readback bundle
+  (4.54-4.55). Phases 4.56-4.57 batch affine transform and layer-flip readbacks;
+  details and verification are below. Filters and transforms still execute
+  their calculations on the CPU.
   Phases
   0–3 are implemented, including real-app canvas and memory-budget checks;
   the phase 3.3 dialog checklist remains documented separately. Layer stacks of RGBA float
@@ -677,6 +694,19 @@ clean runs, and a benchmark entry in this document.
 | 4.40 | Host-cached memory for transfer-only CPU snapshots. | Original direct shader Upload memory stays unchanged; three-process transition/initial timing and CPU parity checks. |
 | 4.41 | Batch GPU tile eviction under memory pressure. | Up to 256 tiles per batch; F32/F16, mixed sizes, busy locks, failed transfers, actual released bytes and Undo/disk-swap/concurrent eviction checks. |
 | 4.42 | Refresh the performance baseline and validate measured canvas paths. | Three fresh processes per workload, completed GPU work, CPU parity and rejection of silent CPU fallback; ordinary short strokes remain slower than CPU. |
+| 4.43 | Copy retained CPU snapshots directly during GPU COW. | F32/F16 ReadWrite/WriteOnly, submission failure, shared source and Undo/Redo coverage. |
+| 4.44 | Share whole current/old tiles without CPU synchronization in exact/rough copies. | F32/F16 no-download assertions, partial-copy parity, independent later writes and Undo/Redo. |
+| 4.45 | Batch partial-clear edge downloads; discard fully cleared tiles without reading. | Aligned, negative-coordinate, one-row and failed-batch cases; combined stroke comparison below. |
+| 4.46 | RGBA16F Normal/Erase Buildup with per-dab half rounding. | Selections, channel flags, mirrors, async ring lifetime, rollback and complete-stroke checks; F16 Wash remains CPU. |
+| 4.47 | RGBA16F hard/creamy Alpha Darken dabs. | CPU variant parity, fractional flow and masks, async ring lifetime. |
+| 4.48 | RGBA16F Normal/Erase Wash preview and final merge. | Scalar half arithmetic, selection/channel flags, fallback and complete-stroke checks. |
+| 4.49 | RGBA16F basic generic dab modes through Pin Light. | Per-dab half rounding, Exclusion intermediate correction, all channel masks, alpha boundaries and async batches. |
+| 4.50 | RGBA16F basic generic Wash preview/final merge. | Soft selections, all channel locks, CPU fallback, Undo/Redo and actual brush jobs. |
+| 4.51 | RGBA16F extended major dab modes. | Soft Light SVG, Color Dodge/Burn and HSY color modes, with CPU half intermediates. |
+| 4.52 | RGBA16F extended major Wash preview/final merge. | Selection/channel/lifecycle matrix and actual mirrored strokes. |
+| 4.53 | Reuse completed projection contexts before waiting for busy ones. | Three pending serial submissions, oldest-first reuse, queue-gated lifetime/fallback/Undo tests. |
+| 4.54-4.55 | Batch CPU filter inputs/destinations and FFT cache reads. | 24 actual-filter rows, CPU parity and failure/Undo checks; user confirmed real-app operation. |
+| 4.56-4.57 | Batch affine transform and layer-flip readbacks. | F32/F16 exact CPU parity, full/partial transforms, transfer counts, failed download and Undo checks. |
 | 4 | Brush engine: GPU dab rendering and compositing for the pixel brush (mask generation, alpha darken, indirect painting), then color smudge. | Stroke parity tests; input-to-pixel latency measured lower than CPU. |
 | 5 | Filters and transforms: blur family, levels/curves, Liquify, Transform Tool, Puppet Warp (preview/final parity). Decide fate of remaining paint ops and color models. | Per-filter parity tests; Puppet Warp invariants from `docs/agent/puppet-warp.md` hold. |
 
@@ -2860,12 +2890,654 @@ This was a test-process override; user preferences were not modified.
 No application installation or new interactive handoff is needed for this
 test/documentation-only stage.
 
-Next implementation priorities: profile ordinary short-stroke job/projection
-costs separately from GPU dispatch and CPU-to-GPU crossings; then implement
-GPU dab/mask generation with CPU parity and actual stroke measurements.
+The subsequent ordinary-stroke tile-cost work is recorded below. Remaining
+implementation priorities include GPU dab/mask generation with CPU parity and
+actual stroke measurements.
 RGBA16F brush arithmetic and color smudge remain separate coverage work.
 Keep GPU brush opt-in until complete drawing latency is measured; do not
 reopen the explicitly deferred large mirrored Alpha Lock investigation.
+
+### Ordinary-stroke tile costs (phases 4.43-4.45)
+
+Implemented together after the phase 4.42 baseline. Temporary stage profiling
+identified tile preparation and COW as substantial costs. Those diagnostic
+totals include fixture setup/verification as well as strokes and must not be
+published as isolated stroke timings. All temporary instrumentation was removed.
+
+- **4.43:** `KisGpuTileAccess` now uses
+  `KisTileDataStore::duplicateCpuSnapshot`. The existing tile-data copy
+  constructor allocates and copies once, avoiding a per-pixel zero fill before
+  the full snapshot copy. It retains memory accounting and the CPU recovery
+  snapshot, does not consume a pooler preclone or download current GPU pixels.
+  The caller must protect the source from swapping and concurrent writes, using
+  the existing GPU residency pin or swap read lock. Successful GPU copies and
+  failed-submission rollback remain unchanged.
+- **4.44:** whole-tile branches of exact/rough `bitBlt`, including old transaction
+  data, use `KisTile::cloneShared`. Its COW mutex protects reference acquisition;
+  no CPU byte access means no readback or swap-in is needed. The existing caller
+  contract still excludes concurrent pixel writes. Partial copies retain normal
+  read/write locking and CPU synchronization. Do not weaken `lockForRead` itself.
+- **4.45:** `KisTiledDataManager::clear` prefetches only partially covered edge
+  tiles through `KisTileGpuHooks::prepareCpuRead` before taking write locks.
+  Whole interior tiles are replaced without downloading their old contents.
+  The hook retains its bounded 256-tile batches, duplicate corners become no-ops,
+  and individual reads retain retry/content-loss handling after a failed batch.
+  Empty clipped clears return immediately. CPU-only/no-backend paths do not
+  initialize Vulkan.
+
+`KisGpuPaintDeviceTest` adds 24 data rows across three tests:
+`testGpuCopyKeepsCpuSnapshot`, `testWholeTileCopyStaysOnGpu` and
+`testPartialClearBatchesReadback`. Coverage includes F32/F16, GPU-authoritative
+pixels with a deliberately older CPU snapshot, ReadWrite/WriteOnly COW,
+submission failure, current/old exact/rough copies, subsequent partial CPU
+copies, independent writes, shared originals and Undo/Redo. The clear fixture
+uses a 10x10 tile region at negative coordinates: 36 distinct boundary tiles
+download in four submissions, aligned clears use zero, and a single partial row
+uses one. Injected first-batch failure retries safely (13 submissions).
+
+Controlled before/after measurements on 2026-10-04 use the phase 4.42 hardware
+and ordinary stroke workload, with `KRITA_GPU_STROKE_REPEATS=10` and validation
+disabled. The baseline is the previously installed image DLL; the new version
+contains all three changes. Both use the same stroke test and remaining build
+dependencies. Three fresh process pairs run sequentially in before/after,
+after/before, before/after order, without a running application. Values are
+medians of the three process medians, in milliseconds:
+
+| Stroke | CPU before / after | GPU projection before / after | GPU projection + brush before / after |
+| --- | ---: | ---: | ---: |
+| 64px Buildup | 4.3209 / 4.2697 | 9.0472 / 7.8149 | 8.2757 / 7.1773 |
+| 64px Wash | 5.2293 / 5.1414 | 10.2257 / 8.8534 | 11.7439 / 10.4859 |
+| 256px Buildup | 9.0366 / 8.9238 | 14.7018 / 12.4097 | 13.8735 / 11.6092 |
+| 256px Wash | 11.6993 / 11.8162 | 17.5883 / 15.7613 | 19.9072 / 18.1752 |
+
+Projection-plus-brush process medians before/after span 8.23-8.45 / 7.04-7.39,
+11.51-11.99 / 10.35-10.60, 13.61-14.23 / 11.30-11.65, and
+19.50-20.78 / 16.93-18.36 ms, respectively. Each process passes CPU image parity,
+GPU path counters and warmup Undo/Redo checks (six passed cases per process).
+Logs: `%TEMP%/solstice-gpu-445-{before,after}-{1,2,3}.txt`.
+Early measurements with only phases 4.43/4.44 did not establish a reliable
+whole-stroke improvement; report the combined result, not individual speedups.
+CPU remains faster for these strokes. No canvas/input latency claim is made,
+and the GPU brush remains opt-in. Projection/canvas/mirror values in the README
+retain the earlier phase 4.42 baseline; only the ordinary-stroke example changed.
+
+Validation-enabled regression: **23/23 CTest suites passed**, including GPU
+engine/interop/paint-device/projection/brush/canvas/save/brush-jobs/full-stroke,
+CPU painter/transaction/paint-device/iterators, and all nine tile-store suites
+(including the concurrent low-memory and disk-swap checks). No GPU validation
+assertion failed. Log: `%TEMP%/solstice-gpu-445-regressions.log`.
+The modified C++ lines were formatted and `git diff --check` passed. Image,
+brush, UI, KRA, paintop and default-paintop DLLs were rebuilt and installed;
+all six built/installed hashes matched. Install log:
+`%TEMP%/solstice-gpu-445-install.log`. The application was closed during
+installation, and no preferences were changed. The user confirmed the combined
+real-app test passed.
+
+Manual handoff: ordinary Normal Buildup/Wash in RGBA32F, Undo/Redo, layer copy,
+save/reopen and a brief RGBA16F check. The user controls application startup
+and exit. Do not reopen the deferred large mirrored Alpha Lock investigation.
+
+### RGBA16F Normal/Erase dabs (phase 4.46)
+
+The opt-in brush path now accepts F16 Normal and Erase in addition to the
+existing F32 modes. `KisBrushOp` retains the owning-RGBA-float-image gate:
+an F16 layer in an integer image must not bypass the GPU-aware scheduling
+requirement. Matching dab/device profiles, selection bounds, disjoint paint
+rectangles, tile budgets, LOD/wrap restrictions and sequential job ownership
+are unchanged. At this phase F16 Alpha Darken and Wash remained CPU paths;
+phases 4.47-4.48 below extend them. Other blend modes remain CPU paths.
+No new preference or automatic enablement is added.
+
+`KisGpuDabCompositor` takes a storage size (8 or 16 bytes) for both upload
+planning and recording. Source pointers describe raw pixels of that format;
+the caller must not mix formats in a batch. Half sources use eight bytes per
+pixel, with each unique source padded to 16-byte alignment, including odd
+pixel counts. Shared sources are uploaded once. The existing three-slot ring
+and combined 64 MiB cap cover both formats; no additional staging cache is
+introduced. F16 uses a lazily created shader pipeline in the same work slot.
+
+The F16 shader follows `KoCompositeOpAlphaBase<half>` / `KoCompositeOpOver`
+and `KoCompositeOpErase`: opacity and alpha intermediates round separately,
+then the destination rounds after every dab, not just at batch completion.
+Normal's selection formula uses the original byte before dividing by 255;
+Erase rounds selection coverage to half before multiplying. Erase preserves
+RGB and ignores channel flags, matching CPU behavior. `channelMask` bit 4
+records nonempty explicit flags for F16 Normal's hidden-RGB handling; bits
+0-3 retain their established channel meaning. The debug counter index masks
+off this additional bit. F32 arithmetic/shader variants are retained.
+
+New tests: 20 F16 Normal/Erase data rows cover soft masks containing all
+256 coverage values, empty/all/partial/locked channel flags, transparent
+hidden RGB, HDR/negative color, odd-sized dabs, shared snapshots, Undo/Redo,
+failed submission with CPU replay, and unsupported-mode refusal. The observed
+maximum difference in this fixture is 0.00048828125; the assertion allows
+1/1024 (one half ULP at 1.0), including hidden RGB. Erase matched exactly in
+the fixture. This is bounded parity testing, not a bit-exact guarantee for
+arbitrary repeated strokes.
+
+Four additional queue-gated F16 cases verify asynchronous snapshots, source
+and mask destruction, deferred CPU reads, fourth-batch ring reuse and failed
+submission rollback. Eight full-stroke rows compare CPU, GPU projection and
+GPU projection-plus-brush: Normal/Erase, Buildup/Wash, ordinary strokes and
+selected/alpha-locked mirrors. Buildup must increment GPU batch counters;
+F16 Wash initially did not increment GPU dab, preview or final-merge counters
+(updated to require GPU submissions in phase 4.48). Layer
+and projection tolerances are 0.002 and 0.004 respectively, with exact layer
+Undo/Redo restoration. The projection tolerance includes the pre-existing
+F16 layer-compositing rounding difference.
+
+Manual check: the user confirmed phase 4.46 passed. The checklist was to
+launch the usual GPU-brush build, create an RGBA16F
+document, paint Normal Buildup and erase, try a soft selection and Alpha Lock,
+then Undo/Redo and save/reopen. Briefly switch to Wash and an existing RGBA32F
+document. Large mirrored Alpha Lock tuning remains explicitly deferred.
+
+Validation: all **10/10** GPU/interop/paint-device/projection/brush/canvas/save,
+brush-jobs, complete-stroke and dab-queue CTest suites passed, including the
+new cases and the existing F32 matrix. Vulkan validation was enabled and no
+validation assertion failed. Log: `%TEMP%/solstice-gpu-446-regressions.log`.
+Version, GPU, image and default-paintop DLLs were installed with matching
+build/install hashes (`solstice-gpu-446-install.log`). No preferences changed.
+
+Benchmark: 2026-10-04 on the phase 4.42 hardware, `KRITA_GPU_VALIDATION=0`,
+`KRITA_GPU_STROKE_REPEATS=5`. Three fresh sequential processes, alternating
+CPU/projection/brush path order within each process, no running application.
+Run `KisGpuStrokeTest.exe` with `testHalfStroke:` rows
+`erase{0,1}-wash0-selected-locked-mirrors{0,1}` (four explicit row arguments).
+The workload is a 128px Normal/Erase Buildup brush, 1024-square RGBA16F image,
+four layers/workers and 24 segments. Timing includes generation, scheduling
+and GPU completion; input, canvas and verification reads are excluded.
+Median of three process medians, milliseconds:
+
+| Stroke | CPU | GPU projection | GPU projection + brush |
+| --- | ---: | ---: | ---: |
+| Normal | 12.1493 | 10.2716 | 7.4203 |
+| Erase | 12.5181 | 9.9734 | 7.2347 |
+| Normal, selection + Alpha Lock + both mirrors | 32.7680 | 18.9381 | 10.6735 |
+| Erase, selection + Alpha Lock + both mirrors | 42.1137 | 29.4617 | 9.8655 |
+
+The corresponding CPU ranges are 12.10-12.29, 10.96-12.59, 27.04-33.05 and
+32.17-43.18 ms; GPU projection+brush ranges are 7.17-8.41, 6.90-7.34,
+10.37-11.07 and 9.07-11.12 ms. Erase ignores Alpha Lock as usual. The combined
+rows show substantial run variation; do not generalize to arbitrary strokes
+or claim a solution to the deferred large mirrored Alpha Lock case. All three
+processes passed parity/path/Undo checks (six cases each). Logs:
+`%TEMP%/solstice-gpu-446-bench-{1,2,3}.txt`. This adds F16 coverage and separate
+F16 measurements; it does not replace the existing F32 README timings.
+
+### RGBA16F Alpha Darken and Wash (phases 4.47-4.48)
+
+The opt-in F16 brush path now supports both hard and creamy Alpha Darken,
+including Wash's temporary target. The shader follows the scalar CPU half
+implementation: flow, opacity, average opacity, mask/alpha products and lerps
+round at their CPU storage boundaries. Hard flow's legacy union rounds its
+product separately. The full-flow branch tests the original float flow,
+not its rounded half value (0.9999 must not become the exact-1 branch).
+Unrestricted Alpha Darken accepts either empty or explicit all-enabled flags;
+restricted Alpha Darken still falls back. The existing three-slot/64 MiB
+staging budget and asynchronous tile lifetime rules also apply to F16.
+
+Normal/Erase Wash preview and final merging use `halfBrush` on the projection
+and low-level layer descriptors. It is valid only for F16 Normal/Erase.
+`composite_half_brush.glsl` shares the scalar half formulas with direct dabs;
+ordinary F16 layer projection keeps its prior arithmetic. Layer shader flag
+bits are 0: alpha lock, 1: half-brush arithmetic, 2: explicit channel flags.
+The explicit-flags distinction preserves hidden RGB handling for scalar
+Normal. Soft selection coverage is accepted for a single F16 brush layer.
+Matching profiles, aligned tiles, owning-image scheduling, readback/fallback,
+transaction and Undo/Redo rules remain unchanged. Other F16 blend modes at
+this phase remained CPU paths; phases 4.49-4.50 below extend the basic modes.
+LOD, wrap-around and unsupported profiles still use the CPU. No preferences
+are changed and no extra cache or shader work pool is introduced.
+
+Regression coverage:
+
+- `testAlphaDarkenVariants`: 128 rows across F32/F16, hard/creamy, flow
+  0/0.43/0.9999/1, opacity/average combinations and soft masks. Uses the real
+  scalar F16 CPU ops and optimized F32 CPU ops, independently of the current
+  hard/creamy preference. F16 tolerance is 1/1024, including hidden RGB;
+  F32 remains 2e-5.
+- `testPendingBatches`: two extra F16 Alpha Darken queue-gated rows prove
+  asynchronous source/mask lifetime, readback waits and ring reuse.
+- `testHalfIndirectMerge` and `testHalfWashChannelLocks`: 102 F16 rows cover
+  all 16 channel masks, selection, inverted/moved/empty coverage, preview and
+  merge submit failures, low budget, limited readback, unaligned source and
+  integer owning-image fallback. Includes hidden RGB, shared snapshots and
+  exact Undo/Redo. Combined dab/merge tolerance is 0.002.
+- `testHalfStroke`: eight actual Normal/Erase Buildup/Wash rows, ordinary
+  and selected/alpha-locked mirrored strokes. Wash now requires GPU dab,
+  preview and final-merge counters. CPU/projection/projection+brush results
+  retain layer tolerance 0.002 and projection tolerance 0.004, with exact
+  Undo/Redo; ordinary F32 coverage remains unchanged.
+
+Validation: the focused arithmetic/lifecycle run passed **266/266** cases;
+the full-stroke F16 run passed all eight data rows plus init/cleanup.
+All **10/10** GPU/interop/paint-device/projection/brush/canvas/save,
+brush-jobs, complete-stroke and dab-queue CTest suites then passed with
+Vulkan validation enabled (163.41 seconds). Logs:
+`%TEMP%/solstice-gpu-447-targeted.txt`, `solstice-gpu-447-strokes.txt` and
+`solstice-gpu-447-regressions.log`. The scalar F16 reference is guarded by
+`HAVE_OPENEXR` so it does not introduce a compile dependency when half color
+support is absent; that configuration was not separately built here.
+
+GPU, image and UI DLLs were installed after confirming no running application;
+their build/install SHA256 hashes match. Log:
+`%TEMP%/solstice-gpu-447-install.log`. No application was started or stopped,
+and preferences were not changed.
+
+Benchmark: 2026-10-04, same hardware and fixture as phase 4.46 (128px,
+1024-square F16, four layers/workers, 24 segments), now using Wash.
+`KRITA_GPU_VALIDATION=0`, `KRITA_GPU_STROKE_REPEATS=5`, three fresh sequential
+processes, no running application. Use the four `testHalfStroke:` rows
+`erase{0,1}-wash1-selected-locked-mirrors{0,1}`. Median of the three process
+medians, milliseconds, including generation, scheduling, final merging and
+GPU completion; excluding tablet input, canvas and verification reads:
+
+| Wash stroke | CPU | GPU projection | GPU projection + brush |
+| --- | ---: | ---: | ---: |
+| Normal | 15.2945 | 12.3001 | 10.7169 |
+| Erase | 16.1339 | 11.8975 | 10.1295 |
+| Normal, selection + Alpha Lock + both mirrors | 45.8234 | 34.0871 | 15.7167 |
+| Erase, selection + Alpha Lock + both mirrors | 47.4446 | 35.9930 | 13.7794 |
+
+CPU ranges across processes: 14.67-16.31, 15.58-16.47, 45.55-46.34 and
+46.18-48.39 ms. GPU projection+brush ranges: 10.15-11.69, 9.39-10.13,
+15.60-16.06 and 12.22-14.32 ms. Erase ignores Alpha Lock, matching the CPU.
+All three processes passed parity/path/Undo checks (six cases each).
+Logs: `%TEMP%/solstice-gpu-447-bench-{1,2,3}.txt`. These results supplement
+the F16 Buildup table; they do not replace F32 README timings or establish
+input latency for arbitrary brush sizes.
+
+Manual check: the user confirmed phases 4.47-4.48 passed. The checklist was:
+in an RGBA16F document, paint Normal Wash with partial
+opacity/flow, erase, use a soft selection and Alpha Lock, then Undo/Redo and
+save/reopen. Check that pen release does not alter the preview unexpectedly.
+Briefly verify Buildup and RGBA32F again. Large mirrored Alpha Lock tuning
+remains explicitly deferred.
+
+### RGBA16F basic blend brushes (phases 4.49-4.50)
+
+F16 pixel brushes now accept Multiply, Screen, Addition/Linear Dodge,
+Subtract, Darken, Lighten, Difference, Overlay, Hard Light, Exclusion,
+Linear Burn, Linear Light and Pin Light: 14 action IDs, 13 distinct operations.
+Both Buildup dabs and Wash preview/final merging use GPU composition.
+Normal/Erase/Alpha Darken support from phases 4.46-4.48 is retained.
+Extended modes beginning with Soft Light remained CPU brush paths at this
+phase; phases 4.51-4.52 below extend the selected major modes.
+F32 support and the existing owning-float-image, profile, LOD, wrap and
+staging-budget restrictions are unchanged.
+
+The F16 dab shader now dispatches basic generic modes through the existing
+half-aware `compositeGeneric`, masking off the explicit-flags bit used only
+by scalar Normal, and stores half after each dab. Wash accepts a soft mask
+for one basic generic F16 layer. Its `halfBrush` descriptor flag remains
+exclusive to Normal/Erase, whose scalar formulas differ from projection.
+Generic modes preserve the CPU's half alpha tolerances, channel locks and
+hidden RGB handling.
+
+The new repeated-dab test exposed an existing half Exclusion mismatch:
+`CFExclusion` rounds `Arithmetic::mul<half>` before widening it for the
+remaining calculation. The shader now rounds the product at the same point,
+also correcting F16 Exclusion layer composition. Six initial direct-dab
+cases failed at 0.00146484; the fix passes the existing 1/1024 tolerance
+without loosening it. F32 Exclusion is unchanged.
+
+Coverage is limited to these major modes:
+
+- `testHalfDabs`: 544 rows including Normal/Erase and the 14 new IDs, empty
+  flags and all 16 explicit channel masks, masked/unmasked HDR dabs, half-alpha
+  fuzzy boundaries, hidden RGB, odd source sizes, shared snapshots, exact
+  Undo/Redo and failed-submit CPU replay. The 1/1024 bound includes hidden RGB.
+- `testPendingBatches`: six added queue-gated half Multiply/Screen/Overlay
+  rows verify in-flight staging ownership, deferred readback and ring reuse.
+- `testHalfWashBlendModes`: 574 rows across all channel masks, soft/inverted/
+  translated/empty/outside selection, preview/merge submission failure,
+  low budget, unaligned source and integer owning-image fallback. Existing
+  0.002 combined dab/merge tolerance and exact Undo/Redo checks are retained.
+- `testHalfBlendModes`: 84 full-stroke rows (14 modes, Buildup/Wash, channel
+  masks 15/7/5), with selection and both mirrors. CPU, projection-only and
+  projection+brush paths are compared, with GPU dab/preview/merge counters
+  required. Existing layer/projection bounds remain 0.002/0.004.
+
+The focused dab/queue/Wash run passed 1140/1140 cases with Vulkan validation
+enabled; its maximum direct-dab error was 0.00048828125. The new complete
+stroke fixture passed 86/86 cases (84 data rows plus init/cleanup) in 163.97
+seconds. Logs: `%TEMP%/solstice-gpu-449-targeted.txt` and
+`solstice-gpu-449-strokes.txt`.
+
+Final regression: all 10/10 GPU/interop/paint-device/projection/brush/canvas/
+save/brush-jobs/complete-stroke/dab-queue CTest suites passed with Vulkan
+validation enabled (375.70 seconds). The complete stroke suite now takes
+246.96 seconds, so this run used `--timeout 420` rather than 240. Log:
+`%TEMP%/solstice-gpu-449-regressions.log`. Final build log:
+`%TEMP%/solstice-gpu-449-final-build.log`.
+
+Representative timing on 2026-10-04, same hardware as phase 4.46: 128px
+brush, 1024-square RGBA16F, four layers/workers, 24 segments, soft selection
+and both mirrors, all channels enabled. Run `testHalfBlendModes:` rows
+`multiply-wash0-channels15` and `overlay-wash1-channels15` with
+`KRITA_GPU_STROKE_REPEATS=5`, `KRITA_GPU_VALIDATION=0`. Three fresh sequential
+processes with alternating path order; medians of the three process medians:
+
+| Stroke | CPU | GPU projection | GPU projection + brush |
+| --- | ---: | ---: | ---: |
+| Multiply Buildup | 69.2854 ms | 41.5280 ms | 12.1696 ms |
+| Overlay Wash | 69.0667 ms | 55.6355 ms | 15.2692 ms |
+
+CPU process-median ranges were 67.65-71.79 and 66.60-70.56 ms; projection-only
+39.27-56.19 and 53.08-56.28 ms; GPU brush 11.46-12.57 and 14.86-15.38 ms.
+All three processes passed path/parity/Undo checks (four cases each).
+Timing includes generation, scheduling, final merge and completed GPU work;
+tablet input, canvas display and verification reads are excluded. These are
+representative cases, not a speed guarantee for all modes or brush sizes.
+Logs: `%TEMP%/solstice-gpu-449-bench-{1,2,3}.txt`. Existing F32 README timings
+are a separate workload and are not replaced by these F16 measurements.
+
+GPU, image and UI DLLs were installed after confirming the application was
+closed; build/install SHA256 hashes match. Log:
+`%TEMP%/solstice-gpu-449-install.log`. No application preferences changed.
+
+The user confirmed the real-app check passed: RGBA16F Multiply, Screen and
+Overlay in Buildup/Wash, selection, Alpha Lock, Undo/Redo and save/reopen.
+The deferred large mirrored Alpha Lock performance case is outside this bundle.
+
+### RGBA16F extended major blend brushes (phases 4.51-4.52)
+
+F16 Buildup and Wash now also accept Soft Light (SVG), Color Dodge, Color
+Burn and HSY Color, Hue, Saturation and Luminosity. This adds seven major
+mode IDs to the preceding 14. Other extended modes remain CPU brush paths;
+in particular Soft Light Photoshop, Divide and the separately named HDR or
+HSI/HSL/HSV modes are not enabled by this bundle.
+
+`paint_dabs_extended_rgba16f` compiles the extended shader with `TILE_F16`.
+`KisGpuDabCompositor` creates its pipeline lazily, independently of the basic
+F16 and both F32 pipelines. The low-level dab gate admits only the selected
+major modes. `kisGpuSupportsHalfBrushBlend` shares the painter/Wash coverage
+gate; Normal/Erase retain their separate scalar half-brush descriptor flag.
+Per-dab storage rounding, upload budgets, asynchronous ownership and CPU
+fallback are unchanged.
+
+The first CPU comparison caught 42 failures in Dodge/Burn dabs and queued
+Dodge batches (largest direct error 0.00585938). CPU `Arithmetic::inv<half>`
+rounds before division; Burn also rounds `clampToSDR<half>` before inverting
+the quotient. The F16 shader now reproduces those intermediate values in
+`composite_blend.glsl`, including layer composition. F32 arithmetic is
+unchanged. No comparison tolerance was relaxed.
+
+Validation-layer checks:
+
+- `testHalfDabs`: 782 rows (Normal/Erase plus 21 major mode IDs, default or
+  each of 16 channel masks, with/without selection), 24 overlapping odd-size
+  dabs, negative origins, HDR colors, alpha boundaries, hidden RGB, retained
+  snapshots, failed-submit CPU replay and exact Undo/Redo. Maximum error was
+  0.0009765625, within the existing 1/1024 bound.
+- `testHalfWashBlendModes`: 861 rows, covering all channel masks, selected
+  and unselected previews/final merges, inverted/translated/empty/outside
+  selections, failed submit/merge, merge budget, offset and integer fallback.
+  The existing 0.002 bound and exact Undo/Redo checks are retained.
+- `testPendingBatches`: 26 F32/F16 rows, including added F16 Soft Light SVG,
+  Dodge and Color read/wrap cases. Queue gating proves source/mask ownership
+  before GPU completion and correct ring reuse.
+
+The targeted run passed 1,671 cases including init/cleanup. Log:
+`%TEMP%/solstice-gpu-451-targeted2.txt`; the preceding failing run is retained
+as `solstice-gpu-451-targeted.txt`.
+
+The full validation-layer regression passed all ten suites in 477.19 s:
+Engine, GL interop, paint device, projection, brush, canvas upload, save,
+dab queue, brush jobs and complete strokes. `KisGpuStrokeTest` includes 126
+F16 generic-mode data rows: 21 major IDs x Buildup/Wash x channel masks
+15/7/5, using a soft selection and both mirrors. GPU path counters, layer
+parity (0.002), projection parity (0.004) and exact layer Undo/Redo remain
+required. Log: `%TEMP%/solstice-gpu-451-regressions.log`.
+
+Representative timings on October 4, 2026, use the preceding 128px F16
+fixture (1024-square document, four layers/workers, 24 segments, soft
+selection, both mirrors and all channels), validation off, five samples
+after warmup in each of three fresh sequential processes. Values are the
+median of process medians; parentheses show their ranges, not percentiles.
+
+| Stroke | CPU only, ms | GPU projection, CPU brush, ms | GPU projection + brush, ms |
+| --- | ---: | ---: | ---: |
+| HSY Color Buildup | 107.501 (104.781-111.501) | 101.301 (100.955-105.960) | 12.611 (11.239-13.586) |
+| Soft Light SVG Wash | 69.205 (68.546-70.331) | 55.250 (51.952-55.408) | 15.377 (14.742-17.047) |
+
+All three processes passed parity, path and Undo checks (four cases each).
+Timing includes completed GPU work, brush generation, scheduling and final
+merging; input, canvas display and verification readback are excluded.
+Logs: `%TEMP%/solstice-gpu-451-bench-{1,2,3}.txt`. These additional F16 cases
+do not replace the different F32 README workloads or establish input latency.
+
+The final GPU, image and UI DLLs were installed with the application closed;
+build/install SHA256 hashes match. Logs: `%TEMP%/solstice-gpu-451-final-build.log`
+and `%TEMP%/solstice-gpu-451-install.log`. No application settings changed.
+
+The user confirmed the real-app check passed: RGBA16F Soft Light (SVG),
+Color Dodge/Burn and Color/Hue in Buildup/Wash, including selection,
+Alpha Lock, Undo/Redo and save/reopen. The deferred large mirrored Alpha
+Lock performance case is outside this bundle.
+
+### Projection context reuse (phase 4.53)
+
+The previous free-context stack immediately selected the last submitted
+context again. `commands.begin()` then waited even when another free context
+had already completed; serial projection/Wash calls could not retain multiple
+submissions in flight. `KisGpuProjectionCompositor` now tracks each context's
+last successful timeline value and selects the oldest available context.
+Completed work is reused immediately. If all available contexts are pending,
+it may lazily create up to three contexts; after that it waits for the oldest.
+
+As before, concurrent callers lease separate contexts and may grow the pool
+when every existing context is leased. Thus the count is bounded by the
+larger of three and peak simultaneous leases, not by queued updates or
+thread lifetime. Both F16/F32 compositors and their table/mask allocations
+remain owned by their context. This is a count bound, not a new global GPU
+memory budget; large retained table allocations still have their existing
+per-context lifetime.
+
+Vulkan resource creation and completion waits run outside the pool mutex.
+An explicit successful wait is required before reusing command/table memory;
+a failed wait returns failure without resetting commands or overwriting
+tables. Submission failure leaves `lastUse` zero after the preceding work
+has completed, allowing CPU replay through the existing transaction path.
+Tile residency, deferred upload/source lifetime and queue dependency barriers
+remain unchanged. The brush upload ring and its 64 MiB limit are unchanged.
+
+`KisGpuBrushTest::testProjectionWorkContexts` adds 12 queue-gated cases:
+F32/F16 x unlocked/Alpha Lock x CPU read/fourth submission/failed fourth
+submission. Three composites must return with the queue blocked, despite
+source, descriptor and coverage storage being destroyed between calls.
+The fourth waits without growing the serial pool or holding its mutex.
+The tests compare CPU output, check one-time CPU replay after failure,
+retained snapshots, exact Undo/Redo, completed-context reuse and test-pool
+reset. A watchdog opens the queue on regression instead of hanging the suite;
+lease-count polling avoids relying on CPU scheduling to enter the fourth call.
+
+The initial queue-gated run passed all 14 cases including init/cleanup
+(`%TEMP%/solstice-gpu-453-contexts.txt`). With explicit lease polling added,
+the full validation-layer regression passed all ten suites in 493.00 s:
+Engine, GL interop, paint device, projection, brush, canvas upload, save,
+dab queue, brush jobs and complete strokes. This includes the existing
+concurrent projection checks and all 126 F16 major blend-stroke conditions.
+Log: `%TEMP%/solstice-gpu-453-regressions.log`.
+
+Before/after timings use the same local hardware on October 4, 2026,
+validation off, five samples after warmup in each of three fresh sequential
+processes per version. The before series preceded the implementation; the
+after series followed the regression run, so this was not an alternating
+A/B comparison. Values are medians of process medians, in milliseconds:
+
+| Stroke | CPU before / after | GPU projection before / after | GPU projection + brush before / after |
+| --- | ---: | ---: | ---: |
+| F32 64px Normal Wash | 5.521 / 5.672 | 9.334 / 8.906 | 10.753 / 10.608 |
+| F32 256px Normal Buildup | 7.901 / 8.072 | 12.300 / 12.310 | 10.743 / 10.550 |
+| F16 128px Soft Light SVG Wash, selection + mirrors | 68.885 / 74.361 | 55.779 / 54.327 | 13.658 / 13.794 |
+
+The GPU projection+brush process-median ranges overlap: 10.624-11.550 versus
+10.467-11.644 ms (64px Wash), 10.715-11.050 versus 10.464-11.821 ms (256px
+Buildup), and 12.897-15.002 versus 13.118-16.828 ms (F16 Wash). CPU-only
+timings also drifted. These measurements do not establish a substantial
+complete-stroke speedup; the deterministic gate test establishes the removed
+serialization and safe bounded reuse. Input and canvas display are excluded.
+All six benchmark processes passed their parity/path/Undo checks (five cases
+each). Logs: `%TEMP%/solstice-gpu-453-{before,after}-{1,2,3}.txt`.
+
+Image, GPU and UI DLLs were installed while the application was closed;
+build/install SHA256 hashes match. Log: `%TEMP%/solstice-gpu-453-install.log`.
+No application preferences changed.
+
+The user confirmed the real-app check passed for this bundle. Large mirrored
+Alpha Lock tuning remains explicitly deferred.
+
+### Batched CPU filter and FFT readback (phases 4.54-4.55)
+
+`KisFilter::process` now calls `KisGpuTileAccess::syncToCpu` for the source's
+`neededRect` before composition-source conversion or CPU filter iteration.
+When a temporary device is copied back, it also batches the destination's
+`applyRect` before the selected/different-destination copy. These calls reuse
+the existing bounded tile download hook and its failure fallback; they are
+no-ops for devices without GPU state. Filter math, color conversion,
+selection compositing and scheduling are unchanged.
+
+`KisConvolutionWorkerFFT::fillCacheFromDevice` separately batches its actual
+read region. FFT padding can extend beyond a filter's declared `neededRect`.
+For repeat-border reads, the underlying horizontal iterator locks through
+`dataRect.right()`, even beyond the requested cache width. The hook therefore
+clamps the read start and vertical extent to the data bounds and includes
+that row tail; ordinary iterators use the cache rectangle directly. This
+does not expand the written region or change border arithmetic. Both hooks
+are compiled only with `HAVE_KRITA_GPU_ENGINE`.
+
+`KisGpuPaintDeviceTest::testCpuFiltersBatchReadback` adds 24 data rows:
+F32/F16 x actual Invert/Gaussian Blur x in-place/unselected,
+in-place/fractional-selection, separate-destination/fractional-selection x
+normal/injected failed download. Fixtures contain HDR pixels, negative
+coordinates, device offsets, partial tile boundaries, retained snapshots,
+exact Undo/Redo, and a subsequent upload. Finite image default bounds are
+required by Gaussian's repeat-border convolution: an initial fixture omitted
+them and triggered `kis_convolution_painter.cc:151`. That test fixture was
+fixed; no application assertion was suppressed.
+
+The selected fixture uses coverage 1..254. Existing F32 CPU Copy SIMD and
+scalar paths can differ in HDR clamping at exactly opaque coverage (255),
+depending on alignment and neighboring coverage. This was observed before
+the new hooks as well; it is not fixed by this transfer change. The fixture
+avoids that separate arithmetic discrepancy without relaxing tolerances.
+
+The final targeted validation-layer run passed all 26 cases including
+init/cleanup, with maximum CPU-reference error zero in all 24 data rows.
+Invert readback submissions decreased from 12 to 1 for in-place processing
+and from 24 to 2 for the separate selected destination. Final Gaussian
+in-place processing uses at most two submissions, including the FFT row
+tail. These are transfer counts for this fixture, not elapsed-time or input
+latency benchmarks. The initial baseline run was interrupted by the missing
+default-bounds fixture and is not a complete Gaussian baseline.
+Logs: `%TEMP%/solstice-gpu-454-before.txt` and
+`%TEMP%/solstice-gpu-454-targeted3.txt`.
+
+All six validation-layer regression suites passed in 51.84 s: convolution
+painter, filter, GPU paint device, projection, canvas upload and save.
+Log: `%TEMP%/solstice-gpu-454-regressions.log`. The image DLL was installed
+with the application closed and its build/install SHA256 hashes match.
+Install log: `%TEMP%/solstice-gpu-454-install.log`. Application preferences
+were not changed.
+
+Manual check: on RGBA16F and RGBA32F GPU-backed layers, apply Invert and
+Gaussian Blur with and without a feathered selection; check the preview,
+final result, Undo/Redo, subsequent painting and save/reopen.
+
+The user confirmed the real-app check passed on October 4, 2026.
+
+### Batched affine transform and layer-flip readback (phases 4.56-4.57)
+
+`kis_transform_worker.cc` now prefetches existing GPU tiles before CPU
+processing in `runPartial` and `mirror_impl`. Full `run` and the centered
+`mirrorX`/`mirrorY` helpers also prefetch before `exactBounds`, preventing
+their edge scan from downloading tiles individually. A repeated hook only
+inspects residency; already current CPU tiles are not downloaded again.
+All hooks use `KisGpuTileAccess::syncToCpu` under `HAVE_KRITA_GPU_ENGINE`.
+
+The full existing device extent is intentional: affine transforms finish
+with `purgeDefaultPixels`, whose existing CPU implementation inspects all
+allocated tiles even for partial transforms or a simple translation. The
+prefetch batches that existing read set instead of adding a new read region.
+Mirror operations process the device's content bounds. No interpolation,
+border behavior, position rounding, mirror axis, clearing, transaction or
+purge semantics changed. Canvas mirroring and mirror brush dabs are separate
+paths. Puppet Warp, perspective, cage and Liquify implementations are untouched.
+
+`testCpuTransformsBatchReadback` adds 44 rows: F32/F16 x 11 operations x
+normal/failed initial download. Operations include bicubic scaling, two-axis
+shear, 90-degree/arbitrary rotation, translation, both explicit half-pixel
+mirror axes, both centered flips, full `run` and partial-region scaling.
+The fixture uses negative coordinates, a device offset, HDR/translucent
+pixels and an asymmetric patch. Comparisons require exact bytes over a
+region larger than both input and output, identical bounds, retained
+snapshot bytes and exact Undo/Redo. The existing fallback retries individual
+downloads after an injected batch failure and must preserve all pixels.
+
+The initial seven-operation baseline issued 16 readback submissions per
+normal operation (four by four resident tiles). The transfer-count assertion
+failed before the hooks. The final 11-operation matrix requires exactly one
+submission in every normal row, and passed all 46 cases including
+init/cleanup, with exact CPU parity in all 44 data rows. This is a submission
+count measurement, not a claimed wall-clock speedup or input-latency result.
+Logs: `%TEMP%/solstice-gpu-456-before.txt` and
+`%TEMP%/solstice-gpu-456-targeted2.txt`.
+
+All five validation-layer regression suites passed in 56.85 s: transform
+worker, GPU paint device, projection, canvas upload and save. No Vulkan
+validation errors were reported. Log: `%TEMP%/solstice-gpu-456-regressions.log`.
+The image DLL was installed with the application closed; build/install
+SHA256 hashes match. Log: `%TEMP%/solstice-gpu-456-install.log`. Application
+preferences were not changed.
+
+Manual check: in RGBA16F and RGBA32F, paint on a GPU-backed layer, then scale,
+rotate, move and flip that layer horizontally/vertically. Check partial
+selections, Undo/Redo, subsequent painting and save/reopen. Use actual layer
+flips rather than canvas-only mirror view for this check.
+
+### Closed Transform Tool Undo investigation (October 4, 2026)
+
+The user initially reported that horizontal flip followed by 90-degree
+rotation and Ctrl+Z skipped the intermediate flipped image. A subsequent
+real-app check explicitly without Apply/Enter confirmed that one Ctrl+Z
+correctly restores the flipped image. This closes the reported Undo concern;
+it does not establish completion of every 4.56-4.57 manual check above.
+
+`KisGpuPaintDeviceTest::testTransformSequenceUndo` checks two committed
+transactions (flip, then rotate) in F32/F16, with/without GPU authority
+restored inside the second transaction. All four variants preserve both
+intermediate images through two Undo and two Redo operations. This does not
+exercise the active tool's internal history or Ctrl+Z routing. An early
+fixture performed an untracked GPU write between transactions, violating
+the memento sequence; it was corrected to write inside the second transaction.
+Final log: `%TEMP%/solstice-transform-undo-test4.txt` (no assertion warnings).
+
+Temporary `KRITA_TRANSFORM_UNDO_DEBUG` diagnostics recorded tool-local
+commits/restores, lifecycle and Windows module-relative call stacks. The
+first trace showed Undo arriving after stroke completion with empty tool
+history (`%TEMP%/solstice-transform-undo-debug-first.log`). The second trace
+(`%TEMP%/solstice-transform-undo-debug.log`) identified both completion stacks as
+`QWidgetWindow::handleMouseEvent -> QAbstractButton::mouseReleaseEvent ->
+QDialogButtonBoxPrivate::handleButtonClicked -> QDialogButtonBox::clicked ->
+KisToolTransform::slotApplyTransform -> endStroke`. Plugin relative PCs
+0x4249e/0x43c06 and Qt Widgets PCs 0x2109f2/0x13ec82 were resolved against
+the matching DLLs using `llvm-symbolizer --relative-address`. These are Apply
+button mouse events, not GPU waits or Ctrl+Z completing the stroke.
+
+The trace also starts the next rotation with the previous negative X scale:
+the established `tryFetchArgsFromCommandAndUndo` continuation path reuses and
+overrides the previous transform command, explaining why document Undo then
+removes the combined transform. The later explicit no-Apply check confirms
+that tool-local Undo retains the intermediate state. No GPU regression or
+required history behavior change was established. Temporary diagnostics have
+been removed; the sequence regression test remains. Application preferences
+and `kritarc` were not changed.
+
+The plugin without diagnostics was rebuilt and installed with the application
+closed; build/install SHA256 hashes match. Logs:
+`%TEMP%/solstice-transform-undo-clean-{build,install}.log`.
 
 ## Risks and open questions
 
@@ -2876,7 +3548,8 @@ reopen the explicitly deferred large mirrored Alpha Lock investigation.
   have no shared budget. Voluntary tile eviction downloads are now batched;
   disk swap still uses the single-tile hook.
 - Individual iterator reads of stale tiles still download synchronously per
-  tile; bulk `readBytes` and planar reads now batch automatically. Other large
+  tile; bulk `readBytes`, planar reads, CPU filter inputs/destinations and FFT
+  cache reads now batch automatically. Other large
   iterator-based consumers should call `KisGpuTileAccess::syncToCpu` first.
   Host-cached staging brought the tested CPU-to-GPU transition close to
   resident update time; other GPUs/drivers and larger documents still need
@@ -2886,16 +3559,20 @@ reopen the explicitly deferred large mirrored Alpha Lock investigation.
   `KisGpuTileFill` reuse one host-visible table buffer, so callers must wait
   between recordings (the projection compositor keeps one per work context);
   replace with a per-submission ring before overlapping submissions.
-- Projection work contexts wait before reusing their command/table buffers;
-  successful projection submissions already return without an end wait.
-  The bounded three-slot staging ring added in 4.23-4.25 is specific to brushes.
+- Projection work contexts prefer completed buffers and permit three pending
+  serial submissions; they still wait under pressure before reusing busy
+  command/table buffers. Successful submissions return without an end wait.
+  The separate bounded upload ring added in 4.23-4.25 is specific to brushes.
 - Unsupported in the GPU projection (CPU fallback): layer styles, blend modes
   outside the list above, layers whose offset is
   not a multiple of 64 relative to the projection, color space mismatches.
 - The whole-stack upload measured 55 GB/s with one `vkCmdCopyBuffer` region per
   tile; evaluate a compute scatter from ReBAR memory for document load.
 - Additional blend modes still need CPU parity coverage. F16 projection
-  already rounds after each layer and is tested; F16 brush compositing remains
-  on the CPU and needs separate per-dab rounding work.
+  already rounds after each layer and is tested. F16 Normal/Erase dabs now
+  have per-dab rounding; F16 Alpha Darken and basic generic Buildup/Wash now
+  have separate arithmetic and stroke coverage. Extended F16 major modes
+  (Soft Light SVG, Color Dodge/Burn and HSY color modes) now have it too;
+  the remaining extended brush modes still need it before enabling F16.
 - Python scripting (`libkis`) and file export need CPU pixel access; every such
   call becomes a synchronous download.

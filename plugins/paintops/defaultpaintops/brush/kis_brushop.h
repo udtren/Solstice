@@ -65,7 +65,7 @@ protected:
     UpdateSharedStateSP m_updateSharedState;
 
 private:
-    bool m_isRgba32fImage = false;
+    bool m_isRgbaFloatImage = false;
     KisAirbrushOptionData m_airbrushData;
 
     KisSizeOption m_sizeOption;

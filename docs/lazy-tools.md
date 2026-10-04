@@ -46,7 +46,10 @@ foreground-color slots and these default-enabled options:
   `Win+Shift+C`. It samples the pixel under the cursor, including from another
   application, and makes it Krita's foreground color.
 - **Disable top menu shortcuts** removes mnemonic activation from Krita's top
-  menu labels. Disable the option to restore normal menu mnemonics.
+  menu labels from startup, including menus added or rebuilt later. This frees
+  combinations such as `Alt+E` for assigned actions such as TempBrush without
+  first opening Settings. Menus remain accessible by mouse; shortcuts inside
+  an open menu are unchanged. Disable the option to restore menu mnemonics.
 
 Color Pick from Anywhere is available only on Windows.
 

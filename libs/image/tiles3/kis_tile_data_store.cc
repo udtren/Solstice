@@ -190,6 +190,13 @@ KisTileData *KisTileDataStore::duplicateTileData(KisTileData *rhs)
     return td;
 }
 
+KisTileData *KisTileDataStore::duplicateCpuSnapshot(const KisTileData *rhs)
+{
+    KisTileData *td = new KisTileData(*rhs);
+    registerTileData(td);
+    return td;
+}
+
 void KisTileDataStore::freeTileData(KisTileData *td)
 {
     Q_ASSERT(td->m_store == this);

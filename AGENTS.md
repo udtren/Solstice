@@ -84,6 +84,8 @@ Read these before adding or updating any feature:
   `docs/agent/brush-stroke-preview.md`
 - Solstice visual branding checklist:
   `docs/agent/solstice-visual-branding-todo.md`
+- UI modernization plan (not implemented):
+  `docs/agent/ui-modernization-plan.md`
 - GitHub Actions Windows trial builds: `docs/agent/github-actions.md`
 
 Before changing a listed feature, read its complete agent document. When a new

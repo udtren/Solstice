@@ -100,12 +100,23 @@ float finiteSDRDivision(float numerator, float denominator)
 float colorDodge(float s, float d)
 {
     if (s == 1.0) return d <= 0.0 ? 0.0 : 1.0;
+#ifdef TILE_F16
+    // Arithmetic::inv<half> rounds before the division.
+    return clamp(finiteSDRDivision(d, float(float16_t(1.0 - s))), 0.0, 1.0);
+#else
     return clamp(finiteSDRDivision(d, 1.0 - s), 0.0, 1.0);
+#endif
 }
 
 float colorBurn(float s, float d)
 {
     if (d == 1.0) return 1.0;
+#ifdef TILE_F16
+    // Both inv(dst) and clampToSDR<half>(quotient) return half values.
+    float value = float(float16_t(1.0 - d)) / s;
+    if (isinf(value) || isnan(value)) return 0.0;
+    return 1.0 - float(float16_t(clamp(value, 0.0, 1.0)));
+#else
     precise float numerator = 1.0 - d;
     precise float value = numerator / s;
     if (isinf(value) || isnan(value)) return 0.0;
@@ -113,6 +124,7 @@ float colorBurn(float s, float d)
     float residual = fma(-value, s, numerator);
     value = fma(residual, 1.0 / s, value);
     return 1.0 - clamp(value, 0.0, 1.0);
+#endif
 }
 
 float blendChannel(uint op, float s, float d)
@@ -141,7 +153,12 @@ float blendChannel(uint op, float s, float d)
     case OpHardLight:
         return hardLight(s, d);
     case OpExclusion: {
+#ifdef TILE_F16
+        // CFExclusion stores Arithmetic::mul<half> before widening to double.
+        const float x = float(float16_t(s * d));
+#else
         const float x = s * d;
+#endif
         return d + s - (x + x);
     }
     case OpLinearBurn:

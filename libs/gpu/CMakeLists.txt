@@ -36,6 +36,12 @@ kis_gpu_add_shader(kritagpu_SHADERS paint_dabs shaders/paint_dabs.comp DEFINES B
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS paint_dabs_extended shaders/paint_dabs.comp
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
+kis_gpu_add_shader(kritagpu_SHADERS paint_dabs_rgba16f shaders/paint_dabs.comp DEFINES TILE_F16 BASIC_BLEND_ONLY
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_half_brush.glsl)
+kis_gpu_add_shader(kritagpu_SHADERS paint_dabs_extended_rgba16f shaders/paint_dabs.comp DEFINES TILE_F16
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_half_brush.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_over_stack_rgba32f shaders/composite_over_stack.comp)
 kis_gpu_add_shader(kritagpu_SHADERS composite_over_stack_rgba16f shaders/composite_over_stack.comp DEFINES TILE_F16)
 kis_gpu_add_shader(kritagpu_SHADERS fill_tiles_rgba32f shaders/fill_tiles.comp)
@@ -43,11 +49,13 @@ kis_gpu_add_shader(kritagpu_SHADERS fill_tiles_rgba16f shaders/fill_tiles.comp D
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba32f shaders/composite_layers.comp DEFINES BASIC_BLEND_ONLY
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba16f shaders/composite_layers.comp DEFINES TILE_F16 BASIC_BLEND_ONLY
-    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_half_brush.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_extended_rgba32f shaders/composite_layers.comp
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_extended_rgba16f shaders/composite_layers.comp DEFINES TILE_F16
-    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_half_brush.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f32 shaders/canvas_patches.comp)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f16 shaders/canvas_patches.comp DEFINES DST_F16)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f16_f32 shaders/canvas_patches.comp DEFINES SRC_F16)

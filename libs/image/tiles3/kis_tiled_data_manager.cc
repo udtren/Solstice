@@ -330,11 +330,28 @@ void KisTiledDataManager::clear(QRect clearRect, const quint8 *clearPixel)
         clearRect &= m_extentManager.extent();
     }
 
+    if (clearRect.isEmpty())
+        return;
+
     qint32 firstColumn = xToCol(clearRect.left());
     qint32 lastColumn = xToCol(clearRect.right());
 
     qint32 firstRow = yToRow(clearRect.top());
     qint32 lastRow = yToRow(clearRect.bottom());
+
+    // Whole tiles are replaced below without reading their old pixels. Only
+    // partial edge tiles need CPU data; batch those downloads before the
+    // per-tile write locks (e.g. clearing a GPU projection for a new stroke).
+    if (pixelSize == 8 || pixelSize == 16) {
+        if (clearRect.top() != firstRow * KisTileData::HEIGHT)
+            KisTileGpuHooks::prepareCpuRead(this, QRect(clearRect.left(), clearRect.top(), clearRect.width(), 1));
+        if (clearRect.bottom() != (lastRow + 1) * KisTileData::HEIGHT - 1)
+            KisTileGpuHooks::prepareCpuRead(this, QRect(clearRect.left(), clearRect.bottom(), clearRect.width(), 1));
+        if (clearRect.left() != firstColumn * KisTileData::WIDTH)
+            KisTileGpuHooks::prepareCpuRead(this, QRect(clearRect.left(), clearRect.top(), 1, clearRect.height()));
+        if (clearRect.right() != (lastColumn + 1) * KisTileData::WIDTH - 1)
+            KisTileGpuHooks::prepareCpuRead(this, QRect(clearRect.right(), clearRect.top(), 1, clearRect.height()));
+    }
 
     const quint32 rowStride = KisTileData::WIDTH * pixelSize;
 
@@ -466,10 +483,7 @@ void KisTiledDataManager::bitBltImpl(KisTiledDataManager *srcDM, const QRect &re
                      m_hashTable->deleteTile(column, row);
 
                  if (srcTileExists || !defaultPixelsCoincide) {
-                     srcTile->lockForRead();
-                     KisTileData *td = srcTile->tileData();
-                     KisTileSP clonedTile = KisTileSP(new KisTile(column, row, td, m_mementoManager));
-                     srcTile->unlockForRead();
+                     KisTileSP clonedTile = srcTile->cloneShared(column, row, m_mementoManager);
 
                      m_hashTable->addTile(clonedTile);
 
@@ -540,10 +554,7 @@ void KisTiledDataManager::bitBltRoughImpl(KisTiledDataManager *srcDM, const QRec
                 m_hashTable->deleteTile(column, row);
 
             if (srcTileExists || !defaultPixelsCoincide) {
-                srcTile->lockForRead();
-                KisTileData *td = srcTile->tileData();
-                KisTileSP clonedTile = KisTileSP(new KisTile(column, row, td, m_mementoManager));
-                srcTile->unlockForRead();
+                KisTileSP clonedTile = srcTile->cloneShared(column, row, m_mementoManager);
 
                 m_hashTable->addTile(clonedTile);
 

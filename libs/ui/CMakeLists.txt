@@ -166,6 +166,7 @@ set(kritaui_LIB_SRCS
     KisTextPropertiesManager.cpp
     KisLongPressEventFilter.cpp
     KisSolsticeLazyTools.cpp
+    utils/KisMenuMnemonicFilter.cpp
     KisGpuEngineUi.cpp
 
     opengl/kis_opengl.cpp

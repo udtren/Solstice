@@ -31,7 +31,6 @@
 namespace
 {
 constexpr int TileSize = 64;
-const quint8 ZeroPixel[16] = {};
 
 int floorDiv(int value, int divisor)
 {
@@ -255,15 +254,13 @@ bool KisGpuTileAccess::prepareImpl(KisGpuCommandList &commands, QString *errorMe
                         // overwrite). The CPU buffer still gets the source's
                         // CPU content: never a meaningless buffer, even if the
                         // GPU copy is lost later.
-                        KisTileData *clone =
-                            KisTileDataStore::instance()->createDefaultTileData(d->pixelSize, ZeroPixel);
-                        const size_t bytes = size_t(d->pixelSize) * TileSize * TileSize;
+                        KisTileData *clone;
                         if (sourceState && sourceState->slot != KisTileGpuState::InvalidSlot) {
                             // The pin prevents eviction and disk swapping.
-                            std::memcpy(clone->data(), source->data(), bytes);
+                            clone = KisTileDataStore::instance()->duplicateCpuSnapshot(source);
                         } else {
                             source->blockSwapping();
-                            std::memcpy(clone->data(), source->data(), bytes);
+                            clone = KisTileDataStore::instance()->duplicateCpuSnapshot(source);
                             source->unblockSwapping();
                         }
                         return clone;

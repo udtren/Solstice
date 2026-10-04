@@ -59,7 +59,7 @@ public:
         Count
     };
     struct Dab {
-        const float *pixels;
+        const void *pixels; // RGBA32F, or RGBA16F when pixelSize is 8
         QPoint origin;
         QSize size;
         float opacity;
@@ -75,12 +75,16 @@ public:
     ~KisGpuDabCompositor();
     static std::unique_ptr<KisGpuDabCompositor> create(KisGpuContext &context, QString *error = nullptr);
     /// Required reusable allocation, rounded to 256 KiB; zero on invalid/oversized input.
-    static quint64
-    requiredUploadBytes(int tileCount, const QVector<Dab> &dabs, const Mask *mask = nullptr, QString *error = nullptr);
+    static quint64 requiredUploadBytes(int tileCount,
+                                       const QVector<Dab> &dabs,
+                                       const Mask *mask = nullptr,
+                                       QString *error = nullptr,
+                                       int pixelSize = 16);
     quint64 uploadBytes() const;
     /// Caller must first wait for the last recording to finish.
     void releaseUpload();
-    /// RGBA32F only. Wait for the previous recording before reusing this object.
+    /// RGBA32F modes, or the supported major RGBA16F modes. Wait before reusing this object.
+    /// F16 channelMask bit 4 distinguishes explicit flags from an empty set.
     /// The host-visible source/table/mask buffer is capped at 64 MiB.
     /// Optional origins select sparse, distinct destination tiles instead of a
     /// rectangular grid. There must be exactly one document origin per address.
@@ -93,13 +97,16 @@ public:
                 const Mask *mask = nullptr,
                 quint32 channelMask = 0xf,
                 QString *error = nullptr,
-                const QVector<QPoint> &tileOrigins = {});
+                const QVector<QPoint> &tileOrigins = {},
+                int pixelSize = 16);
 
 private:
     explicit KisGpuDabCompositor(KisGpuContext &context);
     KisGpuContext &m_context;
     std::unique_ptr<KisGpuComputePipeline> m_pipeline;
     std::unique_ptr<KisGpuComputePipeline> m_extendedPipeline;
+    std::unique_ptr<KisGpuComputePipeline> m_halfPipeline;
+    std::unique_ptr<KisGpuComputePipeline> m_halfExtendedPipeline;
     std::unique_ptr<KisGpuBuffer> m_upload;
 };
 #endif

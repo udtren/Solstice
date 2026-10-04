@@ -8,16 +8,19 @@
 
 #include <QString>
 
-#include <KoCompositeOpRegistry.h>
-#include "kis_bookmarked_configuration_manager.h"
 #include "filter/kis_filter_configuration.h"
-#include "kis_processing_information.h"
-#include "kis_transaction.h"
+#include "kis_bookmarked_configuration_manager.h"
 #include "kis_paint_device.h"
+#include "kis_processing_information.h"
 #include "kis_selection.h"
+#include "kis_transaction.h"
 #include "kis_types.h"
-#include <kis_painter.h>
+#include <KoCompositeOpRegistry.h>
 #include <KoUpdater.h>
+#include <kis_painter.h>
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuTileAccess.h"
+#endif
 
 KisFilter::KisFilter(const KoID& _id, const KoID & category, const QString & entry)
     : KisBaseProcessor(_id, category, entry),
@@ -49,6 +52,12 @@ void KisFilter::process(const KisPaintDeviceSP src,
 
     if (applyRect.isEmpty()) return;
     QRect needRect = neededRect(applyRect, config, src->defaultBounds()->currentLevelOfDetail());
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // CPU filters and composition-source conversion use iterators. Download
+    // their input (including convolution margins) in batches before reading.
+    KisGpuTileAccess::syncToCpu(src, needRect);
+#endif
 
     KisPaintDeviceSP temporary;
     KisTransaction *transaction = 0;
@@ -84,6 +93,10 @@ void KisFilter::process(const KisPaintDeviceSP src,
 
     if(transaction) {
         delete transaction;
+#ifdef HAVE_KRITA_GPU_ENGINE
+        // A selected/different destination may still contain GPU-only pixels.
+        KisGpuTileAccess::syncToCpu(dst, applyRect);
+#endif
         KisPainter::copyAreaOptimized(applyRect.topLeft(), temporary, dst, applyRect, selection);
     }
 }

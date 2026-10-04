@@ -39,10 +39,17 @@ public:
         float opacity = 1.0f;
         bool alphaLocked = false;
         quint32 channelMask = 0xf;
+        bool halfBrush = false;
+        bool explicitChannelFlags = false;
     };
 
     /// Maps a Krita composite op id to a GPU blend op; false if unsupported.
     static bool blendOpForCompositeOp(const QString &compositeOpId, KisGpuBlendOp *op);
+
+    /// Test isolation: refuses while a context is leased; waits outside the pool lock.
+    static bool resetWorkContextsForTesting();
+    static int workContextCountForTesting();
+    static int leasedWorkContextCountForTesting();
 
     /**
      * Composites @p layers (bottom to top) onto @p projection inside @p rect.
@@ -52,10 +59,12 @@ public:
      * 64 pixels in both directions. Only tiles inside a layer's extent are
      * read, matching KisLayerProjectionPlane (which clips to the extent).
      *
-     * Does not wait for the GPU.
+     * Successful submissions return without waiting. Reusing a busy context
+     * may wait when all cached contexts are in flight.
      * Optional coverage is a tightly packed CPU snapshot in image coordinates,
      * copied before return. It supports one RGBA32F layer in a supported blend mode,
-     * including channel locks, and is limited to 16 MiB.
+     * or one RGBA16F layer in a supported brush mode, including channel locks,
+     * and is limited to 16 MiB.
      *
      * @return false on failure; the projection is then unchanged
      */

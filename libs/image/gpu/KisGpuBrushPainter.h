@@ -38,7 +38,7 @@ public:
     static StagingStatistics stagingStatistics();
     /// Tests only: drain and release the staging ring while the backend is alive.
     static bool resetStagingForTesting();
-    /// Supported RGBA32F Wash blend modes with selection and CPU-compatible channel flags.
+    /// Supported RGBA32F/F16 Wash modes, with selection and CPU-compatible channel flags.
     /// Caller must provide tile-exclusive projection scheduling in a float image.
     /// False leaves the destination unchanged for CPU fallback; does not wait.
     static bool paintWashPreview(KisPainter *painter, KisPaintDeviceSP source, const QRect &rect);

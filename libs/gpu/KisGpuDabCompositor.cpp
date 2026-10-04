@@ -16,6 +16,12 @@ const quint32 Shader[] = {
 const quint32 ExtendedShader[] = {
 #include "paint_dabs_extended.spv.inc"
 };
+const quint32 HalfShader[] = {
+#include "paint_dabs_rgba16f.spv.inc"
+};
+const quint32 HalfExtendedShader[] = {
+#include "paint_dabs_extended_rgba16f.spv.inc"
+};
 struct DabRecord {
     VkDeviceAddress pixels;
     qint32 x, y, width, height;
@@ -45,30 +51,32 @@ VkDeviceSize aligned(VkDeviceSize bytes)
 struct UploadLayout {
     VkDeviceSize tableOffset = 0, maskOffset = 0, maskBytes = 0, capacity = 0;
     QVector<VkDeviceSize> offsets;
-    QHash<const float *, VkDeviceSize> sourceOffsets;
+    QHash<const void *, VkDeviceSize> sourceOffsets;
 };
 bool planUpload(int tileCount,
                 const QVector<KisGpuDabCompositor::Dab> &dabs,
                 const KisGpuDabCompositor::Mask *mask,
                 UploadLayout &layout,
-                QString *error)
+                QString *error,
+                int pixelSize)
 {
-    if (tileCount <= 0 || tileCount > 65535 || dabs.isEmpty() || dabs.size() > 65536)
+    if ((pixelSize != 8 && pixelSize != 16) || tileCount <= 0 || tileCount > 65535 || dabs.isEmpty()
+        || dabs.size() > 65536)
         return false;
     layout.tableOffset = aligned(VkDeviceSize(tileCount) * sizeof(TileRecord));
     VkDeviceSize bytes = layout.tableOffset + VkDeviceSize(dabs.size()) * sizeof(DabRecord);
     // Consecutive identical dabs commonly share their fixed paint device.
-    QHash<const float *, QSize> sourceSizes;
+    QHash<const void *, QSize> sourceSizes;
     for (const auto &dab : dabs) {
         if (!dab.pixels || dab.size.isEmpty() || dab.mirrorFlags > 3
-            || quint64(dab.size.width()) * dab.size.height() > KisGpuDabCompositor::MaxUploadBytes / 16)
+            || quint64(dab.size.width()) * dab.size.height() > KisGpuDabCompositor::MaxUploadBytes / pixelSize)
             return false;
         if (sourceSizes.contains(dab.pixels) && sourceSizes.value(dab.pixels) != dab.size)
             return false;
         sourceSizes.insert(dab.pixels, dab.size);
         if (!layout.sourceOffsets.contains(dab.pixels)) {
             layout.sourceOffsets.insert(dab.pixels, bytes);
-            bytes += VkDeviceSize(dab.size.width()) * dab.size.height() * 16;
+            bytes += aligned(VkDeviceSize(dab.size.width()) * dab.size.height() * pixelSize);
         }
         layout.offsets << layout.sourceOffsets.value(dab.pixels);
     }
@@ -97,11 +105,14 @@ KisGpuDabCompositor::KisGpuDabCompositor(KisGpuContext &context)
 {
 }
 KisGpuDabCompositor::~KisGpuDabCompositor() = default;
-quint64
-KisGpuDabCompositor::requiredUploadBytes(int tileCount, const QVector<Dab> &dabs, const Mask *mask, QString *error)
+quint64 KisGpuDabCompositor::requiredUploadBytes(int tileCount,
+                                                 const QVector<Dab> &dabs,
+                                                 const Mask *mask,
+                                                 QString *error,
+                                                 int pixelSize)
 {
     UploadLayout layout;
-    return planUpload(tileCount, dabs, mask, layout, error) ? layout.capacity : 0;
+    return planUpload(tileCount, dabs, mask, layout, error, pixelSize) ? layout.capacity : 0;
 }
 quint64 KisGpuDabCompositor::uploadBytes() const
 {
@@ -126,7 +137,8 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
                                  const Mask *mask,
                                  quint32 channelMask,
                                  QString *error,
-                                 const QVector<QPoint> &tileOrigins)
+                                 const QVector<QPoint> &tileOrigins,
+                                 int pixelSize)
 {
     if (tiles.isEmpty() || dabs.isEmpty())
         return true;
@@ -134,14 +146,35 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
         return false;
     if (!tileOrigins.isEmpty() && tileOrigins.size() != tiles.size())
         return false;
-    if (quint32(mode) >= quint32(CompositeMode::Count) || channelMask > 0xf
-        || ((mode == CompositeMode::AlphaDarkenHard || mode == CompositeMode::AlphaDarkenCreamy) && channelMask != 0xf))
+    const bool half = pixelSize == 8;
+    if (half && mode > CompositeMode::PinLight && mode != CompositeMode::SoftLightSvg
+        && mode != CompositeMode::ColorDodge && mode != CompositeMode::ColorBurn
+        && !(mode >= CompositeMode::Hue && mode <= CompositeMode::Luminosity))
+        return false;
+    if (quint32(mode) >= quint32(CompositeMode::Count) || channelMask > (half ? 0x1fu : 0xfu)
+        || ((mode == CompositeMode::AlphaDarkenHard || mode == CompositeMode::AlphaDarkenCreamy)
+            && (channelMask & 15) != 0xf))
         return false;
     UploadLayout layout;
-    if (!planUpload(tiles.size(), dabs, mask, layout, error))
+    if (!planUpload(tiles.size(), dabs, mask, layout, error, pixelSize))
         return false;
     const bool extended = mode >= CompositeMode::SoftLightSvg;
-    if (extended && !m_extendedPipeline) {
+    if (half && extended && !m_halfExtendedPipeline) {
+        m_halfExtendedPipeline = KisGpuComputePipeline::create(m_context,
+                                                               HalfExtendedShader,
+                                                               sizeof(HalfExtendedShader),
+                                                               sizeof(PushConstants),
+                                                               error);
+        if (!m_halfExtendedPipeline)
+            return false;
+    }
+    if (half && !extended && !m_halfPipeline) {
+        m_halfPipeline =
+            KisGpuComputePipeline::create(m_context, HalfShader, sizeof(HalfShader), sizeof(PushConstants), error);
+        if (!m_halfPipeline)
+            return false;
+    }
+    if (!half && extended && !m_extendedPipeline) {
         m_extendedPipeline = KisGpuComputePipeline::create(m_context,
                                                            ExtendedShader,
                                                            sizeof(ExtendedShader),
@@ -193,7 +226,7 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
                       clip.width(),
                       clip.height()};
         if (sourceOffsets.remove(dab.pixels)) {
-            std::memcpy(out + offsets[i], dab.pixels, size_t(dab.size.width()) * dab.size.height() * 16);
+            std::memcpy(out + offsets[i], dab.pixels, size_t(dab.size.width()) * dab.size.height() * pixelSize);
         }
     }
     PushConstants params{m_upload->deviceAddress(),
@@ -210,6 +243,9 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
                          mask ? mask->bounds.width() : 0,
                          mask ? mask->bounds.height() : 0};
     commands.computeBarrier();
-    (extended ? m_extendedPipeline : m_pipeline)->dispatch(commands.commandBuffer(), params, quint32(tiles.size()));
+    (half           ? (extended ? m_halfExtendedPipeline : m_halfPipeline)
+         : extended ? m_extendedPipeline
+                    : m_pipeline)
+        ->dispatch(commands.commandBuffer(), params, quint32(tiles.size()));
     return true;
 }

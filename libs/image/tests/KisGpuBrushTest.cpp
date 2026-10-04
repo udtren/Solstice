@@ -21,11 +21,14 @@
 #include <KoColorModelStandardIds.h>
 #include <KoColorSpaceRegistry.h>
 #include <KoCompositeOpRegistry.h>
+#include <KoRgbColorSpaceTraits.h>
 #include <QElapsedTimer>
 #include <QScopeGuard>
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <compositeops/KoAlphaDarkenParamsWrapper.h>
+#include <compositeops/KoCompositeOpAlphaDarken.h>
 #include <compositeops/KoOptimizedCompositeOpFactory.h>
 #include <condition_variable>
 #include <future>
@@ -134,6 +137,13 @@ const QStringList blendModes{COMPOSITE_MULT,         COMPOSITE_SCREEN,     COMPO
                              COMPOSITE_DODGE,        COMPOSITE_BURN,       COMPOSITE_COLOR,
                              COMPOSITE_HUE,          COMPOSITE_SATURATION, COMPOSITE_LUMINIZE};
 const QStringList channelModes = QStringList{COMPOSITE_OVER, COMPOSITE_ERASE} + blendModes;
+const QStringList halfBlendModes{COMPOSITE_MULT,         COMPOSITE_SCREEN,     COMPOSITE_ADD,
+                                 COMPOSITE_LINEAR_DODGE, COMPOSITE_SUBTRACT,   COMPOSITE_DARKEN,
+                                 COMPOSITE_LIGHTEN,      COMPOSITE_DIFF,       COMPOSITE_OVERLAY,
+                                 COMPOSITE_HARD_LIGHT,   COMPOSITE_EXCLUSION,  COMPOSITE_LINEAR_BURN,
+                                 COMPOSITE_LINEAR_LIGHT, COMPOSITE_PIN_LIGHT,  COMPOSITE_SOFT_LIGHT_SVG,
+                                 COMPOSITE_DODGE,        COMPOSITE_BURN,       COMPOSITE_COLOR,
+                                 COMPOSITE_HUE,          COMPOSITE_SATURATION, COMPOSITE_LUMINIZE};
 const QStringList dabModes = channelModes + QStringList{COMPOSITE_ALPHA_DARKEN};
 class PreviewPaintLayer : public KisPaintLayer
 {
@@ -141,17 +151,31 @@ public:
     using KisPaintLayer::copyOriginalToProjection;
     using KisPaintLayer::KisPaintLayer;
 };
-const KoColorSpace *space()
+const KoColorSpace *space(bool half = false)
 {
-    return KoColorSpaceRegistry::instance()->colorSpace(RGBAColorModelID.id(), Float32BitsColorDepthID.id(), QString());
+    return KoColorSpaceRegistry::instance()->colorSpace(RGBAColorModelID.id(),
+                                                        half ? Float16BitsColorDepthID.id()
+                                                             : Float32BitsColorDepthID.id(),
+                                                        QString());
 }
 std::vector<float> pixels(KisPaintDeviceSP device, QRect rect)
 {
     std::vector<float> result(size_t(rect.width()) * rect.height() * 4);
-    device->readBytes(reinterpret_cast<quint8 *>(result.data()), rect);
+    if (device->pixelSize() == 8) {
+        QByteArray raw(rect.width() * rect.height() * 8, Qt::Uninitialized);
+        device->readBytes(reinterpret_cast<quint8 *>(raw.data()), rect);
+        device->colorSpace()->convertPixelsTo(reinterpret_cast<const quint8 *>(raw.constData()),
+                                              reinterpret_cast<quint8 *>(result.data()),
+                                              space(),
+                                              rect.width() * rect.height(),
+                                              KoColorConversionTransformation::internalRenderingIntent(),
+                                              KoColorConversionTransformation::internalConversionFlags());
+    } else {
+        device->readBytes(reinterpret_cast<quint8 *>(result.data()), rect);
+    }
     return result;
 }
-QList<KisRenderedDab> makeDabs(int count, int size)
+QList<KisRenderedDab> makeDabs(int count, int size, bool half = false)
 {
     std::mt19937 random(15);
     std::uniform_real_distribution<float> unit(0, 1);
@@ -167,6 +191,8 @@ QList<KisRenderedDab> makeDabs(int count, int size)
             data[4 * p + 2] = unit(random);
             data[4 * p + 3] = p % 7 == 0 ? 0 : (p % 11 == 0 ? 1 : unit(random));
         }
+        if (half)
+            device->convertTo(space(true));
         KisRenderedDab dab(device);
         dab.offset = QPoint(-75 + i * 7, -21 + i * 3);
         dab.opacity = i % 5 == 0 ? 1 : 0.37;
@@ -217,29 +243,252 @@ private Q_SLOTS:
             QCOMPARE(backend->context().validationErrorCount(), 0);
         }
     }
+    void testProjectionWorkContexts_data()
+    {
+        QTest::addColumn<bool>("half");
+        QTest::addColumn<bool>("alphaLocked");
+        QTest::addColumn<int>("finish");
+        for (bool half : {false, true})
+            for (bool alphaLocked : {false, true})
+                for (int finish = 0; finish < 3; ++finish)
+                    QTest::newRow(qPrintable(QString("f16%1-lock%2-finish%3").arg(half).arg(alphaLocked).arg(finish)))
+                        << half << alphaLocked << finish;
+    }
+    void testProjectionWorkContexts()
+    {
+        QFETCH(bool, half);
+        QFETCH(bool, alphaLocked);
+        QFETCH(int, finish);
+        QVERIFY(KisGpuProjectionCompositor::resetWorkContextsForTesting());
+        QCOMPARE(KisGpuProjectionCompositor::workContextCountForTesting(), 0);
+        auto &context = KisGpuTileBackend::instance()->context();
+        context.waitIdle();
+        const auto *cs = space(half);
+        const QRect bounds(-75, -21, 129, 97);
+        KoColor background(cs);
+        cs->fromNormalisedChannelsValue(background.data(), {1.2f, -0.2f, 0.7f, 0.6f});
+        KisPaintDeviceSP cpu = new KisPaintDevice(cs);
+        cpu->fill(bounds, background);
+        KisPaintDeviceSP gpu = new KisPaintDevice(*cpu), snapshot = new KisPaintDevice(*gpu);
+        const auto before = pixels(cpu, bounds);
+        KisTransaction transaction(gpu);
+        const QString ids[]{COMPOSITE_MULT, COMPOSITE_SCREEN, COMPOSITE_OVERLAY};
+        const KisGpuBlendOp ops[]{KisGpuBlendOp::Multiply, KisGpuBlendOp::Screen, KisGpuBlendOp::Overlay};
+        auto paintPass = [&](int index, bool failSubmit) {
+            KisPaintDeviceSP source = new KisPaintDevice(cs);
+            KoColor color(cs);
+            cs->fromNormalisedChannelsValue(color.data(), {0.2f + index * 0.15f, 0.7f, 0.4f, 0.8f});
+            source->fill(bounds, color);
+            QByteArray coverage(bounds.width() * bounds.height(), Qt::Uninitialized);
+            for (int i = 0; i < coverage.size(); ++i)
+                coverage[i] = char((17 * i + 19 * index) % 256);
+            KisSelectionSP selection = new KisSelection();
+            selection->pixelSelection()->writeBytes(reinterpret_cast<const quint8 *>(coverage.constData()), bounds);
+            const quint8 opacity = 80 + index * 31;
+            auto paintCpu = [&](KisPaintDeviceSP device) {
+                KisPainter painter(device);
+                painter.setCompositeOpId(ids[index % 3]);
+                painter.setOpacityU8(opacity);
+                painter.setSelection(selection);
+                QBitArray channels(4, true);
+                channels.setBit(3, !alphaLocked);
+                painter.setChannelFlags(channels);
+                painter.bitBlt(bounds.topLeft(), source, bounds);
+            };
+            paintCpu(cpu);
+            KisGpuProjectionCompositor::Layer layer{source, ops[index % 3], opacity / 255.0f};
+            layer.channelMask = alphaLocked ? 7 : 15;
+            KisGpuLayerCompositor::Mask mask{reinterpret_cast<const quint8 *>(coverage.constData()), bounds};
+            if (failSubmit)
+                context.injectSubmitFailuresForTesting(1);
+            const bool ok = KisGpuProjectionCompositor::composite(gpu, bounds, {layer}, nullptr, &mask);
+            if (failSubmit && !ok)
+                paintCpu(gpu); // replay exactly once after the failed submission
+            return failSubmit ? !ok : ok;
+        };
+        QueueGate gate(context);
+        QVERIFY(gate.isValid());
+        const auto completed = context.completedValue();
+        for (int i = 0; i < 3; ++i) {
+            QVERIFY(paintPass(i, false));
+            QVERIFY2(!gate.timedOut(), "projection waited instead of retaining separate commands/tables/masks");
+            QCOMPARE(context.completedValue(), completed);
+            QCOMPARE(KisGpuProjectionCompositor::workContextCountForTesting(), i + 1);
+            // Sources, layer descriptors and mask storage have already been destroyed.
+        }
+        std::vector<float> after;
+        std::promise<void> entered;
+        auto started = entered.get_future();
+        if (finish) {
+            auto fourth = std::async(std::launch::async, [&]() {
+                entered.set_value();
+                return paintPass(3, finish == 2);
+            });
+            started.wait();
+            const bool waiting = fourth.wait_for(std::chrono::milliseconds(30)) == std::future_status::timeout;
+            // These take the pool mutex: a waiting lease must not hold it.
+            QElapsedTimer leaseTimer;
+            leaseTimer.start();
+            while (!KisGpuProjectionCompositor::leasedWorkContextCountForTesting() && leaseTimer.elapsed() < 2000)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            const bool leased = KisGpuProjectionCompositor::leasedWorkContextCountForTesting() == 1;
+            const int count = KisGpuProjectionCompositor::workContextCountForTesting();
+            const bool reset = leased ? KisGpuProjectionCompositor::resetWorkContextsForTesting() : true;
+            QVERIFY(gate.open());
+            QVERIFY(fourth.get());
+            QVERIFY(waiting);
+            QVERIFY(leased);
+            QCOMPARE(count, 3);
+            QVERIFY(!reset);
+            after = pixels(gpu, bounds);
+        } else {
+            auto reader = std::async(std::launch::async, [&]() {
+                entered.set_value();
+                return pixels(gpu, bounds);
+            });
+            started.wait();
+            const bool waiting = reader.wait_for(std::chrono::milliseconds(30)) == std::future_status::timeout;
+            QVERIFY(gate.open());
+            after = reader.get();
+            QVERIFY(waiting);
+        }
+        QVERIFY(!gate.timedOut());
+        QVERIFY(difference(pixels(cpu, bounds), after, false) <= (half ? 0.004f : 2e-5f));
+        QCOMPARE(pixels(snapshot, bounds), before);
+        QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+        command->redo();
+        command->undo();
+        QCOMPARE(pixels(gpu, bounds), before);
+        command->redo();
+        QCOMPARE(pixels(gpu, bounds), after);
+        // Completed work reuses the cache without allocating more contexts.
+        QVERIFY(paintPass(4, false));
+        QCOMPARE(KisGpuProjectionCompositor::workContextCountForTesting(), 3);
+        QVERIFY(difference(pixels(cpu, bounds), pixels(gpu, bounds), false) <= (half ? 0.004f : 2e-5f));
+        QVERIFY(KisGpuProjectionCompositor::resetWorkContextsForTesting());
+        QCOMPARE(KisGpuProjectionCompositor::workContextCountForTesting(), 0);
+    }
     void testPendingBatches_data()
     {
         QTest::addColumn<QString>("mode");
         QTest::addColumn<bool>("wrapRing");
+        QTest::addColumn<bool>("half");
         for (const auto &mode : {COMPOSITE_OVER, COMPOSITE_ALPHA_DARKEN, COMPOSITE_ERASE, COMPOSITE_MULT})
             for (bool wrapRing : {false, true})
-                QTest::newRow(qPrintable(mode + (wrapRing ? "-reuse" : "-read"))) << mode << wrapRing;
+                QTest::newRow(qPrintable(mode + (wrapRing ? "-reuse" : "-read"))) << mode << wrapRing << false;
+        for (const auto &mode : {COMPOSITE_OVER,
+                                 COMPOSITE_ERASE,
+                                 COMPOSITE_ALPHA_DARKEN,
+                                 COMPOSITE_MULT,
+                                 COMPOSITE_SCREEN,
+                                 COMPOSITE_OVERLAY,
+                                 COMPOSITE_SOFT_LIGHT_SVG,
+                                 COMPOSITE_DODGE,
+                                 COMPOSITE_COLOR})
+            for (bool wrapRing : {false, true})
+                QTest::newRow(qPrintable(mode + (wrapRing ? "-f16-reuse" : "-f16-read"))) << mode << wrapRing << true;
+    }
+    void testHalfDabs_data()
+    {
+        QTest::addColumn<QString>("mode");
+        QTest::addColumn<int>("channels");
+        QTest::addColumn<bool>("masked");
+        for (const auto &mode : QStringList{COMPOSITE_OVER, COMPOSITE_ERASE} + halfBlendModes)
+            for (int channels = -1; channels < 16; ++channels)
+                for (bool masked : {false, true})
+                    QTest::newRow(qPrintable(QString("%1-channels%2-mask%3").arg(mode).arg(channels).arg(masked)))
+                        << mode << channels << masked;
+    }
+    void testHalfDabs()
+    {
+        QFETCH(QString, mode);
+        QFETCH(int, channels);
+        QFETCH(bool, masked);
+        const auto *cs = space(true);
+        QVERIFY(cs);
+        const QRect bounds(-128, -64, 256, 192);
+        auto read = [&](KisPaintDeviceSP device) {
+            return pixels(device, bounds);
+        };
+        KisPaintDeviceSP cpu = new KisPaintDevice(cs);
+        KoColor background(cs);
+        cs->fromNormalisedChannelsValue(background.data(), {1.2f, -0.2f, 0.7f, 0.6f});
+        cpu->fill(bounds, background);
+        const float alphas[] = {0.001f, 0.0021f, 0.998f, 1.0f};
+        for (int i = 0; i < 4; ++i) {
+            cs->fromNormalisedChannelsValue(background.data(), {1.2f, -0.2f, 0.7f, alphas[i]});
+            cpu->fill(QRect(bounds.x() + i * 64, bounds.y(), 64, bounds.height()), background);
+        }
+        cs->fromNormalisedChannelsValue(background.data(), {0.3f, 0.8f, -0.1f, 0.0f});
+        cpu->fill(bounds.adjusted(21, 17, -73, -41), background);
+        KisPaintDeviceSP gpu = new KisPaintDevice(*cpu), shared = new KisPaintDevice(*gpu);
+        const auto before = read(cpu);
+        KisPainter cp(cpu), gp(gpu);
+        cp.setCompositeOpId(mode);
+        gp.setCompositeOpId(mode);
+        if (channels >= 0) {
+            QBitArray flags(4);
+            for (int i = 0; i < 4; ++i)
+                flags.setBit(i, channels & (1 << i));
+            cp.setChannelFlags(flags);
+            gp.setChannelFlags(flags);
+        }
+        if (masked) {
+            KisSelectionSP selection = new KisSelection();
+            QByteArray mask(bounds.width() * bounds.height(), Qt::Uninitialized);
+            for (int i = 0; i < mask.size(); ++i)
+                mask[i] = char(i % 256);
+            selection->pixelSelection()->writeBytes(reinterpret_cast<const quint8 *>(mask.constData()), bounds);
+            cp.setSelection(selection);
+            gp.setSelection(selection);
+        }
+        auto dabs = makeDabs(24, 73, true);
+        KisTransaction transaction(gpu);
+        const auto count = KisGpuBrushPainter::batchCount();
+        cp.bltFixed(bounds, dabs);
+        const QVector<QRect> clips{bounds};
+        QVERIFY(KisGpuBrushPainter::paint(&gp, dabs, &clips));
+        QCOMPARE(KisGpuBrushPainter::batchCount(), count + 1);
+        const auto after = read(gpu);
+        const float error = difference(read(cpu), after, false);
+        qInfo() << "F16 dab maximum error" << error;
+        // One half ULP at 1.0 for repeated HDR dabs; include hidden RGB.
+        QVERIFY2(error <= 1.0f / 1024, qPrintable(QString::number(error)));
+        QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+        command->redo();
+        QCOMPARE(read(shared), before);
+        command->undo();
+        QCOMPARE(read(gpu), before);
+        command->redo();
+        QCOMPARE(read(gpu), after);
+        // A refused GPU write can be replayed once on the CPU, without losing
+        // the original content or interpreting half pixels as float pixels.
+        KisGpuTileBackend::instance()->context().injectSubmitFailuresForTesting(1);
+        QVERIFY(!KisGpuBrushPainter::paint(&gp, dabs, &clips));
+        QCOMPARE(read(gpu), after);
+        cp.bltFixed(bounds, dabs);
+        gp.bltFixed(bounds, dabs);
+        QVERIFY(difference(read(cpu), read(gpu), false) <= 1.0f / 1024);
+        gp.setCompositeOpId(COMPOSITE_DIVIDE);
+        QVERIFY(!KisGpuBrushPainter::supports(&gp));
+        gp.setCompositeOpId(COMPOSITE_ALPHA_DARKEN);
+        gp.setChannelFlags(QBitArray(4, false));
+        QVERIFY(!KisGpuBrushPainter::supports(&gp));
     }
     void testPendingBatches()
     {
         QFETCH(QString, mode);
         QFETCH(bool, wrapRing);
+        QFETCH(bool, half);
+        const float tolerance = half ? 1.0f / 1024 : 2e-5f;
         QVERIFY(KisGpuBrushPainter::resetStagingForTesting());
         auto &context = KisGpuTileBackend::instance()->context();
         context.waitIdle();
         const QRect bounds(-128, -64, 256, 192);
-        KisPaintDeviceSP cpu = new KisPaintDevice(space());
-        const float background[] = {1.2f, -0.2f, 0.7f, 0.6f};
-        cpu->fill(bounds.x(),
-                  bounds.y(),
-                  bounds.width(),
-                  bounds.height(),
-                  reinterpret_cast<const quint8 *>(background));
+        KisPaintDeviceSP cpu = new KisPaintDevice(space(half));
+        KoColor background(space(half));
+        space(half)->fromNormalisedChannelsValue(background.data(), {1.2f, -0.2f, 0.7f, 0.6f});
+        cpu->fill(bounds, background);
         KisPaintDeviceSP gpu = new KisPaintDevice(*cpu), snapshot = new KisPaintDevice(*gpu);
         const auto before = pixels(cpu, bounds);
         KisSelectionSP selection = new KisSelection();
@@ -257,7 +506,7 @@ private Q_SLOTS:
         for (int i = 0; i < 3; ++i) {
             selection->pixelSelection()->clear();
             selection->pixelSelection()->select(bounds.adjusted(13 * i, 7 * i, -9 * i, -5 * i), 71 + 70 * i);
-            auto dabs = makeDabs(3 + i, 73 + i);
+            auto dabs = makeDabs(3 + i, 73 + i, half);
             for (auto &dab : dabs) {
                 dab.opacity = 0.2 + 0.3 * i;
                 dab.averageOpacity = 0.9;
@@ -272,7 +521,7 @@ private Q_SLOTS:
         std::promise<void> started;
         auto entered = started.get_future();
         if (wrapRing) {
-            const auto fourth = makeDabs(4, 81);
+            const auto fourth = makeDabs(4, 81, half);
             cpuPainter.bltFixed(bounds, fourth);
             auto pendingPaint = std::async(std::launch::async, [&]() {
                 started.set_value();
@@ -296,7 +545,7 @@ private Q_SLOTS:
         }
         QScopedPointer<KUndo2Command> command(transaction.endAndTake());
         command->redo();
-        QVERIFY(difference(pixels(cpu, bounds), after) <= 2e-5f);
+        QVERIFY(difference(pixels(cpu, bounds), after) <= tolerance);
         QCOMPARE(pixels(snapshot, bounds), before);
         command->undo();
         QCOMPARE(pixels(gpu, bounds), before);
@@ -304,12 +553,12 @@ private Q_SLOTS:
         QCOMPARE(pixels(gpu, bounds), after);
         // Ring wraparound and failed submission must leave the latest image
         // intact so that the caller can safely replay the refused batch on CPU.
-        const auto dabs = makeDabs(4, 81);
+        const auto dabs = makeDabs(4, 81, half);
         context.injectSubmitFailuresForTesting(1);
         QVERIFY(!KisGpuBrushPainter::paint(&gpuPainter, dabs));
         gpuPainter.bltFixed(bounds, dabs);
         cpuPainter.bltFixed(bounds, dabs);
-        QVERIFY(difference(pixels(cpu, bounds), pixels(gpu, bounds)) <= 2e-5f);
+        QVERIFY(difference(pixels(cpu, bounds), pixels(gpu, bounds)) <= tolerance);
     }
     void testStagingBudgetAndReuse()
     {
@@ -1166,34 +1415,42 @@ private Q_SLOTS:
     }
     void testAlphaDarkenVariants_data()
     {
+        QTest::addColumn<bool>("half");
         QTest::addColumn<bool>("creamy");
         QTest::addColumn<float>("flow");
         QTest::addColumn<float>("opacity");
         QTest::addColumn<float>("average");
         QTest::addColumn<bool>("masked");
         const float pairs[][2] = {{0, 0}, {0.37f, 0.37f}, {0.37f, 0.9f}, {1, 0.2f}};
-        for (bool creamy : {false, true}) {
-            for (float flow : {0.0f, 0.43f, 1.0f}) {
-                for (const auto &pair : pairs) {
-                    const auto name = QStringLiteral("%1-flow%2-opacity%3-average%4")
-                                          .arg(creamy ? "creamy" : "hard")
-                                          .arg(flow)
-                                          .arg(pair[0])
-                                          .arg(pair[1]);
-                    QTest::newRow(qPrintable(name)) << creamy << flow << pair[0] << pair[1] << false;
-                    QTest::newRow(qPrintable(name + "-masked")) << creamy << flow << pair[0] << pair[1] << true;
+        for (bool half : {false, true})
+            for (bool creamy : {false, true}) {
+                for (float flow : {0.0f, 0.43f, 0.9999f, 1.0f}) {
+                    for (const auto &pair : pairs) {
+                        const auto name = QStringLiteral("%1-flow%2-opacity%3-average%4")
+                                              .arg(creamy ? "creamy" : "hard")
+                                              .arg(flow)
+                                              .arg(pair[0])
+                                              .arg(pair[1])
+                            + (half ? "-f16" : "-f32");
+                        QTest::newRow(qPrintable(name)) << half << creamy << flow << pair[0] << pair[1] << false;
+                        QTest::newRow(qPrintable(name + "-masked"))
+                            << half << creamy << flow << pair[0] << pair[1] << true;
+                    }
                 }
             }
-        }
     }
     void testAlphaDarkenVariants()
     {
+        QFETCH(bool, half);
         QFETCH(bool, creamy);
         QFETCH(float, flow);
         QFETCH(float, opacity);
         QFETCH(float, average);
         QFETCH(bool, masked);
-        const auto dabs = makeDabs(4, 73);
+        const auto *cs = space(half);
+        if (!cs)
+            QSKIP("The requested floating-point color space is unavailable");
+        const auto dabs = makeDabs(4, 73, half);
         const auto bounds = boundsOf(dabs).adjusted(-5, -3, 8, 10); // odd mask byte count, padded uint read
         std::vector<quint8> coverage(size_t(bounds.width()) * bounds.height());
         for (size_t i = 0; i < coverage.size(); ++i)
@@ -1206,23 +1463,41 @@ private Q_SLOTS:
             expected[i + 2] = 0.7f;
             expected[i + 3] = i % 12 == 0 ? 0 : (i % 12 == 4 ? 1 : 0.2f);
         }
-        KisPaintDeviceSP gpu = new KisPaintDevice(space());
+        QByteArray raw(bounds.width() * bounds.height() * cs->pixelSize(), Qt::Uninitialized);
+        space()->convertPixelsTo(reinterpret_cast<const quint8 *>(expected.data()),
+                                 reinterpret_cast<quint8 *>(raw.data()),
+                                 cs,
+                                 bounds.width() * bounds.height(),
+                                 KoColorConversionTransformation::internalRenderingIntent(),
+                                 KoColorConversionTransformation::internalConversionFlags());
+        KisPaintDeviceSP gpu = new KisPaintDevice(cs), cpu = new KisPaintDevice(cs);
         gpu->moveTo(-13, 7);
-        gpu->writeBytes(reinterpret_cast<const quint8 *>(expected.data()), bounds);
+        gpu->writeBytes(reinterpret_cast<const quint8 *>(raw.constData()), bounds);
         // Construct both actual CPU implementations without changing global settings.
         QScopedPointer<KoCompositeOp> reference(
             creamy ? KoOptimizedCompositeOpFactory::createAlphaDarkenOpCreamy128(space())
                    : KoOptimizedCompositeOpFactory::createAlphaDarkenOpHard128(space()));
+        if (half) {
+#ifdef HAVE_OPENEXR
+            if (creamy)
+                reference.reset(new KoCompositeOpAlphaDarken<KoRgbF16Traits, KoAlphaDarkenParamsWrapperCreamy>(cs));
+            else
+                reference.reset(new KoCompositeOpAlphaDarken<KoRgbF16Traits, KoAlphaDarkenParamsWrapperHard>(cs));
+#else
+            QSKIP("Scalar half reference requires OpenEXR");
+#endif
+        }
         QVector<KisGpuDabCompositor::Dab> inputs;
         for (const auto &dab : dabs) {
             const QPoint p = dab.offset - bounds.topLeft();
             KoCompositeOp::ParameterInfo parameters;
             parameters.setOpacityAndAverage(opacity, average);
             parameters.flow = flow;
-            parameters.dstRowStart = reinterpret_cast<quint8 *>(expected.data() + (p.y() * bounds.width() + p.x()) * 4);
-            parameters.dstRowStride = bounds.width() * 16;
+            parameters.dstRowStart =
+                reinterpret_cast<quint8 *>(raw.data()) + (p.y() * bounds.width() + p.x()) * cs->pixelSize();
+            parameters.dstRowStride = bounds.width() * cs->pixelSize();
             parameters.srcRowStart = dab.device->constData();
-            parameters.srcRowStride = dab.device->bounds().width() * 16;
+            parameters.srcRowStride = dab.device->bounds().width() * cs->pixelSize();
             parameters.rows = dab.device->bounds().height();
             parameters.cols = dab.device->bounds().width();
             if (masked) {
@@ -1253,11 +1528,16 @@ private Q_SLOTS:
                                    access.tileOrigin(grid.left(), grid.top()),
                                    inputs,
                                    creamy ? Mode::AlphaDarkenCreamy : Mode::AlphaDarkenHard,
-                                   masked ? &mask : nullptr));
+                                   masked ? &mask : nullptr,
+                                   0xf,
+                                   nullptr,
+                                   {},
+                                   cs->pixelSize()));
         QVERIFY(KisGpuTileAccess::submitAndFinish(commands, {&access}));
         QVERIFY(commands.wait());
-        const float error = difference(expected, pixels(gpu, bounds));
-        QVERIFY2(error <= 2e-5f, qPrintable(QString::number(error)));
+        cpu->writeBytes(reinterpret_cast<const quint8 *>(raw.constData()), bounds);
+        const float error = difference(pixels(cpu, bounds), pixels(gpu, bounds), !half);
+        QVERIFY2(error <= (half ? 1.0f / 1024 : 2e-5f), qPrintable(QString::number(error)));
     }
     void testIndirectMerge_data()
     {
@@ -1300,6 +1580,14 @@ private Q_SLOTS:
     {
         runIndirectMerge();
     }
+    void testHalfIndirectMerge_data()
+    {
+        testIndirectMerge_data();
+    }
+    void testHalfIndirectMerge()
+    {
+        runIndirectMerge(-1, QString(), true);
+    }
     void testWashChannelLocks_data()
     {
         QTest::addColumn<bool>("locked");
@@ -1327,6 +1615,15 @@ private Q_SLOTS:
     {
         QFETCH(int, channels);
         runIndirectMerge(channels);
+    }
+    void testHalfWashChannelLocks_data()
+    {
+        testWashChannelLocks_data();
+    }
+    void testHalfWashChannelLocks()
+    {
+        QFETCH(int, channels);
+        runIndirectMerge(channels, QString(), true);
     }
     void testWashBlendModes_data()
     {
@@ -1361,32 +1658,68 @@ private Q_SLOTS:
         QFETCH(QString, mode);
         runIndirectMerge(channels, mode);
     }
+    void testHalfWashBlendModes_data()
+    {
+        QTest::addColumn<bool>("locked");
+        QTest::addColumn<bool>("limitedReadback");
+        QTest::addColumn<QString>("previewPath");
+        QTest::addColumn<bool>("erase");
+        QTest::addColumn<int>("channels");
+        QTest::addColumn<QString>("mode");
+        for (const auto &mode : halfBlendModes) {
+            for (int channels = 0; channels < 16; ++channels)
+                for (bool selected : {false, true})
+                    QTest::newRow(qPrintable(QString("%1-channels%2-selected%3").arg(mode).arg(channels).arg(selected)))
+                        << false << false << (selected ? QStringLiteral("selection") : QStringLiteral("gpu")) << false
+                        << channels << mode;
+            for (const auto &path : {"selection-inverted",
+                                     "selection-translated",
+                                     "selection-empty",
+                                     "selection-outside",
+                                     "selection-failure",
+                                     "selection-merge-failure",
+                                     "merge-budget",
+                                     "offset",
+                                     "integer"})
+                QTest::newRow(qPrintable(mode + '-' + path))
+                    << false << false << QString::fromLatin1(path) << false << 5 << mode;
+        }
+    }
+    void testHalfWashBlendModes()
+    {
+        QFETCH(int, channels);
+        QFETCH(QString, mode);
+        runIndirectMerge(channels, mode, true);
+    }
 
 private:
-    void runIndirectMerge(int channelBits = -1, const QString &modeOverride = QString())
+    void runIndirectMerge(int channelBits = -1, const QString &modeOverride = QString(), bool half = false)
     {
         QFETCH(bool, locked);
         QFETCH(bool, limitedReadback);
         QFETCH(QString, previewPath);
         QFETCH(bool, erase);
         const QString mode = modeOverride.isEmpty() ? (erase ? COMPOSITE_ERASE : COMPOSITE_OVER) : modeOverride;
-        auto dabs = makeDabs(12, 89);
+        const auto *cs = space(half);
+        const float tolerance = half ? 0.002f : 2e-5f;
+        auto dabs = makeDabs(12, 89, half);
         for (int i = 0; i < dabs.size(); ++i)
             dabs[i].averageOpacity = i % 2 ? 0.9 : dabs[i].opacity;
         const auto bounds = boundsOf(dabs).adjusted(-10, -10, 10, 10);
         KisImageSP image = new KisImage(nullptr,
                                         256,
                                         256,
-                                        previewPath == "integer" ? KoColorSpaceRegistry::instance()->rgb8() : space(),
+                                        previewPath == "integer" ? KoColorSpaceRegistry::instance()->rgb8() : cs,
                                         "indirect GPU brush");
-        KisSharedPtr<PreviewPaintLayer> cpu = new PreviewPaintLayer(image, "cpu", 255, space()),
-                                        gpu = new PreviewPaintLayer(image, "gpu", 255, space());
-        KisPaintDeviceSP cpuTarget = new KisPaintDevice(space()), gpuTarget = new KisPaintDevice(space());
+        KisSharedPtr<PreviewPaintLayer> cpu = new PreviewPaintLayer(image, "cpu", 255, cs),
+                                        gpu = new PreviewPaintLayer(image, "gpu", 255, cs);
+        KisPaintDeviceSP cpuTarget = new KisPaintDevice(cs), gpuTarget = new KisPaintDevice(cs);
         if (previewPath == "offset") {
             cpuTarget->moveTo(3, -5);
             gpuTarget->moveTo(3, -5);
         }
-        const float background[] = {0.8f, 0.2f, 0.3f, 0.6f};
+        KoColor background(cs);
+        cs->fromNormalisedChannelsValue(background.data(), {0.8f, 0.2f, 0.3f, 0.6f});
         KisSelectionSP selection = new KisSelection();
         selection->pixelSelection()->select(bounds.adjusted(35, 21, -25, -13), 173);
         const bool selected = locked || previewPath.startsWith("selection");
@@ -1408,11 +1741,7 @@ private:
             }
         }
         for (auto layer : {cpu, gpu}) {
-            layer->paintDevice()->fill(bounds.x(),
-                                       bounds.y(),
-                                       bounds.width(),
-                                       bounds.height(),
-                                       reinterpret_cast<const quint8 *>(background));
+            layer->paintDevice()->fill(bounds.x(), bounds.y(), bounds.width(), bounds.height(), background.data());
             if (erase || channelBits >= 0) {
                 auto data = pixels(layer->paintDevice(), bounds);
                 for (size_t i = 0; i < data.size(); i += 4) {
@@ -1420,7 +1749,14 @@ private:
                     data[i + 1] = -0.3f;
                     data[i + 3] = i % 12 == 0 ? 0.0f : (i % 12 == 4 ? 1.0f : 0.6f);
                 }
-                layer->paintDevice()->writeBytes(reinterpret_cast<const quint8 *>(data.data()), bounds);
+                QByteArray raw(bounds.width() * bounds.height() * cs->pixelSize(), Qt::Uninitialized);
+                space()->convertPixelsTo(reinterpret_cast<const quint8 *>(data.data()),
+                                         reinterpret_cast<quint8 *>(raw.data()),
+                                         cs,
+                                         bounds.width() * bounds.height(),
+                                         KoColorConversionTransformation::internalRenderingIntent(),
+                                         KoColorConversionTransformation::internalConversionFlags());
+                layer->paintDevice()->writeBytes(reinterpret_cast<const quint8 *>(raw.constData()), bounds);
             }
             layer->setTemporaryTarget(layer == cpu ? cpuTarget : gpuTarget);
             layer->setTemporaryCompositeOp(mode);
@@ -1463,7 +1799,7 @@ private:
         });
         if (limitedReadback)
             backend->injectReadbackLimitForTesting(64 * 1024);
-        KisPaintDeviceSP cpuPreview = new KisPaintDevice(space()), gpuPreview = new KisPaintDevice(space());
+        KisPaintDeviceSP cpuPreview = new KisPaintDevice(cs), gpuPreview = new KisPaintDevice(cs);
         qputenv("KRITA_GPU_BRUSH", "0");
         cpu->copyOriginalToProjection(cpu->paintDevice(), cpuPreview, bounds);
         qputenv("KRITA_GPU_BRUSH", "1");
@@ -1483,8 +1819,8 @@ private:
         if (!limitedReadback)
             QCOMPARE(previewSubmissions, noCoverage ? quint64(0) : quint64(1));
         const auto previewPixels = pixels(gpuPreview, bounds);
-        const bool ignoreHiddenRgb = mode == COMPOSITE_OVER && (channelBits < 0 || channelBits == 15);
-        QVERIFY(difference(pixels(cpuPreview, bounds), previewPixels, ignoreHiddenRgb) <= 2e-5f);
+        const bool ignoreHiddenRgb = !half && mode == COMPOSITE_OVER && (channelBits < 0 || channelBits == 15);
+        QVERIFY(difference(pixels(cpuPreview, bounds), previewPixels, ignoreHiddenRgb) <= tolerance);
         if (erase) {
             for (size_t i = 0; i < before.size(); i += 4) {
                 for (int channel = 0; channel < 3; ++channel)
@@ -1507,7 +1843,7 @@ private:
         });
         if (previewPath == "merge-budget") {
             backend->evictTiles(~quint64(0));
-            backend->setMemoryBudgetForTesting(backend->pool(16)->tileBytes());
+            backend->setMemoryBudgetForTesting(backend->pool(cs->pixelSize())->tileBytes());
         }
         const auto beforeMerge = context.completedValue();
         const auto beforeGpuMerge = KisGpuBrushPainter::washMergeCount();
@@ -1531,9 +1867,9 @@ private:
         const auto after = pixels(gpu->paintDevice(), bounds);
         const auto expected = pixels(cpu->paintDevice(), bounds);
         const float finalError = difference(expected, after, ignoreHiddenRgb);
-        if (finalError > 2e-5f) {
+        if (finalError > tolerance) {
             for (size_t i = 0; i < after.size(); ++i) {
-                if (std::abs(expected[i] - after[i]) > 2e-5f) {
+                if (std::abs(expected[i] - after[i]) > tolerance) {
                     qInfo() << "first mismatch"
                             << bounds.topLeft() + QPoint(int(i / 4) % bounds.width(), int(i / 4) / bounds.width())
                             << "channel" << i % 4 << "CPU/GPU" << expected[i] << after[i] << "alpha CPU/GPU"
@@ -1543,7 +1879,7 @@ private:
                 }
             }
         }
-        QVERIFY2(finalError <= 2e-5f, qPrintable(QString::number(finalError)));
+        QVERIFY2(finalError <= tolerance, qPrintable(QString::number(finalError)));
         QCOMPARE(after != before, !noCoverage && (mode != COMPOSITE_OVER || channelBits != 0));
         QCOMPARE(pixels(snapshot, bounds), before);
         QVERIFY(!backend->hasFailed());

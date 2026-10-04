@@ -67,8 +67,9 @@ KisBrushOp::KisBrushOp(const KisPaintOpSettingsSP settings, KisPainter *painter,
 {
     // Only float images use the GPU-aware merge scheduling. A float layer
     // inside an integer image must keep the CPU brush path too.
-    m_isRgba32fImage = image && image->colorSpace()->colorModelId() == RGBAColorModelID
-        && image->colorSpace()->colorDepthId() == Float32BitsColorDepthID;
+    m_isRgbaFloatImage = image && image->colorSpace()->colorModelId() == RGBAColorModelID
+        && (image->colorSpace()->colorDepthId() == Float32BitsColorDepthID
+            || image->colorSpace()->colorDepthId() == Float16BitsColorDepthID);
     Q_ASSERT(settings);
 
     m_airbrushData.read(settings.data());
@@ -207,7 +208,7 @@ void KisBrushOp::addDabPaintingJobs(const QVector<QRect> &rects,
                                     QVector<KisRunnableStrokeJobData *> &jobs,
                                     bool mirroredPass)
 {
-    if (m_isRgba32fImage && KisGpuBrushPainter::supports(state->painter)) {
+    if (m_isRgbaFloatImage && KisGpuBrushPainter::supports(state->painter)) {
         // GPU tile writes must not be split into parallel pixel rectangles:
         // disjoint rectangles can still share one 64x64 destination tile.
         // For mirror passes, the preceding sequential barrier also ensures
@@ -267,7 +268,7 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
             // execution time. Leave room in the 64 MiB GPU staging budget for
             // destination tables, clipped records and selection coverage.
             const quint64 byteLimit =
-                m_isRgba32fImage && KisGpuBrushPainter::supports(painter()) ? quint64(32) << 20 : ~quint64(0);
+                m_isRgbaFloatImage && KisGpuBrushPainter::supports(painter()) ? quint64(32) << 20 : ~quint64(0);
             state->dabsQueue =
                 m_dabExecutor->takeReadyDabs(painter()->hasMirroring(), dabsLimit, &someDabsAreStillInQueue, byteLimit);
         }

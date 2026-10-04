@@ -19,6 +19,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -30,9 +31,8 @@ namespace
 {
 constexpr int TileSize = 64;
 
-/// Per-thread resources of one composite() call, reused across calls. Its
-/// command list's begin() waits for the previous submission of this context,
-/// so the compositor's table buffer is never overwritten while in use.
+/// Exclusively leased by one composite() call. Commands and shader tables
+/// remain untouched until lastUse completes, including coverage snapshots.
 struct WorkContext {
     explicit WorkContext(KisGpuContext &context)
         : commands(context)
@@ -42,6 +42,7 @@ struct WorkContext {
     KisGpuCommandList commands;
     std::unique_ptr<KisGpuLayerCompositor> compositor32;
     std::unique_ptr<KisGpuLayerCompositor> compositor16;
+    quint64 lastUse = 0;
 };
 
 QMutex s_contextsMutex;
@@ -51,15 +52,26 @@ QMutex s_contextsMutex;
  * may already have been torn down (crashed with the validation layer).
  */
 std::vector<std::unique_ptr<WorkContext>> *s_freeContexts = new std::vector<std::unique_ptr<WorkContext>>();
+size_t s_contextCount = 0;
+constexpr size_t MinimumContexts = 3;
 
 std::unique_ptr<WorkContext> acquireContext(KisGpuContext &context)
 {
+    const quint64 completed = context.completedValue();
     QMutexLocker locker(&s_contextsMutex);
-    if (!s_freeContexts->empty()) {
-        std::unique_ptr<WorkContext> work = std::move(s_freeContexts->back());
-        s_freeContexts->pop_back();
+    const auto oldest =
+        std::min_element(s_freeContexts->begin(), s_freeContexts->end(), [](const auto &a, const auto &b) {
+            return a->lastUse < b->lastUse;
+        });
+    if (oldest != s_freeContexts->end() && ((*oldest)->lastUse <= completed || s_contextCount >= MinimumContexts)) {
+        std::unique_ptr<WorkContext> work = std::move(*oldest);
+        s_freeContexts->erase(oldest);
         return work;
     }
+    // Keep up to three serial submissions in flight. Beyond that, grow only
+    // when all contexts are leased by concurrent callers, as before.
+    ++s_contextCount;
+    locker.unlock();
     return std::unique_ptr<WorkContext>(new WorkContext(context));
 }
 
@@ -69,6 +81,32 @@ void releaseContext(std::unique_ptr<WorkContext> work)
     s_freeContexts->push_back(std::move(work));
 }
 } // namespace
+
+bool KisGpuProjectionCompositor::resetWorkContextsForTesting()
+{
+    std::vector<std::unique_ptr<WorkContext>> retired;
+    {
+        QMutexLocker locker(&s_contextsMutex);
+        if (s_contextCount != s_freeContexts->size())
+            return false;
+        retired.swap(*s_freeContexts);
+        s_contextCount = 0;
+    }
+    // Destructors wait for submitted commands; never hold the pool lock here.
+    return true;
+}
+
+int KisGpuProjectionCompositor::workContextCountForTesting()
+{
+    QMutexLocker locker(&s_contextsMutex);
+    return int(s_contextCount);
+}
+
+int KisGpuProjectionCompositor::leasedWorkContextCountForTesting()
+{
+    QMutexLocker locker(&s_contextsMutex);
+    return int(s_contextCount - s_freeContexts->size());
+}
 
 bool KisGpuProjectionCompositor::blendOpForCompositeOp(const QString &id, KisGpuBlendOp *op)
 {
@@ -138,10 +176,14 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
 
     KisGpuTileBackend *backend = KisGpuTileBackend::instance();
     const qint32 pixelSize = projection->pixelSize();
+    const bool halfCoverage = pixelSize == 8 && layers.size() == 1
+        && (layers.first().halfBrush
+            || (layers.first().op > KisGpuBlendOp::Over && layers.first().op != KisGpuBlendOp::Erase
+                && kisGpuSupportsHalfBrushBlend(layers.first().op)));
     if (mask
-        && (pixelSize != 16 || !mask->data || mask->bounds.isEmpty()
+        && ((pixelSize != 16 && !halfCoverage) || !mask->data || mask->bounds.isEmpty()
             || qint64(mask->bounds.width()) * mask->bounds.height() > 4096 * 4096 || layers.size() != 1)) {
-        return fail(QStringLiteral("coverage requires one RGBA32F layer"));
+        return fail(QStringLiteral("coverage requires one supported RGBA float layer"));
     }
     KisGpuContext &context = backend->context();
 
@@ -152,6 +194,9 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     }
 
     for (const Layer &layer : layers) {
+        if (layer.halfBrush
+            && (pixelSize != 8 || (layer.op != KisGpuBlendOp::Over && layer.op != KisGpuBlendOp::Erase)))
+            return fail(QStringLiteral("half brush arithmetic requires F16 Normal or Erase"));
         if (layer.channelMask > 0xf || quint32(layer.op) >= quint32(KisGpuBlendOp::Count)) {
             return fail(QStringLiteral("unsupported blend operation or channel mask"));
         }
@@ -164,6 +209,13 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     }
 
     std::unique_ptr<WorkContext> work = acquireContext(context);
+    // Waiting outside the pool mutex lets unrelated completed contexts remain
+    // available to other workers. On failure, do not reset or overwrite tables.
+    if (!work->commands.isValid() || !work->commands.wait()) {
+        releaseContext(std::move(work));
+        return fail(QStringLiteral("GPU work context is unavailable"));
+    }
+    work->lastUse = 0;
     std::unique_ptr<KisGpuLayerCompositor> &compositor = pixelSize == 8 ? work->compositor16 : work->compositor32;
     if (!compositor) {
         compositor =
@@ -234,7 +286,12 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
             }
         }
         layerTiles += placed;
-        layerParams << KisGpuLayerCompositor::Layer{layer.op, layer.opacity, layer.alphaLocked, layer.channelMask};
+        layerParams << KisGpuLayerCompositor::Layer{layer.op,
+                                                    layer.opacity,
+                                                    layer.alphaLocked,
+                                                    layer.channelMask,
+                                                    layer.halfBrush,
+                                                    layer.explicitChannelFlags};
         accesses.push_back(std::move(access));
     }
 
@@ -260,7 +317,8 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     }
 
     if (ok) {
-        ok = KisGpuTileAccess::submitAndFinish(commands, accessList) != 0;
+        work->lastUse = KisGpuTileAccess::submitAndFinish(commands, accessList);
+        ok = work->lastUse != 0;
         if (!ok && errorMessage && errorMessage->isEmpty()) {
             *errorMessage = QStringLiteral("GPU submission refused or failed");
         }
@@ -271,8 +329,8 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     }
 
     // No wait: the result stays on the GPU. CPU readers of the projection
-    // download it (ordered after this submission); the next use of this work
-    // context waits in commands.begin().
+    // download it (ordered after this submission). Prefer a completed context
+    // on the next call; only wait when every available context is still busy.
     releaseContext(std::move(work));
     return ok;
 }

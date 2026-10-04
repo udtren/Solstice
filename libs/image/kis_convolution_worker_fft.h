@@ -25,6 +25,10 @@
 
 #include <fftw3.h>
 
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuTileAccess.h"
+#endif
+
 template<class _IteratorFactory_> class KisConvolutionWorkerFFT;
 class KisConvolutionWorkerFFTLock
 {
@@ -216,6 +220,18 @@ public:
                              const int cacheRowStride,
                              const FFTInfo &info,
                              const QRect &dataRect) {
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+        // FFT padding can read beyond a filter's declared neededRect. Repeat
+        // iterators also lock the row through dataRect.right(), not just the
+        // requested width. Batch those tiles before constructing the iterator.
+        const QRect readRect = dataRect.isEmpty()
+            ? rect
+            : QRect(QPoint(qBound(dataRect.left(), rect.left(), dataRect.right()),
+                           qBound(dataRect.top(), rect.top(), dataRect.bottom())),
+                    QPoint(dataRect.right(), qBound(dataRect.top(), rect.bottom(), dataRect.bottom())));
+        KisGpuTileAccess::syncToCpu(src, readRect);
+#endif
 
         typename _IteratorFactory_::HLineConstIterator hitSrc =
             _IteratorFactory_::createHLineConstIterator(src,

@@ -65,6 +65,7 @@
 #include "kis_selection.h"
 #include "kis_selection_mask.h"
 #include "kis_undo_adapter.h"
+#include "utils/KisMenuMnemonicFilter.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -159,29 +160,6 @@ private:
 
     bool m_registered{false};
 };
-
-void applyMenuMnemonicSetting(QMainWindow *window)
-{
-    if (!window || !window->menuBar()) {
-        return;
-    }
-
-    const bool disable = KisConfig(true).readEntry<bool>("Solstice/DisableTopMenuShortcuts", true);
-    for (QAction *action : window->menuBar()->actions()) {
-        const QByteArray propertyName("solsticeOriginalMenuText");
-        if (!action->property(propertyName.constData()).isValid()) {
-            action->setProperty(propertyName.constData(), action->text());
-        }
-        const QString original = action->property(propertyName.constData()).toString();
-        if (disable) {
-            QString text = original;
-            text.remove(QLatin1Char('&'));
-            action->setText(text);
-        } else {
-            action->setText(original);
-        }
-    }
-}
 
 QString foregroundColorConfigKey(int slot)
 {
@@ -630,6 +608,11 @@ KisSolsticeLazyTools::~KisSolsticeLazyTools() = default;
 
 void KisSolsticeLazyTools::createActions()
 {
+    if (!m_menuMnemonicFilter) {
+        m_menuMnemonicFilter = new KisMenuMnemonicFilter(m_viewManager->qtMainWindow()->menuBar());
+    }
+    applyCustomSettings(); // Before XMLGUI builds menus, even if startup processes events.
+
     KisAction *action = m_viewManager->actionManager()->createAction("create_selection_mask_alternative");
     connect(action, &QAction::triggered, this, [this] {
         createSelectionMask();
@@ -744,5 +727,7 @@ void KisSolsticeLazyTools::pickColorFromScreen()
 void KisSolsticeLazyTools::applyCustomSettings()
 {
     ScreenColorHotkeyFilter::instance()->updateRegistration();
-    applyMenuMnemonicSetting(m_viewManager->qtMainWindow());
+    if (m_menuMnemonicFilter) {
+        m_menuMnemonicFilter->setSuppressed(KisConfig(true).readEntry<bool>("Solstice/DisableTopMenuShortcuts", true));
+    }
 }

@@ -59,6 +59,68 @@ GPU phase 4.41 adds `tryEvictGpuTileDataBatch` to
 readbacks in `KisGpuTileBackend.*`. No slot is released until CPU content is
 valid; failed transfers preserve GPU copies. See the dedicated eviction tests.
 
+GPU phases 4.43-4.45 add `duplicateCpuSnapshot` in `kis_tile_data_store.{h,cc}`
+for GPU COW without redundant initialization, `KisTile::cloneShared` in
+`kis_tile.{h,cc}` for whole-tile `bitBlt` sharing without CPU synchronization,
+and batched partial-clear boundary reads in `kis_tiled_data_manager.cc`.
+`KisGpuTileAccess.cpp` uses the snapshot copy under its existing residency or
+swap protection. F32/F16 tests cover stale snapshots, current/old exact/rough
+copies, partial copies, clear boundaries, submit failure and Undo/Redo.
+
+GPU phase 4.46 adds RGBA16F Normal/Erase dab composition in
+`libs/gpu/KisGpuDabCompositor.*`, `shaders/paint_dabs.comp` and shader CMake
+entries. `KisGpuBrushPainter.cpp` passes the storage size and restricts F16
+modes; `kis_brushop.{h,cpp}` admits both floating image depths while retaining
+the owning-image scheduling gate. `KisGpuBrushTest` covers half arithmetic,
+asynchronous lifetime and rollback; `KisGpuStrokeTest` covers actual F16
+Buildup jobs. Phases 4.47-4.48 add F16 hard/creamy Alpha Darken and Normal/Erase
+Wash preview/final merging. `shaders/composite_half_brush.glsl` shares scalar
+half Normal/Erase arithmetic between dabs and `composite_layers.comp`.
+The layer descriptors in `KisGpuLayerCompositor.*` and
+`KisGpuProjectionCompositor.*` carry explicit half-brush/flag semantics so
+ordinary layer projection retains its existing arithmetic. Tests cover both
+Alpha Darken CPU variants, every Wash channel mask, failure/budget fallback
+and actual Wash jobs with GPU counters and Undo/Redo. Phases 4.49-4.50 extend
+F16 dabs and Wash to the basic generic modes through Pin Light. They reuse
+`compositeGeneric` with half channel masks and per-dab storage rounding,
+extend single-layer F16 coverage in `KisGpuProjectionCompositor`, and correct
+Exclusion's half intermediate product in `composite_blend.glsl`. The separate
+half-brush arithmetic flag remains specific to Normal/Erase. Phases 4.51-4.52
+add a lazy extended F16 dab pipeline and enable Soft Light SVG, Color Dodge,
+Color Burn and HSY Color/Hue/Saturation/Luminosity for Buildup/Wash. The shared
+F16 brush support predicate in `KisGpuLayerCompositor.h` also gates Wash mask
+coverage. Half Dodge/Burn round CPU inversion/clamping intermediates in
+`composite_blend.glsl`; the other extended F16 brush modes retain CPU fallback.
+
+GPU phase 4.53 updates `KisGpuProjectionCompositor.*` to track timeline values
+per leased context, prefer completed/oldest contexts, and allow three pending
+serial submissions. Resource creation and waits run outside the pool mutex;
+failed waits leave command/table data untouched. `KisGpuBrushTest` adds gated
+projection coverage for F32/F16, masks, Alpha Lock, source lifetime, bounded
+reuse, failed-submit CPU replay and exact Undo/Redo.
+
+GPU phases 4.54-4.55 add batched CPU readback in
+`libs/image/filter/kis_filter.cc` before filter input conversion/processing
+and selected or separate-destination copies. `kis_convolution_worker_fft.h`
+also batches the FFT cache region and the row span locked by repeat-border
+iterators. Both hooks are guarded by `HAVE_KRITA_GPU_ENGINE`.
+`KisGpuPaintDeviceTest` covers actual Invert/Gaussian filters, F32/F16,
+fractional selections, separate destinations, download failure recovery,
+retained snapshots and exact Undo/Redo.
+
+GPU phases 4.56-4.57 add readback hooks in
+`libs/image/kis_transform_worker.cc`: full and partial affine transforms,
+explicit-axis mirrors and centered mirror helpers prefetch existing device
+tiles before CPU iteration. `KisGpuPaintDeviceTest` covers F32/F16 scaling,
+shear, rotations, translation, both mirrors, failed downloads, snapshots and
+exact Undo/Redo. Transform math and the final default-pixel purge are retained.
+
+`KisGpuPaintDeviceTest::testTransformSequenceUndo` additionally covers
+separate flip/rotation transactions and intermediate Undo/Redo states.
+The Transform Tool Undo investigation is closed; temporary tool diagnostics
+were removed without changing its established history behavior. See
+`docs/agent/gpu-engine.md` for the real-app findings.
+
 Brush Stroke Preview adds `KisBrushStrokePreviewRenderer.*` and
 `KisBrushStrokePreviewCache.*` under `libs/ui/widgets/`, sharing the F5
 stroke/background implementation with `kis_preset_live_preview_view.cpp`.
@@ -90,6 +152,11 @@ unrestricted Normal/Erase Wash rectangles inside the existing final-merge
 transaction and barrier jobs; other indirect-painting subclasses are unchanged.
 Full-stroke parity and timing coverage lives in
 `plugins/paintops/defaultpaintops/brush/tests/KisGpuStrokeTest.cpp`.
+
+Lazy Tools menu suppression also uses `libs/ui/utils/KisMenuMnemonicFilter.*`
+and `libs/ui/tests/KisMenuMnemonicFilterTest.cpp`, registered in the UI and
+test CMake files. The menu-bar-owned observer handles late XMLGUI menus/title
+updates without intercepting Alt key events. See `docs/agent/lazy-tools.md`.
 
 ## Undocumented custom changes
 

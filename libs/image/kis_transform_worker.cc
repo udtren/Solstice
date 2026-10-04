@@ -31,6 +31,9 @@
 #include "kis_pixel_selection.h"
 #include "kis_image.h"
 
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuTileAccess.h"
+#endif
 
 KisTransformWorker::KisTransformWorker(KisPaintDeviceSP dev,
                                        double xscale, double yscale,
@@ -228,6 +231,10 @@ void swapValues(T *a, T *b) {
 
 bool KisTransformWorker::run()
 {
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // Batch before exactBounds() starts reading edge tiles individually.
+    KisGpuTileAccess::syncToCpu(m_dev, m_dev->extent());
+#endif
     return runPartial(m_dev->exactBounds());
 }
 
@@ -253,6 +260,13 @@ bool KisTransformWorker::runPartial(const QRect &processRect)
         }
         return true;
     }
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // Resampling uses CPU iterators, and the final purge inspects the entire
+    // device even for partial transforms and translations. Batch that same
+    // existing read set before either operation can download tile by tile.
+    KisGpuTileAccess::syncToCpu(m_dev, m_dev->extent());
+#endif
 
     double xscale = m_xscale;
     double yscale = m_yscale;
@@ -445,6 +459,9 @@ void mirror_impl(KisPaintDeviceSP dev, qreal axis, bool isHorizontal)
 {
     KIS_ASSERT_RECOVER_RETURN(qFloor(axis) == axis || (axis - qFloor(axis) == 0.5));
 
+#ifdef HAVE_KRITA_GPU_ENGINE
+    KisGpuTileAccess::syncToCpu(dev, dev->extent());
+#endif
     QRect mirrorRect = dev->exactBounds();
     if (mirrorRect.width() <= 1) return;
 
@@ -626,12 +643,18 @@ void KisTransformWorker::mirrorY(KisPaintDeviceSP dev, qreal axis)
 
 void KisTransformWorker::mirrorX(KisPaintDeviceSP dev)
 {
+#ifdef HAVE_KRITA_GPU_ENGINE
+    KisGpuTileAccess::syncToCpu(dev, dev->extent());
+#endif
     QRect bounds = dev->exactBounds();
     mirrorX(dev, bounds.x() + 0.5 * bounds.width());
 }
 
 void KisTransformWorker::mirrorY(KisPaintDeviceSP dev)
 {
+#ifdef HAVE_KRITA_GPU_ENGINE
+    KisGpuTileAccess::syncToCpu(dev, dev->extent());
+#endif
     QRect bounds = dev->exactBounds();
     mirrorY(dev, bounds.y() + 0.5 * bounds.height());
 }

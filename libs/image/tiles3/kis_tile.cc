@@ -205,6 +205,12 @@ inline void KisTile::safeReleaseOldTileData(KisTileData *td)
     }
 }
 
+KisTileSP KisTile::cloneShared(qint32 col, qint32 row, KisMementoManager *mm)
+{
+    QMutexLocker locker(&m_COWMutex);
+    return KisTileSP(new KisTile(col, row, m_tileData, mm));
+}
+
 void KisTile::lockForRead() const
 {
 #ifdef DEAD_TILES_SANITY_CHECK
