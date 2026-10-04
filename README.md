@@ -98,30 +98,35 @@ be included in a published build.
 **These numbers measure specific engine operations, not overall application
 performance.** They are not frame rates or pen-to-screen latency measurements.
 
-Measured on an NVIDIA RTX PRO 6000 Blackwell development system:
+Measured on October 4, 2026, with an AMD Ryzen 9 9950X and NVIDIA RTX PRO 6000
+Blackwell (driver 596.86), using the local development build:
 
 | Workload | CPU | GPU |
 | --- | ---: | ---: |
-| Resident full layer projection, 4096 x 4096 RGBA32F, 16 layers | 256 ms | 56 ms |
-| Canvas data preparation, 4096 x 4096 RGBA32F, 8 layers | 1025 ms | 1.6 ms |
-| Four mirror passes, 14 dabs of 73 x 73 pixels | 0.932 ms | 0.459 ms |
-| Four mirror passes, 32 dabs of 256 x 256 pixels | 45.545 ms | 1.874 ms |
+| Resident full layer projection, 4096 x 4096 RGBA32F, 16 layers | 247 ms | 56.6 ms |
+| Canvas data preparation, 4096 x 4096 RGBA32F, 8 layers | 1060 ms | 1.62 ms |
+| Four mirror passes, 14 dabs of 73 x 73 pixels | 0.958 ms | 0.381 ms |
+| Four mirror passes, 32 dabs of 256 x 256 pixels | 45.14 ms | 2.02 ms |
 
-Projection figures are three-sample medians with GPU completion included,
-measured on 2026-10-04. They exclude full CPU readback (about 47 ms).
-Across three fresh benchmark processes, the first GPU refresh after CPU
-projection work takes 58-59 ms, and the initial GPU refresh including
-uploads/preparation takes 0.62-0.65 s.
-Canvas preparation excludes the final OpenGL texture copies. Brush
-measurements average five warmed updates, include uploads and GPU completion
-waits, and compare against serial CPU painting; dab generation, job scheduling
-and display are excluded. Results vary with the workload and hardware.
+Each value is the median of three fresh-process results, with GPU completion
+included and Vulkan validation disabled. Projection and canvas results use
+five-sample medians per process; mirror results use five-update averages after
+warming all three brush staging slots. Projection excludes full CPU readback
+(46-49 ms). Canvas preparation starts with GPU-resident projection pixels and
+excludes projection work and final OpenGL texture copies. Mirror measurements
+include reflection and uploads, compare against serial CPU painting, and
+exclude dab generation, scheduling and display.
 
-Projection methodology is recorded in the
-[GPU development notes](docs/agent/gpu-engine.md#bulk-readback-and-projection-measurements-phases-432-433),
-alongside the [earlier canvas measurements](docs/agent/gpu-engine.md#phase-32-measurements).
-The mirror-painting results are from a development build measured on
-October 3, 2026; they do not establish performance for a packaged release.
+**Complete short strokes can still be slower on the GPU.** In the same build,
+a queued 64px Buildup stroke took 4.51 ms on CPU versus 9.00 ms with GPU
+projection and brush compositing. This includes brush generation and completed
+projection, but not tablet input or screen presentation. GPU brush painting
+remains opt-in.
+
+See the [current benchmark results and limitations](docs/gpu-engine.md#current-benchmarks)
+and [reproduction notes](docs/agent/gpu-engine.md#current-build-benchmark-baseline-phase-442).
+Results vary with workload and hardware and do not establish performance for
+a packaged release.
 
 ## Supported environment
 

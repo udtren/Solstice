@@ -64,6 +64,9 @@ compute on the GPU. User-facing status is in `docs/gpu-engine.md`.
   Phase 4.41 batches voluntary tile eviction readbacks while retaining busy
   tiles and GPU-only data after failed transfers. The user confirmed its
   real-app check passed. Details and checks are below.
+  Phase 4.42 refreshes all README benchmark workloads and ordinary complete
+  strokes on the current build, with a strengthened canvas benchmark.
+  It changes measurement coverage only; no application DLL changes.
   Phases
   0–3 are implemented, including real-app canvas and memory-budget checks;
   the phase 3.3 dialog checklist remains documented separately. Layer stacks of RGBA float
@@ -673,6 +676,7 @@ clean runs, and a benchmark entry in this document.
 | 4.39 | Bound automatic retired-resource reclamation and destroy outside its shared lock. | Slow destructors cannot block other retirement; new tile allocation reclaims at most 16 resource entries, explicit flush drains completed entries. |
 | 4.40 | Host-cached memory for transfer-only CPU snapshots. | Original direct shader Upload memory stays unchanged; three-process transition/initial timing and CPU parity checks. |
 | 4.41 | Batch GPU tile eviction under memory pressure. | Up to 256 tiles per batch; F32/F16, mixed sizes, busy locks, failed transfers, actual released bytes and Undo/disk-swap/concurrent eviction checks. |
+| 4.42 | Refresh the performance baseline and validate measured canvas paths. | Three fresh processes per workload, completed GPU work, CPU parity and rejection of silent CPU fallback; ordinary short strokes remain slower than CPU. |
 | 4 | Brush engine: GPU dab rendering and compositing for the pixel brush (mask generation, alpha darken, indirect painting), then color smudge. | Stroke parity tests; input-to-pixel latency measured lower than CPU. |
 | 5 | Filters and transforms: blur family, levels/curves, Liquify, Transform Tool, Puppet Warp (preview/final parity). Decide fate of remaining paint ops and color models. | Per-filter parity tests; Puppet Warp invariants from `docs/agent/puppet-warp.md` hold. |
 
@@ -2766,6 +2770,102 @@ a multi-layer float document, Undo/Redo, save/reopen, and briefly check F16.
 There is no need to change the user's memory settings to force pressure;
 low-budget and failure conditions are covered by automated tests. The user
 controls application startup/exit.
+
+### Current-build benchmark baseline (phase 4.42)
+
+Measured on 2026-10-04 from application sources at `24c26c3416`, with only
+the canvas benchmark changed afterwards. Environment: Windows 11, Ryzen 9
+9950X (32 logical processors), RTX PRO 6000 Blackwell, driver 596.86,
+Qt 6.8.0, Clang 21.1.6, RelWithDebInfo. Each workload ran in three fresh
+processes, sequentially, with validation disabled. The user application was
+not running. No settings or installed binaries were changed.
+
+`KisGpuCanvasUploadTest::benchmarkCanvasUpdate` previously took a single sample
+per path, and did not reject successful CPU fallback. It now uses
+`KRITA_GPU_BENCH_REPEATS` (default 3, bounded 1-20), discards one warmup per
+path, alternates CPU/GPU order, and rebuilds the GPU projection outside each
+timed interval so both paths start with GPU-authoritative pixels. It requires
+an actual projection dispatch, exactly one GPU upload for a GPU sample, no
+GPU upload for a CPU sample, and the correct upload type on every tile.
+GPU completion is included. The last sample of each size also uploads to real
+GL textures and compares every texel to the CPU path outside the timer,
+retaining the existing linear-sRGB conversion tolerance of 5e-4. The maximum
+measured error was 0.000100363. Interop state is restored by a scope guard.
+No timing threshold determines pass/fail.
+
+Five resident samples per process were used for projection and canvas;
+mirror measurements retain five-update averages after three warmup updates.
+The following ranges are the three process results, not sample percentiles:
+
+| Workload | CPU range (ms) | GPU range (ms) |
+| --- | ---: | ---: |
+| 4096-square, 16-layer resident projection | 241.5-247.6 | 55.4-57.1 |
+| 4096-square, 8-layer canvas preparation | 1037.68-1115.46 | 1.4284-1.7955 |
+| 256-square canvas preparation | 5.2294-5.8447 | 0.1334-0.1561 |
+| Nearby mirrors, 14 dabs at 73px | 0.95572-1.00690 | 0.35190-0.38422 |
+| Nearby mirrors, 32 dabs at 256px | 43.6301-48.0712 | 1.96470-2.03704 |
+| Distant mirrors, 14 dabs at 73px | 0.85332-0.87598 | 0.30836-0.32426 |
+| Distant mirrors, 32 dabs at 256px | 43.6443-50.7916 | 1.88942-1.97296 |
+
+Initial projection was 609.920-639.517 ms, first GPU refresh after CPU
+projection 57.8085-71.8103 ms, full CPU readback 46.1-48.8 ms. README values
+are the median of the three per-process results, rounded for display.
+This is a current baseline, not a controlled old/new performance comparison.
+Canvas measurement boundaries changed, so do not present its difference from
+the historical 1025/1.6 ms single samples as an optimization speedup.
+
+Four ordinary Normal queued strokes were also measured using the existing
+`KisGpuStrokeTest`, five samples after warmup per process, alternating path
+order. CPU layer/projection parity, GPU-path counters and warmup Undo/Redo
+checks remain enabled. Median of the three per-process medians (ms):
+
+| Stroke | CPU | GPU projection only | GPU projection and brush |
+| --- | ---: | ---: | ---: |
+| 64px Buildup | 4.5080 | 9.2534 | 9.0022 |
+| 64px Wash | 5.5280 | 10.8005 | 12.8794 |
+| 256px Buildup | 8.0430 | 13.3256 | 13.7579 |
+| 256px Wash | 10.6316 | 16.3119 | 19.6269 |
+
+The image is 1024-square F32, four layers/workers, 24 queued segments,
+without mirrors or selections. Timings include generation, jobs, final Wash
+merge and GPU completion, but exclude canvas/input and verification reads.
+Per-process GPU projection+brush medians ranged 8.8033-10.2944, 12.3777-12.8978,
+13.7365-14.1701 and 18.7192-21.4228 ms respectively. CPU remains faster;
+compositor microbenchmarks must not be presented as complete stroke speedups.
+
+Reproduce after rebuilding `KisGpuProjectionTest`, `KisGpuCanvasUploadTest`,
+`KisGpuBrushTest` and `KisGpuStrokeTest`. From the configured build environment
+(`call <krita-dev-root>\env.bat >nul`), set `KRITA_GPU_VALIDATION=0`,
+`KRITA_GPU_BENCH_SIZE=4096`, `KRITA_GPU_BENCH_LAYERS=16`,
+`KRITA_GPU_BENCH_REPEATS=5`, `KRITA_GPU_STROKE_REPEATS=5`, and leave budget
+overrides unset. Run each command three times in separate processes, writing
+each run to a distinct temporary output file with `-o <file>,txt`:
+
+```bat
+KisGpuProjectionTest.exe benchmarkRefresh
+KisGpuCanvasUploadTest.exe benchmarkCanvasUpdate
+KisGpuBrushTest.exe benchmarkCombinedMirrors
+KisGpuStrokeTest.exe testStroke:64-buildup testStroke:64-wash testStroke:256-buildup testStroke:256-wash
+```
+
+Do not overlap GPU workloads. Logs are `%TEMP%\solstice-gpu-442-<name>-<run>.txt`
+with names `projection`, `canvas`, `mirrors`, `stroke`, and runs 1-3.
+All 12 processes passed (54 total cases including init/cleanup; no skips).
+The complete canvas suite then passed 28 cases with Vulkan validation enabled
+and zero validation errors (`solstice-gpu-442-canvas-validation.txt`).
+A separate negative control with `KRITA_GPU_CANVAS_BUDGET_MIB=1` correctly
+failed the GPU-upload assertion (actual 0, expected 1), proving CPU fallback
+cannot be published as a GPU timing (`solstice-gpu-442-fallback-rejection.txt`).
+This was a test-process override; user preferences were not modified.
+No application installation or new interactive handoff is needed for this
+test/documentation-only stage.
+
+Next implementation priorities: profile ordinary short-stroke job/projection
+costs separately from GPU dispatch and CPU-to-GPU crossings; then implement
+GPU dab/mask generation with CPU parity and actual stroke measurements.
+RGBA16F brush arithmetic and color smudge remain separate coverage work.
+Keep GPU brush opt-in until complete drawing latency is measured; do not
+reopen the explicitly deferred large mirrored Alpha Lock investigation.
 
 ## Risks and open questions
 

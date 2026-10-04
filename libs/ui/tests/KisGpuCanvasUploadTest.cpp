@@ -37,6 +37,7 @@
 #include "opengl/kis_texture_tile_info_pool.h"
 #include "opengl/kis_texture_tile_update_info.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <map>
@@ -677,6 +678,7 @@ void KisGpuCanvasUploadTest::benchmarkCanvasUpdate()
     const QRect bounds(0, 0, size, size);
     const KoColorSpace *imageSpace = rgba(Float32BitsColorDepthID.id(), QStringLiteral("sRGB-elle-V2-g10.icc"));
     const KoColorSpace *displaySpace = rgba(Float32BitsColorDepthID.id(), QStringLiteral("sRGB-elle-V2-srgbtrc.icc"));
+    QVERIFY(imageSpace && displaySpace);
     KisImageSP image = new KisImage(nullptr, size, size, imageSpace, "canvas benchmark");
     for (int i = 0; i < 8; i++) {
         KisPaintLayerSP layer = new KisPaintLayer(image, QStringLiteral("layer %1").arg(i), 220);
@@ -687,41 +689,69 @@ void KisGpuCanvasUploadTest::benchmarkCanvasUpdate()
     image->waitForDone();
 
     KisOpenGLUpdateInfoBuilder builder;
-    builder.setTextureBorder(16);
-    builder.setEffectiveTextureSize(QSize(224, 224));
-    builder.setTextureInfoPool(toQShared(new KisTextureTileInfoPool(256, 256)));
-    builder.setConversionOptions(ConversionOptions(displaySpace,
-                                                   KoColorConversionTransformation::internalRenderingIntent(),
-                                                   KoColorConversionTransformation::HighQuality
-                                                       | KoColorConversionTransformation::BlackpointCompensation));
-
-    auto timeBuild = [&](bool gpu, const QRect &rect) {
-        KisGpuCanvasUploader::setGLInteropAvailable(gpu);
-        QElapsedTimer timer;
-        timer.start();
-        KisOpenGLUpdateInfoSP update = builder.buildUpdateInfo(rect, image, true);
-        Q_UNUSED(update);
-        if (gpu) {
-            // Include the GPU execution, not only the submission.
-            KisGpuTileBackend::existingInstance()->context().waitIdle();
+    setUpCanvas(builder, displaySpace, {});
+    const bool oldInterop = KisGpuCanvasUploader::isEnabled();
+    const auto restoreInterop = qScopeGuard([&]() {
+        KisGpuCanvasUploader::setGLInteropAvailable(oldInterop);
+    });
+    const int repeats = qBound(1,
+                               qEnvironmentVariableIsSet("KRITA_GPU_BENCH_REPEATS")
+                                   ? qEnvironmentVariableIntValue("KRITA_GPU_BENCH_REPEATS")
+                                   : 3,
+                               20);
+    auto &context = KisGpuTileBackend::existingInstance()->context();
+    for (const QRect &rect : {bounds, QRect(2000, 2000, 256, 256)}) {
+        std::vector<double> samples[2];
+        TextureContents finalTextures[2];
+        for (int iteration = 0; iteration <= repeats; ++iteration) {
+            for (int order = 0; order < 2; ++order) {
+                const bool gpu = (iteration % 2) ? !order : order;
+                // Both paths start with fresh GPU-authoritative projection pixels.
+                // Projection work is outside the canvas preparation interval.
+                const quint64 beforeProjection = KisGpuMergeBatch::gpuCompositeCount();
+                image->refreshGraphAsync();
+                image->waitForDone();
+                context.waitIdle();
+                QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > beforeProjection);
+                KisGpuCanvasUploader::setGLInteropAvailable(gpu);
+                const quint64 beforeUpload = KisGpuCanvasUploader::uploadCount();
+                QElapsedTimer timer;
+                timer.start();
+                KisOpenGLUpdateInfoSP update = builder.buildUpdateInfo(rect, image, true);
+                if (gpu) {
+                    context.waitIdle();
+                }
+                const double elapsed = timer.nsecsElapsed() / 1.0e6;
+                QVERIFY(update && !update->tileList.isEmpty());
+                QCOMPARE(KisGpuCanvasUploader::uploadCount() - beforeUpload, gpu ? quint64(1) : quint64(0));
+                for (const auto &tile : update->tileList) {
+                    QCOMPARE(bool(tile->gpuUpload()), gpu);
+                }
+                if (iteration) {
+                    samples[gpu].push_back(elapsed);
+                }
+                if (iteration == repeats) {
+                    // Verify this exact workload, including margins and GL import,
+                    // without charging texture copies/readback to preparation.
+                    TextureSet textures;
+                    setUpCanvas(builder, displaySpace, {&textures});
+                    finalTextures[gpu] = applyAndRead(&m_glContext, textures, builder, update, bounds);
+                }
+            }
         }
-        return timer.nsecsElapsed() / 1.0e6;
-    };
-
-    const QRect dab(2000, 2000, 256, 256);
-    timeBuild(true, bounds); // warm-up
-    const double cpuFull = timeBuild(false, bounds);
-    const double gpuFull = timeBuild(true, bounds);
-    const double cpuDab = timeBuild(false, dab);
-    const double gpuDab = timeBuild(true, dab);
-    KisGpuCanvasUploader::setGLInteropAvailable(true);
-
-    qInfo().noquote() << QStringLiteral("Canvas update data, %1x%1 RGBA F32, linear -> sRGB display:").arg(size);
-    qInfo().noquote() << QStringLiteral("  whole image: CPU %1 ms, GPU %2 ms (until the GPU finished)")
-                             .arg(cpuFull, 0, 'f', 1)
-                             .arg(gpuFull, 0, 'f', 1);
-    qInfo().noquote()
-        << QStringLiteral("  256 px rect: CPU %1 ms, GPU %2 ms").arg(cpuDab, 0, 'f', 2).arg(gpuDab, 0, 'f', 2);
+        QCOMPARE(finalTextures[0].size(), finalTextures[1].size());
+        QString where;
+        const float worst = maxTextureDifference(finalTextures[0], finalTextures[1], &where);
+        QVERIFY2(worst <= 5e-4f, qPrintable(QStringLiteral("max difference %1 at %2").arg(worst).arg(where)));
+        for (int gpu = 0; gpu < 2; ++gpu) {
+            auto &values = samples[gpu];
+            std::sort(values.begin(), values.end());
+            const double median = (values[(values.size() - 1) / 2] + values[values.size() / 2]) / 2;
+            qInfo() << "Canvas preparation" << rect.size() << (gpu ? "GPU" : "CPU") << "samples" << repeats
+                    << "median ms" << median << "min" << values.front() << "max" << values.back()
+                    << "GPU completion included; projection, GL copies and verification excluded; max error" << worst;
+        }
+    }
 }
 
 int main(int argc, char *argv[])

@@ -55,15 +55,60 @@ to reduce transfer waits. Short-stroke measurements still show cases where the C
 faster. Tablet input and the time until a stroke appears on screen still need
 separate measurement.
 
-Measured on an RTX PRO 6000 Blackwell with 4096x4096 images: repeated
-compositing of 16 resident layers takes about 56 ms instead of 256 ms
-(three-sample medians, GPU completion included). The first GPU refresh after
-CPU projection work takes 58-59 ms; the initial refresh including uploads
-and preparation takes 0.62-0.65 s (ranges across three fresh benchmark
-processes). Reading the full GPU projection back to the
-CPU adds about 47 ms. These are engine timings, not pen-to-screen latency.
-The earlier canvas preparation measurement (8 layers) was about 2 ms instead
-of about 1 s, excluding the final OpenGL texture copies.
+The [current benchmarks](#current-benchmarks) distinguish layer compositing,
+canvas preparation and complete queued strokes. Faster compositing alone
+does not establish lower pen-to-screen latency.
+
+## Current benchmarks
+
+Measured on October 4, 2026, in the local development build: Windows 11,
+AMD Ryzen 9 9950X, RTX PRO 6000 Blackwell, driver 596.86 and Qt 6.8.
+Vulkan validation was disabled for timing. Three fresh processes were run
+sequentially for each workload. Values below are the median of their results;
+ranges in parentheses show variation between processes, not latency percentiles.
+
+| Engine operation | CPU | GPU |
+| --- | ---: | ---: |
+| Resident projection, 4096x4096 RGBA32F, 16 layers | 247 ms (242-248) | 56.6 ms (55.4-57.1) |
+| Full canvas preparation, 4096x4096 RGBA32F, 8 layers | 1060 ms (1038-1115) | 1.62 ms (1.43-1.80) |
+| 256x256 canvas update in that image | 5.36 ms (5.23-5.84) | 0.156 ms (0.133-0.156) |
+| Four mirror passes, 14 dabs of 73x73 pixels | 0.958 ms (0.956-1.007) | 0.381 ms (0.352-0.384) |
+| Four mirror passes, 32 dabs of 256x256 pixels | 45.14 ms (43.63-48.07) | 2.02 ms (1.96-2.04) |
+
+Projection and canvas use five-sample medians per process. Mirror results
+average five updates after warming all three brush staging slots. All GPU
+times include completion. Canvas preparation starts with fresh GPU-resident
+projection pixels for both paths, includes display color conversion and any
+CPU download, and excludes projection work and final OpenGL texture copies.
+Mirror timings include reflection and uploads, but exclude brush generation,
+scheduling and display; their CPU reference is serial painting.
+
+For the projection workload, initial GPU preparation takes 0.61-0.64 seconds,
+the first refresh after CPU projection work takes 58-72 ms, and reading the
+full projection back to CPU adds 46-49 ms. These are distinct operations and
+are not included in the resident projection row.
+
+Complete queued strokes show the remaining overhead. These tests use Normal
+pixel brushes, a 1024x1024 RGBA32F document with four layers, four image workers
+and 24 queued line segments, without mirroring or selections. Each process
+takes five samples after warmup, alternating path order. Times include brush
+generation, scheduling, Wash final merging and completed projection; tablet
+events, canvas presentation and verification readback are excluded.
+
+| Stroke | CPU only | GPU projection, CPU brush | GPU projection and brush |
+| --- | ---: | ---: | ---: |
+| 64px Buildup | 4.51 ms | 9.25 ms | 9.00 ms |
+| 64px Wash | 5.53 ms | 10.80 ms | 12.88 ms |
+| 256px Buildup | 8.04 ms | 13.33 ms | 13.76 ms |
+| 256px Wash | 10.63 ms | 16.31 ms | 19.63 ms |
+
+The CPU is faster for these short strokes. GPU brush painting remains opt-in;
+these measurements do not claim a general drawing-latency improvement or a
+fix for the deferred large mirrored Alpha Lock case. All measured paths
+passed their CPU image comparisons. The canvas benchmark also compares the
+actual OpenGL textures after timing. See the
+[reproduction notes](agent/gpu-engine.md#current-build-benchmark-baseline-phase-442)
+for exact tests and measurement boundaries.
 
 ## Turning it on
 
