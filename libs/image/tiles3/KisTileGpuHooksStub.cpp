@@ -10,6 +10,12 @@
 
 #include <kis_assert.h>
 
+void KisTileGpuHooks::prepareCpuRead(KisTiledDataManager *manager, const QRect &rect)
+{
+    Q_UNUSED(manager);
+    Q_UNUSED(rect);
+}
+
 void KisTileGpuHooks::ensureCpuValid(KisTileData *td)
 {
     Q_UNUSED(td);
@@ -26,4 +32,10 @@ bool KisTileGpuHooks::tryEvict(KisTileData *td)
 {
     Q_UNUSED(td);
     return false;
+}
+
+quint64 KisTileGpuHooks::tryEvictBatch(const QVector<KisTileData *> &tiles)
+{
+    Q_UNUSED(tiles);
+    return 0;
 }

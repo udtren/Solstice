@@ -76,18 +76,24 @@ inline KisTileData* KisTileData::clone() {
     return m_store->duplicateTileData(this);
 }
 
-inline void KisTileData::blockSwapping() {
+inline void KisTileData::blockSwappingForReadback()
+{
     m_swapLock.lockForRead();
     if(!m_data) {
         m_swapLock.unlock();
         m_store->ensureTileDataLoaded(this);
     }
+    resetAge();
+}
+
+inline void KisTileData::blockSwapping()
+{
+    blockSwappingForReadback();
     // GPU engine: bring a stale CPU copy up to date before anyone reads it
     KisTileGpuState *gpu = m_gpuState.loadAcquire();
     if (Q_UNLIKELY(gpu) && !gpu->cpuValid()) {
         KisTileGpuHooks::ensureCpuValid(this);
     }
-    resetAge();
 }
 
 inline void KisTileData::unblockSwapping() {

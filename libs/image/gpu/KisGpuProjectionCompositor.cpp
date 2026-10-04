@@ -85,6 +85,28 @@ bool KisGpuProjectionCompositor::blendOpForCompositeOp(const QString &id, KisGpu
         {COMPOSITE_OVERLAY, KisGpuBlendOp::Overlay},
         {COMPOSITE_HARD_LIGHT, KisGpuBlendOp::HardLight},
         {COMPOSITE_EXCLUSION, KisGpuBlendOp::Exclusion},
+        {COMPOSITE_LINEAR_BURN, KisGpuBlendOp::LinearBurn},
+        {COMPOSITE_LINEAR_LIGHT, KisGpuBlendOp::LinearLight},
+        {COMPOSITE_PIN_LIGHT, KisGpuBlendOp::PinLight},
+        {COMPOSITE_SOFT_LIGHT_SVG, KisGpuBlendOp::SoftLightSvg},
+        {COMPOSITE_SOFT_LIGHT_PHOTOSHOP, KisGpuBlendOp::SoftLightPhotoshop},
+        {COMPOSITE_DODGE, KisGpuBlendOp::ColorDodge},
+        {COMPOSITE_BURN, KisGpuBlendOp::ColorBurn},
+        {COMPOSITE_DIVIDE, KisGpuBlendOp::Divide},
+        {COMPOSITE_VIVID_LIGHT, KisGpuBlendOp::VividLight},
+        {COMPOSITE_HARD_MIX, KisGpuBlendOp::HardMix},
+        {COMPOSITE_HARD_MIX_PHOTOSHOP, KisGpuBlendOp::HardMixPhotoshop},
+        {COMPOSITE_HARD_MIX_SOFTER_PHOTOSHOP, KisGpuBlendOp::HardMixSofterPhotoshop},
+        {COMPOSITE_GRAIN_MERGE, KisGpuBlendOp::GrainMerge},
+        {COMPOSITE_GRAIN_EXTRACT, KisGpuBlendOp::GrainExtract},
+        {COMPOSITE_NEGATION, KisGpuBlendOp::Negation},
+        {COMPOSITE_ALLANON, KisGpuBlendOp::Allanon},
+        {COMPOSITE_HUE, KisGpuBlendOp::Hue},
+        {COMPOSITE_SATURATION, KisGpuBlendOp::Saturation},
+        {COMPOSITE_COLOR, KisGpuBlendOp::Color},
+        {COMPOSITE_LUMINIZE, KisGpuBlendOp::Luminosity},
+        {COMPOSITE_DARKER_COLOR, KisGpuBlendOp::DarkerColor},
+        {COMPOSITE_LIGHTER_COLOR, KisGpuBlendOp::LighterColor},
     };
     auto it = ops.constFind(id);
     if (it == ops.constEnd()) {
@@ -130,8 +152,7 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     }
 
     for (const Layer &layer : layers) {
-        if (layer.channelMask > 0xf || quint32(layer.op) > quint32(KisGpuBlendOp::Erase)
-            || (layer.channelMask != 0xf && pixelSize != 16)) {
+        if (layer.channelMask > 0xf || quint32(layer.op) >= quint32(KisGpuBlendOp::Count)) {
             return fail(QStringLiteral("unsupported blend operation or channel mask"));
         }
         if (!(*layer.device->colorSpace() == *projection->colorSpace())) {
@@ -163,11 +184,17 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     commands.begin();
 
     KisGpuTileAccess target(projection, rect, KisGpuTileAccess::ReadWrite);
+    // Share upload allocations across this submission's layers. Allocate
+    // lazily, with at most 16 MiB per chunk (larger individual uploads keep
+    // their exact size). Resident layers require no upload storage.
+    KisGpuTileAccess::UploadArena uploads(
+        qMin<VkDeviceSize>(16 * 1024 * 1024,
+                           VkDeviceSize(target.tileCount()) * pixelSize * TileSize * TileSize * (layers.size() + 2)));
     std::vector<std::unique_ptr<KisGpuTileAccess>> accesses;
     QVector<VkDeviceAddress> layerTiles;
     QVector<KisGpuLayerCompositor::Layer> layerParams;
 
-    bool ok = target.prepare(commands, errorMessage);
+    bool ok = target.prepare(commands, uploads, errorMessage);
     const QRect grid = target.tileGrid();
     const int tileCount = target.tileCount();
     const QPoint gridOrigin = target.tileOrigin(grid.left(), grid.top());
@@ -182,7 +209,7 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
             // Nothing of this layer inside the rect.
             continue;
         }
-        if (!access->prepare(commands, errorMessage)) {
+        if (!access->prepare(commands, uploads, errorMessage)) {
             ok = false;
             accesses.push_back(std::move(access));
             break;

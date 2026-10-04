@@ -289,6 +289,9 @@ set(kritaui_LIB_SRCS
     widgets/kis_layer_filter_widget.cpp
     widgets/kis_elided_label.cpp
     widgets/kis_preset_live_preview_view.cpp
+    widgets/KisBrushStrokePreviewRenderer.cpp
+    widgets/KisBrushStrokePreviewCache.cpp
+    widgets/KisPresetDockerFilters.cpp
     widgets/KisScreenColorSampler.cpp
     widgets/KoDualColorButton.cpp
     widgets/KoStrokeConfigWidget.cpp

@@ -23,6 +23,10 @@
 #include "KisRunnableStrokeJobData.h"
 #include "KisAnimAutoKey.h"
 
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuBrushPainter.h"
+#include "gpu/KisGpuTileAccess.h"
+#endif
 #include "kis_paintop_registry.h"
 #include "kis_paintop_preset.h"
 #include "kis_paintop_settings.h"
@@ -131,6 +135,22 @@ QVector<KisRunnableStrokeJobData *> KisPainterBasedStrokeStrategy::doMaskingBrus
 {
     QVector<KisRunnableStrokeJobData *> jobs;
     KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(m_maskingBrushRenderer, jobs);
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+    if (KisGpuBrushPainter::isEnabled() && !rects.isEmpty()) {
+        QRect readRect;
+        for (const QRect &rc : rects) {
+            readRect |= rc;
+        }
+        const KisPaintDeviceSP strokeDevice = m_maskingBrushRenderer->strokeDevice();
+        // Masking patches use CPU iterators after copying the stroke device.
+        // Fetch GPU-written tiles together before any parallel patch can cause
+        // a synchronous per-tile download or a copy-on-write CPU clone.
+        KritaUtils::addJobSequential(jobs, [strokeDevice, readRect]() {
+            KisGpuTileAccess::syncToCpu(strokeDevice, readRect);
+        });
+    }
+#endif
 
     Q_FOREACH (const QRect &rc, rects) {
         KritaUtils::addJobConcurrent(jobs,

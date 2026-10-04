@@ -10,6 +10,7 @@
 #include <KisLocalStrokeResources.h>
 #include <KisPaintingModeOptionData.h>
 #include <KisStandardOptionData.h>
+#include <KisTextureOptionData.h>
 #include <KoCanvasResourceProvider.h>
 #include <KoColor.h>
 #include <KoColorModelStandardIds.h>
@@ -191,17 +192,13 @@ private Q_SLOTS:
         QTest::addColumn<bool>("alphaOnly");
         QTest::addColumn<int>("channels");
         QTest::addColumn<QString>("mode");
-        for (const auto &mode : {COMPOSITE_MULT,
-                                 COMPOSITE_SCREEN,
-                                 COMPOSITE_ADD,
-                                 COMPOSITE_LINEAR_DODGE,
-                                 COMPOSITE_SUBTRACT,
-                                 COMPOSITE_DARKEN,
-                                 COMPOSITE_LIGHTEN,
-                                 COMPOSITE_DIFF,
-                                 COMPOSITE_OVERLAY,
-                                 COMPOSITE_HARD_LIGHT,
-                                 COMPOSITE_EXCLUSION})
+        for (const auto &mode : {COMPOSITE_MULT,         COMPOSITE_SCREEN,     COMPOSITE_ADD,
+                                 COMPOSITE_LINEAR_DODGE, COMPOSITE_SUBTRACT,   COMPOSITE_DARKEN,
+                                 COMPOSITE_LIGHTEN,      COMPOSITE_DIFF,       COMPOSITE_OVERLAY,
+                                 COMPOSITE_HARD_LIGHT,   COMPOSITE_EXCLUSION,  COMPOSITE_LINEAR_BURN,
+                                 COMPOSITE_LINEAR_LIGHT, COMPOSITE_PIN_LIGHT,  COMPOSITE_SOFT_LIGHT_SVG,
+                                 COMPOSITE_DODGE,        COMPOSITE_BURN,       COMPOSITE_COLOR,
+                                 COMPOSITE_HUE,          COMPOSITE_SATURATION, COMPOSITE_LUMINIZE})
             for (bool wash : {false, true})
                 for (int channels : {15, 7, 5})
                     QTest::newRow(qPrintable(QString("%1-wash%2-channels%3").arg(mode).arg(wash).arg(channels)))
@@ -213,10 +210,41 @@ private Q_SLOTS:
         QFETCH(QString, mode);
         runStroke(false, true, channels, mode);
     }
+    void testTexturedMaskedStroke_data()
+    {
+        QTest::addColumn<int>("diameter");
+        QTest::addColumn<bool>("wash");
+        QTest::addColumn<bool>("mirrors");
+        QTest::addColumn<bool>("restricted");
+        QTest::addColumn<bool>("distant");
+        QTest::addColumn<bool>("alphaOnly");
+        QTest::addColumn<bool>("masked");
+        QTest::addColumn<bool>("textured");
+        for (int diameter : {150, 300}) {
+            for (bool textured : {false, true}) {
+                QTest::newRow(qPrintable(QString("masked-%1-texture%2").arg(diameter).arg(textured)))
+                    << diameter << true << false << false << false << false << true << textured;
+            }
+        }
+        for (bool wash : {false, true}) {
+            QTest::newRow(wash ? "texture-only-wash" : "texture-only-buildup")
+                << 300 << wash << false << false << false << false << false << true;
+        }
+    }
+    void testTexturedMaskedStroke()
+    {
+        QFETCH(bool, masked);
+        QFETCH(bool, textured);
+        runStroke(false, false, -1, QString(), masked, textured);
+    }
 
 private:
-    void
-    runStroke(bool erase, bool selectionOnly = false, int channelBits = -1, const QString &modeOverride = QString())
+    void runStroke(bool erase,
+                   bool selectionOnly = false,
+                   int channelBits = -1,
+                   const QString &modeOverride = QString(),
+                   bool masked = false,
+                   bool textured = false)
     {
         QFETCH(int, diameter);
         QFETCH(bool, wash);
@@ -237,7 +265,8 @@ private:
                                                                       Float32BitsColorDepthID.id(),
                                                                       QString());
         QVERIFY(cs);
-        KisPaintOpSettingsSP settings = new KisBrushOpSettings(toQShared(new KisLocalStrokeResources()));
+        auto localResources = toQShared(new KisLocalStrokeResources());
+        KisPaintOpSettingsSP settings = new KisBrushOpSettings(localResources);
         settings->setProperty("paintop", "paintbrush");
         settings->setProperty(
             "brush_definition",
@@ -258,8 +287,31 @@ private:
         flow.useCurve = false;
         flow.strengthValue = 0.47;
         flow.write(settings.data());
+        if (masked) {
+            settings->setProperty("MaskingBrush/Enabled", true);
+            settings->setProperty("MaskingBrush/MaskingCompositeOp", COMPOSITE_MULT);
+            settings->setProperty("MaskingBrush/UseMasterSize", false);
+            settings->setProperty("MaskingBrush/Preset/paintop", "paintbrush");
+            settings->setProperty("MaskingBrush/Preset/brush_definition", settings->getString("brush_definition"));
+        }
+        if (textured) {
+            QImage grain(64, 64, QImage::Format_RGB32);
+            for (int y = 0; y < grain.height(); ++y) {
+                for (int x = 0; x < grain.width(); ++x) {
+                    const int value = (x * 73 + y * 151 + x * y * 13) % 256;
+                    grain.setPixel(x, y, qRgb(value, value, value));
+                }
+            }
+            KoPatternSP pattern(new KoPattern(grain, "GPU test grain", "gpu-test-grain.pat"));
+            localResources->addResource(pattern);
+            KisTextureOptionData texture;
+            texture.isEnabled = true;
+            texture.textureData = KisEmbeddedTextureData::fromPattern(pattern);
+            texture.write(settings.data());
+        }
         KisPaintOpPresetSP preset(new KisPaintOpPreset());
         preset->setSettings(settings);
+        QCOMPARE(preset->hasMaskingPreset(), masked);
 
         const int repeats = qBound(1, qEnvironmentVariableIntValue("KRITA_GPU_STROKE_REPEATS"), 20);
         std::vector<float> referenceLayer, referenceProjection;

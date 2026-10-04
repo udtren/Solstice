@@ -41,7 +41,30 @@ compute on the GPU. User-facing status is in `docs/gpu-engine.md`.
   channel restrictions. The user confirmed their combined manual test passed.
   Phases 4.23-4.25 pipeline brush submissions through three reusable contexts,
   reuse upload allocations in size buckets and cap their total at 64 MiB.
-  Their combined manual check passed, as confirmed by the user. Phases
+  Their combined manual check passed, as confirmed by the user. Phases 4.26-4.28
+  add Linear Burn, Linear Light and Pin Light to float layer compositing,
+  RGBA32F Buildup dabs and Wash preview/final merging; the user confirmed their
+  combined manual check passed. Phases 4.29-4.31 add the separable and HSY blend
+  families described below as one bundle; the user confirmed the combined
+  manual check passed.
+  Phases 4.32-4.33 batch ordinary bulk CPU reads and distinguish initial,
+  CPU-to-GPU transition and resident projection timings (details below).
+  The subsequent manual report identified drawing catch-up with textured
+  brushes at 150px and above; the screenshot also has Masked Brush enabled.
+  Phases 4.34-4.35 address masked-stroke readbacks and staging reallocation
+  pressure, with a new textured/masked full-stroke regression matrix.
+  The user confirmed almost no lag at 150px and acceptable gradual lag above
+  about 250px. Further tuning of that reported case is not currently needed.
+  Phases 4.36-4.37 add per-channel layer projection in F32/F16 and align the
+  established F16 generic blend math with CPU half arithmetic (details below).
+  The user confirmed the combined real-app check passed.
+  Phases 4.38-4.40 reduce CPU-to-GPU transition costs with shared upload
+  allocations, bounded retirement outside the shared lock, and host-cached
+  transfer-only staging. The user confirmed their real-app check passed.
+  Phase 4.41 batches voluntary tile eviction readbacks while retaining busy
+  tiles and GPU-only data after failed transfers. The user confirmed its
+  real-app check passed. Details and checks are below.
+  Phases
   0–3 are implemented, including real-app canvas and memory-budget checks;
   the phase 3.3 dialog checklist remains documented separately. Layer stacks of RGBA float
   images are composited on the GPU inside `KisAsyncMerger`, directly into
@@ -67,6 +90,9 @@ compute on the GPU. User-facing status is in `docs/gpu-engine.md`.
   `HAVE_KRITA_GPU_ENGINE`), `libs/image/tests/CMakeLists.txt`, and the tile
   engine: `tiles3/kis_tile_data_interface.h`, `kis_tile_data.h`,
   `kis_tile_data.cc`, `kis_tile.h`, `kis_tile.cc`, `kis_tile_data_store.cc`,
+  `kis_tiled_data_manager.cc` (automatic interleaved/planar bulk readback),
+  `libs/ui/tool/strokes/kis_painter_based_stroke_strategy.cpp` (batch prefetch
+  before CPU masking-brush patch jobs),
   the merger: `kis_async_merger.h`, `kis_async_merger.cpp`, the scheduler:
   `kis_updater_context.cpp`, and the canvas: `libs/ui/opengl/KisOpenGLUpdateInfoBuilder.{h,cpp}`,
   `kis_texture_tile.{h,cpp}`, `kis_texture_tile_update_info.h`,
@@ -400,10 +426,16 @@ Parity criteria (`KisGpuProjectionTest`):
 
 Supported blend modes (`KisGpuBlendOp`, parity with Krita's RGBA float ops):
 Normal (`KoOptimizedCompositeOpOver128`), Multiply, Screen, Addition / Linear
-Dodge, Subtract, Darken, Lighten, Difference, Overlay, Hard Light, Exclusion
+Dodge, Subtract, Darken, Lighten, Difference, Overlay, Hard Light, Exclusion,
+Linear Burn, Linear Light, Pin Light, Soft Light SVG/Photoshop, Color Dodge,
+Color Burn, Divide, Vivid Light, Hard Mix/default/Photoshop/Softer Photoshop,
+Grain Merge/Extract, Negation and Allanon
 (`KoCompositeOpGenericSC` with the `cf*` functions and their clamp policies,
 including the alpha-locked branch and `KoCompositeOpBase`'s clearing of
-alpha-0 destination pixels). All other modes run on the CPU.
+alpha-0 destination pixels). HSY Hue, Saturation, Color, Luminosity, Darker
+Color and Lighter Color use `KoCompositeOpGenericHSLFunctor` semantics.
+Separately named HDR variants and HSI/HSL/HSV families remain on the CPU.
+All other modes run on the CPU.
 
 ### Canvas
 
@@ -625,6 +657,22 @@ clean runs, and a benchmark entry in this document.
 | 4.23 | Pipeline brush submissions without a completion wait after each batch. | Three contexts retain in-flight source/mask/table bytes; real blocked-queue parity and CPU-read tests; combined manual check passed (user confirmed). |
 | 4.24 | Reuse brush upload allocations in 256 KiB buckets. | Variable-size dabs reuse existing capacity; completed-work benchmarks include explicit waits; combined manual check passed (user confirmed). |
 | 4.25 | Bound the whole brush staging ring to 64 MiB. | Drain before slot reuse or reclamation; pressure, oversized refusal, failure/CPU fallback and Undo/Redo tests; combined manual check passed (user confirmed). |
+| 4.26 | Linear Burn, Linear Light and Pin Light for RGBA32F/RGBA16F layer compositing. | CPU parity and direct GPU clamp-boundary tests; bundled validation below. |
+| 4.27 | The same three blend modes for RGBA32F Buildup dabs. | Selections, all channel masks, mirrors, COW/Undo/Redo and submit fallback; bundled validation below. |
+| 4.28 | The same three blend modes for RGBA32F Wash previews and final merging. | Selected/restricted preview/final parity and complete strokes; bundled validation below. |
+| 4.29 | Soft Light, Dodge/Burn, Divide, Vivid Light, Hard Mix and related separable modes. | Shared F32/F16 layer and F32 brush shaders; bundled with 4.30-4.31. |
+| 4.30 | HSY Hue/Saturation/Color/Luminosity and Darker/Lighter Color. | Dedicated non-separable alpha/clamp behavior; bundled with 4.29/4.31. |
+| 4.31 | Selection, channel-lock and complete stroke coverage for the new major modes. | Representative Buildup/Wash parity and Undo/Redo; user confirmed the combined manual check passed. |
+| 4.32 | Automatically batch bulk CPU pixel reads and bound explicit prefetch storage. | F32/F16 interleaved and planar reads, padding, sparse/negative/offset regions, batch boundaries and failed-transfer retry. |
+| 4.33 | Separate initial, CPU-to-GPU transition and resident projection measurements. | GPU completion, repeated CPU/GPU medians, actual GPU-path use and full pixel parity checked. |
+| 4.34 | Batch masked-brush stroke readback before parallel CPU mask patches. | Complete masked/textured 150px and 300px strokes match CPU layers/projections and Undo/Redo. |
+| 4.35 | Reuse fitting brush staging contexts under budget pressure. | Two large buffers remain reusable within 64 MiB instead of rotating through repeated third-slot allocations; deterministic context-count and pixel regression. |
+| 4.36 | Individual RGB channel flags for F32/F16 layer projection. | All 16 channel masks, full refresh and partial updates; eight representative blend modes. User confirmed the combined manual check passed. |
+| 4.37 | CPU-compatible half alpha tests and intermediate rounding in established F16 blend modes. | Transparent RGB, near-zero/near-one alpha and Hard Light/Overlay midpoint boundaries; bundled with 4.36. User confirmed the combined manual check passed. |
+| 4.38 | Share projection upload buffers across layers in one submission. | Geometric growth up to 16 MiB chunks; F32/F16 offsets, rollover, oversized uploads, lifetime and failed-submit parity. |
+| 4.39 | Bound automatic retired-resource reclamation and destroy outside its shared lock. | Slow destructors cannot block other retirement; new tile allocation reclaims at most 16 resource entries, explicit flush drains completed entries. |
+| 4.40 | Host-cached memory for transfer-only CPU snapshots. | Original direct shader Upload memory stays unchanged; three-process transition/initial timing and CPU parity checks. |
+| 4.41 | Batch GPU tile eviction under memory pressure. | Up to 256 tiles per batch; F32/F16, mixed sizes, busy locks, failed transfers, actual released bytes and Undo/disk-swap/concurrent eviction checks. |
 | 4 | Brush engine: GPU dab rendering and compositing for the pixel brush (mask generation, alpha darken, indirect painting), then color smudge. | Stroke parity tests; input-to-pixel latency measured lower than CPU. |
 | 5 | Filters and transforms: blur family, levels/curves, Liquify, Transform Tool, Puppet Warp (preview/final parity). Decide fate of remaining paint ops and color models. | Per-filter parity tests; Puppet Warp invariants from `docs/agent/puppet-warp.md` hold. |
 
@@ -2216,31 +2264,538 @@ and ordinary mirroring. Check immediate Undo/Redo, switching layers/documents,
 appearance after release and save/reopen. The deferred large-brush mirrored
 Alpha Lock latency remains outside this bundle's scope.
 
+### Extended blend coverage (phases 4.26-4.28)
+
+Linear Burn, Linear Light and Pin Light now share the GPU blend functions
+across layer stacks (F32/F16), direct dabs and Wash preview/final merging
+(F32). Existing selection, channel, mirror, tile alignment, memory budget,
+submission and fallback rules apply. The brush path remains opt-in; this
+does not implement F16 brushes, GPU dab generation or color smudge.
+
+The CPU implementations in `KoCompositeOpFunctions.h` are the reference:
+Linear Burn clamps source RGB to [0, 1], permits HDR destination RGB, and
+clamps only the lower end of the blend result. Linear Light leaves source,
+destination and result unbounded for float storage. Pin Light clamps both
+inputs to [0, 1]. Preserve these policies even for alpha-locked blending;
+clamping all three modes alike changes colors. The shared wrapper still
+handles zero alpha, hidden RGB, opacity and channel restoration.
+
+The expanded real-brush job tests initially failed Linear Light by up to
+0.000156403 (CPU/GPU channel values near -55.567), above the unchanged 2e-5
+absolute tolerance. Two rounding differences accumulated across dabs:
+contracted interpolation arithmetic, and converting mask bytes by multiplying
+a rounded 1/255 reciprocal instead of the CPU lookup's division. The shared
+generic shader now uses `precise` Linear Light arithmetic and interpolation.
+`maskCoverage` corrects the reciprocal product using its FMA residual, matching
+all 256 CPU lookup values without a new buffer or Vulkan feature. Both dab
+and layer shaders use the correction for the three new modes; existing modes
+retain their established reciprocal rounding. Applying the correction to
+all modes exposed a 2.28882e-5 Multiply difference after selected painting,
+CPU fallback and deselection, so it is deliberately scoped to this bundle.
+`testSelectionCoverageRounding` requires exact alpha
+equality for every byte through both shaders; normal tolerance checks alone
+would not detect a one-ULP coverage difference. The previously failing real
+brush job rows now pass without relaxing tolerances.
+Temporarily restoring the uncorrected reciprocal conversion makes all three
+exact-coverage rows fail at byte value 3; the correction was restored before
+final validation and installation.
+
+Existing internal enum IDs are retained. New layer operations are 12-14,
+following brush-only Erase at 11; new dab modes are 14-16. The host mapping
+and `paint_dabs.comp` both account for that reserved Erase slot. `Count`
+bounds layer-operation validation, so invalid enum values still refuse.
+These IDs are internal and do not change persisted composite-op IDs.
+
+`KisGpuProjectionTest` extends actual image-stack checks and directly calls
+the GPU compositor for all three modes in F32/F16, with/without alpha lock.
+The direct calls require success, preventing CPU fallback from passing a
+test just because another layer used the GPU. Their input matrix crosses
+0, 0.5 and 1, negative/HDR values, zero/near-zero/partial/full alpha, and
+full/partial/zero opacity. Existing tolerances remain 2e-5 for F32 and four
+half ULPs at max(|value|, 1) for F16.
+
+The brush test matrices include the three modes across selections, all 16
+channel masks, hidden RGB, clipping, separate/combined mirrors, source
+immutability, COW, Undo/Redo and failed submits. Real brush jobs add selected
+alpha lock, fractional mirror axes and failed-submit recovery. Complete
+strokes compare Buildup/Wash layer and projection pixels with CPU, requiring
+GPU dab/preview/final counters rather than accepting silent CPU fallback.
+
+Validation on 2026-10-04: all nine GPU suites plus the dab rendering queue
+passed with Vulkan validation enabled (10/10, 125.23 s). The isolated layer
+blend/boundary run passed 44 cases; real brush jobs passed 41, and the exact
+coverage plus existing Multiply regression passed six, including init/cleanup.
+The final suite includes all of these and the complete stroke, canvas interop,
+save/load and failure regressions. `git diff --check` passed. Installed the
+rebuilt `kritagpu` and `kritaimage` libraries with Krita closed. The installed
+`kritalibbrush` was older than the build used by the tests, so it was also
+installed. SHA-256 checks now match all nine related build/install DLLs;
+the other six already matched.
+No user settings were changed or application process started/stopped.
+
+Five measured samples after warm-up, RTX PRO 6000 Blackwell, validation off,
+128px brush, soft selection, both mirror axes and Alpha Lock, 1024-square
+four-layer image, four workers, completed-stroke median in milliseconds:
+
+| Operation | CPU | GPU projection only | GPU projection + brush |
+| --- | ---: | ---: | ---: |
+| Linear Burn Buildup | 9.89 | 26.68 | 19.25 |
+| Linear Burn Wash | 11.93 | 33.64 | 29.71 |
+| Linear Light Buildup | 11.68 | 26.19 | 21.11 |
+| Linear Light Wash | 15.68 | 42.46 | 37.63 |
+| Pin Light Buildup | 13.80 | 33.13 | 23.37 |
+| Pin Light Wash | 15.36 | 36.19 | 36.13 |
+
+GPU completion is included; canvas/tablet input and verification readback are
+excluded. These are new-mode coverage measurements, not a before/after speedup
+claim. All-CPU strokes remain faster in these short workloads, and Pin Light
+Wash is essentially unchanged from projection-only here. The timing run also
+passed CPU pixel parity (eight cases including init/cleanup).
+
+The user confirmed this bundle's manual verification passed. The checklist was:
+use the local GPU brush launcher
+(`%LOCALAPPDATA%\Temp\krita-gpu-brush-debug.bat`), not an older downloaded
+CI artifact: RGBA32F, a normal-sized pixel brush, the three new modes in
+Buildup and Wash, soft selection, Alpha Lock and ordinary mirroring.
+Check appearance on pen release, Undo/Redo, save/reopen, then switch back
+to Normal/Erase. Also check the three layer modes in an RGBA16F document
+(brushes there still use CPU). Only the user launches/closes the app.
+The deferred large-brush mirrored Alpha Lock latency remains out of scope.
+
+### Blend-family bundle (phases 4.29-4.31)
+
+Nineteen operations were added together: Soft Light SVG/Photoshop, Color Dodge,
+Color Burn, Divide, Vivid Light, Hard Mix (default, Photoshop, Softer Photoshop),
+Grain Merge/Extract, Negation, Allanon, HSY Hue/Saturation/Color/Luminosity and
+Darker/Lighter Color. They share `composite_blend.glsl` across F32/F16 layers,
+F32 Buildup dabs and F32 Wash previews/final merges. Existing enum values are
+preserved; the new IDs are appended. The host mapping remains the common
+eligibility gate. No settings or document serialization changed.
+
+Preserve the CPU functor's individual clamp rules and exact endpoint behavior.
+In particular, Color Dodge, Vivid Light and default Hard Mix clamp the source
+but allow HDR destination input before SDR result clamping. Color Burn and
+Soft Light clamp both inputs. Divide clamps only negative inputs. Soft Light
+uses float shader arithmetic against the CPU's double intermediate reference.
+The separately named HDR Dodge/Vivid Light/Hard Mix variants, other Soft Light
+variants and HSI/HSL/HSV families remain CPU-only.
+
+HSY uses a separate wrapper: strict alpha zero checks, input clamping only
+inside the blend function, and interpolation of the original unclamped RGB.
+Its luminance weights, saturation normalization and two-stage gamut correction
+follow `KoColorSpaceMaths.h`. F16 rounds the blended HSY color to half before
+interpolation, then stores each completed layer as half. Reusing the separable
+wrapper would incorrectly discard very small alpha and clamp HDR base colors.
+
+The expanded boundary matrix exposed F16 Divide drift after repeated blending
+near zero. New modes now reproduce half-rounded opacity, source alpha, alpha
+union, and the intermediate terms of `Arithmetic::blend<half>`, as well as
+half-specific fuzzy alpha comparisons in the separable wrapper. This is
+restricted to the new operations to preserve established modes' arithmetic.
+Color Burn's mirror/selection tests exposed division rounding amplified by
+repeated nonlinear blending (up to 0.000243). Preserve the compensated divisions
+in its blend function and final alpha normalization; removing the latter fails
+the existing major-mode tests. Color Burn also needs precise alpha/interpolation/
+weighted-color expressions. Compiling those expressions alongside existing
+Linear Light changes shared-expression optimization and fails its fractional
+mirror test. Keep `BASIC_BLEND_ONLY` shader variants for existing modes and
+separate extended variants for operations at/after Soft Light SVG. Both variants
+are generated from the same sources; all include dependencies remain explicit.
+Compositors lazily create and retain the extra pipeline when first needed.
+Mixed layer batches dispatch consecutive runs of each family with a compute
+barrier between runs, retaining the same tables and submission. Existing modes
+must never use the extended pipeline merely because another layer needs it.
+Image-stack parity interleaves Linear Light and the newly supported modes to
+cover both family transitions.
+
+Testing is concentrated on major modes. The lightweight layer parity and
+boundary cases cover all newly enabled IDs to check mapping and formulas;
+the larger brush/stroke matrices add only Soft Light SVG, Dodge, Burn and
+HSY Hue/Saturation/Color/Luminosity. CPU-fallback tests now use Dodge HDR
+(brushes) and HSL Color (mixed layer stacks), since ordinary Dodge is supported.
+Tolerances remain F32 absolute 2e-5 and
+F16 four half ULPs at max(abs(value), 1).
+
+A same-session diagnostic run of the existing 4096-square, 16-layer benchmark
+measured 745.6 ms GPU with the expanded shader and 758.2 ms with the original
+HEAD shader (validation off; CPU 257.7/265.4 ms). These single samples do not
+establish a speedup or a regression. They also do not reproduce the historical
+42 ms result above; investigate the current whole-stack benchmark separately
+before making new performance claims. The temporary baseline was restored;
+the final implementation shares layer/dab source math, with separately compiled
+variants for the rounding isolation described above, not a claimed speedup.
+
+Validation on 2026-10-04: all ten GPU/brush-queue suites passed with Vulkan
+validation enabled, in 167.19 seconds. This includes the interleaved layer
+families, F32/F16 boundaries, full brush selection/channel/failure matrices,
+complete Buildup/Wash strokes, Undo/Redo, canvas interop, memory budgets and
+save/readback protection. The direct diagnostic runs also recorded 2,531
+passing brush cases and 41 passing real-brush job cases. No tolerances were
+relaxed. Logs are `%LOCALAPPDATA%\Temp\solstice-gpu-429-verified-tests.log`,
+`solstice-gpu-429-brush-isolated.txt` and `solstice-gpu-429-jobs-isolated.txt`.
+The GPU, image and version DLLs were installed into the local test installation;
+SHA-256 matches the build for all nine related application/plugin DLLs.
+
+The user confirmed this bundle's manual verification passed. The checks were
+intentionally limited to major modes:
+Normal/Multiply/Screen/Overlay regression, Soft Light, Dodge/Burn and Color.
+Use the local GPU brush launcher, a normal-sized pixel brush in RGBA32F,
+Buildup/Wash, a soft selection and Alpha Lock; check Undo/Redo and save/reopen.
+Check Soft Light and Color layer blending in RGBA16F as well (F16 brushes
+remain CPU). No need to test the less common added modes individually.
+Only the user launches/closes the application. Large-brush mirrored Alpha Lock
+latency remains deferred.
+
+### Bulk readback and projection measurements (phases 4.32-4.33)
+
+`KisTiledDataManager::readBytes` and `readPlanarBytes` now prefetch stale GPU
+tiles before their existing copy loops. The hook is a no-op without an
+existing backend, and automatic prefetch is limited to 8/16-byte pixels.
+It never initializes Vulkan just to read a CPU device. Individual iterators
+retain their existing single-tile synchronization.
+
+`KisTileGpuHooks::prepareCpuRead` shares the same implementation with explicit
+`KisGpuTileAccess::syncToCpu`. It keeps at most 256 stale tile references and
+swap read locks at a time (16 MiB of F32 staging), deduplicates shared tile
+data, and leaves missing tiles unallocated. `blockSwappingForReadback()` defers
+single-tile synchronization until the batch is downloaded; the caller must
+finish that download before releasing swap locks or reading the CPU bytes.
+The lock order is swap read locks, sorted GPU state locks, transfer mutex.
+Callers must continue to exclude writes to the requested region, as for
+existing bulk reads and explicit synchronization. Device offsets and planar
+API coordinates are unchanged. Failed batches retain the existing per-tile
+retry and persistent-content-loss reporting behavior.
+
+The eight new `testBulkReadback` rows cover F32/F16, interleaved reads with
+37-byte row padding, planar channels, sparse tiles, negative and unaligned
+coordinates, a moved device, null/empty reads and one injected batch failure.
+They compare exact bytes with CPU data and assert that 290 stale tiles use
+two submissions, or 257 when the first 256-tile batch must be retried tile by
+tile. A second read adds no submission and does not enlarge the device.
+
+`benchmarkRefresh` now waits for GPU completion within every timed refresh,
+reports the initial refresh and first GPU refresh after CPU work separately,
+and uses three resident samples per path by default. Set
+`KRITA_GPU_BENCH_REPEATS` (1-20) to change the count. It verifies that the GPU
+path ran and compares the final full projection to the CPU within 2e-5.
+The old single GPU sample immediately followed a CPU refresh, so it measured
+transition cost, not repeated resident updates. A baseline diagnostic split
+that into 512.7 ms after CPU versus a 55.3 ms resident median. Retaining empty
+tile-pool chunks did not improve either number and was not kept.
+
+Final measurements on 2026-10-04, RTX PRO 6000 Blackwell, validation disabled,
+4096x4096 RGBA32F and 16 Normal/Multiply/Screen/Overlay layers:
+
+| Operation | CPU | GPU |
+| --- | --- | --- |
+| Resident full refresh, median of three samples, completion included | 243.8 ms | 53.9 ms |
+| First GPU refresh after CPU projection work | — | 540.4 ms |
+| Initial GPU refresh, including first uploads/preparation | — | 2267.7 ms |
+| 256px update plus CPU pixel read, average of 20 | 11.19 ms | 1.26 ms |
+
+Full projection `readBytes` took another 47.0 ms. In the separate 256 MiB
+paint-device transfer test, automatic `readBytes` took 44.9 ms, explicit
+prefetch took 28.0 ms and copying already-current CPU pixels took 20.0 ms.
+These transfer figures are single samples, not latency percentiles or direct
+before/after comparisons with the historical phase 1 table. No claim is made
+about pen-to-screen or application startup latency.
+
+Final validation: all 13 GPU/brush-queue/tile-manager suites passed in
+148.57 seconds with Vulkan validation enabled. This covers concurrent
+eviction, disk swap, COW/Undo/Redo, persistent readback loss, save protection,
+canvas interop and complete strokes as well as the eight new bulk-read rows.
+GPU-disabled stub and tile-manager syntax checks also passed (not a complete
+GPU-disabled application build). Logs are
+`%LOCALAPPDATA%\Temp\solstice-gpu-432-final-tests.log`,
+`solstice-gpu-432-projection-bench.txt` and
+`solstice-gpu-432-transfer-bench.txt`.
+The rebuilt image, brush, UI, KRA and paint-op libraries and default paint-op
+plugin are installed in the local test prefix. All nine related DLLs match
+the build by SHA-256. This bundle's manual check is pending.
+
+Manual handoff: use an RGBA32F document with several layers, paint with a
+normal-sized brush, check Undo/Redo, save/reopen KRA and export PNG. Briefly
+check an RGBA16F document too. No additional blend-mode matrix is needed;
+the previous bundle is already user-confirmed. Large mirrored-brush latency
+remains deferred. Only the user launches/closes the application.
+
+### Textured and masked brush catch-up (phases 4.34-4.35)
+
+The user reported strokes continuing after pen release with textured brushes
+at roughly 150px and above. The provided preset also enables Masked Brush.
+This is separate from the explicitly deferred large mirrored Alpha Lock case.
+Two avoidable costs were reproduced with synthetic textured/masked strokes:
+
+- `doMaskingBrushUpdates` splits CPU masking into small patches; copying a
+  GPU-written stroke tile into the mask destination triggered synchronous
+  single-tile downloads and CPU COW. A sequential prefetch job now downloads
+  the bounding region of the pending patches before any concurrent mask job.
+  Only existing stale stroke tiles are transferred; the bounded bulk reader
+  retains its 256-tile limit and failure handling. Mask formulas and patch
+  parallelism are unchanged. With the opt-in GPU brush switch off, no
+  prefetch job is added.
+- `WorkPool::acquire` rotated through three staging contexts even when only
+  two large buffers fit in the 64 MiB budget. It repeatedly drained, freed
+  and reallocated buffers. If growing the next slot would exceed the budget,
+  it now reuses the oldest existing context whose capacity is sufficient,
+  waiting for its previous work before overwriting any bytes. Normal small
+  batches still use three slots. The 32 MiB source batch limit and 64 MiB total
+  staging cap are unchanged; larger or incompatible allocations retain the
+  previous bounded reclamation/fallback path.
+
+`KisGpuStrokeTest::testTexturedMaskedStroke` adds six rows: 150/300px masked
+Wash with and without a generated grain texture, plus 300px texture-only
+Buildup/Wash. It checks CPU, GPU projection only and GPU projection+brush,
+including complete layer/projection pixels, path counters and Undo/Redo.
+`KisGpuBrushTest::testLargeStagingReusesFittingContexts` submits six roughly
+30 MiB sources, requires exactly two contexts after warmup and stable reserved
+bytes, verifies the 64 MiB ceiling and CPU pixel parity. The old allocator
+creates a third context and fails that regression assertion.
+
+Same-session measurements on RTX PRO 6000 Blackwell, validation off, three
+measured samples per path after warmup (1024-square F32, four layers/workers,
+24 queued stroke segments; 300px rows use dense 0.02 spacing):
+
+| GPU projection+brush workload | Before | After |
+| --- | --- | --- |
+| 150px texture + masked Wash | 44.8 ms | 30.3 ms |
+| 300px texture + masked Wash | 311.3 ms | 112.0 ms |
+| 300px masked Wash without texture | 280.4 ms | 87.2 ms |
+| 300px texture-only Buildup | 224.0 ms | 64.0 ms |
+| 300px texture-only Wash | 235.9 ms | 78.2 ms |
+
+These are complete queued-stroke engine times including GPU completion,
+excluding verification readback and actual tablet/canvas latency. They use a
+synthetic grain preset, not the user's exact preset. CPU remains faster in
+some cases. The user confirmed almost no lag at 150px and acceptable gradual
+lag from about 250px upward; this optimization is accepted. Profiling
+identified 10-23 ms staging-acquisition stalls in the old large-batch path;
+the temporary profiling code and the trial 16 MiB batch limit were removed.
+Logs: `%LOCALAPPDATA%\Temp\solstice-gpu-434-baseline.txt`,
+`solstice-gpu-434-reuse.txt`, `solstice-gpu-434-staging.txt`.
+
+Final validation: seven suites passed with Vulkan validation enabled in
+120.09 seconds (`KisGpuPaintDeviceTest`, `KisGpuBrushTest`,
+`KisGpuCanvasUploadTest`, `KisGpuSaveTest`, `KisDabRenderingQueueTest`,
+`KisGpuBrushJobsTest`, `KisGpuStrokeTest`), logged in
+`%LOCALAPPDATA%\Temp\solstice-gpu-434-final-tests.log`. The rebuilt libraries
+and brush plugin are installed; all nine related DLLs match the build by
+SHA-256. The user confirmed the real-app latency improvement as described above.
+
+Manual handoff: use the same textured preset at 150px and 300px, compare the
+time for the line to catch up after release, and check Undo/Redo. If practical,
+compare once with Masked Brush disabled to distinguish the two paths. The
+user controls application startup/exit and preset settings. The unrelated
+large mirrored Alpha Lock optimization remains deferred.
+
+### Layer channel flags and F16 blend arithmetic (phases 4.36-4.37)
+
+`KisGpuMergeBatch` now forwards all four leaf channel flags to each projection
+layer instead of rejecting partial RGB flags. Empty flags still mean all
+channels; malformed nonempty flag arrays still fall back. Alpha lock retains
+its existing behavior. `KisGpuProjectionCompositor` accepts channel masks for
+F16 as well as F32; coverage snapshots remain restricted to single-layer F32.
+Layer styles, unsupported modes, unaligned offsets and mismatched color
+spaces retain their CPU fallback.
+
+The new channel tests exposed a pre-existing F16 mismatch in basic generic
+blends: GPU Multiply/Screen/Overlay used float alpha tolerances and unrounded
+intermediates while the CPU uses half arithmetic. For example, with locked
+alpha near 0.001, the CPU keeps the destination color but the old GPU shader
+blended it. All F16 generic modes now use the CPU's 0.002 zero/unit-alpha
+tolerance, rounded source alpha/opacity, blend color, alpha union and weighted
+products. Screen and Hard Light/Overlay also round their internal products;
+Hard Light uses the half-specific 0.001 midpoint tolerance. Normal and Erase
+keep their separate CPU-compatible formulas. F32 formulas and the separate
+basic/extended shader families remain intact.
+
+`KisGpuProjectionTest::testLayerChannelFlags` adds 16 rows (Normal, Multiply,
+Screen, Overlay, Soft Light SVG, Dodge, Burn, HSY Color, each in F32/F16).
+Every row checks all 16 channel masks, actual merge-batch acceptance, full
+refresh and an unaligned partial update against CPU rendering.
+`testChannelFlagBoundaries` adds 16 more rows with direct successful GPU
+submissions, all masks and three opacities (0, 179, 255). It checks every
+component, including hidden RGB at zero alpha, HDR/negative colors, half-alpha
+thresholds and Overlay midpoint boundaries. Tolerances stay at 2e-5 for F32
+and four half ULPs at max(abs(value), 1) for F16; they were not loosened.
+
+Validation: all ten GPU/brush-queue suites passed with Vulkan validation
+enabled in 163.85 seconds, including complete strokes, Undo/Redo, save and
+canvas interop. Logs: `%LOCALAPPDATA%\Temp\solstice-gpu-436-final-tests.log`
+and `solstice-gpu-436-channels.txt`. The rebuilt GPU, image and UI libraries
+are installed in the local test prefix; all nine related DLLs match the
+build by SHA-256. The user confirmed the combined real-app check passed.
+
+Manual handoff: in layer properties (Active Channels), disable one or two RGB channels on a
+paint layer above another colored layer. Check Normal, Multiply and Overlay,
+opacity changes, painting, Undo/Redo and save/reopen in RGBA32F; briefly repeat
+in RGBA16F. Layer flags are distinct from display-only channel selection in
+the Channels docker. No exhaustive blend-mode matrix or large mirrored-brush
+latency check is requested. The user controls application startup/exit.
+
+### CPU-to-GPU transition preparation (phases 4.38-4.40)
+
+Profiling the 4096-square, 16-layer benchmark showed that the first new tile
+after CPU projection work collected 512 completed upload resource entries.
+Their destruction took about 640 ms inside the retirement mutex, making
+other image workers wait. These snapshots used `Location::Upload`, which
+prefers device-local host-visible ReBAR memory. The cost was largely memory
+unmapping/freeing, rather than the layer compute dispatch.
+
+- `KisGpuTileAccess::UploadArena` appends snapshots into shared allocations
+  for one projection submission. Each access retains its buffer and offset;
+  snapshot timing, generation checks, skipped uploads, COW rollback and GPU
+  completion lifetime are unchanged. It is not copyable or thread-safe.
+  The first allocation is exact-sized; later allocations grow geometrically
+  up to the projection's 16 MiB chunk target. Uploads below 256 KiB do not
+  trigger growth, and a single larger upload retains its exact size. Failed
+  speculative growth retries an exact allocation. No storage is allocated
+  for resident tiles. This is temporary per-submission storage, not a new
+  persistent cache or a global upload-memory budget.
+- `pinState` reclaims at most 16 completed retired-resource entries per
+  automatic collection. Resources are moved out under `m_garbageMutex`, then
+  destroyed after unlocking. Deferred slots still release only after their
+  timeline completes; explicit `collectGarbage`/`flush` drains all completed
+  entries. Chunk trimming retains the pool's own locking. There is no new
+  background thread.
+- `KisGpuBuffer::Location::Staging` requires coherent host-visible memory and
+  prefers host-cached memory for transfer-only CPU snapshots. The existing
+  memory-type fallback works if no cached type exists. Shader-readable brush
+  buffers and tables retain `Location::Upload` and its ReBAR preference.
+  Allocation/coalescing and lock changes alone left transition times near
+  600 ms; choosing cached snapshot storage produced the substantial gain on
+  the tested NVIDIA/Windows environment.
+
+Regression tests: `testSharedUploadArena` has eight rows (F32/F16, normal or
+oversized chunks, successful or injected failed submission), requiring five
+source uploads to use three allocations in the shared case and five in the
+oversized case. It destroys the arena before submit and accesses before the
+GPU wait, checks all source regions byte-for-byte on CPU, and checks unchanged
+output after failed submit. `testRetiredResourcesReleasedOutsideLock` holds a
+destructor open while another thread retires a resource; the latter must
+finish before the destructor is released. `testTileAllocationBoundsResourceReclamation`
+checks the 16-entry limit and complete explicit flushing. Existing projection
+tests cover partial updates, selections, channel flags and CPU fallback.
+
+Same-session benchmark, RTX PRO 6000 Blackwell, validation disabled,
+4096x4096 F32, 16 layers, GPU completion included:
+
+| Measurement | Before (one fresh process) | After (three fresh processes) |
+| --- | --- | --- |
+| Initial refresh, including uploads/preparation | 2520.5 ms | 620.2-655.0 ms |
+| First GPU refresh after CPU projection work | 629.1 ms | 58.2-59.1 ms |
+| Resident GPU refresh, three-sample median per process | 56.2 ms | 55.7-56.3 ms |
+| Resident CPU refresh, three-sample median per process | 251.6 ms | 251.3-258.5 ms |
+| Full CPU readback | 46.3 ms | 46.2-47.4 ms |
+| 256px dirty update plus canvas read, average of 20 | 1.24 ms | 0.85-0.98 ms |
+
+Every run verifies full CPU/GPU pixel parity. Initial/transition values are
+single samples per fresh process, not latency percentiles. These are engine
+measurements, not application startup, document loading or pen-to-screen
+latency. Logs: `%LOCALAPPDATA%\Temp\solstice-gpu-438-before.txt`,
+`solstice-gpu-438-host.txt`, `solstice-gpu-438-host-repeat2.txt`,
+`solstice-gpu-438-host-repeat3.txt`. Temporary profiling instrumentation was
+removed. Large mirrored Alpha Lock latency remains explicitly deferred.
+
+Validation: all ten GPU/brush-queue suites passed with Vulkan validation
+enabled in 138.63 seconds (`solstice-gpu-438-final-tests.log` in the same temp
+directory). GPU, image and UI libraries are installed in the test prefix;
+all nine related DLLs match the build by SHA-256. The user confirmed the
+combined real-app check passed.
+
+Manual handoff: open a multi-layer RGBA32F document, paint on several layers,
+change visibility/opacity and check Undo/Redo and KRA save/reopen. Apply and
+undo a CPU filter to exercise returning to GPU projection. Briefly check
+RGBA16F too; no additional blend-mode matrix is needed. The user launches
+and closes the application.
+
+### Batched voluntary tile eviction (phase 4.41)
+
+`KisGpuTileBackend::evictTiles` retains the existing historical/CPU-current
+candidate priority but visits up to 256 candidates per batch. The tile store
+holds its iteration lock for object lifetimes and takes non-blocking swap
+write locks through `tryEvictGpuTileDataBatch`. Missing, already-evicted,
+duplicate and busy tiles do not contribute released bytes. The backend then
+takes the residency lock, rejects pinned/in-flight slots, sorts state locks
+and separates pixel sizes before calling `downloadBatch`.
+
+At most 256 tiles (16 MiB for F32, 8 MiB for F16) are downloaded per transfer.
+CPU-current tiles need no transfer. Only CPU-valid contents are released;
+a failed batch retains its GPU-only slots without retries, content-loss
+reporting or stopping the engine. Other pixel sizes/CPU-current neighbors
+can still be reclaimed. The existing single-tile hook remains for disk swap.
+Lock order stays store lifetime, swap locks, residency, sorted tile states,
+then transfer commands. The no-GPU hook is a no-op returning zero.
+
+`testBatchedEviction` adds eight rows (F32/F16, successful transfer, failed
+submission, busy swap lock and denied readback allocation). A 17x17 tile
+image now requires two readback submissions rather than 289; all pixels are
+compared exactly after successful reclamation/retry. `testMixedEvictionBatch`
+mixes CPU-current F32, GPU-only F32/F16 and duplicate entries. It fails the
+F16 transfer, checks successful F32 eviction and exact returned byte counts,
+then checks that retry preserves F16 pixels and already-evicted entries
+return zero. Existing pressure, prepared-access, COW source, Undo/Redo,
+disk-swap and concurrent-eviction tests remain required.
+
+The full regression run also exposed an intermittent pre-existing assertion
+in `testChannelFlagBoundaries(normal-f160)`: channels 15, opacity 179,
+component 256 had CPU 0 versus GPU -0.25, with both output alphas zero.
+`KoOptimizedCompositeOpOver128` may copy source RGB when every destination
+alpha in a SIMD batch is zero, while its scalar path preserves destination
+RGB for a zero source alpha. The test now independently asserts the GPU's
+scalar preservation rule against the original pixels only for unrestricted
+Normal RGB where both output alphas are exactly zero. Alpha, visible pixels,
+restricted channels, other modes and numeric tolerances are unchanged. No
+production blend behavior was changed to match CPU SIMD grouping.
+
+Validation on 2026-10-04: all 13 selected suites passed with Vulkan validation
+enabled (GPU engine/interop/paint-device/projection/brush/brush-jobs/stroke/
+canvas/save, dab queue and three tile-store suites; 152.42 seconds). The
+projection suite then passed three consecutive CTest runs (72.54 seconds).
+The no-GPU tile hook and tile store also passed syntax-only compilation;
+this was not a complete no-GPU build. Updated image, brush, UI, KRA,
+paint-op and default paint-op libraries were installed; all nine relevant
+built/installed DLL hashes match. The user confirmed the application's
+phase 4.41 manual check passed. Logs are under `%LOCALAPPDATA%/Temp/` as
+`solstice-gpu-441-final-tests-fixed.log`,
+`solstice-gpu-441-projection-repeat.log` and `solstice-gpu-441-install.log`.
+
+This reduces transfer submission count; no application latency benchmark
+is claimed for eviction. Manual check: paint and change layer visibility in
+a multi-layer float document, Undo/Redo, save/reopen, and briefly check F16.
+There is no need to change the user's memory settings to force pressure;
+low-budget and failure conditions are covered by automated tests. The user
+controls application startup/exit.
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.
 - Memory management now bounds and evicts tile pools, including a path to
   disk swap. Canvas transfer buffers have a separate cap. GPU-resident tiles
   still retain CPU snapshots, other temporary allocations and GL textures
-  have no shared budget, and eviction downloads need batching.
-- A CPU read of a stale tile costs one synchronous submission per tile
-  (see the phase 1 measurements); bulk readers should call
-  `KisGpuTileAccess::syncToCpu` first. `KisTiledDataManager::readBytes`
-  could batch this automatically.
+  have no shared budget. Voluntary tile eviction downloads are now batched;
+  disk swap still uses the single-tile hook.
+- Individual iterator reads of stale tiles still download synchronously per
+  tile; bulk `readBytes` and planar reads now batch automatically. Other large
+  iterator-based consumers should call `KisGpuTileAccess::syncToCpu` first.
+  Host-cached staging brought the tested CPU-to-GPU transition close to
+  resident update time; other GPUs/drivers and larger documents still need
+  measurements. Initial preparation/upload costs remain higher than resident
+  updates.
 - `KisGpuLayerStackCompositor`, `KisGpuLayerCompositor`, and
   `KisGpuTileFill` reuse one host-visible table buffer, so callers must wait
   between recordings (the projection compositor keeps one per work context);
   replace with a per-submission ring before overlapping submissions.
-- Phase 2 waits for the GPU inside each merge job (one submission per
-  batch). Fine for correctness; phase 3 should pipeline submissions.
+- Projection work contexts wait before reusing their command/table buffers;
+  successful projection submissions already return without an end wait.
+  The bounded three-slot staging ring added in 4.23-4.25 is specific to brushes.
 - Unsupported in the GPU projection (CPU fallback): layer styles, blend modes
-  outside the list above, partial RGB channel flags, layers whose offset is
+  outside the list above, layers whose offset is
   not a multiple of 64 relative to the projection, color space mismatches.
 - The whole-stack upload measured 55 GB/s with one `vkCmdCopyBuffer` region per
   tile; evaluate a compute scatter from ReBAR memory for document load.
-- Parity of the remaining blend modes and of 16-bit float rounding (Krita's F16
-  op rounds after every layer; the GPU rounds once).
+- Additional blend modes still need CPU parity coverage. F16 projection
+  already rounds after each layer and is tested; F16 brush compositing remains
+  on the CPU and needs separate per-dab rounding work.
 - Python scripting (`libkis`) and file export need CPU pixel access; every such
   call becomes a synchronous download.
-- Merging later `krita-sol` feature work into `krita-sol-gpu` is expected to
-  conflict in `libs/image` once phase 1 starts.

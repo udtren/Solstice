@@ -7,8 +7,9 @@
 #ifndef KISTAGFILTERRESOURCEPROXYMODEL_H
 #define KISTAGFILTERRESOURCEPROXYMODEL_H
 
-#include <QSortFilterProxyModel>
 #include <QObject>
+#include <QSet>
+#include <QSortFilterProxyModel>
 
 #include "KoResource.h"
 #include "KisResourceModel.h"
@@ -73,6 +74,14 @@ public:
      * @param metaDataMap
      */
     void setMetaDataFilter(QMap<QString, QVariant> metaDataMap);
+
+    /// OR within each list, AND across facets. An empty map disables metadata
+    /// filtering; an enabled facet with an empty list matches no resources.
+    void setAdditionalFilters(const QMap<QString, QStringList> &metadataValues,
+                              bool filterStorages,
+                              const QSet<int> &storageIds);
+    /// All active copies of the name/filename/checksum identity grouped by the resource model.
+    static QSet<int> activeStorageIdsForIndex(const QModelIndex &index);
 
     /**
      * @brief setTagFilter sets the tag to filter with

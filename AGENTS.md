@@ -80,6 +80,8 @@ Read these before adding or updating any feature:
 - Lazy Tools: `docs/agent/lazy-tools.md`
 - Puppet Warp: `docs/agent/puppet-warp.md`
 - GPU Engine (branch `krita-sol-gpu`): `docs/agent/gpu-engine.md`
+- Brush Stroke Preview:
+  `docs/agent/brush-stroke-preview.md`
 - Solstice visual branding checklist:
   `docs/agent/solstice-visual-branding-todo.md`
 - GitHub Actions Windows trial builds: `docs/agent/github-actions.md`

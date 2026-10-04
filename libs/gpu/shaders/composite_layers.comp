@@ -9,11 +9,12 @@
  * Blend modes reproduce Krita's RGBA float composite ops:
  *  - Over: KoOptimizedCompositeOpOver128
  *  - Erase: KoCompositeOpErase, preserving RGB even at zero alpha
+ *  - HSY modes: KoCompositeOpGenericHSLFunctor
  *  - the others: KoCompositeOpGenericSC with the cf* functions of
  *    KoCompositeOpFunctions.h and their clamp policies
  *  - KoCompositeOpBase: a destination pixel with alpha exactly 0 is cleared
  *    when any channel is locked (not all channel flags set).
- * Krita computes intermediate values in double; this shader uses float.
+ * Soft Light uses double intermediates on the CPU; this shader uses float.
  *
  * Compile with -DTILE_F16 for RGBA16F tiles; the result is then rounded to
  * half after every layer, as Krita does when compositing into an F16 device.
@@ -145,7 +146,9 @@ void main()
             if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, params.maskSize))) continue;
             const uint maskIndex = uint(p.y * params.maskSize.x + p.x);
             const uint packed = MaskBytes(params.mask).word[maskIndex / 4];
-            coverage = float((packed >> (8 * (maskIndex % 4))) & 255) * (1.0 / 255.0);
+            // Coverage is restricted to one layer by the host-side API.
+            coverage = maskCoverage((packed >> (8 * (maskIndex % 4))) & 255,
+                                    params.layers.layers[0].op >= OpLinearBurn);
         }
         vec4 result = LOAD_PIXEL(dstTile.px[index]);
         for (uint layer = 0; layer < params.layerCount; layer++) {

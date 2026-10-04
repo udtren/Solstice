@@ -127,6 +127,11 @@ void FreehandStrokeStrategy::init(Flags flags)
     m_d->efficiencyMeasurer.setEnabled(KisStrokeSpeedMonitor::instance()->haveStrokeSpeedMeasurement());
 }
 
+void FreehandStrokeStrategy::setPreviewRandomSeed(int seed)
+{
+    m_d->randomSource.setSeed(seed);
+}
+
 void FreehandStrokeStrategy::initStrokeCallback()
 {
     KisPainterBasedStrokeStrategy::initStrokeCallback();

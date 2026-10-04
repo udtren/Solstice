@@ -186,6 +186,8 @@ public:
                            Flags flags = None);
 
     ~FreehandStrokeStrategy() override;
+    /// Preview-only, called before startStroke(). Never changes ordinary stroke randomness.
+    void setPreviewRandomSeed(int seed);
 
     void initStrokeCallback() override;
     void finishStrokeCallback() override;

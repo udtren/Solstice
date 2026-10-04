@@ -19,6 +19,7 @@
 #include "kritaimage_export.h"
 
 class KisGpuCommandList;
+class KisGpuBuffer;
 
 /**
  * GPU access to the 64x64 tiles of a paint device that cover a rect
@@ -47,6 +48,36 @@ class KisGpuCommandList;
 class KRITAIMAGE_EXPORT KisGpuTileAccess
 {
 public:
+    /** Append-only upload storage shared by accesses prepared for one submission.
+     * Not thread-safe. Live accesses retain each buffer until GPU completion.
+     */
+    class UploadArena
+    {
+    public:
+        explicit UploadArena(VkDeviceSize chunkBytes)
+            : m_chunkBytes(chunkBytes)
+        {
+        }
+        UploadArena(const UploadArena &) = delete;
+        UploadArena &operator=(const UploadArena &) = delete;
+        int allocationCount() const
+        {
+            return m_allocationCount;
+        }
+        VkDeviceSize reservedBytes() const
+        {
+            return m_reservedBytes;
+        }
+
+    private:
+        friend class KisGpuTileAccess;
+        VkDeviceSize m_chunkBytes;
+        std::shared_ptr<KisGpuBuffer> m_current;
+        VkDeviceSize m_used = 0;
+        int m_allocationCount = 0;
+        VkDeviceSize m_reservedBytes = 0;
+    };
+
     enum Mode {
         /// The GPU reads the tiles. Missing tiles read as the default pixel.
         ReadOnly,
@@ -78,6 +109,7 @@ public:
      * clone copies into @p commands. Call once, before using addresses().
      */
     bool prepare(KisGpuCommandList &commands, QString *errorMessage = nullptr);
+    bool prepare(KisGpuCommandList &commands, UploadArena &uploads, QString *errorMessage = nullptr);
 
     /// Device address of each tile, row-major over tileGrid(). Valid after prepare().
     QVector<VkDeviceAddress> addresses() const;
@@ -116,6 +148,7 @@ public:
     static void syncToCpu(KisPaintDeviceSP device, const QRect &rect);
 
 private:
+    bool prepareImpl(KisGpuCommandList &commands, QString *errorMessage, UploadArena *uploads);
     /// Records the uploads still needed into commands.preamble() (residency mutex held).
     void recordUploads(KisGpuCommandList &commands);
     /// Publishes flags and lastUse (under the residency mutex).

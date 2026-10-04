@@ -35,6 +35,29 @@ enum class KisGpuBlendOp : quint32 {
     HardLight = 9,
     Exclusion = 10,
     Erase = 11, // Brush compositing only; not exposed by the layer blend-op mapping.
+    LinearBurn = 12,
+    LinearLight = 13,
+    PinLight = 14,
+    SoftLightSvg = 15,
+    SoftLightPhotoshop = 16,
+    ColorDodge = 17,
+    ColorBurn = 18,
+    Divide = 19,
+    VividLight = 20,
+    HardMix = 21,
+    HardMixPhotoshop = 22,
+    HardMixSofterPhotoshop = 23,
+    GrainMerge = 24,
+    GrainExtract = 25,
+    Negation = 26,
+    Allanon = 27,
+    Hue = 28,
+    Saturation = 29,
+    Color = 30,
+    Luminosity = 31,
+    DarkerColor = 32,
+    LighterColor = 33,
+    Count,
 };
 
 /**
@@ -87,6 +110,8 @@ private:
 
     KisGpuContext &m_context;
     std::unique_ptr<KisGpuComputePipeline> m_pipeline;
+    std::unique_ptr<KisGpuComputePipeline> m_extendedPipeline;
+    bool m_f16 = false;
     std::unique_ptr<KisGpuBuffer> m_tables;
 };
 

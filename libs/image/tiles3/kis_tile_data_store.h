@@ -10,8 +10,9 @@
 
 #include "kritaimage_export.h"
 
-#include <QReadWriteLock>
 #include "kis_tile_data_interface.h"
+#include <QReadWriteLock>
+#include <QVector>
 
 #include "kis_tile_data_pooler.h"
 #include "swap/kis_tile_data_swapper.h"
@@ -108,6 +109,8 @@ public:
     bool trySwapTileData(KisTileData *td);
     /// GPU eviction while iterating the store; does not alter store membership.
     bool tryEvictGpuTileData(KisTileData *td);
+    /// Bounded GPU eviction under store iteration; skips busy swap locks.
+    quint64 tryEvictGpuTileDataBatch(const QVector<KisTileData *> &tiles);
 
     /**
      * WARN: The following three method are only for usage

@@ -175,6 +175,16 @@ QPoint KisGpuTileAccess::tileOrigin(int col, int row) const
 
 bool KisGpuTileAccess::prepare(KisGpuCommandList &commands, QString *errorMessage)
 {
+    return prepareImpl(commands, errorMessage, nullptr);
+}
+
+bool KisGpuTileAccess::prepare(KisGpuCommandList &commands, UploadArena &uploads, QString *errorMessage)
+{
+    return prepareImpl(commands, errorMessage, &uploads);
+}
+
+bool KisGpuTileAccess::prepareImpl(KisGpuCommandList &commands, QString *errorMessage, UploadArena *arena)
+{
     KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(!d->prepared, false);
     d->prepared = true;
 
@@ -303,21 +313,46 @@ bool KisGpuTileAccess::prepare(KisGpuCommandList &commands, QString *errorMessag
 
     if (!uploadEntries.isEmpty()) {
         const VkDeviceSize tileBytes = pool->tileBytes();
-        d->staging = std::shared_ptr<KisGpuBuffer>(KisGpuBuffer::create(backend->context(),
-                                                                        tileBytes * uploadEntries.size(),
-                                                                        KisGpuBuffer::Location::Upload,
-                                                                        errorMessage)
-                                                       .release());
+        const VkDeviceSize bytes = tileBytes * uploadEntries.size();
+        VkDeviceSize baseOffset = 0;
+        if (arena && arena->m_current && arena->m_current->size() - arena->m_used >= bytes) {
+            d->staging = arena->m_current;
+            baseOffset = arena->m_used;
+        } else {
+            // Grow only after observing multiple uploads in this submission.
+            // A single dirty layer must not reserve space for resident layers.
+            const VkDeviceSize capacity = arena && arena->m_current && bytes >= 256 * 1024
+                ? qMax(bytes, qMin(arena->m_chunkBytes, 2 * arena->m_current->size()))
+                : bytes;
+            d->staging = KisGpuBuffer::create(backend->context(),
+                                              capacity,
+                                              KisGpuBuffer::Location::Staging,
+                                              capacity == bytes ? errorMessage : nullptr);
+            // Pooling is optional: retry the original exact allocation if the
+            // larger chunk could not be obtained.
+            if (!d->staging && capacity != bytes) {
+                d->staging =
+                    KisGpuBuffer::create(backend->context(), bytes, KisGpuBuffer::Location::Staging, errorMessage);
+            }
+            if (d->staging && arena) {
+                arena->m_current = d->staging;
+                arena->m_used = 0;
+                ++arena->m_allocationCount;
+                arena->m_reservedBytes += d->staging->size();
+            }
+        }
         if (!d->staging) {
             d->restorePendingContent();
             return false;
         }
+        if (arena)
+            arena->m_used += bytes;
 
         // Snapshot the CPU content now; whether it is uploaded is decided at
         // submission (submitAndFinish), when it is known whether the GPU copy
         // has become current in the meantime.
         quint8 *out = static_cast<quint8 *>(d->staging->mapped());
-        VkDeviceSize offset = 0;
+        VkDeviceSize offset = baseOffset;
         for (Entry *entry : uploadEntries) {
             KisTileData *td = entry->tileData;
             td->blockSwapping();
@@ -535,25 +570,7 @@ void KisGpuTileAccess::Private::releaseReplaced()
 
 void KisGpuTileAccess::syncToCpu(KisPaintDeviceSP device, const QRect &rect)
 {
-    KisGpuTileBackend *backend = KisGpuTileBackend::existingInstance();
-    if (!backend || rect.isEmpty()) {
-        return;
-    }
-
     KisDataManagerSP dataManager = device->dataManager();
     const QRect dmRect = rect.translated(-device->x(), -device->y());
-
-    QVector<KisTileSP> tiles;
-    QVector<KisTileData *> tileData;
-    for (int row = floorDiv(dmRect.top(), TileSize); row <= floorDiv(dmRect.bottom(), TileSize); row++) {
-        for (int col = floorDiv(dmRect.left(), TileSize); col <= floorDiv(dmRect.right(), TileSize); col++) {
-            bool existing = false;
-            KisTileSP tile = dataManager->getReadOnlyTileLazy(col, row, existing);
-            if (existing) {
-                tiles << tile;
-                tileData << tile->tileData();
-            }
-        }
-    }
-    backend->downloadToCpu(tileData);
+    KisTileGpuHooks::prepareCpuRead(dataManager.data(), dmRect);
 }

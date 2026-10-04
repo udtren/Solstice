@@ -4,6 +4,7 @@
 #include "KisRenderedDab.h"
 #include "gpu/KisGpuBrushPainter.h"
 #include "gpu/KisGpuMergeBatch.h"
+#include "gpu/KisGpuProjectionCompositor.h"
 #include "gpu/KisGpuTileAccess.h"
 #include "gpu/KisGpuTileBackend.h"
 #include "kis_default_bounds.h"
@@ -124,18 +125,15 @@ private:
     std::condition_variable m_changed;
     std::thread m_watchdog;
 };
-const QStringList separableModes{COMPOSITE_MULT,
-                                 COMPOSITE_SCREEN,
-                                 COMPOSITE_ADD,
-                                 COMPOSITE_LINEAR_DODGE,
-                                 COMPOSITE_SUBTRACT,
-                                 COMPOSITE_DARKEN,
-                                 COMPOSITE_LIGHTEN,
-                                 COMPOSITE_DIFF,
-                                 COMPOSITE_OVERLAY,
-                                 COMPOSITE_HARD_LIGHT,
-                                 COMPOSITE_EXCLUSION};
-const QStringList channelModes = QStringList{COMPOSITE_OVER, COMPOSITE_ERASE} + separableModes;
+// Representative modes for the full selection/channel/lifecycle matrix.
+const QStringList blendModes{COMPOSITE_MULT,         COMPOSITE_SCREEN,     COMPOSITE_ADD,
+                             COMPOSITE_LINEAR_DODGE, COMPOSITE_SUBTRACT,   COMPOSITE_DARKEN,
+                             COMPOSITE_LIGHTEN,      COMPOSITE_DIFF,       COMPOSITE_OVERLAY,
+                             COMPOSITE_HARD_LIGHT,   COMPOSITE_EXCLUSION,  COMPOSITE_LINEAR_BURN,
+                             COMPOSITE_LINEAR_LIGHT, COMPOSITE_PIN_LIGHT,  COMPOSITE_SOFT_LIGHT_SVG,
+                             COMPOSITE_DODGE,        COMPOSITE_BURN,       COMPOSITE_COLOR,
+                             COMPOSITE_HUE,          COMPOSITE_SATURATION, COMPOSITE_LUMINIZE};
+const QStringList channelModes = QStringList{COMPOSITE_OVER, COMPOSITE_ERASE} + blendModes;
 const QStringList dabModes = channelModes + QStringList{COMPOSITE_ALPHA_DARKEN};
 class PreviewPaintLayer : public KisPaintLayer
 {
@@ -344,13 +342,36 @@ private Q_SLOTS:
         QCOMPARE(KisGpuBrushPainter::stagingStatistics().bytes, quint64(0));
         QCOMPARE(KisGpuBrushPainter::stagingStatistics().contexts, 0);
     }
+    void testLargeStagingReusesFittingContexts()
+    {
+        QVERIFY(KisGpuBrushPainter::resetStagingForTesting());
+        KisPaintDeviceSP cpu = new KisPaintDevice(space()), gpu = new KisPaintDevice(space());
+        KisPainter cpuPainter(cpu), gpuPainter(gpu);
+        const QRect clip(-75, -21, 8, 8);
+        const QVector<QRect> rects{clip};
+        quint64 capacity = 0;
+        for (int i = 0; i < 6; ++i) {
+            const auto dabs = makeDabs(1, 1400); // ~30 MiB: two fit, three do not.
+            cpuPainter.bltFixed(clip, dabs);
+            QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs, &rects));
+            const auto stats = KisGpuBrushPainter::stagingStatistics();
+            QCOMPARE(stats.contexts, qMin(i + 1, 2));
+            QVERIFY(stats.bytes <= KisGpuDabCompositor::MaxUploadBytes);
+            if (i == 1)
+                capacity = stats.bytes;
+            if (i > 1)
+                QCOMPARE(stats.bytes, capacity);
+        }
+        QVERIFY(difference(pixels(cpu, clip), pixels(gpu, clip)) <= 2e-5f);
+        QVERIFY(KisGpuBrushPainter::resetStagingForTesting());
+    }
     void testParityUndoAndCpuWrite_data()
     {
         QTest::addColumn<QString>("mode");
         QTest::newRow("normal") << COMPOSITE_OVER;
         QTest::newRow("alpha-darken") << COMPOSITE_ALPHA_DARKEN;
         QTest::newRow("erase") << COMPOSITE_ERASE;
-        for (const auto &mode : separableModes)
+        for (const auto &mode : blendModes)
             QTest::newRow(qPrintable(mode)) << mode;
     }
     void testParityUndoAndCpuWrite()
@@ -410,7 +431,7 @@ private Q_SLOTS:
         KisPainter painter(device);
         painter.setCompositeOpId(mode);
         const auto before = pixels(device, bounds);
-        painter.setCompositeOpId(COMPOSITE_DODGE);
+        painter.setCompositeOpId(COMPOSITE_DODGE_HDR); // HDR variant still uses CPU.
         QVERIFY(!KisGpuBrushPainter::paint(&painter, dabs));
         painter.setCompositeOpId(mode);
         QBitArray flags(mode == COMPOSITE_ALPHA_DARKEN ? 4 : 3, true);
@@ -1005,6 +1026,48 @@ private Q_SLOTS:
         QVERIFY(difference(pixels(cpu, bounds), pixels(gpu, bounds), mode == COMPOSITE_OVER && channels == 15)
                 <= 2e-5f);
     }
+    void testSelectionCoverageRounding_data()
+    {
+        QTest::addColumn<QString>("mode");
+        for (const auto &mode : {COMPOSITE_LINEAR_BURN, COMPOSITE_LINEAR_LIGHT, COMPOSITE_PIN_LIGHT})
+            QTest::newRow(qPrintable(mode)) << mode;
+    }
+    void testSelectionCoverageRounding()
+    {
+        QFETCH(QString, mode);
+        auto dabs = makeDabs(1, 16);
+        auto *source = reinterpret_cast<float *>(dabs.first().device->data());
+        for (int i = 0; i < 256 * 4; ++i)
+            source[i] = 1.0f;
+        const QRect bounds = boundsOf(dabs);
+        QVector<quint8> coverage(256);
+        for (int i = 0; i < 256; ++i)
+            coverage[i] = quint8(i);
+        KisSelectionSP selection = new KisSelection();
+        selection->pixelSelection()->writeBytes(coverage.constData(), bounds);
+        KisPaintDeviceSP cpu = new KisPaintDevice(space()), gpu = new KisPaintDevice(space());
+        KisPainter cpuPainter(cpu, selection), gpuPainter(gpu, selection);
+        cpuPainter.setCompositeOpId(mode);
+        gpuPainter.setCompositeOpId(mode);
+        cpuPainter.bltFixed(bounds, dabs);
+        QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs));
+        const auto expected = pixels(cpu, bounds);
+        auto actual = pixels(gpu, bounds);
+        for (int i = 0; i < 256; ++i)
+            QVERIFY2(actual[4 * i + 3] == expected[4 * i + 3], qPrintable(QString::number(i)));
+
+        // Wash's layer shader uses the same byte conversion; require exact alpha
+        // there too, not the looser whole-image color tolerance.
+        KisPaintDeviceSP src = new KisPaintDevice(space()), merged = new KisPaintDevice(space());
+        src->writeBytes(reinterpret_cast<const quint8 *>(source), bounds);
+        const KisGpuLayerCompositor::Mask mask{coverage.constData(), bounds};
+        KisGpuBlendOp op;
+        QVERIFY(KisGpuProjectionCompositor::blendOpForCompositeOp(mode, &op));
+        QVERIFY(KisGpuProjectionCompositor::composite(merged, bounds, {{src, op}}, nullptr, &mask));
+        actual = pixels(merged, bounds);
+        for (int i = 0; i < 256; ++i)
+            QVERIFY2(actual[4 * i + 3] == expected[4 * i + 3], qPrintable(QString::number(i)));
+    }
     void testSelection_data()
     {
         QTest::addColumn<QString>("mode");
@@ -1090,14 +1153,16 @@ private Q_SLOTS:
             QCOMPARE(pixels(gpu, bounds), after);
             gpuPainter.bltFixed(bounds, dabs); // original selected CPU fallback
             cpuPainter.bltFixed(bounds, dabs);
-            QVERIFY(difference(pixels(cpu, bounds), pixels(gpu, bounds)) <= 2e-5f);
+            const float fallbackError = difference(pixels(cpu, bounds), pixels(gpu, bounds));
+            QVERIFY2(fallbackError <= 2e-5f, qPrintable(QString::number(fallbackError)));
         }
         // Reusing the uploader after deselection must not reuse its old mask.
         cpuPainter.setSelection(nullptr);
         gpuPainter.setSelection(nullptr);
         cpuPainter.bltFixed(bounds, dabs);
         QVERIFY(KisGpuBrushPainter::paint(&gpuPainter, dabs));
-        QVERIFY(difference(pixels(cpu, bounds), pixels(gpu, bounds)) <= 2e-5f);
+        const float deselectedError = difference(pixels(cpu, bounds), pixels(gpu, bounds));
+        QVERIFY2(deselectedError <= 2e-5f, qPrintable(QString::number(deselectedError)));
     }
     void testAlphaDarkenVariants_data()
     {
@@ -1271,7 +1336,7 @@ private Q_SLOTS:
         QTest::addColumn<bool>("erase");
         QTest::addColumn<int>("channels");
         QTest::addColumn<QString>("mode");
-        for (const auto &mode : separableModes) {
+        for (const auto &mode : blendModes) {
             for (int channels = 0; channels < 16; ++channels)
                 for (bool selected : {false, true})
                     QTest::newRow(qPrintable(QString("%1-channels%2-selected%3").arg(mode).arg(channels).arg(selected)))

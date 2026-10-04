@@ -10,13 +10,20 @@
 
 #include "kis_preset_chooser.h"
 
-#include <QVBoxLayout>
-#include <QPainter>
-#include <QAbstractItemDelegate>
-#include <QStyleOptionViewItem>
-#include <QSortFilterProxyModel>
+#include "KisBrushStrokePreviewCache.h"
+#include "KisPresetDockerFilters.h"
 #include <KisResourceModel.h>
+#include <QAbstractItemDelegate>
 #include <QApplication>
+#include <QEvent>
+#include <QHelpEvent>
+#include <QPainter>
+#include <QScrollBar>
+#include <QSortFilterProxyModel>
+#include <QStyleOptionViewItem>
+#include <QToolTip>
+#include <QVBoxLayout>
+#include <QWheelEvent>
 
 #include <kis_config.h>
 #include <klocalizedstring.h>
@@ -65,10 +72,15 @@ public:
     void setUseDirtyPresets(bool value) {
         m_useDirtyPresets = value;
     }
+    void setStrokePreview(bool enabled)
+    {
+        m_strokePreview = enabled;
+    }
 
 private:
     bool m_showText;
     bool m_useDirtyPresets;
+    bool m_strokePreview = false;
 };
 
 void KisPresetDelegate::paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const
@@ -85,6 +97,35 @@ void KisPresetDelegate::paint(QPainter * painter, const QStyleOptionViewItem & o
     }
 
     bool dirty = index.data(Qt::UserRole + KisAbstractResourceModel::Dirty).toBool();
+
+    if (m_strokePreview) {
+        const QRect cell = option.rect.adjusted(2, 2, -2, -2);
+        const QRect imageRect(cell.topLeft(), QSize(cell.width(), cell.width() / 3));
+        painter->fillRect(imageRect, QColor("#303030"));
+        const auto request = KisBrushStrokePreviewCache::Request::fromIndex(index);
+        const auto image = KisBrushStrokePreviewCache::instance()->preview(request);
+        if (!image.isNull())
+            painter->drawImage(imageRect, image);
+        QString name = index.data(Qt::UserRole + KisAbstractResourceModel::Name).toString().replace('_', ' ');
+        if (m_useDirtyPresets && dirty) {
+            name += '*';
+            KisIconUtils::loadIcon("dirty-preset")
+                .paint(painter, QRect(imageRect.topLeft() + QPoint(3, 3), QSize(16, 16)));
+        }
+        if (index.data(Qt::UserRole + KisAbstractResourceModel::BrokenStatus).toBool())
+            KisIconUtils::loadIcon("broken-preset")
+                .paint(painter, QRect(imageRect.bottomRight() - QPoint(20, 20), QSize(20, 20)));
+        painter->setPen(option.palette.color(QPalette::Text));
+        painter->drawText(QRect(cell.left(), imageRect.bottom() + 3, cell.width(), option.fontMetrics.height() + 2),
+                          Qt::AlignCenter,
+                          option.fontMetrics.elidedText(name, Qt::ElideMiddle, cell.width()));
+        if (option.state & (QStyle::State_Selected | QStyle::State_MouseOver)) {
+            painter->setPen(QPen(option.palette.highlight(), option.state & QStyle::State_Selected ? 3 : 1));
+            painter->drawRect(cell);
+        }
+        painter->restore();
+        return;
+    }
 
     QImage preview = KisResourceThumbnailCache::instance()->getImage(index);
 
@@ -199,10 +240,118 @@ KisPresetChooser::KisPresetChooser(QWidget *parent)
 
 
     notifyConfigChanged();
+    m_previewRequestsTimer.setSingleShot(true);
+    m_previewRequestsTimer.setInterval(30);
+    connect(&m_previewRequestsTimer, &QTimer::timeout, this, &KisPresetChooser::updatePreviewRequests);
+    auto *view = m_chooser->itemView();
+    view->viewport()->installEventFilter(this);
+    connect(view->verticalScrollBar(), &QScrollBar::valueChanged, this, [this]() {
+        m_previewRequestsTimer.start();
+    });
+    connect(view->horizontalScrollBar(), &QScrollBar::valueChanged, this, [this]() {
+        m_previewRequestsTimer.start();
+    });
+    connect(view->model(), &QAbstractItemModel::modelReset, this, [this]() {
+        m_previewRequestsTimer.start();
+    });
+    connect(view->model(), &QAbstractItemModel::dataChanged, this, [this]() {
+        m_previewRequestsTimer.start();
+    });
+    connect(view->model(), &QAbstractItemModel::rowsInserted, this, [this]() {
+        m_previewRequestsTimer.start();
+    });
+    connect(view->model(), &QAbstractItemModel::rowsRemoved, this, [this]() {
+        m_previewRequestsTimer.start();
+    });
+    connect(view->model(), &QAbstractItemModel::layoutChanged, this, [this]() {
+        m_previewRequestsTimer.start();
+    });
 }
 
 KisPresetChooser::~KisPresetChooser()
 {
+    if (m_strokePreview)
+        KisBrushStrokePreviewCache::instance()->removeConsumer(this);
+}
+
+void KisPresetChooser::setStrokePreviewMode(bool enabled)
+{
+    if (m_strokePreview == enabled)
+        return;
+    m_strokePreview = enabled;
+    m_delegate->setStrokePreview(enabled);
+    m_chooser->setSynced(!enabled);
+    m_chooser->setResponsiveness(!enabled && !m_dockerFilters);
+    m_chooser->setBottomBarLayout(enabled || m_dockerFilters);
+    if (enabled) {
+        m_previewWidth = qBound(90, KisConfig(true).readEntry<int>("Solstice/BrushStrokePreviewWidth", 180), 240);
+        connect(KisBrushStrokePreviewCache::instance(),
+                &KisBrushStrokePreviewCache::previewReady,
+                m_chooser->itemView()->viewport(),
+                QOverload<>::of(&QWidget::update),
+                Qt::UniqueConnection);
+    } else {
+        KisBrushStrokePreviewCache::instance()->removeConsumer(this);
+    }
+    updateViewSettings();
+}
+
+void KisPresetChooser::enableDockerFilters()
+{
+    if (m_dockerFilters)
+        return;
+    m_dockerFilters = true;
+    m_chooser->setResponsiveness(false);
+    m_chooser->setBottomBarWidget(new KisPresetDockerFilters(m_chooser->tagFilterModel()));
+    updateViewSettings();
+}
+
+bool KisPresetChooser::eventFilter(QObject *object, QEvent *event)
+{
+    if (m_strokePreview && object == m_chooser->itemView()->viewport()) {
+        if (event->type() == QEvent::ToolTip) {
+            const auto *help = static_cast<QHelpEvent *>(event);
+            const auto index = m_chooser->itemView()->indexAt(help->pos());
+            const QString name = index.data(Qt::UserRole + KisAbstractResourceModel::Name).toString();
+            if (name.isEmpty())
+                QToolTip::hideText();
+            else
+                QToolTip::showText(help->globalPos(), name, m_chooser->itemView());
+            return true; // The shared resource tooltip contains the stored icon.
+        }
+        if (event->type() == QEvent::Hide)
+            KisBrushStrokePreviewCache::instance()->removeConsumer(this);
+        if (event->type() == QEvent::Show || event->type() == QEvent::Resize)
+            m_previewRequestsTimer.start();
+        if (event->type() == QEvent::Wheel) {
+            auto *wheel = static_cast<QWheelEvent *>(event);
+            if (wheel->modifiers() & Qt::ControlModifier) {
+                setIconSize(iconSize() + wheel->angleDelta().y() / 120 * 10);
+                saveIconSize();
+                return true;
+            }
+        }
+    }
+    return QWidget::eventFilter(object, event);
+}
+
+void KisPresetChooser::updatePreviewRequests()
+{
+    if (!m_strokePreview)
+        return;
+    auto *view = m_chooser->itemView();
+    if (!view->isVisible()) {
+        KisBrushStrokePreviewCache::instance()->removeConsumer(this);
+        return;
+    }
+    QList<KisBrushStrokePreviewCache::Request> requests;
+    const QRect viewport = view->viewport()->rect();
+    for (int row = 0; row < view->model()->rowCount(); ++row) {
+        const auto index = view->model()->index(row, 0);
+        if (view->visualRect(index).intersects(viewport))
+            requests << KisBrushStrokePreviewCache::Request::fromIndex(index);
+    }
+    KisBrushStrokePreviewCache::instance()->setRequests(this, requests);
 }
 
 void KisPresetChooser::setViewMode(KisPresetChooser::ViewMode mode)
@@ -225,7 +374,8 @@ void KisPresetChooser::notifyConfigChanged()
 {
     KisConfig cfg(true);
     m_delegate->setUseDirtyPresets(cfg.useDirtyPresets());
-    setIconSize(cfg.presetIconSize());
+    if (!m_strokePreview)
+        setIconSize(cfg.presetIconSize());
 }
 
 void KisPresetChooser::slotResourceWasSelected(KoResourceSP resource)
@@ -254,6 +404,14 @@ void KisPresetChooser::slotCurrentPresetChanged()
 
 void KisPresetChooser::updateViewSettings()
 {
+    if (m_strokePreview) {
+        m_chooser->setListViewMode(ListViewMode::IconGrid);
+        m_chooser->setColumnWidth(m_previewWidth);
+        m_chooser->setRowHeight(m_previewWidth / 3 + fontMetrics().height() + 10);
+        m_chooser->itemView()->viewport()->update();
+        m_previewRequestsTimer.start();
+        return;
+    }
     switch (m_mode) {
     case ViewMode::THUMBNAIL: {
         m_chooser->setListViewMode(ListViewMode::IconGrid);
@@ -300,18 +458,29 @@ void KisPresetChooser::setPresetFilter(const QString& paintOpId)
 
 void KisPresetChooser::setIconSize(int newSize)
 {
+    if (m_strokePreview) {
+        m_previewWidth = 3 * qBound(30, newSize, 80);
+        updateViewSettings();
+        return;
+    }
     KisResourceItemChooserSync* chooserSync = KisResourceItemChooserSync::instance();
     chooserSync->setBaseLength(newSize);
 }
 
 int KisPresetChooser::iconSize()
 {
+    if (m_strokePreview)
+        return m_previewWidth / 3;
     KisResourceItemChooserSync* chooserSync = KisResourceItemChooserSync::instance();
     return chooserSync->baseLength();
 }
 
 void KisPresetChooser::saveIconSize()
 {
+    if (m_strokePreview) {
+        KisConfig(false).writeEntry("Solstice/BrushStrokePreviewWidth", m_previewWidth);
+        return;
+    }
     // save icon size
     if (KisConfig(true).presetIconSize() != iconSize()) {
         KisConfig(false).setPresetIconSize(iconSize());

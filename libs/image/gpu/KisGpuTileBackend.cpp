@@ -10,15 +10,18 @@
 #include <KisGpuContext.h>
 
 #include <QMutexLocker>
+#include <QSet>
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <mutex>
 
 #include <kis_debug.h>
 
 #include "tiles3/kis_tile_data.h"
 #include "tiles3/kis_tile_data_store_iterators.h"
+#include "tiles3/kis_tiled_data_manager.h"
 
 namespace
 {
@@ -126,7 +129,9 @@ KisTileGpuState *KisGpuTileBackend::pinState(KisTileData *td, QString *errorMess
         return nullptr;
     }
 
-    collectGarbage();
+    // Spread completed upload destruction across callers instead of making
+    // the first new tile synchronously free every previous upload buffer.
+    collectGarbageImpl(16);
 
     for (int attempt = 0; attempt < 2; ++attempt) {
         // Loading from disk may take store locks: never do it with the
@@ -193,6 +198,47 @@ bool KisGpuTileBackend::tryEvict(KisTileData *td)
     return true;
 }
 
+quint64 KisGpuTileBackend::tryEvictBatch(const QVector<KisTileData *> &tiles)
+{
+    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(tiles.size() <= DownloadBatchTiles, 0);
+    QMutexLocker locker(&m_residencyMutex);
+    const quint64 completed = m_context->completedValue();
+    QVector<KisTileData *> eligible;
+    for (KisTileData *td : tiles) {
+        KisTileGpuState *state = td->gpuState();
+        if (state && state->slot != KisTileGpuState::InvalidSlot && !state->pins && state->lastUse <= completed)
+            eligible << td;
+    }
+    // Match the readback lock order and keep each transfer to one pixel size.
+    std::sort(eligible.begin(), eligible.end(), [](KisTileData *a, KisTileData *b) {
+        return a->pixelSize() != b->pixelSize() ? a->pixelSize() < b->pixelSize() : a->gpuState() < b->gpuState();
+    });
+    quint64 released = 0;
+    int start = 0;
+    while (start < eligible.size()) {
+        int end = start + 1;
+        while (end < eligible.size() && eligible[end]->pixelSize() == eligible[start]->pixelSize())
+            ++end;
+        // Voluntary reclamation: do not retry or mark content lost on failure.
+        // CPU-current tiles can still be released if their neighbors failed.
+        downloadBatch(eligible.mid(start, end - start));
+        for (int i = start; i < end; ++i) {
+            KisTileData *td = eligible[i];
+            KisTileGpuState *state = td->gpuState();
+            QMutexLocker stateLocker(&state->mutex);
+            if (!state->cpuValid())
+                continue;
+            const quint32 slot = state->slot;
+            state->setValid(KisTileGpuState::CpuValid);
+            state->slot = KisTileGpuState::InvalidSlot;
+            pool(td->pixelSize())->release(slot);
+            released += quint64(td->pixelSize()) * 64 * 64;
+        }
+        start = end;
+    }
+    return released;
+}
+
 quint64 KisGpuTileBackend::evictTiles(quint64 bytes)
 {
     quint64 evicted = 0;
@@ -211,13 +257,22 @@ quint64 KisGpuTileBackend::evictTiles(quint64 bytes)
     std::stable_sort(candidates.begin(), candidates.end(), [](const auto &a, const auto &b) {
         return a.first < b.first;
     });
+    QVector<KisTileData *> batch;
+    quint64 batchBytes = 0;
     for (const auto &candidate : candidates) {
         if (evicted >= bytes)
             break;
         KisTileData *td = candidate.second;
-        if (store->tryEvictGpuTileData(td))
-            evicted += quint64(td->pixelSize()) * 64 * 64;
+        batch << td;
+        batchBytes += quint64(td->pixelSize()) * 64 * 64;
+        if (batch.size() == DownloadBatchTiles || batchBytes >= bytes - evicted) {
+            evicted += store->tryEvictGpuTileDataBatch(batch);
+            batch.clear();
+            batchBytes = 0;
+        }
     }
+    if (!batch.isEmpty())
+        evicted += store->tryEvictGpuTileDataBatch(batch);
     store->endIteration(iterator);
     m_pool32->trim();
     m_pool16->trim();
@@ -445,22 +500,37 @@ void KisGpuTileBackend::retireAfter(quint64 timelineValue, std::shared_ptr<void>
 
 void KisGpuTileBackend::collectGarbage()
 {
+    collectGarbageImpl(std::numeric_limits<size_t>::max());
+}
+
+void KisGpuTileBackend::collectGarbageImpl(size_t maxRetired)
+{
     const quint64 completed = m_context->completedValue();
+    std::vector<std::shared_ptr<void>> retired;
+    {
+        QMutexLocker locker(&m_garbageMutex);
+        auto slotEnd =
+            std::partition(m_deferredSlots.begin(), m_deferredSlots.end(), [completed](const DeferredSlot &slot) {
+                return slot.timelineValue > completed;
+            });
+        for (auto it = slotEnd; it != m_deferredSlots.end(); ++it) {
+            it->pool->release(it->slot);
+        }
+        m_deferredSlots.erase(slotEnd, m_deferredSlots.end());
 
-    QMutexLocker locker(&m_garbageMutex);
-    auto slotEnd =
-        std::partition(m_deferredSlots.begin(), m_deferredSlots.end(), [completed](const DeferredSlot &slot) {
-            return slot.timelineValue > completed;
+        auto retiredEnd = std::partition(m_retired.begin(), m_retired.end(), [completed](const auto &entry) {
+            return entry.first > completed;
         });
-    for (auto it = slotEnd; it != m_deferredSlots.end(); ++it) {
-        it->pool->release(it->slot);
+        const auto releaseEnd = retiredEnd + qMin(maxRetired, size_t(m_retired.end() - retiredEnd));
+        retired.reserve(size_t(releaseEnd - retiredEnd));
+        for (auto it = retiredEnd; it != releaseEnd; ++it) {
+            retired.push_back(std::move(it->second));
+        }
+        m_retired.erase(retiredEnd, releaseEnd);
     }
-    m_deferredSlots.erase(slotEnd, m_deferredSlots.end());
-
-    auto retiredEnd = std::partition(m_retired.begin(), m_retired.end(), [completed](const auto &entry) {
-        return entry.first > completed;
-    });
-    m_retired.erase(retiredEnd, m_retired.end());
+    // Vulkan memory unmapping/freeing can take milliseconds per allocation.
+    // Do not hold the global retirement lock while calling these destructors.
+    retired.clear();
     m_pool32->trim();
     m_pool16->trim();
 }
@@ -475,6 +545,55 @@ quint32 KisGpuTileBackend::allocatedSlots(qint32 pixelSize)
 {
     KisGpuTilePool *tilePool = pool(pixelSize);
     return tilePool ? tilePool->allocatedSlots() : 0;
+}
+
+void KisTileGpuHooks::prepareCpuRead(KisTiledDataManager *manager, const QRect &rect)
+{
+    KisGpuTileBackend *backend = KisGpuTileBackend::existingInstance();
+    if (!backend || rect.isEmpty()) {
+        return;
+    }
+
+    const auto tileIndex = [](int value) {
+        return value >= 0 ? value / 64 : -((-qint64(value) + 63) / 64);
+    };
+    QVector<KisTileSP> tiles;
+    QVector<KisTileData *> data;
+    QSet<KisTileData *> seen;
+    auto download = [&]() {
+        backend->downloadToCpu(data);
+        for (KisTileData *td : data) {
+            td->unblockSwapping();
+        }
+        data.clear();
+        seen.clear();
+        tiles.clear();
+    };
+    for (int row = tileIndex(rect.top()); row <= tileIndex(rect.bottom()); ++row) {
+        for (int col = tileIndex(rect.left()); col <= tileIndex(rect.right()); ++col) {
+            bool existing = false;
+            KisTileSP tile = manager->getReadOnlyTileLazy(col, row, existing);
+            if (!existing) {
+                continue;
+            }
+            KisTileData *td = tile->tileData();
+            KisTileGpuState *state = td->gpuState();
+            if (!state || state->cpuValid() || seen.contains(td)) {
+                continue;
+            }
+            // Keep both the tile and its CPU allocation alive while downloading.
+            // Swapping can evict a GPU slot, so the swap lock precedes state locks.
+            // Defer the usual single-tile download until the batch is complete.
+            td->blockSwappingForReadback();
+            tiles << tile;
+            data << td;
+            seen.insert(td);
+            if (data.size() == DownloadBatchTiles) {
+                download();
+            }
+        }
+    }
+    download();
 }
 
 void KisTileGpuHooks::ensureCpuValid(KisTileData *td)
@@ -498,4 +617,10 @@ bool KisTileGpuHooks::tryEvict(KisTileData *td)
 {
     KisGpuTileBackend *backend = KisGpuTileBackend::existingInstance();
     return backend && backend->tryEvict(td);
+}
+
+quint64 KisTileGpuHooks::tryEvictBatch(const QVector<KisTileData *> &tiles)
+{
+    KisGpuTileBackend *backend = KisGpuTileBackend::existingInstance();
+    return backend ? backend->tryEvictBatch(tiles) : 0;
 }

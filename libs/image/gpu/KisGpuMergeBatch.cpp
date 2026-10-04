@@ -133,12 +133,18 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
         return false;
     }
 
-    // Channel flags: all channels, or all colors with the alpha channel locked.
+    // Empty flags mean all channels; RGBA float channels use storage order.
     const QBitArray flags = leaf->channelFlags();
     bool alphaLocked = false;
+    quint32 channelMask = 0xf;
     if (!flags.isEmpty()) {
-        if (flags.size() != 4 || !flags.testBit(0) || !flags.testBit(1) || !flags.testBit(2)) {
+        if (flags.size() != 4) {
             return false;
+        }
+        channelMask = 0;
+        for (int i = 0; i < 4; ++i) {
+            if (flags.testBit(i))
+                channelMask |= 1u << i;
         }
         alphaLocked = !flags.testBit(3);
     }
@@ -171,6 +177,7 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
     entry.op = quint32(op);
     entry.opacity = leaf->opacity() / 255.0f;
     entry.alphaLocked = alphaLocked;
+    entry.channelMask = channelMask;
     m_entries << entry;
     return true;
 #else
@@ -196,6 +203,7 @@ void KisGpuMergeBatch::flush()
         layer.op = KisGpuBlendOp(entry.op);
         layer.opacity = entry.opacity;
         layer.alphaLocked = entry.alphaLocked;
+        layer.channelMask = entry.channelMask;
         layers << layer;
     }
 

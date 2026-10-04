@@ -31,6 +31,9 @@ public:
     bool firstShown {true};
     QSlider* iconSizeSlider {nullptr};
     KisPopupButton *viewModeButton {nullptr};
+    QMenu *menu{nullptr};
+    QList<QAction *> modeActions;
+    QAction *strokeAction{nullptr};
 };
 
 KisPaintOpPresetsChooserPopup::KisPaintOpPresetsChooserPopup(QWidget * parent)
@@ -39,6 +42,7 @@ KisPaintOpPresetsChooserPopup::KisPaintOpPresetsChooserPopup(QWidget * parent)
 {
     m_d->uiWdgPaintOpPresets.setupUi(this);
     QMenu* menu = new QMenu(this);
+    m_d->menu = menu;
     menu->setStyleSheet("margin: 6px");
 
     menu->addSection(i18nc("@title Which elements to display (e.g., thumbnails or details)", "Display"));
@@ -51,11 +55,13 @@ KisPaintOpPresetsChooserPopup::KisPaintOpPresetsChooserPopup(QWidget * parent)
     action->setCheckable(true);
     action->setChecked(mode == KisPresetChooser::THUMBNAIL);
     action->setActionGroup(actionGroup);
+    m_d->modeActions << action;
 
     action = menu->addAction(KisIconUtils::loadIcon("view-list-details"), i18n("Details"), this, SLOT(slotDetailMode()));
     action->setCheckable(true);
     action->setChecked(mode == KisPresetChooser::DETAIL);
     action->setActionGroup(actionGroup);
+    m_d->modeActions << action;
 
     // add widget slider to control icon size
     QSlider* iconSizeSlider = new QSlider(this);
@@ -118,7 +124,7 @@ void KisPaintOpPresetsChooserPopup::slotDetailMode()
 void KisPaintOpPresetsChooserPopup::slotUpdateMenu()
 {
     QSignalBlocker b(m_d->iconSizeSlider);
-    m_d->iconSizeSlider->setValue(KisConfig(true).presetIconSize());
+    m_d->iconSizeSlider->setValue(m_d->uiWdgPaintOpPresets.wdgPresetChooser->iconSize());
 }
 
 void KisPaintOpPresetsChooserPopup::paintEvent(QPaintEvent* event)
@@ -155,4 +161,26 @@ void KisPaintOpPresetsChooserPopup::updateViewSettings()
 void KisPaintOpPresetsChooserPopup::setResponsiveness(bool value)
 {
     m_d->uiWdgPaintOpPresets.wdgPresetChooser->itemChooser()->setResponsiveness(value);
+}
+
+void KisPaintOpPresetsChooserPopup::enableStrokePreviewSetting()
+{
+    if (m_d->strokeAction)
+        return;
+    m_d->uiWdgPaintOpPresets.wdgPresetChooser->enableDockerFilters();
+    m_d->strokeAction = m_d->menu->addAction(i18n("Stroke Previews"));
+    m_d->strokeAction->setCheckable(true);
+    auto apply = [this](bool enabled) {
+        m_d->uiWdgPaintOpPresets.wdgPresetChooser->setStrokePreviewMode(enabled);
+        for (auto *action : m_d->modeActions)
+            action->setVisible(!enabled);
+        slotUpdateMenu();
+    };
+    const bool enabled = KisConfig(true).readEntry<bool>("Solstice/BrushStrokePreview", true);
+    m_d->strokeAction->setChecked(enabled);
+    apply(enabled);
+    connect(m_d->strokeAction, &QAction::toggled, this, [apply](bool checked) {
+        KisConfig(false).writeEntry("Solstice/BrushStrokePreview", checked);
+        apply(checked);
+    });
 }

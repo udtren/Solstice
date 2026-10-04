@@ -9,6 +9,7 @@
 #include <QElapsedTimer>
 #include <QObject>
 #include <QScopeGuard>
+#include <QSemaphore>
 #include <QThread>
 
 #include <KoColorModelStandardIds.h>
@@ -18,6 +19,7 @@
 
 #include <KisGpuCommandList.h>
 #include <KisGpuContext.h>
+#include <KisGpuLayerCompositor.h>
 #include <KisGpuLayerStackCompositor.h>
 #include <KisGpuTileFill.h>
 
@@ -36,6 +38,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstring>
 #include <memory>
 #include <random>
 #include <thread>
@@ -54,7 +57,13 @@ private Q_SLOTS:
     void init();
 
     void testSupport();
+    void testSharedUploadArena_data();
+    void testSharedUploadArena();
+    void testRetiredResourcesReleasedOutsideLock();
+    void testTileAllocationBoundsResourceReclamation();
     void testGpuFillVisibleOnCpu();
+    void testBulkReadback_data();
+    void testBulkReadback();
     void testCompositeMatchesCpu();
     void testUndoRedo();
     void testCopyOnWriteIsolation();
@@ -75,6 +84,9 @@ private Q_SLOTS:
     void testSnapshotDuringCpuWriteIsNotPublished();
     void testDeferredSlotRelease();
     void testMemoryBudgetEviction();
+    void testBatchedEviction_data();
+    void testBatchedEviction();
+    void testMixedEvictionBatch();
     void testPreparedAccessPreventsEviction();
     void testEvictionFailureKeepsContent();
     void testGpuTileDiskSwapRoundTrip();
@@ -249,6 +261,243 @@ bool KisGpuPaintDeviceTest::gpuCompositeOver(KisPaintDeviceSP dst,
     const quint64 value = KisGpuTileAccess::submitAndFinish(*m_commands, {&srcAccess, &dstAccess});
     dst->setDirty(rect);
     return value && m_commands->wait();
+}
+
+void KisGpuPaintDeviceTest::testRetiredResourcesReleasedOutsideLock()
+{
+    REQUIRE_GPU();
+    m_backend->flush();
+    QSemaphore entered, release, published;
+    m_backend->retireAfter(0, std::shared_ptr<int>(new int, [&](int *p) {
+                               entered.release();
+                               release.acquire();
+                               delete p;
+                           }));
+    std::thread collector([&] {
+        m_backend->collectGarbage();
+    });
+    const bool destroying = entered.tryAcquire(1, 5000);
+    std::thread publisher([&] {
+        m_backend->retireAfter(0, std::make_shared<int>(42));
+        published.release();
+    });
+    const bool unblocked = published.tryAcquire(1, 5000);
+    // Always release/join before assertions so an old implementation fails
+    // cleanly instead of leaving a blocked worker behind.
+    release.release();
+    publisher.join();
+    collector.join();
+    m_backend->flush();
+    QVERIFY(destroying);
+    QVERIFY2(unblocked, "retiring another upload must not wait for a slow resource destructor");
+}
+
+void KisGpuPaintDeviceTest::testTileAllocationBoundsResourceReclamation()
+{
+    REQUIRE_GPU();
+    m_backend->flush();
+    std::atomic<int> destroyed{0};
+    for (int i = 0; i < 40; ++i) {
+        m_backend->retireAfter(0, std::shared_ptr<int>(new int, [&](int *p) {
+                                   ++destroyed;
+                                   delete p;
+                               }));
+    }
+    const QRect rect(0, 0, 64, 64);
+    KisPaintDeviceSP device = new KisPaintDevice(rgbaFloat());
+    fillRandom(device, rect, 937);
+    KisGpuTileAccess access(device, rect, KisGpuTileAccess::ReadOnly);
+    m_commands->begin();
+    const bool prepared = access.prepare(*m_commands);
+    const int reclaimed = destroyed.load();
+    KisGpuTileAccess::finishUnsubmitted(*m_commands, {&access});
+    m_backend->flush();
+    QVERIFY(prepared);
+    QCOMPARE(reclaimed, 16);
+    QCOMPARE(destroyed.load(), 40);
+}
+
+void KisGpuPaintDeviceTest::testSharedUploadArena_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<bool>("failSubmit");
+    QTest::addColumn<bool>("oversized");
+    for (bool f16 : {false, true})
+        for (bool fail : {false, true})
+            for (bool oversized : {false, true})
+                QTest::newRow(qPrintable(QString("f16%1-fail%2-oversized%3").arg(f16).arg(fail).arg(oversized)))
+                    << f16 << fail << oversized;
+}
+
+void KisGpuPaintDeviceTest::testSharedUploadArena()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(bool, failSubmit);
+    QFETCH(bool, oversized);
+    const auto *cs = rgbaFloat(f16);
+    QVERIFY(cs);
+    const QRect sourceRect(0, 0, 256, 128);
+    const QRect bounds(0, 0, 256, 5 * 128);
+    const VkDeviceSize bytes = VkDeviceSize(sourceRect.width()) * sourceRect.height() * cs->pixelSize();
+    KisPaintDeviceSP output = new KisPaintDevice(cs), expected = new KisPaintDevice(cs);
+    KoColor original(cs);
+    cs->fromNormalisedChannelsValue(original.data(), {0.25f, 0.5f, 0.75f, 1.0f});
+    output->fill(bounds, original);
+    expected->fill(bounds, original);
+    KisGpuTileAccess target(output, bounds, KisGpuTileAccess::WriteOnly);
+    std::vector<std::unique_ptr<KisGpuTileAccess>> sources;
+    QVector<KisGpuTileAccess *> accesses{&target};
+    QVector<VkDeviceAddress> addresses;
+    QString error;
+    m_commands->begin();
+    QVERIFY(target.prepare(*m_commands, &error));
+    {
+        KisGpuTileAccess::UploadArena arena(oversized ? bytes / 2 : 2 * bytes);
+        for (int i = 0; i < 5; ++i) {
+            KisPaintDeviceSP source = new KisPaintDevice(cs);
+            KoColor color(cs);
+            cs->fromNormalisedChannelsValue(color.data(), {i / 8.0f, (5 - i) / 8.0f, 0.125f, 1.0f});
+            // writeBytes ensures independent tile data (fill may share tiles),
+            // making the upload size and chunk-boundary assertions deterministic.
+            QByteArray pixels(int(bytes), Qt::Uninitialized);
+            for (int p = 0; p < sourceRect.width() * sourceRect.height(); ++p)
+                std::memcpy(pixels.data() + p * cs->pixelSize(), color.data(), cs->pixelSize());
+            source->writeBytes(reinterpret_cast<const quint8 *>(pixels.constData()), sourceRect);
+            auto access = std::make_unique<KisGpuTileAccess>(source, sourceRect, KisGpuTileAccess::ReadOnly);
+            QVERIFY2(access->prepare(*m_commands, arena, &error), qPrintable(error));
+            addresses += access->addresses();
+            accesses << access.get();
+            sources.push_back(std::move(access));
+            if (!failSubmit)
+                expected->fill(sourceRect.translated(0, i * 128), color);
+        }
+        QCOMPARE(arena.allocationCount(), oversized ? 5 : 3);
+        QCOMPARE(arena.reservedBytes(), bytes * 5);
+    } // The arena dies before submission; each access must retain its storage.
+    auto compositor = KisGpuLayerCompositor::create(m_backend->context(),
+                                                    f16 ? KisGpuTileFormat::RGBA16F : KisGpuTileFormat::RGBA32F,
+                                                    &error);
+    QVERIFY2(compositor, qPrintable(error));
+    QVERIFY2(compositor->record(*m_commands,
+                                addresses,
+                                target.addresses(),
+                                {{KisGpuBlendOp::Over, 1.0f, false, 0xf}},
+                                4,
+                                bounds,
+                                &error),
+             qPrintable(error));
+    if (failSubmit)
+        m_backend->context().injectSubmitFailuresForTesting(1);
+    const auto value = KisGpuTileAccess::submitAndFinish(*m_commands, accesses);
+    QCOMPARE(value == 0, failSubmit);
+    // Accesses also die before completion; deferred retirement owns all chunks.
+    sources.clear();
+    if (value)
+        QVERIFY(m_commands->wait());
+    QByteArray actual(bounds.width() * bounds.height() * cs->pixelSize(), Qt::Uninitialized);
+    QByteArray reference(actual.size(), Qt::Uninitialized);
+    output->readBytes(reinterpret_cast<quint8 *>(actual.data()), bounds);
+    expected->readBytes(reinterpret_cast<quint8 *>(reference.data()), bounds);
+    QCOMPARE(actual, reference);
+}
+
+void KisGpuPaintDeviceTest::testBulkReadback_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<bool>("planar");
+    QTest::addColumn<bool>("retry");
+    for (bool f16 : {false, true}) {
+        for (bool planar : {false, true}) {
+            for (bool retry : {false, true}) {
+                const QByteArray name =
+                    QByteArray(f16 ? "F16" : "F32") + (planar ? "-planar" : "-strided") + (retry ? "-retry" : "");
+                QTest::newRow(name.constData()) << f16 << planar << retry;
+            }
+        }
+    }
+}
+
+void KisGpuPaintDeviceTest::testBulkReadback()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(bool, planar);
+    QFETCH(bool, retry);
+    const KoColorSpace *cs = rgbaFloat(f16);
+    KisPaintDeviceSP device = new KisPaintDevice(cs);
+    KisPaintDeviceSP expected = new KisPaintDevice(cs);
+    const QPoint offset(7, -11);
+    device->moveTo(offset);
+    expected->moveTo(offset);
+    // 289 + 1 stale tiles cross the 256-tile batch boundary, with sparse holes,
+    // negative coordinates, a device offset and an unaligned read rectangle.
+    const QRect red = QRect(-128, -128, 17 * 64, 17 * 64).translated(offset);
+    const QRect blue = QRect(18 * 64, 18 * 64, 64, 64).translated(offset);
+    QVERIFY(gpuFill(device, red, {1, 0, 0, 1}));
+    QVERIFY(gpuFill(device, blue, {0, 0, 1, 1}));
+    KoColor redPixel(cs);
+    KoColor bluePixel(cs);
+    cs->fromNormalisedChannelsValue(redPixel.data(), {1, 0, 0, 1});
+    cs->fromNormalisedChannelsValue(bluePixel.data(), {0, 0, 1, 1});
+    expected->fill(red, redPixel);
+    expected->fill(blue, bluePixel);
+    const QRect rect = red.united(blue).adjusted(-3, -5, 9, 7);
+    const QRect localRect = rect.translated(-offset);
+    const QRect extent = device->extent();
+    const int pixelSize = device->pixelSize();
+    QByteArray reference(rect.width() * rect.height() * pixelSize, Qt::Uninitialized);
+    expected->readBytes(reinterpret_cast<quint8 *>(reference.data()), rect);
+
+    const quint64 before = m_backend->context().completedValue();
+    device->dataManager()->readBytes(nullptr, -128, -128, 512, 512);
+    quint8 unused = 0;
+    device->dataManager()->readBytes(&unused, 0, 0, 0, 0);
+    QCOMPARE(m_backend->context().completedValue(), before);
+    if (retry) {
+        m_backend->injectDownloadFailuresForTesting(1);
+    }
+    if (planar) {
+        // The planar API takes data-manager coordinates (unlike readBytes).
+        const QVector<quint8 *> planes =
+            device->readPlanarBytes(localRect.x(), localRect.y(), rect.width(), rect.height());
+        const auto cleanup = qScopeGuard([&]() {
+            for (quint8 *plane : planes)
+                delete[] plane;
+        });
+        QCOMPARE(planes.size(), 4);
+        const int channelSize = pixelSize / 4;
+        for (int i = 0; i < rect.width() * rect.height(); ++i) {
+            for (int c = 0; c < 4; ++c) {
+                QVERIFY(std::memcmp(planes[c] + i * channelSize,
+                                    reference.constData() + i * pixelSize + c * channelSize,
+                                    channelSize)
+                        == 0);
+            }
+        }
+    } else {
+        const int rowBytes = rect.width() * pixelSize;
+        const int stride = rowBytes + 37;
+        QByteArray actual(stride * rect.height(), char(0x5a));
+        device->dataManager()->readBytes(reinterpret_cast<quint8 *>(actual.data()),
+                                         localRect.x(),
+                                         localRect.y(),
+                                         rect.width(),
+                                         rect.height(),
+                                         stride);
+        for (int y = 0; y < rect.height(); ++y) {
+            QCOMPARE(actual.mid(y * stride, rowBytes), reference.mid(y * rowBytes, rowBytes));
+            QCOMPARE(actual.mid(y * stride + rowBytes, 37), QByteArray(37, char(0x5a)));
+        }
+    }
+    // A failed batch retries its 256 tiles individually; otherwise two submissions.
+    QCOMPARE(m_backend->context().completedValue() - before, quint64(retry ? 257 : 2));
+    QCOMPARE(device->extent(), extent);
+    QByteArray again(reference.size(), Qt::Uninitialized);
+    const quint64 after = m_backend->context().completedValue();
+    device->readBytes(reinterpret_cast<quint8 *>(again.data()), rect);
+    QCOMPARE(again, reference);
+    QCOMPARE(m_backend->context().completedValue(), after);
 }
 
 void KisGpuPaintDeviceTest::testSupport()
@@ -919,6 +1168,123 @@ void KisGpuPaintDeviceTest::testMemoryBudgetEviction()
     QVERIFY(!m_backend->hasFailed());
 }
 
+void KisGpuPaintDeviceTest::testBatchedEviction_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<int>("scenario");
+    for (bool f16 : {false, true})
+        for (int scenario = 0; scenario < 4; ++scenario)
+            QTest::newRow(qPrintable(QString("f16%1-case%2").arg(f16).arg(scenario))) << f16 << scenario;
+}
+
+void KisGpuPaintDeviceTest::testBatchedEviction()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(int, scenario);
+    m_backend->flush();
+    m_backend->evictTiles(~quint64(0));
+    const QRect bounds(0, 0, 17 * 64, 17 * 64);
+    KisPaintDeviceSP device = new KisPaintDevice(rgbaFloat(f16));
+    QVERIFY(gpuFill(device, bounds, {0.25f, 0.5f, 0.75f, 1}));
+    QVector<KisTileSP> tiles;
+    for (int row = 0; row < 17; ++row)
+        for (int col = 0; col < 17; ++col)
+            tiles << device->dataManager()->getTile(col, row, false);
+    bool locked = scenario == 2;
+    if (locked)
+        tiles[0]->tileData()->blockSwappingForReadback();
+    auto unlock = qScopeGuard([&] {
+        if (locked)
+            tiles[0]->tileData()->unblockSwapping();
+    });
+    if (scenario == 1)
+        m_backend->injectDownloadFailuresForTesting(1);
+    if (scenario == 3)
+        m_backend->injectReadbackLimitForTesting(0);
+    const quint64 before = m_backend->context().completedValue();
+    const quint64 evicted = m_backend->evictTiles(~quint64(0));
+    const quint64 submissions = m_backend->context().completedValue() - before;
+    int retained = 0;
+    for (const auto &tile : tiles) {
+        const auto *state = tile->tileData()->gpuState();
+        if (state->slot != KisTileGpuState::InvalidSlot) {
+            ++retained;
+            QVERIFY(state->gpuValid());
+        } else {
+            QVERIFY(state->cpuValid());
+        }
+    }
+    if (scenario == 0 || scenario == 2) {
+        QCOMPARE(submissions, quint64(2)); // 289 (or 288 unlocked) tiles, not one submission per tile
+        QCOMPARE(retained, scenario == 2 ? 1 : 0);
+        QVERIFY(evicted >= quint64(289 - retained) * device->pixelSize() * 64 * 64);
+    } else if (scenario == 1) {
+        QCOMPARE(submissions, quint64(1));
+        QVERIFY(retained > 0 && retained <= 256);
+    } else {
+        QCOMPARE(submissions, quint64(0));
+        QCOMPARE(retained, 289);
+    }
+    QVERIFY(!m_backend->hasFailed());
+    if (locked) {
+        tiles[0]->tileData()->unblockSwapping();
+        locked = false;
+    }
+    m_backend->injectDownloadFailuresForTesting(0);
+    m_backend->injectReadbackLimitForTesting(~quint64(0));
+    m_backend->evictTiles(~quint64(0));
+    for (const auto &tile : tiles)
+        QCOMPARE(tile->tileData()->gpuState()->slot.load(), KisTileGpuState::InvalidSlot);
+    KoColor color(device->colorSpace());
+    device->colorSpace()->fromNormalisedChannelsValue(color.data(), {0.25f, 0.5f, 0.75f, 1});
+    QByteArray pixels(bounds.width() * bounds.height() * device->pixelSize(), Qt::Uninitialized);
+    device->readBytes(reinterpret_cast<quint8 *>(pixels.data()), bounds);
+    for (int offset = 0; offset < pixels.size(); offset += device->pixelSize())
+        QCOMPARE(std::memcmp(pixels.constData() + offset, color.data(), device->pixelSize()), 0);
+}
+
+void KisGpuPaintDeviceTest::testMixedEvictionBatch()
+{
+    REQUIRE_GPU();
+    KisPaintDeviceSP f32 = new KisPaintDevice(rgbaFloat()), f16 = new KisPaintDevice(rgbaFloat(true));
+    QVERIFY(gpuFill(f32, QRect(0, 0, 128, 64), {0.25f, 0.5f, 0.75f, 1}));
+    QVERIFY(gpuFill(f16, QRect(0, 0, 64, 64), {0.75f, 0.5f, 0.25f, 1}));
+    const auto a = f32->dataManager()->getTile(0, 0, false);
+    const auto b = f32->dataManager()->getTile(1, 0, false);
+    const auto c = f16->dataManager()->getTile(0, 0, false);
+    a->tileData()->blockSwapping(); // A CPU-current neighbor must not need a download.
+    a->tileData()->unblockSwapping();
+    auto *store = KisTileDataStore::instance();
+    auto *iteration = store->beginIteration();
+    // Pixel sizes are downloaded separately. Fail F16, but reclaim F32; the
+    // duplicate must not double-count or recursively lock the same tile.
+    m_backend->injectDownloadFailuresForTesting(1);
+    const quint64 before = m_backend->context().completedValue();
+    const quint64 released =
+        store->tryEvictGpuTileDataBatch({a->tileData(), b->tileData(), c->tileData(), a->tileData()});
+    store->endIteration(iteration);
+    QCOMPARE(released, quint64(2 * 64 * 64 * 16));
+    QCOMPARE(m_backend->context().completedValue() - before, quint64(1));
+    QCOMPARE(a->tileData()->gpuState()->slot.load(), KisTileGpuState::InvalidSlot);
+    QCOMPARE(b->tileData()->gpuState()->slot.load(), KisTileGpuState::InvalidSlot);
+    QVERIFY(c->tileData()->gpuState()->slot != KisTileGpuState::InvalidSlot);
+    QVERIFY(c->tileData()->gpuState()->gpuValid());
+    QVERIFY(!m_backend->hasFailed());
+    iteration = store->beginIteration();
+    const quint64 remaining = store->tryEvictGpuTileDataBatch({a->tileData(), b->tileData(), c->tileData()});
+    const quint64 alreadyEvicted = store->tryEvictGpuTileDataBatch({a->tileData(), b->tileData(), c->tileData()});
+    store->endIteration(iteration);
+    QCOMPARE(remaining, quint64(64 * 64 * 8));
+    QCOMPARE(alreadyEvicted, quint64(0));
+    QCOMPARE(readPixels(f32, QRect(0, 0, 128, 64))[0], 0.25f);
+    KoColor color;
+    f16->pixel(0, 0, &color);
+    QVector<float> channels(4);
+    color.colorSpace()->normalisedChannelsValue(color.data(), channels);
+    QCOMPARE(channels[0], 0.75f);
+}
+
 void KisGpuPaintDeviceTest::testPreparedAccessPreventsEviction()
 {
     REQUIRE_GPU();
@@ -1103,7 +1469,7 @@ void KisGpuPaintDeviceTest::benchmarkTransfers()
     qInfo().noquote() << QStringLiteral("  first GPU read (upload all tiles):  %1 ms").arg(firstUpload, 0, 'f', 1);
     qInfo().noquote() << QStringLiteral("  GPU read when resident:             %1 ms").arg(resident, 0, 'f', 1);
     qInfo().noquote() << QStringLiteral("  GPU fill (write-only, in place):    %1 ms").arg(gpuWrite, 0, 'f', 1);
-    qInfo().noquote() << QStringLiteral("  readBytes with per-tile downloads:  %1 ms").arg(lazyDownload, 0, 'f', 1);
+    qInfo().noquote() << QStringLiteral("  readBytes with automatic batching: %1 ms").arg(lazyDownload, 0, 'f', 1);
     qInfo().noquote() << QStringLiteral("  syncToCpu (batched downloads):      %1 ms").arg(batchedDownload, 0, 'f', 1);
     qInfo().noquote() << QStringLiteral("  readBytes after syncToCpu:          %1 ms").arg(readAfterSync, 0, 'f', 1);
     QVERIFY(firstUpload >= 0 && resident >= 0 && gpuWrite >= 0);

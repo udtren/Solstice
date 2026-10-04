@@ -13,6 +13,9 @@ namespace
 const quint32 Shader[] = {
 #include "paint_dabs.spv.inc"
 };
+const quint32 ExtendedShader[] = {
+#include "paint_dabs_extended.spv.inc"
+};
 struct DabRecord {
     VkDeviceAddress pixels;
     qint32 x, y, width, height;
@@ -137,6 +140,16 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
     UploadLayout layout;
     if (!planUpload(tiles.size(), dabs, mask, layout, error))
         return false;
+    const bool extended = mode >= CompositeMode::SoftLightSvg;
+    if (extended && !m_extendedPipeline) {
+        m_extendedPipeline = KisGpuComputePipeline::create(m_context,
+                                                           ExtendedShader,
+                                                           sizeof(ExtendedShader),
+                                                           sizeof(PushConstants),
+                                                           error);
+        if (!m_extendedPipeline)
+            return false;
+    }
     const auto bytes = layout.capacity;
     const auto tableOffset = layout.tableOffset;
     const auto maskOffset = layout.maskOffset;
@@ -197,6 +210,6 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
                          mask ? mask->bounds.width() : 0,
                          mask ? mask->bounds.height() : 0};
     commands.computeBarrier();
-    m_pipeline->dispatch(commands.commandBuffer(), params, quint32(tiles.size()));
+    (extended ? m_extendedPipeline : m_pipeline)->dispatch(commands.commandBuffer(), params, quint32(tiles.size()));
     return true;
 }

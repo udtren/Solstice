@@ -8,12 +8,15 @@
 
 #include <QAtomicInt>
 #include <QMutex>
+#include <QVector>
 #include <QtGlobal>
 #include <atomic>
 
 #include "kritaimage_export.h"
 
 class KisTileData;
+class KisTiledDataManager;
+class QRect;
 
 /**
  * GPU residency of one KisTileData (GPU engine, docs/agent/gpu-engine.md).
@@ -137,18 +140,23 @@ private:
 };
 
 /**
- * Entry points from the tile engine into the GPU backend. In builds without
- * the GPU engine no tile data ever gets a KisTileGpuState, so these are never
- * reached (KisTileGpuHooksStub.cpp).
+ * Entry points from the tile engine into the GPU backend. Without the GPU
+ * engine, bulk prefetch is a no-op and no tile data gets a KisTileGpuState,
+ * so state-specific hooks are never reached (KisTileGpuHooksStub.cpp).
  */
 namespace KisTileGpuHooks
 {
+/// Batch prefetch for bulk readers. The caller must exclude writes to the region.
+/// Does nothing without an existing GPU backend; never creates missing tiles.
+KRITAIMAGE_EXPORT void prepareCpuRead(KisTiledDataManager *manager, const QRect &rect);
 /// Downloads the GPU copy into td->data(). Called with the swap lock held for reading.
 KRITAIMAGE_EXPORT void ensureCpuValid(KisTileData *td);
 /// Releases the slot (after the GPU has finished using it) and deletes @p state.
 KRITAIMAGE_EXPORT void destroyState(KisTileGpuState *state, qint32 pixelSize);
 /// Voluntary eviction. Caller holds the tile data's swap lock for writing.
 KRITAIMAGE_EXPORT bool tryEvict(KisTileData *td);
+/// Batched voluntary eviction; caller holds all swap write locks and lifetimes.
+KRITAIMAGE_EXPORT quint64 tryEvictBatch(const QVector<KisTileData *> &tiles);
 } // namespace KisTileGpuHooks
 
 #endif // KISTILEGPUSTATE_H

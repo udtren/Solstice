@@ -698,6 +698,9 @@ void KisTiledDataManager::readBytes(quint8 *data,
 {
     QReadLocker locker(&m_lock);
     // Actual bytes reading/writing is done in private header
+    if (data && (m_pixelSize == 8 || m_pixelSize == 16)) {
+        KisTileGpuHooks::prepareCpuRead(const_cast<KisTiledDataManager *>(this), QRect(x, y, width, height));
+    }
     readBytesBody(data, x, y, width, height, dataRowStride);
 }
 
@@ -708,6 +711,9 @@ KisTiledDataManager::readPlanarBytes(QVector<qint32> channelSizes,
 {
     QReadLocker locker(&m_lock);
     // Actual bytes reading/writing is done in private header
+    if (m_pixelSize == 8 || m_pixelSize == 16) {
+        KisTileGpuHooks::prepareCpuRead(const_cast<KisTiledDataManager *>(this), QRect(x, y, width, height));
+    }
     return readPlanarBytesBody(channelSizes, x, y, width, height);
 }
 

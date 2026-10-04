@@ -59,6 +59,9 @@ public:
     void unpinStates(const QVector<KisTileGpuState *> &states);
     /// Caller holds the swap lock for writing. Failed readback keeps GPU content resident.
     bool tryEvict(KisTileData *td);
+    /// Caller holds store lifetime and swap write locks; at most 256 tiles.
+    /// Returns bytes actually released; failed readbacks keep their GPU copies.
+    quint64 tryEvictBatch(const QVector<KisTileData *> &tiles);
     /// Evict idle tiles, preferring historical/CPU-current tiles, up to this many bytes.
     quint64 evictTiles(quint64 bytes);
     quint64 memoryBudget() const;
@@ -121,6 +124,7 @@ public:
 
 private:
     explicit KisGpuTileBackend(std::unique_ptr<KisGpuContext> context);
+    void collectGarbageImpl(size_t maxRetired);
     /// Returns the tiles that are still stale because the download failed.
     QVector<KisTileData *> downloadBatch(const QVector<KisTileData *> &tiles);
 

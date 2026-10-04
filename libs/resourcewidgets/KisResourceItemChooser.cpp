@@ -94,6 +94,9 @@ public:
     Layout layout = Layout::NotSet;
     ListViewMode requestedViewMode = ListViewMode::IconGrid;
     bool isResponsive = false;
+    bool bottomBarLayout = false;
+    QWidget *bottomBar{nullptr};
+    QWidget *bottomBarWidget{nullptr};
     bool showViewModeBtn = true;
     bool showStoragePopupBtn = true;
 
@@ -314,6 +317,46 @@ void KisResourceItemChooser::setResponsiveness(bool isResponsive)
     else {
         d->isResponsive = false;
     }
+}
+
+void KisResourceItemChooser::setBottomBarLayout(bool enabled)
+{
+    if (d->bottomBarLayout == enabled)
+        return;
+    d->bottomBarLayout = enabled;
+    // Disabling responsiveness alone leaves an existing horizontal strip in place.
+    d->layout = Layout::NotSet;
+    applyVerticalLayout();
+    changeLayoutBasedOnSize();
+}
+
+void KisResourceItemChooser::setBottomBarWidget(QWidget *widget)
+{
+    KIS_SAFE_ASSERT_RECOVER_RETURN(!d->bottomBarWidget);
+    d->bottomBarWidget = widget;
+    setBottomBarLayout(true);
+    updateBottomBarLayout();
+}
+
+void KisResourceItemChooser::updateBottomBarLayout()
+{
+    if (!d->bottomBarLayout || !d->bottomBar)
+        return;
+    auto *bar = qobject_cast<QGridLayout *>(d->bottomBar->layout());
+    auto *tags = d->tagManager->tagChooserWidget();
+    auto *filter = d->tagManager->tagFilterWidget();
+    const int preferredWidth = tags->sizeHint().width() + filter->sizeHint().width()
+        + d->viewModeButton->sizeHint().width() + d->storagePopupButton->sizeHint().width()
+        + (d->importExportBtns->isHidden() ? 0 : d->importExportBtns->sizeHint().width())
+        + (d->bottomBarWidget ? d->bottomBarWidget->sizeHint().width() : 0);
+    const bool narrow = width() < preferredWidth;
+    bar->addWidget(tags, 0, 0);
+    bar->addWidget(d->viewModeButton, 0, 1);
+    bar->addWidget(d->storagePopupButton, 0, 2);
+    bar->addWidget(d->importExportBtns, 0, 3);
+    if (d->bottomBarWidget)
+        bar->addWidget(d->bottomBarWidget, narrow ? 1 : 0, narrow ? 0 : 4, 1, narrow ? 4 : 1);
+    bar->addWidget(filter, narrow ? (d->bottomBarWidget ? 2 : 1) : 0, narrow ? 0 : 5, 1, narrow ? 4 : 1);
 }
 
 void KisResourceItemChooser::setListViewMode(ListViewMode newViewMode)
@@ -701,6 +744,8 @@ void KisResourceItemChooser::showEvent(QShowEvent *event)
 
 void KisResourceItemChooser::hideEverything()
 {
+    if (d->bottomBar)
+        d->bottomBar->hide();
     d->horzSplitter->hide();
     d->left->hide();
     d->right->hide();
@@ -728,6 +773,29 @@ void KisResourceItemChooser::applyVerticalLayout()
     d->view->setItemSize(QSize(chooserSync->baseLength(), chooserSync->baseLength()));
 
     QGridLayout* thisLayout = dynamic_cast<QGridLayout*>(layout());
+    // Clear stretch left behind by the horizontal strip or bottom-bar layout.
+    thisLayout->setRowStretch(0, 0);
+    thisLayout->setRowStretch(1, 0);
+    thisLayout->setColumnStretch(0, 0);
+    if (d->bottomBarLayout) {
+        if (!d->bottomBar) {
+            d->bottomBar = new QWidget(this);
+            d->bottomBar->setObjectName("ResourceChooserBottomBar");
+            auto *bar = new QGridLayout(d->bottomBar);
+            bar->setContentsMargins(0, 0, 0, 0);
+            bar->setSpacing(0);
+        }
+        thisLayout->addWidget(d->resourcesSplitter, 0, 0, 1, 3);
+        thisLayout->setRowStretch(0, 1);
+        thisLayout->addWidget(d->bottomBar, 1, 0, 1, 3, Qt::AlignRight);
+        updateBottomBarLayout();
+        d->bottomBar->show();
+        d->resourcesSplitter->show();
+        d->viewModeButton->setVisible(d->showViewModeBtn);
+        d->storagePopupButton->setVisible(d->showStoragePopupBtn);
+        d->layout = Layout::Vertical;
+        return;
+    }
     thisLayout->addWidget(d->tagManager->tagChooserWidget(), 0, 0);
     thisLayout->addWidget(d->viewModeButton, 0, 1);
     thisLayout->addWidget(d->storagePopupButton, 0, 2);
@@ -745,6 +813,10 @@ void KisResourceItemChooser::applyVerticalLayout()
 
 void KisResourceItemChooser::changeLayoutBasedOnSize()
 {
+    if (d->bottomBarLayout) {
+        updateBottomBarLayout();
+        return;
+    }
     if (d->isResponsive == false) {
         return;
     }

@@ -63,6 +63,7 @@ KisGpuBuffer::create(KisGpuContext &context, VkDeviceSize size, Location locatio
         preferred = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         break;
     case Location::Readback:
+    case Location::Staging:
         required = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         preferred = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
         break;

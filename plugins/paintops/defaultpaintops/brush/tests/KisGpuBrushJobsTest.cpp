@@ -110,7 +110,12 @@ private Q_SLOTS:
         QTest::newRow("combined-submit-failure") << COMPOSITE_OVER << 3 << true << true << QStringLiteral("failure");
         QTest::newRow("single-submit-failure") << COMPOSITE_OVER << 0 << false << false << QStringLiteral("failure");
         QTest::newRow("integer-owning-image") << COMPOSITE_OVER << 3 << false << false << QStringLiteral("integer");
-        for (const auto &mode : {COMPOSITE_MULT, COMPOSITE_SCREEN, COMPOSITE_OVERLAY}) {
+        for (const auto &mode : {COMPOSITE_MULT,
+                                 COMPOSITE_SCREEN,
+                                 COMPOSITE_OVERLAY,
+                                 COMPOSITE_LINEAR_BURN,
+                                 COMPOSITE_LINEAR_LIGHT,
+                                 COMPOSITE_PIN_LIGHT}) {
             QTest::newRow(qPrintable(mode + "-selected-locked")) << mode << 3 << true << true << QStringLiteral("near");
             QTest::newRow(qPrintable(mode + "-fractional"))
                 << mode << 3 << false << false << QStringLiteral("fractional");
@@ -248,6 +253,13 @@ private Q_SLOTS:
                 referenceDirty = dirty;
             } else {
                 const float error = difference(reference, after);
+                if (error > 2e-5f) {
+                    for (size_t i = 0; i < after.size(); ++i)
+                        if (std::abs(reference[i] - after[i]) == error) {
+                            qInfo() << "worst channel" << i << "CPU" << reference[i] << "GPU" << after[i];
+                            break;
+                        }
+                }
                 QVERIFY2(error <= 2e-5f, qPrintable(QString::number(error)));
                 QCOMPARE(dirty, referenceDirty);
                 if (scenario == "integer")

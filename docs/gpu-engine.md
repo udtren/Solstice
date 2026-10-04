@@ -12,6 +12,40 @@ composite supported pixel-brush blend modes on the GPU in RGBA32F
 documents, including the temporary painting buffer used by Wash mode.
 Filters and transforms still run on the CPU. The engine is off by default.
 
+Accelerated layer blend modes include Normal, Multiply, Screen, Addition /
+Linear Dodge, Subtract, Darken, Lighten, Difference, Overlay, Hard Light,
+Exclusion, Linear Burn, Linear Light and Pin Light in RGBA32F and RGBA16F.
+The same formats also accelerate Soft Light (SVG and Photoshop), Color Dodge,
+Color Burn, Divide, Vivid Light, Hard Mix (including Photoshop and Softer
+Photoshop), Grain Merge/Extract, Negation, Allanon, and the HSY Hue, Saturation,
+Color, Luminosity, Darker Color and Lighter Color modes. The separately named
+HDR variants of Dodge, Vivid Light and Hard Mix still use the CPU, as do the
+HSI/HSL/HSV families.
+Other layer blend modes continue through the CPU path.
+
+Layer compositing also stays on the GPU when individual RGB channels are
+disabled in the layer properties, with or without alpha locked, in both
+RGBA32F and RGBA16F documents. The supported blend modes retain the CPU's
+channel-preservation behavior. For unrestricted Normal blending, fully
+transparent pixels retain their original hidden RGB; CPU SIMD processing
+can produce different hidden RGB at zero alpha, without changing appearance.
+
+Bulk pixel reads from GPU-backed documents now transfer tiles in batches,
+including channel-by-channel reads used by some CPU consumers. This reduces
+transfer waits when those paths need current GPU pixels. Filters and file
+encoding still run on the CPU.
+
+CPU-to-GPU transfers share temporary buffers across layers and use memory
+suited to CPU snapshots. Completed transfers also release resources without
+holding the shared cleanup lock. This reduces waits when an image first
+enters the GPU path or returns to it after CPU processing.
+
+Large textured brushes now reuse available GPU transfer buffers when the
+memory limit prevents keeping all three buffers. Masked Brush also batches
+GPU pixel reads before its CPU mask-compositing step. These changes reduce
+avoidable waits, but texture generation and masking remain CPU operations;
+large or densely spaced strokes can still take time to catch up.
+
 Automated checks compare complete strokes and their layer projections with
 CPU drawing, including Buildup/Wash, mirror painting, selections, alpha lock
 and Undo/Redo. Supported Wash previews and final merges, including
@@ -21,11 +55,15 @@ to reduce transfer waits. Short-stroke measurements still show cases where the C
 faster. Tablet input and the time until a stroke appears on screen still need
 separate measurement.
 
-Measured on an RTX PRO 6000 Blackwell with 4096x4096 images: compositing
-16 layers takes about 42 ms instead of 253 ms, and preparing the canvas
-display data for the whole image (8 layers) takes about 2 ms instead of
-about 1 s. The final copy into the display textures, which also happens on
-the GPU, is not included in these numbers.
+Measured on an RTX PRO 6000 Blackwell with 4096x4096 images: repeated
+compositing of 16 resident layers takes about 56 ms instead of 256 ms
+(three-sample medians, GPU completion included). The first GPU refresh after
+CPU projection work takes 58-59 ms; the initial refresh including uploads
+and preparation takes 0.62-0.65 s (ranges across three fresh benchmark
+processes). Reading the full GPU projection back to the
+CPU adds about 47 ms. These are engine timings, not pen-to-screen latency.
+The earlier canvas preparation measurement (8 layers) was about 2 ms instead
+of about 1 s, excluding the final OpenGL texture copies.
 
 ## Turning it on
 
@@ -88,7 +126,9 @@ export formats write the file directly and are not covered.)
 ## Limitations
 
 - The GPU tile cache has a memory limit. Idle tiles are copied back to RAM
-  before their GPU memory is reused, and can then use the normal disk swap.
+  in batches before their GPU memory is reused, and can then use the normal
+  disk swap. Busy tiles are skipped; if a transfer fails, their GPU copy is
+  kept instead of being discarded to make room.
   If a processing job cannot fit, it continues through the CPU path. Undo
   data is preserved. This limit covers image tiles; display buffers and
   temporary processing buffers use additional memory.
@@ -117,7 +157,8 @@ export formats write the file directly and are not covered.)
   to lag behind input; GPU painting does not yet guarantee lower latency.
   It covers RGBA32F pixel brushes with matching dab/layer profiles. GPU blend
   modes are Normal, Multiply, Screen, Addition/Linear Dodge, Subtract, Darken,
-  Lighten, Difference, Overlay, Hard Light, Exclusion and Erase. They work in
+  Lighten, Difference, Overlay, Hard Light, Exclusion, Linear Burn, Linear Light,
+  Pin Light, the additional layer modes listed above, and Erase. They work in
   Buildup and in Wash's preview and final merge with aligned tiles, including
   selections, Alpha Lock and individual RGB locks. Alpha Darken dab compositing,
   including Wash's temporary painting buffer, is also supported with all

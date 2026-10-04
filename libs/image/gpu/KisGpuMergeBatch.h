@@ -69,6 +69,7 @@ private:
         quint32 op = 0;
         float opacity = 1.0f;
         bool alphaLocked = false;
+        quint32 channelMask = 0xf;
     };
 
     void compositeOnCpu();

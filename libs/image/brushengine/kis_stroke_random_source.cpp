@@ -69,3 +69,11 @@ void KisStrokeRandomSource::setLevelOfDetail(int value)
 {
     m_d->levelOfDetail = value;
 }
+
+void KisStrokeRandomSource::setSeed(int seed)
+{
+    m_d->lod0RandomSource = new KisRandomSource(seed);
+    m_d->lodNRandomSource = new KisRandomSource(*m_d->lod0RandomSource);
+    m_d->lod0PerStrokeRandomSource = new KisPerStrokeRandomSource(seed);
+    m_d->lodNPerStrokeRandomSource = new KisPerStrokeRandomSource(*m_d->lod0PerStrokeRandomSource);
+}

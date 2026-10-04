@@ -147,6 +147,8 @@ public:
      * Control the access of swapper to the tile data
      */
     inline void blockSwapping();
+    /// Batch readback must synchronize before reading data or releasing this lock.
+    inline void blockSwappingForReadback();
     inline void unblockSwapping();
 
     /**

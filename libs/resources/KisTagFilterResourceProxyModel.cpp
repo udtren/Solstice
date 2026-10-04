@@ -6,6 +6,8 @@
 #include "KisTagFilterResourceProxyModel.h"
 
 #include <QDebug>
+#include <QSqlError>
+#include <QSqlQuery>
 
 #include <KisResourceModelProvider.h>
 #include <KisResourceModel.h>
@@ -32,6 +34,9 @@ struct KisTagFilterResourceProxyModel::Private
     bool filteringWithinCurrentTag {false};
 
     QMap<QString, QVariant> metaDataMapFilter;
+    QMap<QString, QStringList> additionalMetadata;
+    QSet<int> additionalStorageIds;
+    bool filterAdditionalStorages = false;
     KisTagSP currentTagFilter;
     KoResourceSP currentResourceFilter;
 
@@ -353,10 +358,49 @@ bool KisTagFilterResourceProxyModel::filterAcceptsColumn(int /*source_column*/, 
     return true;
 }
 
+QSet<int> KisTagFilterResourceProxyModel::activeStorageIdsForIndex(const QModelIndex &index)
+{
+    // Non-database resource models may expose only their individual storage.
+    if (!index.data(Qt::UserRole + KisAbstractResourceModel::Id).isValid())
+        return {index.data(Qt::UserRole + KisAbstractResourceModel::StorageId).toInt()};
+    QSqlQuery query;
+    query.prepare(
+        "SELECT DISTINCT r.storage_id FROM resources r "
+        "JOIN storages s ON s.id = r.storage_id "
+        "JOIN resource_types t ON t.id = r.resource_type_id "
+        "WHERE r.name = :name AND r.filename = :filename AND r.md5sum = :md5 "
+        "AND t.name = :type AND r.status > 0 AND s.active > 0");
+    query.bindValue(":name", index.data(Qt::UserRole + KisAbstractResourceModel::Name));
+    query.bindValue(":filename", index.data(Qt::UserRole + KisAbstractResourceModel::Filename));
+    query.bindValue(":md5", index.data(Qt::UserRole + KisAbstractResourceModel::MD5));
+    query.bindValue(":type", index.data(Qt::UserRole + KisAbstractResourceModel::ResourceType));
+    QSet<int> result;
+    if (!query.exec()) {
+        qWarning() << "Could not query resource storage memberships" << query.lastError();
+        return result;
+    }
+    while (query.next())
+        result.insert(query.value(0).toInt());
+    return result;
+}
+
+void KisTagFilterResourceProxyModel::setAdditionalFilters(const QMap<QString, QStringList> &metadataValues,
+                                                          bool filterStorages,
+                                                          const QSet<int> &storageIds)
+{
+    Q_EMIT beforeFilterChanges();
+    d->additionalMetadata = metadataValues;
+    d->filterAdditionalStorages = filterStorages;
+    d->additionalStorageIds = storageIds;
+    invalidateFilter();
+    Q_EMIT afterFilterChanged();
+}
+
 bool KisTagFilterResourceProxyModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
 {
     // if both filters are empty, just accept everything
-    if (d->filter->isEmpty() && d->metaDataMapFilter.isEmpty() && !d->useStorageIdFilter) {
+    if (d->filter->isEmpty() && d->metaDataMapFilter.isEmpty() && !d->useStorageIdFilter
+        && d->additionalMetadata.isEmpty() && !d->filterAdditionalStorages) {
         return true;
     }
 
@@ -366,6 +410,17 @@ bool KisTagFilterResourceProxyModel::filterAcceptsRow(int source_row, const QMod
 
     if (!idx.isValid()) {
         return false;
+    }
+    if (d->filterAdditionalStorages) {
+        if (d->additionalStorageIds.isEmpty() || !activeStorageIdsForIndex(idx).intersects(d->additionalStorageIds))
+            return false;
+    }
+    if (!d->additionalMetadata.isEmpty()) {
+        const auto metadata = idx.data(Qt::UserRole + KisAbstractResourceModel::MetaData).toMap();
+        for (auto it = d->additionalMetadata.cbegin(); it != d->additionalMetadata.cend(); ++it) {
+            if (!it.value().contains(metadata.value(it.key()).toString()))
+                return false;
+        }
     }
 
     // checking the storage filter

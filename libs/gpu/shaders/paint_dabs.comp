@@ -92,7 +92,7 @@ void main()
             if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, params.maskSize))) continue;
             uint index = uint(p.y * params.maskSize.x + p.x);
             uint packed = MaskBytes(params.mask).word[index / 4];
-            coverage = float((packed >> (8 * (index % 4))) & 255) * (1.0 / 255.0);
+            coverage = maskCoverage((packed >> (8 * (index % 4))) & 255, params.mode >= 14);
         }
         vec4 value = dst.px[i];
         bool touched = false;
@@ -111,8 +111,10 @@ void main()
                 float erased = (source.a * coverage) * dab.opacity;
                 value.a = (1.0 - erased) * value.a;
             } else if (params.mode >= 4) {
-                // Dab modes 4..13 map to the shared blend operations 1..10.
-                value = compositeGeneric(params.mode - 3, value, source, dab.opacity, false, coverage, params.channelMask);
+                // Skip the layer enum's Erase slot: dabs 4..13 -> ops 1..10,
+                // dabs 14 and above -> ops 12 and above. Keep existing IDs stable.
+                uint op = params.mode - (params.mode < 14 ? 3 : 2);
+                value = compositeGeneric(op, value, source, dab.opacity, false, coverage, params.channelMask);
             } else {
                 value = params.mode == 0 ? over(value, source, dab.opacity, coverage)
                                         : alphaDarken(value, source, dab, coverage);

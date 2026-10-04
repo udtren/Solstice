@@ -51,6 +51,11 @@ KisPerStrokeRandomSource::KisPerStrokeRandomSource(const KisPerStrokeRandomSourc
 {
 }
 
+KisPerStrokeRandomSource::KisPerStrokeRandomSource(int seed)
+    : m_d(new Private(seed))
+{
+}
+
 KisPerStrokeRandomSource::~KisPerStrokeRandomSource()
 {
 }

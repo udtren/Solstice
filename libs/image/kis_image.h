@@ -928,6 +928,8 @@ Q_SIGNALS:
      * the stroke when it comes
      */
     void sigStrokeCancellationRequested();
+    /// Emitted before scheduling new stroke work, so optional previews can yield.
+    void sigStrokeStarted();
 
     /**
      * Emitted when the image decides that the stroke should better

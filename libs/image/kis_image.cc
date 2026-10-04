@@ -1961,6 +1961,7 @@ void KisImage::waitForDone()
 
 KisStrokeId KisImage::startStroke(KisStrokeStrategy *strokeStrategy)
 {
+    Q_EMIT sigStrokeStarted();
     /**
      * Ask open strokes to end gracefully. All the strokes clients
      * (including the one calling this method right now) will get

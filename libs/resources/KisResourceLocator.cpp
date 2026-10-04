@@ -1148,6 +1148,29 @@ KisResourceStorageSP KisResourceLocator::storageByLocation(const QString &locati
     return storage;
 }
 
+KoResourceSP KisResourceLocator::resourceSnapshot(const QString &storageLocation,
+                                                  const QString &resourceType,
+                                                  const QString &filename,
+                                                  const QString &expectedMd5) const
+{
+    const auto storage = storageByLocation(makeStorageLocationAbsolute(storageLocation));
+    return loadResourceSnapshot(storage, resourceType, filename, expectedMd5);
+}
+
+KoResourceSP KisResourceLocator::loadResourceSnapshot(KisResourceStorageSP storage,
+                                                      const QString &resourceType,
+                                                      const QString &filename,
+                                                      const QString &expectedMd5)
+{
+    const QString url = resourceType + '/' + filename;
+    if (!storage || expectedMd5.isEmpty() || storage->resourceMd5(url) != expectedMd5)
+        return {};
+    const auto saved = storage->resource(url);
+    if (!saved || !saved->valid() || storage->resourceMd5(url) != expectedMd5)
+        return {};
+    return saved->clone();
+}
+
 KisResourceStorageSP KisResourceLocator::folderStorage() const
 {
     return storageByLocation(d->resourceLocation);

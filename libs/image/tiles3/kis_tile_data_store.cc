@@ -290,6 +290,25 @@ bool KisTileDataStore::tryEvictGpuTileData(KisTileData *td)
     return evicted;
 }
 
+quint64 KisTileDataStore::tryEvictGpuTileDataBatch(const QVector<KisTileData *> &tiles)
+{
+    QVector<KisTileData *> locked;
+    for (KisTileData *td : tiles) {
+        // tryLockForWrite also rejects duplicate entries without blocking.
+        if (!td->m_swapLock.tryLockForWrite())
+            continue;
+        if (td->data() && td->gpuState() && td->gpuState()->slot != KisTileGpuState::InvalidSlot) {
+            locked << td;
+        } else {
+            td->m_swapLock.unlock();
+        }
+    }
+    const quint64 bytes = KisTileGpuHooks::tryEvictBatch(locked);
+    for (KisTileData *td : locked)
+        td->m_swapLock.unlock();
+    return bytes;
+}
+
 KisTileDataStoreIterator* KisTileDataStore::beginIteration()
 {
     m_iteratorLock.lockForWrite();

@@ -201,6 +201,10 @@ if (${INSTALL_BENCHMARKS})
 endif()
 
 # GPU engine (Solstice): canvas textures from the GPU
+kis_add_test(KisBrushStrokePreviewTest.cpp ../widgets/kis_preset_live_preview_view.cpp
+    TEST_NAME KisBrushStrokePreviewTest LINK_LIBRARIES kritaui kritatestsdk)
+target_link_libraries(KisBrushStrokePreviewTest kritamypaintop_static)
+
 if(HAVE_KRITA_GPU_ENGINE AND WIN32)
     kis_add_tests(KisGpuCanvasUploadTest.cpp
         LINK_LIBRARIES kritaui kritatestsdk Qt${QT_MAJOR_VERSION}::OpenGL)

@@ -35,6 +35,8 @@ public:
 
     int levelOfDetail() const;
     void setLevelOfDetail(int value);
+    /// Set before scheduling a reproducible preview; ordinary strokes keep their random seed.
+    void setSeed(int seed);
 
 private:
     struct Private;

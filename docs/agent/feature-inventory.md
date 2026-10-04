@@ -29,6 +29,53 @@ GPU phase 4.12 also touches `KisDabRenderingQueue.{h,cpp}` and
 `KisDabRenderingExecutor.{h,cpp}` under `plugins/paintops/defaultpaintops/brush/`
 to bound GPU brush batches by completed source pixel bytes, with queue tests.
 
+GPU phase 4.32 adds bulk-read hooks to
+`libs/image/tiles3/kis_tiled_data_manager.cc` and deferred synchronization to
+`kis_tile_data{,_interface}.h`. Both interleaved and planar CPU reads batch
+stale GPU tiles while holding swap read locks; existing copy/stride behavior
+and individual iterator synchronization remain intact.
+
+GPU phase 4.34 adds a sequential GPU readback before the concurrent CPU
+masking patches in `libs/ui/tool/strokes/kis_painter_based_stroke_strategy.cpp`.
+The masking formulas and patch partitioning remain unchanged. Phase 4.35
+changes the brush staging-context choice in `KisGpuBrushPainter.cpp` to reuse
+existing large buffers without exceeding the existing memory cap.
+
+GPU phases 4.36-4.37 forward per-channel layer flags in
+`libs/image/gpu/KisGpuMergeBatch.*`, allow F16 channel masks in
+`KisGpuProjectionCompositor.cpp`, and align the established F16 generic blend
+arithmetic in `libs/gpu/shaders/composite_blend.glsl`. Projection tests cover
+major modes, all channel masks, partial updates and transparent boundaries.
+
+GPU phases 4.38-4.40 add per-submission upload arenas in `KisGpuTileAccess.*`
+and `KisGpuProjectionCompositor.cpp`, bounded resource reclamation outside
+the retirement lock in `KisGpuTileBackend.*`, and host-cached transfer-only
+staging in `libs/gpu/KisGpuBuffer.*`. Paint-device tests cover suballocation,
+GPU lifetime, failed submissions and concurrent retirement.
+
+GPU phase 4.41 adds `tryEvictGpuTileDataBatch` to
+`libs/image/tiles3/kis_tile_data_store.{h,cc}`, a batch hook in
+`KisTileGpuState.h`/`KisTileGpuHooksStub.cpp`, and bounded F32/F16 eviction
+readbacks in `KisGpuTileBackend.*`. No slot is released until CPU content is
+valid; failed transfers preserve GPU copies. See the dedicated eviction tests.
+
+Brush Stroke Preview adds `KisBrushStrokePreviewRenderer.*` and
+`KisBrushStrokePreviewCache.*` under `libs/ui/widgets/`, sharing the F5
+stroke/background implementation with `kis_preset_live_preview_view.cpp`.
+It touches `kis_preset_chooser.*`, `kis_paintop_presets_chooser_popup.*` and
+`plugins/dockers/presetdocker/presetdocker_dock.cpp` for the docker-only layout;
+`libs/resourcewidgets/KisResourceItemChooser.*` for the opt-in bottom controls
+and restoration from an already active horizontal strip;
+`KisPresetDockerFilters.*` for per-docker multi-select engine/bundle menus and
+`KisTagFilterResourceProxyModel.*` for additional per-view metadata/storage facets;
+`KisResourceLocator.*` for independent saved snapshots; `kis_image.{h,cc}`
+for stroke-start notification; stroke random sources and `freehand_stroke.*`
+for preview-only seeding; and `MyPaintPaintOp.cpp` for tool-independent preview
+tracking. Build/test entries are in
+`libs/ui/CMakeLists.txt` and `libs/ui/tests/`, including
+`KisBrushStrokePreviewTest`. See `docs/brush-stroke-preview.md` and
+`docs/agent/brush-stroke-preview.md` for lifecycle and compatibility rules.
+
 GPU phase 4.11 changes `libs/image/tiles3/kis_tile_data_pooler.cc` to avoid
 speculative CPU-clone downloads of GPU-only tiles after commits, and adds
 GPU test friend access to the existing pooler suspend/resume helpers in

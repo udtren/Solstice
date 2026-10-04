@@ -62,6 +62,12 @@ public:
     /// Default is false no responsiveness, layout is vertical.
     void setResponsiveness(bool isResponsive);
 
+    /// Keep the requested view mode with all controls below the resource view.
+    /// Controls wrap into two rows in narrow docks; the view never becomes a strip.
+    void setBottomBarLayout(bool enabled);
+    /// Takes ownership of an optional widget placed beside the bottom filters.
+    void setBottomBarWidget(QWidget *widget);
+
     /// Set's the desired view mode for the resource list.
     /// Caller should use this instead of directly tampering with the KisResourceItemListView.
     void setListViewMode(ListViewMode viewMode);
@@ -167,6 +173,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
+    void updateBottomBarLayout();
     void updateButtonState();
     void updatePreview(const QModelIndex &idx);
 

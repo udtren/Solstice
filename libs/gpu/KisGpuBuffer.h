@@ -33,6 +33,8 @@ public:
         Upload,
         /// Host-visible and host-cached. GPU-to-CPU readback.
         Readback,
+        /// CPU snapshots used only as transfer sources; prefer host-cached memory.
+        Staging,
     };
 
     ~KisGpuBuffer();

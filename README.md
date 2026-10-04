@@ -25,7 +25,14 @@ Krita edition, and development no longer tracks upstream Krita.
   background removal and Smart Fill.
 - **[Puppet Warp](docs/puppet-warp.md)**: pose and reshape artwork with movable
   and rotatable pins in the Transform Tool.
+- **[Brush Presets](docs/brush-stroke-preview.md)**: cached stroke previews in
+  a grid that adapts to the docker's width, with multi-select engine and bundle
+  filters alongside tags and search.
 
+![Brush Presets with stroke previews and the multi-select engine filter](docs/images/brush-presets.png)
+
+The Brush Presets docker with the Engines filter open. See the
+[Brush Presets guide](docs/brush-stroke-preview.md) for preview behavior and filters.
 
 ## Development and downloads
 
@@ -33,15 +40,16 @@ Krita edition, and development no longer tracks upstream Krita.
 > development. It does not yet replace every CPU processing path, and its
 > supported hardware and platforms are limited.
 
-There are currently no packaged downloads in [GitHub Releases](https://github.com/udtren/Solstice/releases). 
-Solstice is currently available as source code for development builds.
-
-[Experimental Windows CI builds](docs/test-builds.md)
+Solstice is available as source code and as unsigned Windows x64 trial ZIPs
+from successful manual [GitHub Actions builds](https://github.com/udtren/Solstice/actions/workflows/windows-build.yml).
+These temporary artifacts expire after seven days and are development builds,
+not stable releases. See [Experimental Windows builds](docs/test-builds.md)
+for download instructions and packaging limitations.
 
 [Temporary visual branding](docs/visual-branding.md)
 
 The primary development and default branch is `krita-sol-gpu`. For source
-builds, see the [development environment](AGENTS.md#shared-development-environment) and [build workflow](docs/agent/development-workflow.md#build). 
+builds, see the [development environment](AGENTS.md#shared-development-environment) and [build workflow](docs/agent/development-workflow.md#build).
 Check the [supported environment](#supported-environment) before building.
 
 ## Project page
@@ -67,16 +75,19 @@ changes and support are maintained in this repository.
 ## GPU engine
 
 The experimental engine uses Vulkan compute for supported RGBA floating-point
-layer compositing and shares data with the OpenGL canvas for display. It is
+layer compositing in RGBA32F and RGBA16F and shares data with the OpenGL canvas
+for display. Supported layer modes include Normal, Multiply, Screen, Overlay,
+Soft Light and HSY color modes, including individual channel locks. It is
 disabled by default and falls back to CPU paths for unsupported operations.
 
 An opt-in RGBA32F pixel-brush prototype also composites supported blend modes
-(including Normal, Multiply, Screen, Overlay and Erase) on the GPU, with selected
-and mirrored painting. Supported Wash previews and final merges also have GPU
-paths with selection and
-CPU-compatible channel-lock handling. Dab generation,
-filters and transforms still run on the CPU. This is an
-ongoing rewrite, not a fully GPU-based painting pipeline.
+(including Normal, Multiply, Screen, Overlay and Erase) on the GPU, with
+selections, alpha lock and mirror painting. Supported Buildup strokes and Wash
+previews and final merges use GPU paths with CPU-compatible channel handling.
+Batched tile transfers and reusable upload buffers reduce transfer waits,
+including for textured and masked brushes. Dab generation, texture generation,
+masking, filters and transforms still run on the CPU. This is an ongoing
+rewrite, not a fully GPU-based painting pipeline.
 
 See the [GPU Engine guide](docs/gpu-engine.md) for setup and limitations.
 Prototype benchmark results below include development work that may not yet
@@ -91,19 +102,24 @@ Measured on an NVIDIA RTX PRO 6000 Blackwell development system:
 
 | Workload | CPU | GPU |
 | --- | ---: | ---: |
-| Full layer projection, 4096 x 4096 RGBA32F, 16 layers | 253 ms | 42 ms |
+| Resident full layer projection, 4096 x 4096 RGBA32F, 16 layers | 256 ms | 56 ms |
 | Canvas data preparation, 4096 x 4096 RGBA32F, 8 layers | 1025 ms | 1.6 ms |
 | Four mirror passes, 14 dabs of 73 x 73 pixels | 0.932 ms | 0.459 ms |
 | Four mirror passes, 32 dabs of 256 x 256 pixels | 45.545 ms | 1.874 ms |
 
-Projection measurements start with GPU-resident layers and exclude a full CPU
-readback. Canvas preparation excludes the final OpenGL texture copies. Brush
+Projection figures are three-sample medians with GPU completion included,
+measured on 2026-10-04. They exclude full CPU readback (about 47 ms).
+Across three fresh benchmark processes, the first GPU refresh after CPU
+projection work takes 58-59 ms, and the initial GPU refresh including
+uploads/preparation takes 0.62-0.65 s.
+Canvas preparation excludes the final OpenGL texture copies. Brush
 measurements average five warmed updates, include uploads and GPU completion
 waits, and compare against serial CPU painting; dab generation, job scheduling
 and display are excluded. Results vary with the workload and hardware.
 
-Projection and canvas methodology is recorded in the
-[GPU development notes](docs/agent/gpu-engine.md#phase-31-measurements).
+Projection methodology is recorded in the
+[GPU development notes](docs/agent/gpu-engine.md#bulk-readback-and-projection-measurements-phases-432-433),
+alongside the [earlier canvas measurements](docs/agent/gpu-engine.md#phase-32-measurements).
 The mirror-painting results are from a development build measured on
 October 3, 2026; they do not establish performance for a packaged release.
 
@@ -120,7 +136,7 @@ October 3, 2026; they do not establish performance for a packaged release.
 - **Other platforms:** Linux and macOS are not currently validated for this
   custom build. Android is not supported.
 
-The GPU engine has narrower requirements than Krita itself. 
+The GPU engine has narrower requirements than Krita itself.
 See the [GPU Engine guide](docs/gpu-engine.md#requirements) for the supported document
 formats and fallback behavior.
 

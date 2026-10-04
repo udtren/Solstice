@@ -23,6 +23,12 @@ const quint32 CompositeLayersRgba32f[] = {
 const quint32 CompositeLayersRgba16f[] = {
 #include "composite_layers_rgba16f.spv.inc"
 };
+const quint32 CompositeLayersExtendedRgba32f[] = {
+#include "composite_layers_extended_rgba32f.spv.inc"
+};
+const quint32 CompositeLayersExtendedRgba16f[] = {
+#include "composite_layers_extended_rgba16f.spv.inc"
+};
 
 struct PushConstants {
     VkDeviceAddress layerTiles;
@@ -66,6 +72,7 @@ KisGpuLayerCompositor::create(KisGpuContext &context, KisGpuTileFormat format, Q
 {
     std::unique_ptr<KisGpuLayerCompositor> compositor(new KisGpuLayerCompositor(context));
     const bool f16 = format == KisGpuTileFormat::RGBA16F;
+    compositor->m_f16 = f16;
     compositor->m_pipeline =
         KisGpuComputePipeline::create(context,
                                       f16 ? CompositeLayersRgba16f : CompositeLayersRgba32f,
@@ -103,12 +110,27 @@ bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
         return false;
     }
     const VkDeviceSize totalBytes = maskOffset + alignUp(VkDeviceSize(maskBytes), 4);
+    bool extended = false;
     for (const auto &layer : layers) {
-        if (layer.channelMask > 0xf || quint32(layer.op) > quint32(KisGpuBlendOp::Erase)) {
+        if (layer.channelMask > 0xf || quint32(layer.op) >= quint32(KisGpuBlendOp::Count)) {
             if (errorMessage)
                 *errorMessage = QStringLiteral("unsupported layer channel mask");
             return false;
         }
+        extended |= layer.op >= KisGpuBlendOp::SoftLightSvg;
+    }
+
+    // Compile the extra rounding constraints separately so they cannot affect
+    // established modes through shared-expression optimization.
+    if (extended && !m_extendedPipeline) {
+        m_extendedPipeline = KisGpuComputePipeline::create(
+            m_context,
+            m_f16 ? CompositeLayersExtendedRgba16f : CompositeLayersExtendedRgba32f,
+            m_f16 ? sizeof(CompositeLayersExtendedRgba16f) : sizeof(CompositeLayersExtendedRgba32f),
+            sizeof(PushConstants),
+            errorMessage);
+        if (!m_extendedPipeline)
+            return false;
     }
 
     if (!m_tables || m_tables->size() < totalBytes) {
@@ -150,6 +172,22 @@ bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
         constants.maskSize[1] = mask->bounds.height();
     }
 
-    m_pipeline->dispatch(commands.commandBuffer(), constants, quint32(tileCount));
+    // A mixed stack must also keep old modes out of the extended shader.
+    // Consecutive runs share the tables and submission; only their offsets and
+    // pipeline change. Each run observes the preceding run's destination writes.
+    for (int first = 0; first < layers.size();) {
+        const bool useExtended = layers[first].op >= KisGpuBlendOp::SoftLightSvg;
+        int end = first + 1;
+        while (end < layers.size() && (layers[end].op >= KisGpuBlendOp::SoftLightSvg) == useExtended)
+            ++end;
+        constants.layerTiles = m_tables->deviceAddress() + VkDeviceSize(first) * tileCount * sizeof(VkDeviceAddress);
+        constants.layers = m_tables->deviceAddress() + paramsOffset + VkDeviceSize(first) * sizeof(LayerParams);
+        constants.layerCount = quint32(end - first);
+        if (first)
+            commands.computeBarrier();
+        (useExtended ? m_extendedPipeline : m_pipeline)
+            ->dispatch(commands.commandBuffer(), constants, quint32(tileCount));
+        first = end;
+    }
     return true;
 }

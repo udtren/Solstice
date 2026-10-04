@@ -102,6 +102,16 @@ public:
      */
     bool hasStorage(const QString &storageLocation);
 
+    /** Load an independent saved resource without consulting or changing the
+     * dirty resource cache. Returns null if the stored checksum has changed. */
+    KoResourceSP resourceSnapshot(const QString &storageLocation,
+                                  const QString &resourceType,
+                                  const QString &filename,
+                                  const QString &expectedMd5) const;
+    static KoResourceSP loadResourceSnapshot(KisResourceStorageSP storage,
+                                             const QString &resourceType,
+                                             const QString &filename,
+                                             const QString &expectedMd5);
 
     /**
      * @brief saveTags saves all tags to .tag files in the resource folder

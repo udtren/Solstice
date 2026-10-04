@@ -34,6 +34,28 @@ public:
         Overlay,
         HardLight,
         Exclusion,
+        LinearBurn,
+        LinearLight,
+        PinLight,
+        SoftLightSvg,
+        SoftLightPhotoshop,
+        ColorDodge,
+        ColorBurn,
+        Divide,
+        VividLight,
+        HardMix,
+        HardMixPhotoshop,
+        HardMixSofterPhotoshop,
+        GrainMerge,
+        GrainExtract,
+        Negation,
+        Allanon,
+        Hue,
+        Saturation,
+        Color,
+        Luminosity,
+        DarkerColor,
+        LighterColor,
         Count
     };
     struct Dab {
@@ -77,6 +99,7 @@ private:
     explicit KisGpuDabCompositor(KisGpuContext &context);
     KisGpuContext &m_context;
     std::unique_ptr<KisGpuComputePipeline> m_pipeline;
+    std::unique_ptr<KisGpuComputePipeline> m_extendedPipeline;
     std::unique_ptr<KisGpuBuffer> m_upload;
 };
 #endif

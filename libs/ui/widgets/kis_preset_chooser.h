@@ -8,8 +8,9 @@
 #ifndef KIS_PRESET_CHOOSER_H_
 #define KIS_PRESET_CHOOSER_H_
 
-#include <QWidget>
 #include <QPointer>
+#include <QTimer>
+#include <QWidget>
 
 #include <KoResource.h>
 #include <KoID.h>
@@ -60,6 +61,8 @@ public:
 
     /// get the base size for the icons. Used by the slider in the view options
     int iconSize();
+    void setStrokePreviewMode(bool enabled);
+    void enableDockerFilters();
 
 Q_SIGNALS:
     void resourceSelected(KoResourceSP resource);
@@ -86,6 +89,12 @@ private Q_SLOTS:
     void slotCurrentPresetChanged();
 
 private:
+    bool eventFilter(QObject *object, QEvent *event) override;
+    void updatePreviewRequests();
+    bool m_strokePreview = false;
+    bool m_dockerFilters = false;
+    int m_previewWidth = 180;
+    QTimer m_previewRequestsTimer;
     KisResourceItemChooser *m_chooser {0};
     KisPresetDelegate* m_delegate {0};
     ViewMode m_mode;

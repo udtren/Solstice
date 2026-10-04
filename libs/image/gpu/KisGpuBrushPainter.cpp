@@ -63,6 +63,22 @@ struct WorkPool {
     {
         if (!required || required > KisGpuDabCompositor::MaxUploadBytes)
             return nullptr;
+        const quint64 currentCapacity =
+            slots[next] && slots[next]->compositor ? slots[next]->compositor->uploadBytes() : 0;
+        if (currentCapacity < required && bytes() - currentCapacity + required > KisGpuDabCompositor::MaxUploadBytes) {
+            // Large textured batches may fit only two buffers in the budget.
+            // Reuse the oldest sufficiently large buffer instead of continually
+            // evicting it to allocate the third round-robin slot from scratch.
+            Work *oldest = nullptr;
+            for (size_t i = 0; i < slots.size(); ++i) {
+                auto *candidate = slots[i].get();
+                if (candidate && candidate->compositor && candidate->compositor->uploadBytes() >= required
+                    && (!oldest || candidate->lastUse < oldest->lastUse)) {
+                    oldest = candidate;
+                    next = i;
+                }
+            }
+        }
         auto &slot = slots[next];
         if (!slot)
             slot = std::make_unique<Work>(context);
@@ -176,10 +192,13 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     KisGpuBlendOp blendOp;
     if (KisGpuProjectionCompositor::blendOpForCompositeOp(painter->compositeOpId(), &blendOp)
         && blendOp != KisGpuBlendOp::Over) {
-        // Both enums retain the shared shader's order for the separable modes.
+        // Both enums retain the shared shader's order for generic blend modes.
         static_assert(quint32(Mode::Multiply) == quint32(KisGpuBlendOp::Multiply) + 3);
         static_assert(quint32(Mode::Exclusion) == quint32(KisGpuBlendOp::Exclusion) + 3);
-        mode = Mode(quint32(blendOp) + 3);
+        // The layer enum reserves 11 for Erase; the dab enum places it at 3.
+        static_assert(quint32(Mode::LinearBurn) == quint32(KisGpuBlendOp::LinearBurn) + 2);
+        static_assert(quint32(Mode::LighterColor) == quint32(KisGpuBlendOp::LighterColor) + 2);
+        mode = Mode(quint32(blendOp) + (blendOp < KisGpuBlendOp::Erase ? 3 : 2));
     }
     if (alphaDarken) {
         // The CPU op fixes this process-wide setting when the color space is created.

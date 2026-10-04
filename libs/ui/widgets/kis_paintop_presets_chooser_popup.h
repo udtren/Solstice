@@ -24,6 +24,8 @@ public:
     
     void updateViewSettings();
     void setResponsiveness(bool value);
+    /// Exposes the docker-only setting; toolbar/editor instances do not call this.
+    void enableStrokePreviewSetting();
 public Q_SLOTS:
     void canvasResourceChanged(KisPaintOpPresetSP  preset);
     void slotThemeChanged();
