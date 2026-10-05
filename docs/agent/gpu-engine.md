@@ -639,6 +639,10 @@ included (GPU-to-GPU).
 
 ## Phase plan
 
+The order of work after phase 4.57 is set in
+`docs/agent/gpu-work-priorities.md`; record measurements and phase details
+here and keep that document as the ordering reference.
+
 Each phase ends with parity tests against the CPU implementation, validation
 clean runs, and a benchmark entry in this document.
 
