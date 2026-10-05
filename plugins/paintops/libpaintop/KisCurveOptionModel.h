@@ -58,6 +58,14 @@ public:
     LAGER_QT_READER(QString, curveYMaxLabel);
 
     KisCurveOptionDataCommon bakedOptionData() const;
+
+    /**
+     * The data bakedOptionData() writes, as a pure function: the option is
+     * disabled unless \p externallyEnabled, and the strength range and value
+     * are taken from \p strengthRange.
+     */
+    static KisCurveOptionDataCommon
+    bakeOptionData(const KisCurveOptionDataCommon &data, bool externallyEnabled, const RangeState &strengthRange);
 };
 
 #endif // KISCURVEOPTIONMODEL_H

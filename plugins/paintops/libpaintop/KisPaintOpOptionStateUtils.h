@@ -10,9 +10,9 @@
 #include <optional>
 #include <tuple>
 
+#include <KisCurveOptionModel.h>
 #include <KisPaintOpOptionWidgetUtils.h>
 #include <KisPaintOpOptionsModel.h>
-#include <KisCurveOptionModel.h>
 
 /**
  * Helpers for option widgets whose state lives in KisPaintOpOptionsModel
@@ -23,7 +23,7 @@ namespace KisPaintOpOptionStateUtils
 
 namespace detail
 {
-template <typename Widget, typename Data>
+template<typename Widget, typename Data>
 auto widgetCursor(KisPaintOpOptionState<Data> *state)
 {
     if constexpr (KisPaintOpOptionWidgetUtils::detail::has_type_data_type<Widget>::value) {
@@ -37,9 +37,9 @@ auto widgetCursor(KisPaintOpOptionState<Data> *state)
     }
 }
 
-template <typename Widget, typename Data>
+template<typename Widget, typename Data>
 struct StateWidgetWithLodLimitations : public Widget {
-    template <typename... Args>
+    template<typename... Args>
     StateWidgetWithLodLimitations(KisPaintOpOptionState<Data> *state, Args... args)
         : Widget(widgetCursor<Widget>(state), std::forward<Args>(args)...)
         , m_lodData(state->reader())
@@ -64,7 +64,7 @@ private:
  * are forwarded after the cursor, as in
  * KisPaintOpOptionWidgetUtils::createOptionWidget().
  */
-template <typename Widget, typename Data, typename... Args>
+template<typename Widget, typename Data, typename... Args>
 Widget *createOptionWidget(KisPaintOpOptionState<Data> *state, Args... args)
 {
     return new Widget(detail::widgetCursor<Widget>(state), std::forward<Args>(args)...);
@@ -75,7 +75,7 @@ Widget *createOptionWidget(KisPaintOpOptionState<Data> *state, Args... args)
  * Data::lodLimitations(), like
  * KisPaintOpOptionWidgetUtils::createOptionWidgetWithLodLimitations().
  */
-template <typename Widget, typename Data, typename... Args>
+template<typename Widget, typename Data, typename... Args>
 Widget *createOptionWidgetWithLodLimitations(KisPaintOpOptionState<Data> *state, Args... args)
 {
     return new detail::StateWidgetWithLodLimitations<Widget, Data>(state, std::forward<Args>(args)...);
@@ -85,7 +85,7 @@ Widget *createOptionWidgetWithLodLimitations(KisPaintOpOptionState<Data> *state,
  * Cursor for the KisCurveOptionWidget-based helpers, e.g.
  * KisPaintOpOptionWidgetUtils::createOpacityOptionWidget(cursor).
  */
-template <typename Data>
+template<typename Data>
 lager::cursor<KisCurveOptionDataCommon> curveCursor(KisPaintOpOptionState<Data> *state)
 {
     return state->cursor().zoom(kislager::lenses::to_base<KisCurveOptionDataCommon>);
@@ -96,7 +96,7 @@ lager::cursor<KisCurveOptionDataCommon> curveCursor(KisPaintOpOptionState<Data> 
  * strength range override. It applies the same rules as
  * KisCurveOptionModel::bakedOptionData().
  */
-template <typename Data>
+template<typename Data>
 Data bakeCurveOption(const Data &data)
 {
     Data result = data;

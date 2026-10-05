@@ -59,6 +59,22 @@ struct Q_DECL_HIDDEN KisPaintOpPreset::Private {
             }
         }
 
+        void recordChangedKey(const QString &key) override
+        {
+            KisPaintOpPresetUpdateProxy *proxy = m_parentPreset->updateProxyNoCreate();
+            if (proxy) {
+                proxy->recordChangedKey(key);
+            }
+        }
+
+        void recordAllKeysChanged() override
+        {
+            KisPaintOpPresetUpdateProxy *proxy = m_parentPreset->updateProxyNoCreate();
+            if (proxy) {
+                proxy->recordAllKeysChanged();
+            }
+        }
+
     private:
         KisPaintOpPreset *m_parentPreset;
     };
@@ -151,6 +167,7 @@ void KisPaintOpPreset::setSettings(KisPaintOpSettingsSP settings)
     }
 
     if (d->updateProxy) {
+        d->updateProxy->recordAllKeysChanged();
         d->updateProxy->notifyUniformPropertiesChanged();
         d->updateProxy->notifySettingsChanged();
     }

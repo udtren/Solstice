@@ -95,6 +95,15 @@ KisPaintOpSettings::UpdateListener::~UpdateListener()
 {
 }
 
+void KisPaintOpSettings::UpdateListener::recordChangedKey(const QString &key)
+{
+    Q_UNUSED(key);
+}
+
+void KisPaintOpSettings::UpdateListener::recordAllKeysChanged()
+{
+}
+
 KisPaintOpSettings::KisPaintOpSettings(KisResourcesInterfaceSP resourcesInterface)
     : d(new Private)
 {
@@ -281,6 +290,11 @@ void KisPaintOpSettings::resetSettings(const QStringList &preserveProperties)
         if (hasProperty(key)) {
             preserved[key] = getProperty(key);
         }
+    }
+
+    UpdateListenerSP updateListener = d->updateListener.toStrongRef();
+    if (updateListener) {
+        updateListener->recordAllKeysChanged();
     }
 
     clearProperties();
@@ -577,6 +591,7 @@ void KisPaintOpSettings::setProperty(const QString & name, const QVariant & valu
 
         if (updateListener) {
             updateListener->setDirty(true);
+            updateListener->recordChangedKey(name);
         }
     }
 
@@ -584,6 +599,19 @@ void KisPaintOpSettings::setProperty(const QString & name, const QVariant & valu
     onPropertyChanged();
 }
 
+void KisPaintOpSettings::removeProperty(const QString &name)
+{
+    if (!KisPropertiesConfiguration::hasProperty(name)) {
+        return;
+    }
+
+    KisPropertiesConfiguration::removeProperty(name);
+
+    UpdateListenerSP updateListener = d->updateListener.toStrongRef();
+    if (updateListener) {
+        updateListener->recordChangedKey(name);
+    }
+}
 
 void KisPaintOpSettings::onPropertyChanged()
 {

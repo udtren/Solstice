@@ -8,6 +8,7 @@
 #include "kis_paintop_settings_widget.h"
 #include "kis_paintop_option.h"
 #include "kis_paintop_options_model.h"
+#include "KisPaintOpOptionsModel.h"
 
 #include <QHBoxLayout>
 #include <QList>
@@ -16,6 +17,7 @@
 #include <QPainter>
 #include <QStyleOptionViewItem>
 #include <QAction>
+#include <QPointer>
 #include <QShowEvent>
 
 #include <brushengine/kis_paintop_preset.h>
@@ -41,6 +43,7 @@ struct KisPaintOpSettingsWidget::Private
     KisPaintOpOptionListModel*  model;
     QStackedWidget*             optionsStack;
     std::optional<lager::reader<KisPaintopLodLimitations>> lodLimitations;
+    QPointer<KisPaintOpOptionsModel> optionsModel;
 };
 
 KisPaintOpSettingsWidget::KisPaintOpSettingsWidget(QWidget * parent)
@@ -115,13 +118,31 @@ void KisPaintOpSettingsWidget::addPaintOpOption(KisPaintOpOption *option, QStrin
                                       option->effectiveLodLimitations());
 }
 
+void KisPaintOpSettingsWidget::setOptionsModel(KisPaintOpOptionsModel *model)
+{
+    m_d->optionsModel = model;
+}
+
+KisPaintOpOptionsModel *KisPaintOpSettingsWidget::optionsModel() const
+{
+    return m_d->optionsModel;
+}
+
 void KisPaintOpSettingsWidget::setConfiguration(const KisPropertiesConfigurationSP  config)
 {
     Q_ASSERT(!config->getString("paintop").isEmpty());
+
+    // the model keeps itself in sync with its attached preset
+    if (m_d->optionsModel && !m_d->optionsModel->isAttachedTo(config.data())) {
+        m_d->optionsModel->readAll(config.data());
+    }
+
     KisLockedPropertiesProxySP propertiesProxy = KisLockedPropertiesServer::instance()->createLockedPropertiesProxy(config);
     int indexcount = 0;
     Q_FOREACH (KisPaintOpOption* option, m_d->paintOpOptions) {
-        option->startReadOptionSetting(propertiesProxy);
+        if (!m_d->optionsModel) {
+            option->startReadOptionSetting(propertiesProxy);
+        }
 
         KisLockedPropertiesServer::instance()->setPropertiesFromLocked(false);
         KisOptionInfo info;
@@ -137,6 +158,14 @@ void KisPaintOpSettingsWidget::setConfiguration(const KisPropertiesConfiguration
 
 void KisPaintOpSettingsWidget::writeConfiguration(KisPropertiesConfigurationSP config) const
 {
+    if (m_d->optionsModel) {
+        // the attached preset has already been written by the model
+        if (!m_d->optionsModel->isAttachedTo(config.data())) {
+            m_d->optionsModel->writeAll(config.data());
+        }
+        return;
+    }
+
     KisLockedPropertiesProxySP propertiesProxy = KisLockedPropertiesServer::instance()->createLockedPropertiesProxy(config);
     Q_FOREACH (const KisPaintOpOption* option, m_d->paintOpOptions) {
         option->startWriteOptionSetting(propertiesProxy);

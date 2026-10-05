@@ -13,20 +13,51 @@
 namespace KisPaintOpOptionWidgetUtils {
 
 namespace detail {
+QString opacityMinLabel()
+{
+    return i18n("Transparent");
+}
+QString opacityMaxLabel()
+{
+    return i18n("Opaque");
+}
+QString rotationMinLabel()
+{
+    return i18n("-180°");
+}
+QString rotationMaxLabel()
+{
+    return i18n("180°");
+}
 KisCurveOptionWidget *createOpacityOptionWidgetImpl(KisPaintOpOption::PaintopCategory category, const QString &prefix)
 {
-    return createCurveOptionWidget(KisOpacityOptionData(prefix),
-                                   category,
-                                   i18n("Transparent"),
-                                   i18n("Opaque"));
+    return createCurveOptionWidget(KisOpacityOptionData(prefix), category, opacityMinLabel(), opacityMaxLabel());
 }
 KisCurveOptionWidget *createRotationOptionWidgetImpl(KisPaintOpOption::PaintopCategory category, const QString &prefix)
 {
-    return createCurveOptionWidget(KisRotationOptionData(prefix),
-                                   category,
-                                   i18n("-180°"),
-                                   i18n("180°"));
+    return createCurveOptionWidget(KisRotationOptionData(prefix), category, rotationMinLabel(), rotationMaxLabel());
 }
+}
+
+KisCurveOptionWidget *createOpacityOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData,
+                                    KisPaintOpOption::GENERAL,
+                                    detail::opacityMinLabel(),
+                                    detail::opacityMaxLabel());
+}
+
+KisCurveOptionWidget *createRotationOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData,
+                                    KisPaintOpOption::GENERAL,
+                                    detail::rotationMinLabel(),
+                                    detail::rotationMaxLabel());
+}
+
+KisCurveOptionWidget *createRateOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData, KisPaintOpOption::COLOR);
 }
 
 KisCurveOptionWidget *createOpacityOptionWidget()

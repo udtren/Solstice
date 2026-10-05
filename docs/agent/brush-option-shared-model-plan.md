@@ -2,8 +2,10 @@
 
 作成日: 2026年10月5日
 
-状態: フェーズ0(調査)完了。結果は `docs/agent/brush-option-shared-model-phase0.md`。
-フェーズ1以降の実装・設定変更・ビルド・インストールは未実施。
+状態: フェーズ1(基盤とDeformの試験移行)を実装済み。自動テストはLinuxの
+部分ビルドで実施し、Windows(Qt 6)でのビルド・インストールと実アプリでの
+手動確認は未実施。フェーズ0の調査結果は
+`docs/agent/brush-option-shared-model-phase0.md`。
 
 ブラシエディタ(F5)が持つオプションの状態を画面から切り離し、プリセットごとの
 1つのモデルに集約する。F5画面とTool Optionsドッカーなど複数の画面が同じ状態を
@@ -180,6 +182,119 @@
   部分書き込み、キー差分による削除、外部変更の取り込み、自己反響が起きないこと、
   `UpdatedPostponer` による通知のまとめである。
 - 既存のブラシエンジンの動作が変わらない。
+
+#### フェーズ1の実装結果(2026年10月5日)
+
+自動テストはすべて通過した。実アプリでの手動確認はまだ行っていない。
+
+**変更したファイル**
+
+| 場所 | 内容 |
+| --- | --- |
+| `libs/image/brushengine/kis_paintop_settings.{h,cpp}` | `UpdateListener` に `recordChangedKey()`/`recordAllKeysChanged()`(既定は何もしない)を追加。`setProperty` は値が変わったキーを記録する。`removeProperty` を隠蔽する関数で追加し、通知なし・変更済みフラグ不変のまま削除を記録する。`resetSettings` は全体の変更として記録する |
+| `libs/image/brushengine/KisPaintOpPresetUpdateProxy.{h,cpp}` | 変更キーを集約し、`sigSettingsKeysChanged(QSet<QString>, bool allKeys)` で配信する。EarlyWarningの後、Uncompressedの前に出す。延期中は解除時にまとめて出す |
+| `libs/image/brushengine/kis_paintop_preset.cpp` | リスナーの記録をプロキシへ転送する。`setSettings` は全体の変更として記録する |
+| `libs/ui/KisPaintOpOptionsModel.{h,cpp}`(新規) | 共有モデル本体。`KisPaintOpOptionState<Data>` がオプションの状態を持つ |
+| `libs/ui/kis_paintop_settings_widget.{h,cpp}` | `setOptionsModel()`/`optionsModel()` を追加。モデルがあるとき、接続中のプリセットに対する `setConfiguration`/`writeConfiguration` はオプションを読み書きしない。それ以外の設定にはモデルが読み書きする |
+| `libs/ui/kis_paintop_box.cc` | エンジン切り替え時にモデルをプリセットへ接続・切断する。LOD設定のキーを全書き込みの保持対象に指定する。モデル接続中は `slotGuiChangedCurrentPreset()` の全消去を行わない(LOD設定だけを書く) |
+| `plugins/paintops/libpaintop/KisPaintOpOptionStateUtils.h`(新規) | モデルの状態に結び付けたウィジェットの作成、LOD制限付きの作成、カーブ系の焼き込み関数 |
+| `plugins/paintops/libpaintop/KisCurveOptionModel.{h,cpp}` | 焼き込みを純粋な関数 `bakeOptionData()` として追加。ウィジェット側の `bakedOptionData()` と同じ規則 |
+| `plugins/paintops/libpaintop/KisStandardOptionData.{h,cpp}` | Opacity、Rotation、Rateのカーソル版作成関数を追加。ラベルは既存版と共有 |
+| `plugins/paintops/deform/`(試験移行) | 設定画面を共有モデルのビューに変更。テスト用に静的ライブラリ `kritadeformpaintop_static` を追加し、プラグインはそれにリンクする |
+| `plugins/paintops/deform/tests/`(新規) | `KisPaintOpOptionsModelTest` と、Deformプリセット6件のテストデータ |
+
+**計画からの変更点**
+
+- **`removeProperty` を仮想関数にしなかった。** `kis_properties_configuration.h`
+  はほぼ全体から参照されるため、変更すると再ビルドの範囲が非常に大きくなる。
+  代わりに `KisPaintOpSettings` で同名の関数を定義した。基底クラスのポインタ
+  経由の削除(ロック用プロキシによる `_previous` の削除)は記録されないが、
+  モデルが担当するキーには影響しない。
+- **`transactional_tag` は使わなかった。** 状態を `transactional_tag` にすると、
+  ウィジェットからの変更も `commit()` まで伝播しなくなる。そのため状態は
+  従来どおり `automatic_tag` とし、一括読み込み中は書き戻しを止めるフラグで
+  途中の状態を書き込まないようにした。依存readerを持つエンジン(フェーズ2以降)
+  で途中の状態が問題になる場合は、改めて検討する。
+- **オプション記述子は、モデルへの状態の登録(`addOption`)で代用した。**
+  ウィジェットを作る関数を記述子に持たせる作業は、Tool Optionsに2つ目の
+  ビューを作るフェーズ3で行う。
+
+**モデルの動作規則**
+
+- 接続直後と、設定の差し替え・全消去(`allKeys`)の後は、最初の書き込みで
+  全消去と全書き込みを行う。保持するキーはLOD設定の2つ。
+- 2回目以降は、変更されたオプションだけを一時的な設定に書き出す。前回書いた
+  キーとの差分を削除してから、ロック用プロキシ経由で値を書く。
+- 外部からの変更は、変更キーを担当するオプションだけを読み直す。どの
+  オプションも担当しないキーが含まれる場合は全オプションを読み直す(値が
+  同じなら状態は変わらない)。読み直しでは書き戻さない。
+- 1回の書き込みは `UpdatedPostponer` で囲み、通知を1回にまとめる。
+- オプション単位の書き込みは、`Data::write()` が書き込み先の既存値を読まない
+  ことを前提とする。MyPaintの共有JSONキーはこの前提を満たさない。
+
+**テスト(`KisPaintOpOptionsModelTest`、32件すべて通過)**
+
+- **既存の挙動の固定(変更前のコードでも14件通過):** 通知の回数と順序、
+  延期中のまとめ、値が同じときの変更済みフラグ、削除の無通知、ロックの適用と
+  解除、Uniform Propertyの書き込み、6プリセットでの従来の全書き込み
+- **変更キーの配信:** 単独の変更、延期中、全消去、設定の差し替え
+- **モデル:**
+  - 6プリセットすべてで、最初の書き込みが従来の全書き込みとキー・値とも一致
+    する(4件は `Custom<id>`/`Curve<id>` を含み、全書き込みで取り除かれる)
+  - 2回目以降の書き込みでは、変更したオプションのキーだけが変わり、オプション
+    外のキーは残る
+  - Uniform Propertyやツールバー相当の書き込みが取り込まれ、書き戻されない
+  - F5画面からの書き込み(LOD設定だけ)ではプリセットが変更済みにならない
+  - 設定の差し替え後は全書き込みに戻る
+  - 条件付きで書くオプションを無効にすると、そのキーが削除される
+  - ロック前の値(`_previous`)が他のオプションの書き込みで失われない
+  - 接続していない設定への書き込みが、従来のウィジェットと同じ結果になる
+- **テストの有効性の確認:** 毎回全書き込みにする誤りを意図的に入れると、
+  9件が失敗することを確認した。
+
+**検証環境と限界**
+
+- この環境ではUbuntu 24.04のQt 5.15.13とKF5で部分的にビルドした
+  (`kritaimage`、`kritaui`、`kritalibpaintop`、Deform、関連テスト)。lager と
+  zug は上流の現行版を使った。Solstice本来のQt 6.8とWindowsではビルドして
+  いない。
+- Qt 5でビルドするため、本作業と無関係な2ファイルをローカルでだけ修正した。
+  コミットには含めていない(`libs/ui/KisWelcomeAssetLibraryWidget.cpp` の
+  `QStringList` への波括弧代入、`libs/ui/widgets/KisPresetDockerFilters.cpp`
+  のQt 6専用の `dataChanged` 引数型)。
+- Quick AccessとRest Noteは、この環境のQtで `qt_add_resources` のターゲット
+  形式が使えないため、ローカルのビルドから除外した。
+- 既存テストのうち、リソースデータベースを初期化するもの
+  (`KisPaintOpPresetTest`、`kis_derived_resources_test`、`KisBrushModelTest`、
+  `KisBrushStrokePreviewTest`)は、この環境ではテスト関数の実行前にフォント
+  サムネイル生成で停止するか、何も実行せずに終了した。`KisBrushOpTest` は
+  ブラシ先端のデータがないため失敗し、`kis_properties_configuration_test` の
+  `testGetColor` も失敗した。いずれも変更箇所とは無関係な環境要因と判断した。
+  `KisCurveOptionDataTest` と `kis_paintop_test` は通過した。
+- 実アプリでの手動確認(下記)が残っている。
+
+**Windowsでの確認手順**
+
+```bat
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritaimage kritaui kritalibpaintop kritadeformpaintop KisPaintOpOptionsModelTest -j 8"
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && ctest --test-dir <krita-dev-root>\_build -R KisPaintOpOptionsModelTest --output-on-failure"
+```
+
+インストール対象は `libs/image`、`libs/ui`、`plugins/paintops/libpaintop`、
+`plugins/paintops/deform` の各 `cmake_install.cmake`。
+
+手動確認の項目(Deformブラシ):
+
+1. F5画面で各オプションを変更し、描画結果と変更済み表示が従来どおり更新される。
+2. ツールバーのサイズ・不透明度・ブレンドモード、On-Canvas Brush Editorの
+   Amount を変更すると、F5画面の値が追従する。
+3. プリセットの切り替え、再読み込み、上書き保存、新規保存で値が保たれる。
+   `v)_Distort_Grow` などの旧形式キーを含むプリセットでも同様。
+4. オプションをロックして別のプリセットに切り替え、ロックを「破棄」で解除
+   すると元の値に戻る(承認済みの挙動変更)。
+5. F5画面のLOD設定だけを変更しても、プリセットが変更済みにならない(承認済みの
+   挙動変更)。
+6. Pixel Brushなど未移行のエンジンが従来どおり動作する。
 
 ### フェーズ2: ブラシ先端・マスクブラシとPixel Brushの移行
 

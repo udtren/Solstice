@@ -245,7 +245,8 @@ void KisPaintOpOptionsModel::readOptions(const QList<int> &indexes)
     KisPaintOpSettingsSP settings = m_d->preset->settings();
     KIS_SAFE_ASSERT_RECOVER_RETURN(settings);
 
-    KisLockedPropertiesProxySP proxy = KisLockedPropertiesServer::instance()->createLockedPropertiesProxy(settings.data());
+    KisLockedPropertiesProxySP proxy =
+        KisLockedPropertiesServer::instance()->createLockedPropertiesProxy(settings.data());
 
     m_d->isReading = true;
     Q_FOREACH (int index, indexes) {

@@ -17,6 +17,7 @@
 class KisPropertiesConfiguration;
 class KisPaintOpConfigWidget;
 class KisPaintopLodLimitations;
+class KisPaintOpOptionsModel;
 
 /**
  * A common widget for enabling/disabling and determining
@@ -34,6 +35,15 @@ public:
 
     void addPaintOpOption(KisPaintOpOption *option);
     void addPaintOpOption(KisPaintOpOption *option, KisPaintOpOption::PaintopCategory category);
+
+    /**
+     * Declares that the option states live in \p model instead of the option
+     * widgets. The model then reads and writes the attached preset itself;
+     * setConfiguration()/writeConfiguration() only touch other
+     * configurations. See docs/agent/brush-option-shared-model-plan.md.
+     */
+    void setOptionsModel(KisPaintOpOptionsModel *model);
+    KisPaintOpOptionsModel *optionsModel() const;
 
     /// Reimplemented
     void setConfiguration(const KisPropertiesConfigurationSP  config) override;

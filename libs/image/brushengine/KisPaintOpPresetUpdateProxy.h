@@ -9,6 +9,8 @@
 
 #include <QScopedPointer>
 #include <QObject>
+#include <QSet>
+#include <QString>
 
 #include "kritaimage_export.h"
 
@@ -26,6 +28,13 @@ public:
 
     void notifySettingsChanged();
     void notifyUniformPropertiesChanged();
+
+    /**
+     * Records changed keys for sigSettingsKeysChanged(). Called by the
+     * preset's settings update listener.
+     */
+    void recordChangedKey(const QString &key);
+    void recordAllKeysChanged();
 
     /**
      * Blocks all sigSettingsChanged() signals until unpostponeSettingsChanges()
@@ -55,10 +64,21 @@ Q_SIGNALS:
      */
     void sigSettingsChangedUncompressedEarlyWarning();
     void sigSettingsChangedUncompressed();
+
+    /**
+     * Uncompressed. Emitted after sigSettingsChangedUncompressedEarlyWarning()
+     * and before sigSettingsChangedUncompressed() when keys changed since the
+     * previous emission. \p allKeys is true when the settings were reset or
+     * replaced; \p keys is then incomplete. Removed keys are included.
+     */
+    void sigSettingsKeysChanged(const QSet<QString> &keys, bool allKeys);
     void sigUniformPropertiesChanged();
 
 private Q_SLOTS:
     void slotDeliverSettingsChanged();
+
+private:
+    void emitSettingsKeysChanged();
 
 private:
     struct Private;

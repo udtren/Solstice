@@ -69,7 +69,7 @@ private:
  * operator==. Per-option writes require write() to depend only on the data
  * (no read-modify-write of the target configuration).
  */
-template <typename Data>
+template<typename Data>
 class KisPaintOpOptionState : public KisPaintOpOptionStateBase
 {
 public:
@@ -154,10 +154,9 @@ public:
     /**
      * Creates and registers a typed option state. The model owns it.
      */
-    template <typename Data>
-    KisPaintOpOptionState<Data> *addOption(const QString &id,
-                                           const Data &initialData,
-                                           typename KisPaintOpOptionState<Data>::BakeFunction bake = {})
+    template<typename Data>
+    KisPaintOpOptionState<Data> *
+    addOption(const QString &id, const Data &initialData, typename KisPaintOpOptionState<Data>::BakeFunction bake = {})
     {
         auto *state = new KisPaintOpOptionState<Data>(id, initialData, std::move(bake));
         addOption(state);
