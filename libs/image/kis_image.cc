@@ -82,8 +82,9 @@
 
 #include "kis_layer_projection_plane.h"
 
-#include "kis_update_time_monitor.h"
+#include "KisPaintTrace.h"
 #include "kis_lockless_stack.h"
+#include "kis_update_time_monitor.h"
 
 #include <QtCore>
 
@@ -2157,12 +2158,14 @@ bool KisImage::isIsolatingGroup() const
 
 void KisImage::addJob(KisStrokeId id, KisStrokeJobData *data)
 {
+    KisPaintTrace::instant("stroke.enqueue", this, data);
     KisUpdateTimeMonitor::instance()->reportJobStarted(data);
     m_d->scheduler.addJob(id, data);
 }
 
 void KisImage::endStroke(KisStrokeId id)
 {
+    KisPaintTrace::instant("stroke.end_requested", this);
     m_d->scheduler.endStroke(id);
 }
 

@@ -7,7 +7,7 @@
  */
 
 #include "kis_layer.h"
-
+#include "KisPaintTrace.h"
 
 #include <klocalizedstring.h>
 #include <QImage>
@@ -754,18 +754,21 @@ QRect KisLayer::updateProjection(const QRect& rect, KisNodeSP filthyNode, KisRen
 {
     QRect updatedRect = rect;
     KisPaintDeviceSP originalDevice = original();
-    if (!rect.isValid() ||
-        (!visible() && !isIsolatedRoot() && !hasClones()) ||
-        !originalDevice) return QRect();
+    if (!rect.isValid() || (!visible() && !isIsolatedRoot() && !hasClones()) || !originalDevice) {
+        KisPaintTrace::link("path.projection.recalculate_skipped", this, KisPaintTrace::currentFlow());
+        return QRect();
+    }
 
     if (!needProjection() && !hasEffectMasks()) {
         m_d->safeProjection->releaseDevice();
+        KisPaintTrace::link("path.projection.original_reused", this, KisPaintTrace::currentFlow());
     } else {
 
         if (!updatedRect.isEmpty()) {
             KisPaintDeviceSP projection = m_d->safeProjection->getDeviceLazy(originalDevice);
             updatedRect = applyMasks(originalDevice, projection,
                                      updatedRect, filthyNode, 0, flags);
+            KisPaintTrace::link("path.projection.masks_applied", this, KisPaintTrace::currentFlow());
         }
     }
 

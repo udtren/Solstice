@@ -4,6 +4,7 @@
  */
 
 #include "KisGpuMergeBatch.h"
+#include "KisPaintTrace.h"
 
 #include <QBitArray>
 
@@ -217,6 +218,7 @@ void KisGpuMergeBatch::flush()
 #endif
 
     if (!done) {
+        KisPaintTrace::link("path.projection.cpu_fallback", this, KisPaintTrace::currentFlow());
         compositeOnCpu();
     }
 

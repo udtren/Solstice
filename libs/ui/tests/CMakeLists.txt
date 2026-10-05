@@ -1,3 +1,6 @@
+kis_add_test(KisCanvasPaintTraceTest.cpp
+    TEST_NAME KisCanvasPaintTraceTest LINK_LIBRARIES Qt${QT_MAJOR_VERSION}::Gui Qt${QT_MAJOR_VERSION}::Test)
+
 kis_add_test(KisMenuMnemonicFilterTest.cpp ../utils/KisMenuMnemonicFilter.cpp
     TEST_NAME KisMenuMnemonicFilterTest LINK_LIBRARIES Qt${QT_MAJOR_VERSION}::Widgets Qt${QT_MAJOR_VERSION}::Test)
 

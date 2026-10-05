@@ -132,9 +132,22 @@ public:
 
 #endif
 
+        KisPaintTrace::FlowScope projectionFlow(m_walker->paintTraceId());
         m_merger.startMerge(*m_walker);
 
         QRect changeRect = m_walker->changeRect();
+        if (KisPaintTrace::enabled()) {
+            KisPaintTrace::rectangle("projection.executed_request_rect",
+                                     m_walker->startNode().data(),
+                                     m_walker->paintTraceId(),
+                                     m_walker->requestedRect(),
+                                     m_walker->levelOfDetail());
+            KisPaintTrace::rectangle("projection.change_rect",
+                                     m_walker->startNode().data(),
+                                     m_walker->paintTraceId(),
+                                     changeRect,
+                                     m_walker->levelOfDetail());
+        }
         m_updaterContext->continueUpdate(changeRect);
     }
 

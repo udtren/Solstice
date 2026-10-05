@@ -8,6 +8,7 @@
  */
 
 #include "kis_canvas2.h"
+#include "KisPaintTrace.h"
 
 #include <functional>
 #include <numeric>
@@ -1049,7 +1050,11 @@ void KisCanvas2::finishResizingImage(qint32 w, qint32 h)
 
 void KisCanvas2::startUpdateCanvasProjection(const QRect & rc)
 {
+    KisPaintTrace::Scope trace("canvas.prepare", this);
     KisUpdateInfoSP info = m_d->canvasWidget->startUpdateCanvasProjection(rc);
+    KisPaintTrace::link("update.ready", this, info->paintTraceId(), KisPaintTrace::currentFlow());
+    // sigImageUpdated has already upscaled image coordinates to LOD 0.
+    KisPaintTrace::rectangle("update.request_rect", this, info->paintTraceId(), rc, 0);
     if (m_d->projectionUpdatesCompressor.putUpdateInfo(info)) {
         Q_EMIT sigCanvasCacheUpdated();
     }
@@ -1075,6 +1080,7 @@ void KisCanvas2::updateCanvasProjection()
     };
 
     auto uploadData = [this, tryIssueCanvasUpdates](const QVector<KisUpdateInfoSP> &infoObjects) {
+        KisPaintTrace::Scope trace("canvas.upload", this);
         QVector<QRect> viewportRects = m_d->canvasWidget->updateCanvasProjection(infoObjects);
         const QRect vRect = std::accumulate(viewportRects.constBegin(), viewportRects.constEnd(),
                                             QRect(), std::bit_or<QRect>());

@@ -5,6 +5,7 @@
  */
 
 #include "freehand_stroke.h"
+#include "KisPaintTrace.h"
 
 #include <QElapsedTimer>
 #include <QThread>
@@ -147,6 +148,7 @@ void FreehandStrokeStrategy::finishStrokeCallback()
 
 void FreehandStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
 {
+    KisPaintTrace::Scope trace("stroke.run", this, data);
     if (KisAsynchronousStrokeUpdateHelper::UpdateData *d =
             dynamic_cast<KisAsynchronousStrokeUpdateHelper::UpdateData*>(data)) {
 
@@ -285,12 +287,30 @@ void FreehandStrokeStrategy::tryDoUpdate(bool forceEnd)
 
 void FreehandStrokeStrategy::issueSetDirtySignals()
 {
+    const quint64 dirtyId = KisPaintTrace::nextId();
+    KisPaintTrace::FlowScope dirtyFlow(dirtyId);
+    KisPaintTrace::link("dirty.dispatch", this, dirtyId, KisPaintTrace::currentJob());
+    KisPaintTrace::Scope trace("stroke.dirty", this);
     QVector<QRect> dirtyRects;
 
     for (int i = 0; i < numMaskedPainters(); i++) {
         KisMaskedFreehandStrokePainter *maskedPainter = this->maskedPainter(i);
         dirtyRects.append(maskedPainter->takeDirtyRegion());
     }
+
+    const auto traceDirtyRects = [this, dirtyId](const char *name, const QVector<QRect> &rects) {
+        if (!KisPaintTrace::enabled())
+            return;
+        const auto node = targetNode();
+        const int lod = node->projection()->defaultBounds()->currentLevelOfDetail();
+        if (rects.isEmpty()) {
+            KisPaintTrace::rectangle(name, node.data(), dirtyId, QRect(), lod);
+        }
+        for (const QRect &rect : rects) {
+            KisPaintTrace::rectangle(name, node.data(), dirtyId, rect, lod);
+        }
+    };
+    traceDirtyRects("dirty.source_rect", dirtyRects);
 
     if (needsMaskingUpdates()) {
 
@@ -318,15 +338,16 @@ void FreehandStrokeStrategy::issueSetDirtySignals()
 
         QVector<KisRunnableStrokeJobData*> jobs = doMaskingBrushUpdates(dirtyRects);
 
-        KritaUtils::addJobSequential(jobs,
-            [this, dirtyRects] () {
-                this->targetNode()->setDirty(dirtyRects);
-            }
-        );
+        KritaUtils::addJobSequential(jobs, [this, dirtyRects, dirtyId, traceDirtyRects]() {
+            KisPaintTrace::FlowScope dirtyFlow(dirtyId);
+            traceDirtyRects("dirty.submitted_rect", dirtyRects);
+            this->targetNode()->setDirty(dirtyRects);
+        });
 
         runnableJobsInterface()->addRunnableJobs(jobs);
 
     } else {
+        traceDirtyRects("dirty.submitted_rect", dirtyRects);
         targetNode()->setDirty(dirtyRects);
     }
 

@@ -122,6 +122,89 @@ The Transform Tool Undo investigation is closed; temporary tool diagnostics
 were removed without changing its established history behavior. See
 `docs/agent/gpu-engine.md` for the real-app findings.
 
+GPU phase 4.58 adds the opt-in `libs/image/KisPaintTrace.*` CPU timeline and
+`KisPaintTraceTest`, plus capture/summary helpers under `build-tools/paint-trace/`.
+Phase 4.69 adds offline `timing.py` and regression coverage: joined-check inputs
+are timed from a unique Qt input receipt to the last required upload's verified
+swap acknowledgment, with per-stroke statistics and explicit exclusions. It adds
+no native hooks and is not a physical input-to-pixel or effective GPU-path proof.
+Phase 4.70 adds `paths.py` and trace markers at successful submissions in
+`KisGpuBrushPainter.cpp` / `KisGpuProjectionCompositor.cpp`, CPU replay in
+`KisGpuMergeBatch.cpp`, CPU apply in `kis_async_merger.cpp`, brush CPU branches
+in `kis_brushop.cpp`, and completed upload-source inspection in
+`kis_opengl_canvas2.cpp`. These provide per-input evidence, not pure-GPU classification.
+Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
+and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
+from CPU/GPU execution and preserves missing evidence for other walkers.
+Phase 4.73 adds offline `overhead.py`: verified input intervals are partitioned
+at their last required upload issue, with timestamp validation and regression
+tests. It introduces no native hooks and is not a GPU execution-time measurement.
+Hooks cover `kis_image.cc` (enqueue/end request), `kis_async_merger.cpp`,
+`libs/ui/input/kis_input_manager.cpp`, `tool/kis_tool_freehand.cc`,
+`tool/strokes/freehand_stroke.cpp`, `canvas/kis_canvas2.cpp`,
+`opengl/kis_opengl_canvas2.cpp`, and brush `KisDabRenderingJob.cpp`/`kis_brushop.cpp`.
+
+Phase 4.59 extends those hooks with scoped input identities, IDs in
+`canvas/kis_update_info.*`, merge/replacement records in that implementation and
+`canvas/kis_canvas_updates_compressor.cpp`, and upload issuance in
+`opengl/kis_opengl_image_textures.cpp`. The tracing-only per-widget coverage
+model is `canvas/KisCanvasPaintTrace.h`, tested by `KisCanvasPaintTraceTest`.
+Its IDs and frame links do not yet establish input-to-pixel latency.
+
+Phase 4.60 adds job creation/execution/destruction IDs in
+`libs/image/kis_stroke_job.h` and thread-local job scopes in `KisPaintTrace.*`.
+Nested CPU spans carry the executing job ID; summary tooling reports explicit
+creation ancestry and scheduling intervals. This does not attribute every input
+consumed by a dab batch or connect input pixels through projection yet.
+
+Phase 4.61 adds request IDs to `KisDabRenderingJob.*`, records each consumed
+request in `KisDabRenderingQueue.*`, and passes the diagnostic batch ID through
+`KisDabRenderingExecutor.*`. `kis_brushop.cpp` records batch-ready, painting-job
+and dirty-rectangle-recording boundaries. `KisDabRenderingQueueTest` covers
+cache/postprocess membership across split batches. The trace `Scope` accepts
+an optional record ID for matching generation spans to logical requests.
+
+Phase 4.68 records collected/submitted dirty regions in `freehand_stroke.cpp`
+and upload image bounds in `kis_opengl_canvas2.cpp`. Offline bridge checks link
+dirty groups to projection requests and same-canvas compressed updates to uploads,
+and become prerequisites in the input-level readiness report.
+
+Phase 4.67 adds diagnostic input-to-stroke membership in `kis_tool_freehand.cc`
+using a transient per-tool QObject property (no ABI/config change). The offline
+summary joins per-input branch/geometry checks with explicit condition records
+and reports exclusions; it does not publish latency.
+
+Phase 4.66 extends `KisCanvasPaintTrace` with mapping checks and view-change
+invalidation; `kis_opengl_canvas2.cpp` records per-upload image/widget patch
+geometry. `geometry.py` compares those regions with render/blit tracking and
+same-widget swap acknowledgments, retaining unsupported/offscreen cases.
+
+Phase 4.65 adds rectangle/LOD events to `KisPaintTrace`, emitted by
+`kis_simple_update_queue.cpp`, `kis_update_job_item.h` and `kis_canvas2.cpp`.
+`build-tools/paint-trace/geometry.py` verifies LOD-0 projection request regions
+and per-canvas notification regions; upload/presentation geometry is not yet
+certified.
+
+Phase 4.64 extends the offline summary with an all-recorded-branches audit,
+terminal-stage diagnostics and same-canvas checks for update replacement edges.
+It does not change native painting or certify geometric region coverage.
+
+Phase 4.63 adds bounded stroke-start GUI condition snapshots in `KisPaintTrace`
+and `kis_tool_freehand.cc`, plus per-input request/batch completeness auditing in
+`build-tools/paint-trace/summarize.py`. It does not yet establish full-region
+display coverage or an interactive latency baseline.
+
+Phase 4.62 connects batch dirty regions to projection/canvas updates:
+`kis_painter.{h,cc}`/`kis_painter_p.h` keep bounded diagnostic batch IDs until
+the dirty drain; `freehand_stroke.cpp` passes explicit dirty context including
+the deferred masked-brush callback. `kis_base_rects_walker.h`,
+`kis_simple_update_queue.cpp` and `kis_update_job_item.h` preserve request and
+walker identities across split/merge/recalculate/execute. `kis_canvas2.cpp`
+records the direct projection-to-prepared-update link. Flow scope and queue
+tests cover those boundaries; the summary still makes no pixel-latency claim.
+It records raw spans/events, not validated per-input presentation latency;
+see the measurement scope and remaining work in `docs/agent/gpu-engine.md`.
+
 Brush Stroke Preview adds `KisBrushStrokePreviewRenderer.*` and
 `KisBrushStrokePreviewCache.*` under `libs/ui/widgets/`, sharing the F5
 stroke/background implementation with `kis_preset_live_preview_view.cpp`.

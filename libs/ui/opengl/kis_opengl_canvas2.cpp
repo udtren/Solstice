@@ -9,18 +9,20 @@
 
 #include <QWindow>
 
-#include "opengl/kis_opengl_canvas2.h"
+#include "KisPaintTrace.h"
 #include "opengl/KisOpenGLCanvasRenderer.h"
 #include "opengl/KisOpenGLSync.h"
+#include "opengl/kis_opengl_canvas2.h"
 #include "opengl/kis_opengl_canvas_debugger.h"
 
+#include "KisRepaintDebugger.h"
+#include "canvas/KisCanvasPaintTrace.h"
 #include "canvas/kis_canvas2.h"
-#include <kis_canvas_resource_provider.h>
 #include "kis_config.h"
 #include "kis_config_notifier.h"
 #include "kis_debug.h"
 #include <KisViewManager.h>
-#include "KisRepaintDebugger.h"
+#include <kis_canvas_resource_provider.h>
 
 #include "KisLongPressEventFilter.h"
 #include "KisOpenGLModeProber.h"
@@ -77,6 +79,7 @@ public:
     KisOpenGLCanvasRenderer *renderer;
     QScopedPointer<KisOpenGLSync> glSyncObject;
     KisRepaintDebugger repaintDbg;
+    QScopedPointer<KisCanvasPaintTrace> paintTrace;
 };
 
 KisOpenGLCanvas2::KisOpenGLCanvas2(KisCanvas2 *canvas,
@@ -91,6 +94,14 @@ KisOpenGLCanvas2::KisOpenGLCanvas2(KisCanvas2 *canvas,
     , d(new Private())
 {
     setProperty("krita_skip_srgb_surface_manager_assignment", true);
+    if (KisPaintTrace::enabled()) {
+        d->paintTrace.reset(new KisCanvasPaintTrace());
+        KisPaintTrace::instant("canvas.created", canvas, this);
+        connect(this, &QOpenGLWidget::frameSwapped, this, [this]() {
+            KisPaintTrace::instant("canvas.frame_swapped", this->canvas(), this);
+            KisPaintTrace::link("frame.swapped", this, d->paintTrace->swapped());
+        });
+    }
     setProperty(KisLongPressEventFilter::ENABLED_PROPERTY, false);
 
     KisConfig cfg(false);
@@ -225,6 +236,10 @@ void KisOpenGLCanvas2::initializeGL()
 
 void KisOpenGLCanvas2::resizeGL(int width, int height)
 {
+    if (d->paintTrace) {
+        d->paintTrace->reset();
+        KisPaintTrace::instant("frame.reset", this);
+    }
     d->renderer->resizeGL(width, height);
     d->canvasImageDirtyRect = QRect(0, 0, width, height);
 }
@@ -237,6 +252,14 @@ void KisOpenGLCanvas2::paintGL()
     }
 #endif
 
+    KisPaintTrace::Scope trace("canvas.paint", canvas(), this);
+    if (d->paintTrace
+        && d->paintTrace->setView(coordinatesConverter()->imageToWidgetTransform(),
+                                  rect(),
+                                  devicePixelRatioF(),
+                                  wrapAroundViewingMode())) {
+        KisPaintTrace::instant("frame.reset", this);
+    }
     const QRect updateRect = d->updateRect ? *d->updateRect : QRect();
 
     if (!OPENGL_SUCCESS) {
@@ -271,6 +294,17 @@ void KisOpenGLCanvas2::paintGL()
     // outside of KisOpenGLRenderer allows the canvas widget to do extra
     // rendering, which a QtQuick2-based canvas will need.
     d->glSyncObject.reset(new KisOpenGLSync());
+
+    if (d->paintTrace) {
+        const quint64 frame = KisPaintTrace::nextId();
+        const auto result =
+            d->paintTrace->paint(canvasImageDirtyRect, updateRect.isEmpty() ? rect() : updateRect & rect(), frame);
+        KisPaintTrace::link("frame.submitted", this, frame);
+        KisPaintTrace::link("frame.replaced", this, result.previous, frame);
+        for (quint64 upload : result.uploads) {
+            KisPaintTrace::link("frame.covered_upload", this, upload, frame);
+        }
+    }
 
     if (!OPENGL_SUCCESS) {
         KisConfig cfg(false);
@@ -433,7 +467,70 @@ KisUpdateInfoSP KisOpenGLCanvas2::startUpdateCanvasProjection(const QRect & rc)
 
 QRect KisOpenGLCanvas2::updateCanvasProjection(KisUpdateInfoSP info)
 {
-    return d->renderer->updateCanvasProjection(info);
+    const QRect dirtyRect = d->renderer->updateCanvasProjection(info);
+    if (d->paintTrace && info->paintTraceUploadIssued) {
+        const auto transform = coordinatesConverter()->imageToWidgetTransform();
+        if (d->paintTrace->setView(transform, rect(), devicePixelRatioF(), wrapAroundViewingMode())) {
+            KisPaintTrace::instant("frame.reset", this);
+        }
+        const quint64 upload = KisPaintTrace::nextId();
+        KisPaintTrace::link("update.upload_issued", this, upload, info->paintTraceId());
+        const auto *glInfo = dynamic_cast<const KisOpenGLUpdateInfo *>(info.data());
+        if (glInfo) {
+            bool cpu = false;
+            bool shared = false;
+            for (const auto &tile : glInfo->tileList) {
+#ifdef HAVE_KRITA_GPU_CANVAS
+                if (tile->gpuUpload()) {
+                    shared = true;
+                } else
+#endif
+                {
+                    cpu = true;
+                }
+            }
+            if (shared)
+                KisPaintTrace::link("path.canvas.shared_buffer", this, upload);
+            if (cpu)
+                KisPaintTrace::link("path.canvas.cpu_pixels", this, upload);
+        }
+        const KisImageSP currentImage = canvas()->image();
+        if (glInfo && currentImage && glInfo->levelOfDetail() == 0
+            && KisCanvasPaintTrace::supportsMapping(transform, wrapAroundViewingMode())) {
+            const QRect expected = info->dirtyImageRect() & currentImage->bounds();
+            KisPaintTrace::rectangle("update.upload_bounds_rect", this, upload, currentImage->bounds(), 0);
+            KisPaintTrace::rectangle("update.upload_expected_rect", this, upload, expected, 0);
+            KisPaintTrace::rectangle("update.widget_expected_rect",
+                                     this,
+                                     upload,
+                                     KisCanvasPaintTrace::visibleImageRect(expected, transform, rect()),
+                                     0);
+            KisPaintTrace::rectangle("update.tracked_widget_rect", this, upload, dirtyRect & rect(), 0);
+            for (const auto &tile : glInfo->tileList) {
+                KisPaintTrace::rectangle("update.upload_patch_rect",
+                                         this,
+                                         upload,
+                                         tile->realPatchRect() & currentImage->bounds(),
+                                         tile->patchLevelOfDetail());
+                if (tile->patchLevelOfDetail() == 0) {
+                    KisPaintTrace::rectangle(
+                        "update.widget_patch_rect",
+                        this,
+                        upload,
+                        KisCanvasPaintTrace::visibleImageRect(tile->realPatchRect() & currentImage->bounds(),
+                                                              transform,
+                                                              rect()),
+                        0);
+                }
+            }
+        } else {
+            KisPaintTrace::link("update.geometry_unsupported", this, upload);
+        }
+        if (!d->paintTrace->addUpdate(upload, dirtyRect & rect())) {
+            KisPaintTrace::markIncomplete();
+        }
+    }
+    return dirtyRect;
 }
 
 QVector<QRect> KisOpenGLCanvas2::updateCanvasProjection(const QVector<KisUpdateInfoSP> &infoObjects)

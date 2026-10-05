@@ -47,7 +47,8 @@ public:
     QList<KisRenderedDab> takeReadyDabs(bool returnMutableDabs = false,
                                         int oneTimeLimit = -1,
                                         bool *someDabsLeft = 0,
-                                        quint64 maxDabBytes = ~quint64(0));
+                                        quint64 maxDabBytes = ~quint64(0),
+                                        quint64 paintTraceBatch = 0);
 
     bool hasPreparedDabs() const;
 

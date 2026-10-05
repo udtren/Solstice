@@ -12,11 +12,12 @@
  */
 
 #include "kis_painter.h"
+#include "KisPaintTrace.h"
+#include <cfloat>
+#include <climits>
+#include <cmath>
 #include <stdlib.h>
 #include <string.h>
-#include <cfloat>
-#include <cmath>
-#include <climits>
 #ifndef Q_OS_WIN
 #include <strings.h>
 #endif
@@ -400,11 +401,25 @@ KisTransaction* KisPainter::takeTransaction()
 
 QVector<QRect> KisPainter::takeDirtyRegion()
 {
+    for (quint64 batch : std::as_const(d->paintTraceBatches)) {
+        KisPaintTrace::link("batch.to_dirty", this, batch, KisPaintTrace::currentFlow());
+    }
+    d->paintTraceBatches.clear();
     QVector<QRect> vrect = d->dirtyRects;
     d->dirtyRects.clear();
     return vrect;
 }
 
+void KisPainter::recordPaintTraceBatch(quint64 batch)
+{
+    if (!batch || !KisPaintTrace::enabled())
+        return;
+    if (d->paintTraceBatches.size() >= 4096) {
+        KisPaintTrace::markIncomplete();
+        return;
+    }
+    d->paintTraceBatches.append(batch);
+}
 
 void KisPainter::addDirtyRect(const QRect & rc)
 {

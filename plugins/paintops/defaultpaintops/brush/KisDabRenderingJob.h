@@ -40,6 +40,7 @@ public:
     QPoint dstDabOffset() const;
 
     int seqNo = -1;
+    quint64 paintTraceId = 0; // logical dab request, including cache hits
     KisDabCacheUtils::DabGenerationInfo generationInfo;
     JobType type = Dab;
     KisFixedPaintDeviceSP originalDevice;

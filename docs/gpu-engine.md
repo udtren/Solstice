@@ -98,6 +98,50 @@ does not establish lower pen-to-screen latency.
 
 ## Current benchmarks
 
+The nine-process manual comparison completed on October 6, 2026 measures
+**Qt input receipt to the last required command-swap acknowledgment**, not
+physical pen-to-screen latency. Three fresh processes per configuration used
+RGBA32F, a 2480x3508 document and the Basic-4 Flow Opacity preset. After excluding
+one warm-up stroke per condition/process, 108 strokes and 2,078 timed inputs
+remain. All request-producing inputs passed the recorded checks; no trace events
+were dropped.
+
+Each table value is the median of three process summaries; each process summary
+is the median of its three measured stroke medians. Parentheses show the range
+of process summaries, not confidence intervals. All values are milliseconds.
+
+| Condition | CPU brush + CPU-pixel upload | CPU brush + shared-buffer upload | GPU brush + shared-buffer upload |
+| --- | ---: | ---: | ---: |
+| 64px Buildup | 19.91 (19.43–21.94) | 19.06 (18.00–20.58) | 19.77 (19.05–20.10) |
+| 64px Wash | 19.41 (18.60–20.75) | 18.79 (17.98–20.45) | 19.73 (19.22–19.95) |
+| 256px Buildup | 21.65 (21.35–22.66) | 32.79 (26.92–38.99) | 25.11 (21.95–29.28) |
+| 256px Wash | 18.38 (17.48–21.00) | 26.85 (24.29–29.13) | 24.20 (23.83–25.16) |
+
+There is no clear GPU advantage at 64px; process ranges overlap. CPU has lower
+summary medians at 256px, although GPU-brush Buildup overlaps CPU across processes.
+This supports investigating overhead before adding more GPU features; it does
+not identify the cause or establish a general slowdown.
+
+Reanalysis of the same captures places most of the 256px difference before the
+last required upload is issued, rather than in the trailing Qt swap acknowledgment
+interval. That earlier interval combines scheduling, drawing, preparation and
+transfer work; it does not isolate a GPU-transfer bottleneck. No new runtime
+optimization or additional manual captures were needed for this analysis.
+
+The labels describe observed paths: this scene reused child images and skipped
+extra layer composition, so the middle column is **not a GPU layer-compositing
+benchmark**. GPU brush submissions and shared-buffer transfers were recorded;
+GPU-brush Wash also recorded compositor submissions during its processing.
+
+The user kept the same requested conditions, but hand motion/pressure and all
+unsaved brush settings were not replayed or fully recorded. Refresh rate, zoom
+and smoothing were not independently captured. Samples sharing batches/frames
+are correlated, tracing overhead is uncorrected, and physical pixel visibility
+is not established. These results are an observational software-timing baseline.
+See the [run records, sample counts, tail summaries and limitations](agent/paint-trace-baseline-runs.md#completed-comparison-october-6-2026).
+
+The following earlier benchmarks measure separate workloads and remain unchanged.
+
 Measured on October 4, 2026, in the local development build: Windows 11,
 AMD Ryzen 9 9950X, RTX PRO 6000 Blackwell, driver 596.86 and Qt 6.8.
 Vulkan validation was disabled for timing. Three fresh processes were run

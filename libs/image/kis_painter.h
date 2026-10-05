@@ -438,6 +438,8 @@ public:
       * dirty area. This method returns this dirty area and resets it.
       */
     QVector<QRect> takeDirtyRegion();
+    /// Diagnostic provenance accumulated until takeDirtyRegion(), not pixel state.
+    void recordPaintTraceBatch(quint64 batch);
 
     /**
      * Paint a line that connects the dots in points

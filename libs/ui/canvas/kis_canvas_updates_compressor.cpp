@@ -5,6 +5,7 @@
  */
 
 #include "kis_canvas_updates_compressor.h"
+#include "KisPaintTrace.h"
 
 bool KisCanvasUpdatesCompressor::putUpdateInfo(KisUpdateInfoSP info)
 {
@@ -26,6 +27,7 @@ bool KisCanvasUpdatesCompressor::putUpdateInfo(KisUpdateInfoSP info)
                  * of the queue. Otherwise, the updates will become reordered and the canvas
                  * may have tiles artifacts with "outdated" data
                  */
+                KisPaintTrace::link("update.superseded", nullptr, (*it)->paintTraceId(), info->paintTraceId());
                 it = m_updatesList.erase(it);
             } else {
                 ++it;

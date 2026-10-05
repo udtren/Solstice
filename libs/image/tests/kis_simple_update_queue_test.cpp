@@ -5,6 +5,12 @@
  */
 
 #include "kis_simple_update_queue_test.h"
+#include "KisPaintTrace.h"
+#include <QCoreApplication>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <simpletest.h>
 
 #include "kistest.h"
@@ -27,7 +33,97 @@
 
 #include "lod_override.h"
 
+void KisSimpleUpdateQueueTest::testTraceSplitAndMerge()
+{
+    if (!KisPaintTrace::enabled())
+        QSKIP("Enable KRITA_PAINT_TRACE to verify provenance");
+    const QRect bounds(0, 0, 1024, 1024);
+    KisImageSP image = new KisImage(0, 1024, 1024, KoColorSpaceRegistry::instance()->rgb8(), "trace");
+    KisPaintLayerSP layer = new KisPaintLayer(image, "trace", OPACITY_OPAQUE_U8);
+    image->barrierLock();
+    image->addNode(layer);
+    image->unlock();
+    image->waitForDone();
 
+    const quint64 first = KisPaintTrace::nextId(), second = KisPaintTrace::nextId();
+    KisTestableSimpleUpdateQueue merged;
+    {
+        KisPaintTrace::FlowScope source(first);
+        merged.addUpdateJob(layer, QRect(0, 0, 30, 30), bounds, 0);
+    }
+    const quint64 survivor = merged.getWalkersList().first()->paintTraceId();
+    {
+        KisPaintTrace::FlowScope source(second);
+        merged.addUpdateJob(layer, QRect(0, 0, 40, 40), bounds, 0);
+    }
+    QCOMPARE(merged.getWalkersList().size(), 1);
+    QCOMPARE(merged.getWalkersList().first()->paintTraceId(), survivor);
+    // Recalculation must not replace the identity used by existing edges.
+    merged.getWalkersList().first()->recalculate(QRect(0, 0, 40, 40));
+    QCOMPARE(merged.getWalkersList().first()->paintTraceId(), survivor);
+
+    const quint64 splitSource = KisPaintTrace::nextId();
+    KisTestableSimpleUpdateQueue split;
+    {
+        KisPaintTrace::FlowScope source(splitSource);
+        split.addUpdateJob(layer, QRect(0, 0, 1000, 1000), bounds, 0);
+    }
+    QVERIFY(split.getWalkersList().size() > 1);
+
+    class OptimizeQueue : public KisTestableSimpleUpdateQueue
+    {
+    public:
+        OptimizeQueue()
+        {
+            m_maxMergeAlpha = 0;
+            m_maxCollectAlpha = 2;
+        }
+    } optimized;
+    optimized.addUpdateJob(layer, QRect(0, 0, 30, 30), bounds, 0);
+    optimized.addUpdateJob(layer, QRect(0, 0, 40, 40), bounds, 0);
+    QCOMPARE(optimized.getWalkersList().size(), 2);
+    const quint64 kept = optimized.getWalkersList().first()->paintTraceId();
+    const quint64 removed = optimized.getWalkersList().last()->paintTraceId();
+    optimized.optimize();
+    QCOMPARE(optimized.getWalkersList().size(), 1);
+
+    QVERIFY(KisPaintTrace::flush());
+    QFile file(QString::fromLocal8Bit(qgetenv("KRITA_PAINT_TRACE"))
+               + QStringLiteral(".%1.json").arg(QCoreApplication::applicationPid()));
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QHash<quint64, QSet<quint64>> edges;
+    for (const auto &entry : QJsonDocument::fromJson(file.readAll()).object()["traceEvents"].toArray()) {
+        const auto event = entry.toObject();
+        const auto args = event["args"].toObject();
+        const quint64 id = args["id"].toString().toULongLong();
+        const quint64 parent = args["parent"].toString().toULongLong();
+        if (event["name"] == "projection.request" && parent)
+            edges[parent].insert(id);
+        if (event["name"] == "projection.walker_request" || event["name"] == "projection.walker_merged")
+            edges[id].insert(parent);
+    }
+    auto reachable = [&edges](quint64 source, quint64 destination) {
+        QSet<quint64> visited;
+        QList<quint64> pending{source};
+        while (!pending.isEmpty()) {
+            const auto next = pending.takeLast();
+            if (next == destination)
+                return true;
+            if (visited.contains(next))
+                continue;
+            visited.insert(next);
+            for (quint64 child : edges.value(next))
+                pending.append(child);
+        }
+        return false;
+    };
+    QVERIFY(reachable(first, survivor));
+    QVERIFY(reachable(second, survivor));
+    for (const auto &walker : split.getWalkersList())
+        QVERIFY(reachable(splitSource, walker->paintTraceId()));
+    QVERIFY(reachable(removed, kept));
+    QVERIFY(!reachable(splitSource, survivor));
+}
 
 void KisSimpleUpdateQueueTest::testJobProcessing()
 {

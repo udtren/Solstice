@@ -26,6 +26,15 @@ public:
     virtual QRect dirtyImageRect() const = 0;
     virtual int levelOfDetail() const = 0;
     virtual bool canBeCompressed() const;
+    quint64 paintTraceId() const
+    {
+        return m_paintTraceId;
+    }
+    // Diagnostic state only: texture upload commands were issued, not completed.
+    bool paintTraceUploadIssued = false;
+
+private:
+    const quint64 m_paintTraceId;
 };
 
 Q_DECLARE_METATYPE(KisUpdateInfoSP)

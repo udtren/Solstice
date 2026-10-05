@@ -4,6 +4,7 @@
  */
 
 #include "KisGpuProjectionCompositor.h"
+#include "KisPaintTrace.h"
 
 #include "KisGpuTileAccess.h"
 #include "KisGpuTileBackend.h"
@@ -319,6 +320,12 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     if (ok) {
         work->lastUse = KisGpuTileAccess::submitAndFinish(commands, accessList);
         ok = work->lastUse != 0;
+        if (ok) {
+            KisPaintTrace::link("path.compositor.submitted",
+                                nullptr,
+                                KisPaintTrace::currentFlow(),
+                                KisPaintTrace::currentJob());
+        }
         if (!ok && errorMessage && errorMessage->isEmpty()) {
             *errorMessage = QStringLiteral("GPU submission refused or failed");
         }

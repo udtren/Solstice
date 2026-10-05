@@ -18,6 +18,7 @@ private:
     void testSplit(bool useFullRefresh);
 
 private Q_SLOTS:
+    void testTraceSplitAndMerge();
     void testJobProcessing();
     void testSplitUpdate();
     void testSplitFullRefresh();

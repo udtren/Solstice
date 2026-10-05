@@ -7,6 +7,7 @@
 #ifndef __KIS_STROKE_JOB_H
 #define __KIS_STROKE_JOB_H
 
+#include "KisPaintTrace.h"
 #include "kis_runnable_with_debug_name.h"
 #include "kis_stroke_job_strategy.h"
 
@@ -22,13 +23,18 @@ public:
           m_levelOfDetail(levelOfDetail),
           m_isOwnJob(isOwnJob)
     {
+        m_paintTraceId = KisPaintTrace::nextId();
+        KisPaintTrace::link("job.created", this, m_paintTraceId, KisPaintTrace::currentCause());
     }
 
     ~KisStrokeJob() override {
+        KisPaintTrace::link("job.destroyed", this, m_paintTraceId);
         delete m_dabData;
     }
 
     void run() override {
+        KisPaintTrace::JobScope jobTrace(m_paintTraceId);
+        KisPaintTrace::Scope trace("job.run", this, m_dabData);
         m_dabStrategy->run(m_dabData);
     }
 
@@ -92,6 +98,7 @@ private:
 
     int m_levelOfDetail;
     bool m_isOwnJob;
+    quint64 m_paintTraceId = 0;
 };
 
 #endif /* __KIS_STROKE_JOB_H */

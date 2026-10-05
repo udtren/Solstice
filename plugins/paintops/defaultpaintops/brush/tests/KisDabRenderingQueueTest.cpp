@@ -5,6 +5,12 @@
  */
 
 #include "KisDabRenderingQueueTest.h"
+#include "KisPaintTrace.h"
+#include <QCoreApplication>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #include <simpletest.h>
 #include <KoColorSpace.h>
@@ -61,6 +67,82 @@ KisDabCacheUtils::DabRenderingResources *testResourcesFactory()
     resources->brush = brush;
 
     return resources;
+}
+
+void KisDabRenderingQueueTest::testTraceBatchMembership()
+{
+    if (!KisPaintTrace::enabled())
+        QSKIP("Run with KRITA_PAINT_TRACE to verify exported dab lineage");
+    const auto cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisDabRenderingQueue queue(cs, testResourcesFactory);
+    auto cache = new SurrogateCacheInterface();
+    queue.setCacheInterface(cache);
+    const QPointF pos(10, 10);
+    const KoColor color;
+    const KisDabShape shape;
+    const KisPaintInformation info(pos);
+    KisDabCacheUtils::DabRequestInfo request(color, pos, shape, info, 1.0);
+    KisDabRenderingJobSP original;
+    quint64 inputA, inputB;
+    {
+        KisPaintTrace::InputScope input("test.input_a", this);
+        inputA = KisPaintTrace::currentInput();
+        original = queue.addDab(request, 1.0, 1.0);
+    }
+    QVERIFY(original);
+    {
+        KisPaintTrace::InputScope input("test.input_b", this);
+        inputB = KisPaintTrace::currentInput();
+        cache->typeOverride = KisDabRenderingJob::Copy;
+        QVERIFY(!queue.addDab(request, 1.0, 1.0));
+        cache->typeOverride = KisDabRenderingJob::Postprocess;
+        QVERIFY(!queue.addDab(request, 1.0, 1.0));
+    }
+    original->originalDevice = new KisFixedPaintDevice(cs);
+    original->postprocessedDevice = original->originalDevice;
+    const auto dependent = queue.notifyJobFinished(original->seqNo);
+    QCOMPARE(dependent.size(), 1);
+    dependent.first()->postprocessedDevice = dependent.first()->originalDevice;
+    QVERIFY(queue.notifyJobFinished(dependent.first()->seqNo).isEmpty());
+
+    const quint64 batchA = KisPaintTrace::nextId(), batchB = KisPaintTrace::nextId();
+    QCOMPARE(queue.takeReadyDabs(false, 1, nullptr, ~quint64(0), batchA).size(), 1);
+    QCOMPARE(queue.takeReadyDabs(false, -1, nullptr, ~quint64(0), batchB).size(), 2);
+    QVERIFY(queue.takeReadyDabs(false, -1, nullptr, ~quint64(0), batchB).isEmpty());
+    KisDabRenderingJob copied(*original), assigned(0, KisDabRenderingJob::Dab);
+    assigned = *original;
+    QCOMPARE(copied.paintTraceId, original->paintTraceId);
+    QCOMPARE(assigned.paintTraceId, original->paintTraceId);
+
+    QVERIFY(KisPaintTrace::flush());
+    QFile file(QString::fromLocal8Bit(qgetenv("KRITA_PAINT_TRACE"))
+               + QStringLiteral(".%1.json").arg(QCoreApplication::applicationPid()));
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    const auto events = QJsonDocument::fromJson(file.readAll()).object()["traceEvents"].toArray();
+    QHash<quint64, quint64> causes, batches;
+    for (const auto &entry : events) {
+        const auto event = entry.toObject();
+        const auto args = event["args"].toObject();
+        const quint64 id = args["id"].toString().toULongLong();
+        const quint64 parent = args["parent"].toString().toULongLong();
+        const QString name = event["name"].toString();
+        if (name.startsWith("dab.") && name.endsWith("request") && (parent == inputA || parent == inputB))
+            causes[id] = parent;
+        if (name == "dab.in_batch" && (parent == batchA || parent == batchB)) {
+            QVERIFY(!batches.contains(id));
+            batches[id] = parent;
+        }
+    }
+    QCOMPARE(causes.size(), 3);
+    QCOMPARE(batches.size(), 3);
+    QCOMPARE(causes[original->paintTraceId], inputA);
+    QCOMPARE(batches[original->paintTraceId], batchA);
+    for (auto it = causes.constBegin(); it != causes.constEnd(); ++it) {
+        if (it.key() != original->paintTraceId) {
+            QCOMPARE(it.value(), inputB);
+            QCOMPARE(batches[it.key()], batchB);
+        }
+    }
 }
 
 void KisDabRenderingQueueTest::testCachedDabs()

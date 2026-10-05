@@ -153,6 +153,9 @@ not establish a substantial stroke speedup. GPU brush painting remains opt-in.
 
 See the [current benchmark results and limitations](docs/gpu-engine.md#current-benchmarks)
 and [reproduction notes](docs/agent/gpu-engine.md#current-build-benchmark-baseline-phase-442).
+A nine-process manual comparison now reports Qt input-to-command-swap timing:
+no clear GPU advantage at 64px, and lower CPU summary medians at 256px in the
+tested scene. It is not physical pen-to-screen latency or a multilayer-compositing benchmark.
 Results vary with workload and hardware and do not establish performance for
 a packaged release.
 

@@ -301,6 +301,7 @@ KisOpenGLUpdateInfoSP KisOpenGLImageTextures::updateCacheImpl(const QRect& rect,
 
 void KisOpenGLImageTextures::recalculateCache(KisUpdateInfoSP info, bool blockMipmapRegeneration)
 {
+    info->paintTraceUploadIssued = false;
     if (!m_initialized) {
         dbgUI << "OpenGL: Tried to edit image texture cache before it was initialized.";
         return;
@@ -373,6 +374,7 @@ void KisOpenGLImageTextures::recalculateCache(KisUpdateInfoSP info, bool blockMi
             numProcessedTiles++;
         }
     }
+    info->paintTraceUploadIssued = info->paintTraceId() && !glInfo->tileList.isEmpty();
 }
 
 void KisOpenGLImageTextures::generateCheckerTexture(const QImage &checkImage)

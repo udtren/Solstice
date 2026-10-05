@@ -13,6 +13,7 @@ class KisDabRenderingQueueTest : public QObject
 {
     Q_OBJECT
 private Q_SLOTS:
+    void testTraceBatchMembership();
     void testCachedDabs();
     void testPostprocessedDabs();
     void testRunningJobs();

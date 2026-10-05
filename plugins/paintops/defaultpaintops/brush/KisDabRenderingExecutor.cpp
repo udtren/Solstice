@@ -58,9 +58,14 @@ void KisDabRenderingExecutor::addDab(const KisDabCacheUtils::DabRequestInfo &req
 QList<KisRenderedDab> KisDabRenderingExecutor::takeReadyDabs(bool returnMutableDabs,
                                                              int oneTimeLimit,
                                                              bool *someDabsLeft,
-                                                             quint64 maxDabBytes)
+                                                             quint64 maxDabBytes,
+                                                             quint64 paintTraceBatch)
 {
-    return m_d->renderingQueue->takeReadyDabs(returnMutableDabs, oneTimeLimit, someDabsLeft, maxDabBytes);
+    return m_d->renderingQueue->takeReadyDabs(returnMutableDabs,
+                                              oneTimeLimit,
+                                              someDabsLeft,
+                                              maxDabBytes,
+                                              paintTraceBatch);
 }
 
 bool KisDabRenderingExecutor::hasPreparedDabs() const

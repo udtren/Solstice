@@ -3,6 +3,7 @@
  */
 #include "KisGpuBrushPainter.h"
 #include "KisGpuMergeBatch.h"
+#include "KisPaintTrace.h"
 #include "KisRenderedDab.h"
 #include "kis_paint_device.h"
 #include "kis_painter.h"
@@ -371,6 +372,7 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     const quint64 value = KisGpuTileAccess::submitAndFinish(commands, accesses);
     if (!value)
         return false;
+    KisPaintTrace::link("path.brush.submitted", painter, KisPaintTrace::currentJob());
     work->lastUse = value;
     // A submitted write must never be replayed by CPU fallback, even on device loss.
     // Existing tile readback/content-loss reporting handles subsequent CPU reads.

@@ -4,7 +4,7 @@
  */
 
 #include "kis_async_merger.h"
-
+#include "KisPaintTrace.h"
 
 #include <kis_debug.h>
 
@@ -170,7 +170,11 @@ private:
 /*********************************************************************/
 
 void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
+    KisPaintTrace::Scope trace("projection.merge", &walker, nullptr, walker.paintTraceId());
     KisMergeWalker::LeafStack &leafStack = walker.leafStack();
+    if (leafStack.isEmpty()) {
+        KisPaintTrace::link("path.projection.empty_walk", this, KisPaintTrace::currentFlow());
+    }
 
     const bool useTempProjections = walker.needRectVaries();
 
@@ -199,6 +203,9 @@ void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
 
         if (currentLeaf->isRoot()) {
             currentLeaf->projectionPlane()->recalculate(applyRect, walker.startNode(), item.m_renderFlags);
+            KisPaintTrace::link("path.projection.root_recalculated",
+                                currentLeaf->node().data(),
+                                KisPaintTrace::currentFlow());
             continue;
         }
 
@@ -210,7 +217,9 @@ void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
                                                      m_currentProjection);
             currentLeaf->accept(originalVisitor);
             currentLeaf->projectionPlane()->recalculate(applyRect, currentLeaf->node(), item.m_renderFlags);
-
+            KisPaintTrace::link("path.projection.extra_recalculated",
+                                currentLeaf->node().data(),
+                                KisPaintTrace::currentFlow());
             continue;
         }
 
@@ -306,7 +315,7 @@ void KisAsyncMerger::setupProjection(KisProjectionLeafSP currentLeaf, const QRec
          * writeProjection() and compositeWithProjection() do nothing
          * when called.
          */
-        /* NOP */
+        KisPaintTrace::link("path.projection.child_reused", currentLeaf->node().data(), KisPaintTrace::currentFlow());
     }
 }
 
@@ -324,9 +333,14 @@ void KisAsyncMerger::writeProjection(KisProjectionLeafSP topmostLeaf, bool useTe
 }
 
 bool KisAsyncMerger::compositeWithProjection(KisProjectionLeafSP leaf, const QRect &rect) {
-
-    if (!m_currentProjection) return true;
-    if (!leaf->visible()) return true;
+    if (!m_currentProjection) {
+        KisPaintTrace::link("path.projection.no_target", leaf->node().data(), KisPaintTrace::currentFlow());
+        return true;
+    }
+    if (!leaf->visible()) {
+        KisPaintTrace::link("path.projection.invisible", leaf->node().data(), KisPaintTrace::currentFlow());
+        return true;
+    }
 
     // GPU engine: defer supported layers into one GPU dispatch
     if (m_gpuBatch.tryAdd(leaf, m_currentProjection, rect))
@@ -335,6 +349,7 @@ bool KisAsyncMerger::compositeWithProjection(KisProjectionLeafSP leaf, const QRe
 
     KisPainter gc(m_currentProjection);
     leaf->projectionPlane()->apply(&gc, rect);
+    KisPaintTrace::link("path.projection.cpu", this, KisPaintTrace::currentFlow());
 
     DEBUG_NODE_ACTION("Compositing projection", "", leaf, rect);
     return true;

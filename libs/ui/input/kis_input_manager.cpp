@@ -7,6 +7,7 @@
  */
 
 #include "kis_input_manager.h"
+#include "KisPaintTrace.h"
 
 #include <kis_debug.h>
 #include <QQueue>
@@ -201,6 +202,34 @@ void KisInputManager::setupAsEventFilter(QObject *receiver)
 bool KisInputManager::eventFilter(QObject* object, QEvent* event)
 {
     if (object != d->eventsReceiver) return false;
+
+    const char *traceInputName = nullptr;
+    if (KisPaintTrace::enabled()) {
+        const char *&name = traceInputName;
+        switch (event->type()) {
+        case QEvent::TabletPress:
+            name = "input.tablet_press";
+            break;
+        case QEvent::TabletMove:
+            name = "input.tablet_move";
+            break;
+        case QEvent::TabletRelease:
+            name = "input.tablet_release";
+            break;
+        case QEvent::MouseButtonPress:
+            name = "input.mouse_press";
+            break;
+        case QEvent::MouseMove:
+            name = "input.mouse_move";
+            break;
+        case QEvent::MouseButtonRelease:
+            name = "input.mouse_release";
+            break;
+        default:
+            break;
+        }
+    }
+    KisPaintTrace::InputScope traceInput(traceInputName, canvas());
 
     if (d->eventEater.eventFilter(object, event)) return false;
 

@@ -31,6 +31,7 @@ struct Q_DECL_HIDDEN KisPainter::Private {
     KoUpdater*                  progressUpdater {nullptr};
 
     QVector<QRect>              dirtyRects;
+    QVector<quint64> paintTraceBatches;
     KisPaintOp*                 paintOp {nullptr};
     KoColor                     paintColor;
     KoColor                     backgroundColor;

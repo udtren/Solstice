@@ -187,8 +187,12 @@ void KisSimpleUpdateQueue::addJob(KisNodeSP node, const QVector<QRect> &rects,
                                   bool dontInvalidateFrames)
 {
     QList<KisBaseRectsWalkerSP> walkers;
+    const quint64 requestId = KisPaintTrace::nextId();
+    KisPaintTrace::link("projection.request", node.data(), requestId, KisPaintTrace::currentFlow());
+    KisPaintTrace::FlowScope requestFlow(requestId);
 
     Q_FOREACH (const QRect &rc, rects) {
+        KisPaintTrace::rectangle("projection.request_rect", node.data(), requestId, rc, levelOfDetail);
         if (rc.isEmpty()) continue;
 
         KisBaseRectsWalkerSP walker;
@@ -231,6 +235,7 @@ void KisSimpleUpdateQueue::addJob(KisNodeSP node, const QVector<QRect> &rects,
         /* else if(type == KisBaseRectsWalker::UNSUPPORTED) fatalKrita; */
 
         walker->collectRects(node, rc);
+        KisPaintTrace::link("projection.walker_request", node.data(), requestId, walker->paintTraceId());
         walkers.append(walker);
     }
 
@@ -351,8 +356,13 @@ bool KisSimpleUpdateQueue::tryMergeJob(KisNodeSP node, const QRect& rc,
         }
     }
 
-    if(goodCandidate)
+    if (goodCandidate) {
+        KisPaintTrace::link("projection.walker_request",
+                            node.data(),
+                            KisPaintTrace::currentFlow(),
+                            goodCandidate->paintTraceId());
         collectJobs(goodCandidate, baseRect, m_maxMergeCollectAlpha);
+    }
 
     return (bool)goodCandidate;
 }
@@ -387,6 +397,7 @@ void KisSimpleUpdateQueue::collectJobs(KisBaseRectsWalkerSP &baseWalker,
         if(item->levelOfDetail() != baseWalker->levelOfDetail()) continue;
 
         if(joinRects(baseRect, item->requestedRect(), maxAlpha)) {
+            KisPaintTrace::link("projection.walker_merged", this, item->paintTraceId(), baseWalker->paintTraceId());
             iter.remove();
         }
     }

@@ -711,8 +711,24 @@ clean runs, and a benchmark entry in this document.
 | 4.53 | Reuse completed projection contexts before waiting for busy ones. | Three pending serial submissions, oldest-first reuse, queue-gated lifetime/fallback/Undo tests. |
 | 4.54-4.55 | Batch CPU filter inputs/destinations and FFT cache reads. | 24 actual-filter rows, CPU parity and failure/Undo checks; user confirmed real-app operation. |
 | 4.56-4.57 | Batch affine transform and layer-flip readbacks. | F32/F16 exact CPU parity, full/partial transforms, transfer counts, failed download and Undo checks. |
+| 4.58 | Opt-in CPU timeline from input receipt through Qt frame swaps. | Infrastructure in progress; event-to-pixel attribution and real-app baseline remain open. |
+| 4.59 | Stable input/update IDs and per-widget upload/frame command coverage. | Partial lineage only; compressed-input/job/projection attribution remains open. |
+| 4.60 | Scheduled job identities and explicit creation ancestry across worker threads. | Unit/scheduler/stroke regressions pass; batch input sets and projection lineage remain open. |
+| 4.61 | Logical dab requests, cache-hit identity and explicit paint-batch membership. | Queue and stroke regressions pass; dirty/projection/frame dependency chain remains open. |
+| 4.62 | Dirty-group IDs through projection splitting/merging to canvas preparation. | All 28 regression batches reach executed projection; all 21 input-linked real-app batches reach swapped command descendants. |
+| 4.63 | Per-input request audit, stroke-start condition snapshots and tracing-cost check. | Automated checks pass; conditions installed, real-app condition capture pending. Full-region coverage and interactive baseline remain open. |
+| 4.64 | Audit every recorded projection/presentation branch, not only a successful descendant. | Python tests pass; existing real-app capture passes for 21 batches/64 request-producing inputs. Geometric coverage remains open. |
+| 4.65 | Record image-space projection and canvas-notification rectangles; exact LOD-0 containment checks. | 100 regression requests covered by executed walker request regions; no-canvas stage explicitly unverified. Upload/presentation geometry remains open. |
+| 4.66 | Record uploaded patches and logical-widget regions; invalidate pending coverage on view changes. | Automated checks pass; combined real-app capture verifies four condition records, 33 input-linked batches and all 450 upload geometries/swap chains. |
+| 4.67 | Explicit tool input-to-stroke membership and joined per-input recorded checks. | Installed; analysis tests and stroke regressions pass. Combined real-app capture verifies membership for all 106 accepted inputs and joined checks for all 94 request-producing inputs; full latency baseline remains open. |
+| 4.68 | Dirty collection/submission and compressed-update-to-upload geometry. | Installed; 28 ordinary and six masked dirty groups pass; analysis tests 24/24. Combined real-app capture passes for 94 request-producing inputs, 40 input-linked batches and all 472 uploads. |
 | 4 | Brush engine: GPU dab rendering and compositing for the pixel brush (mask generation, alpha darken, indirect painting), then color smudge. | Stroke parity tests; input-to-pixel latency measured lower than CPU. |
 | 5 | Filters and transforms: blur family, levels/curves, Liquify, Transform Tool, Puppet Warp (preview/final parity). Decide fate of remaining paint ops and color models. | Per-filter parity tests; Puppet Warp invariants from `docs/agent/puppet-warp.md` hold. |
+
+Per the user's priority change on 2026-10-06, remaining Blend Mode extensions
+are deferred until after phase 5, as the final item in
+`docs/agent/gpu-work-priorities.md`. Current overhead analysis and GPU dab
+generation retain their earlier priority; existing phase numbers are unchanged.
 
 ## Build, test, and install
 
@@ -3542,6 +3558,1148 @@ and `kritarc` were not changed.
 The plugin without diagnostics was rebuilt and installed with the application
 closed; build/install SHA256 hashes match. Logs:
 `%TEMP%/solstice-transform-undo-clean-{build,install}.log`.
+
+### Paint pipeline trace foundation (phase 4.58)
+
+Started October 5, 2026, as priority 1 of `gpu-work-priorities.md`.
+This is measurement infrastructure only. Priority 1 is not complete:
+per-event pixel/frame attribution and the 64px/256px Buildup/Wash three-path
+baseline still need implementation and real-application capture. Do not move
+on to dab generation or more blend modes on the strength of these traces.
+
+`KisPaintTrace` is enabled only when `KRITA_PAINT_TRACE` contains an output
+filename prefix. Normal process teardown writes `<prefix>.<pid>.json` using
+QSaveFile. A bounded 262,144-event buffer uses one steady-clock timebase across
+threads. Overflow is counted in metadata and makes a capture unusable for
+comparisons. No file I/O, GPU fences, queue changes, or configuration writes
+are added to the measured path. Disabled hooks return without acquiring the
+recording lock, reading the clock, or allocating a recorder. Enabled recording
+does take a mutex; its overhead must be measured before drawing conclusions.
+Do not call `flush()` during a timed capture: export snapshots allocate and
+perform I/O. Abnormal termination may lose the buffered trace.
+
+Captured boundaries:
+
+| Event | Meaning |
+| --- | --- |
+| `input.mouse_*`, `input.tablet_*` | Arrival at the canvas input manager, before its filtering/compression; includes hover and rejected events |
+| `tool.begin/move/end` | Freehand helper dispatch on the GUI thread |
+| `stroke.enqueue`, `stroke.end_requested` | Image scheduler submission requests |
+| `stroke.run`, `stroke.dirty` | Freehand callback and dirty-notification CPU spans |
+| `dab.generate_and_postprocess` | Executed CPU dab generation/postprocessing; cache hits need not run this span |
+| `brush.cpu_composite`, `brush.gpu_attempt_and_fallback` | CPU painting job or GPU-path attempt including possible CPU fallback, not GPU execution time |
+| `projection.merge` | Merger CPU span; Vulkan work may outlive it |
+| `canvas.prepare`, `canvas.upload` | Canvas data preparation and compressed update upload spans |
+| `canvas.paint`, `canvas.frame_swapped` | OpenGL widget paint and Qt frameSwapped callback; not physical scanout |
+
+Each record includes thread ID and opaque `owner`/`related` identities.
+Enqueue/run share a job-data identity, but pointer identities can be reused
+after destruction and are not persistent event IDs. Canvas records use their
+canvas/widget identities. Parallel or nested spans cannot be added to obtain
+elapsed latency. Critically, the next swap after an input may still show old
+pixels; the summary deliberately does not report that difference as latency.
+Future event lineage must survive input compression, asynchronous dab batches,
+dirty-rectangle/projection compression and update-info upload before a frame
+can be attributed to that input. Multiple documents/views and canceled/no-op
+inputs must be accounted for. QPainter/QtQuick presentation is not covered.
+
+User-invoked capture (agent must not start or stop the real application):
+
+```bat
+build-tools\paint-trace\run.cmd <krita-dev-root> brush
+```
+
+The second argument is `cpu`, `projection` or `brush` (default). It sets only
+process-local overrides: projection/brush 0/0, 1/0 or 1/1, disables Vulkan
+validation for timing, and prepares the same dependency/Python environment
+as the working debug launcher. An existing Krita/Solstice process blocks
+launch, avoiding forwarding to a process with different flags. `--check` as
+the third argument validates setup without starting an application. Output
+goes to `%TEMP%/solstice-paint-trace-<mode>.<pid>.json`; startup stderr is in
+the adjacent `.launch.log`. Flags in metadata describe requested paths, not
+proof of successful GPU execution. Never change `kritarc` for the comparison.
+
+For initial capture validation, open a single RGBA32F document, use a plain
+pixel brush without smoothing/texture/masks, draw a few short strokes with
+pauses, and close normally. First establish that input, job and frame events
+are all present. This smoke capture is not the performance baseline.
+
+```bat
+python build-tools/paint-trace/summarize.py <trace.json>
+python -B -m unittest discover -s build-tools/paint-trace -p test_summarize.py
+```
+
+The summary validates schema/units and rejects overflow, then reports counts
+and median/p95 CPU span durations per event name. It does not sum overlapping
+spans, infer pixel causality, or report a drawing speedup. The raw format uses
+Chrome trace-event JSON for timeline inspection. Tests cover disabled mode in
+a fresh process, four concurrent writers, export, and bounded overflow;
+timing values are not pass/fail performance thresholds.
+
+After lineage is validated, the planned baseline remains 64px/256px ×
+Buildup/Wash × all three paths, with warmup, at least three fresh processes,
+explicit sample counts and fixed document/preset/view conditions. Include
+tracing-disabled comparisons to quantify measurement overhead. Re-run the
+README operation workloads at that point; do not relabel old numbers as new.
+
+Validation on October 5, 2026: `KisPaintTraceTest` passed 5/5 including
+init/cleanup; Python summary tests passed 3/3. The four ordinary 64px/256px
+Buildup/Wash rows of `KisGpuStrokeTest` passed with tracing enabled and again
+disabled (6/6 each including init/cleanup). Each row compares all three
+painting paths and verifies pixels, Undo/Redo and Vulkan validation errors.
+These single-sample regression timings are not a performance baseline.
+The enabled run exported a parseable trace with no dropped events; as this
+fixture has no UI, it cannot verify input or frame-swap hooks. That remains
+a real-app smoke check at that stage. Both launcher environment checks passed without
+starting Solstice. A local convenience launcher is
+`%TEMP%/solstice-paint-trace.bat` (brush path).
+
+The rebuilt version/image/brush/UI/paintop libraries and default paintop
+plugin were installed with the application closed; all six build/install
+SHA256 hashes matched. Logs: `%TEMP%/solstice-paint-trace-build.log`,
+`solstice-paint-trace-test.txt`, `solstice-paint-trace-strokes-{enabled,disabled}.txt`
+and `solstice-paint-trace-install.log`. No application preferences changed.
+
+### Paint trace identity and frame coverage (phase 4.59)
+
+The first real-app capture passed: `%TEMP%/solstice-paint-trace-brush.39868.json`
+contains seven freehand begin/end pairs, 697 moves, 726 projection spans,
+397 upload spans and 1,485 Qt frame swaps, with zero dropped events.
+Both tablet and mouse input streams are present. Counting their combined
+arrivals as brush samples, or pairing each with the next swap, is invalid.
+This is a smoke result, not a latency measurement or a three-path baseline.
+
+Schema 2 adds process-unique numeric IDs serialized as strings. Dispatch
+scopes in the input manager expose a thread-local input identity to the
+freehand tool. Nested non-input events clear it temporarily; nested pointer
+events replace it and restore the outer identity on return. Worker threads
+cannot inherit it. `input.accepted_*` means synchronous freehand dispatch,
+not a promise that the event creates a dab. Delayed/compressed input dispatched
+outside the original scope is deliberately unattributed. Propagating lineage
+through compression, brush jobs, dirty notifications and projection is still
+required before reporting input-to-pixel latency.
+
+Each `KisUpdateInfo` has an ID (zero with tracing off). `update.ready` marks
+preparation; compression records `update.superseded`, and successful animation
+update merging records `update.merged`. Neither means that old pixels survive.
+`update.upload_issued` assigns a separate occurrence ID after the nonempty
+texture upload loop returns successfully, so reuse of a cached update is not
+mistaken for a single upload. Early exits are not marked successful. This
+records command issuance, not GPU completion or a GL error check.
+
+The OpenGL widget owns a tracing-only `KisCanvasPaintTrace`. It tracks remaining
+render/blit regions in widget coordinates for the visible part of each upload.
+Decoration-only paints cannot consume unrendered image regions. A cached image
+render can be followed by a later blit; partial coverage remains pending.
+`frame.covered_upload` connects a covered occurrence to `frame.submitted`.
+`frame.replaced` connects paints occurring before the previous swap; only this
+widget's `frameSwapped` signal acknowledges the pending frame. Extra swaps and
+uploads arriving between paint and swap cannot acknowledge a future frame.
+Resize clears tracking; uploads outside the viewport remain unassociated.
+Tracking is bounded to 4,096 pending occurrences; overflow marks the whole
+trace incomplete so the summary rejects it.
+
+Coverage is a conservative record of render/blit commands, not proof that an
+upload's pixels survived later overwrites or became physically visible. Capture
+with a fixed view (no pan/zoom/rotation, resize, animation, wrap-around or LOD
+changes); coordinate changes and non-OpenGL canvases are not attribution targets
+yet. The summary accepts schemas 1/2, counts only explicit same-widget frame
+chains and reports no latency or speedup. Merged/superseded updates remain raw
+graph evidence, not extra successful samples. No waits or repaint requests
+were added, and the tracking object is absent when tracing is disabled.
+
+Automated coverage: `KisPaintTraceTest` 6/6 (including init/cleanup),
+`KisCanvasPaintTraceTest` 5/5, and Python summary tests 4/4. Tests exercise
+nested input dispatch, thread isolation, stable ID export, partial render and
+delayed blit, late uploads, duplicate swaps, separate widgets, reset and bounded
+state. The summary regression rejects implicit nearest-swap attribution and
+cross-widget matches. `KisGpuStrokeTest` passed the 64px/256px Buildup/Wash rows
+with tracing on and off (6/6 each), and `KisGpuCanvasUploadTest` passed 28/28 with Vulkan
+validation enabled. Timing values from these regressions are not benchmarks.
+
+Real-app schema-2 verification passed on October 5, 2026:
+`%TEMP%/solstice-paint-trace-brush.19084.json` contains nine freehand strokes,
+657 linked freehand dispatches (9 begins, 639 moves, 9 ends), and 772 upload
+occurrences. All 772 have render/blit coverage and an explicit same-widget
+swapped-frame chain. No events were dropped. There are 1,190 submitted frames
+and 1,187 attributed swaps; the 1,206 raw Qt swaps must not be treated as 1,206
+new image updates. This confirms coverage bookkeeping in the real app, not
+input-to-pixel latency. Priority 1 remains in progress.
+
+The six rebuilt version/image/brush/UI/paintop libraries and default paintop
+plugin were installed with Solstice closed; build/install SHA256 hashes match.
+Logs use `%TEMP%/solstice-paint-lineage-` with suffixes `build.log`, `test.txt`,
+`canvas-test.txt`, `strokes.txt`, `strokes-disabled.txt`, `upload.txt` and
+`install.log`. Both GPU regression traces exported schema 2 with no dropped
+events; these fixtures do not exercise real freehand input or the canvas widget
+frame hooks. No preferences were changed and the application was not launched.
+
+### Scheduled job trace lineage (phase 4.60)
+
+`KisStrokeJob` now assigns a process-unique ID at construction and records
+`job.created`, `job.started`, `job.finished` and `job.destroyed`. The creation
+parent is the executing job's ID, or the synchronous input-dispatch ID when
+there is no executing job. Mutation-generated jobs therefore retain their
+creating context even when they run later on a different worker. Queued jobs
+destroyed without execution remain distinct from completed jobs. IDs belong
+to the wrapper, not the reusable data pointer or copied LOD data.
+
+`KisPaintTrace::JobScope` sets/restores a thread-local job identity around the
+strategy call. CPU scopes and instant records created there include `args.job`;
+`job.run` covers the strategy call including its nested work. No scheduler
+ordering, queue ownership, dependency or wait behavior changed. The disabled
+path reads neither clocks nor trace locks and allocates no recorder; the wrapper
+adds one ID field and cheap disabled checks. Enabled-trace overhead is still
+unquantified and must be measured before publishing a performance baseline.
+
+The summary reports creation-to-start intervals for explicitly matching job IDs
+(including queue insertion and scheduling), counts unexecuted destroyed jobs,
+and counts jobs with a freehand-input ancestor. **Creation ancestry is not a
+complete pixel dependency graph:** timer-generated work may have no input parent,
+and a batch can consume dabs from several earlier inputs. Never label all batch
+pixels as belonging to the context that created its flush job. Delayed input,
+dab-batch input sets, dirty rectangles and compressed projection requests still
+need attribution. No input-to-display latency is reported yet.
+
+Validation: `KisPaintTraceTest` 7/7, including actual `KisStrokeJob` execution on
+separate threads, child creation, context restoration, canceled/unrun jobs and
+CPU-span job tags; existing `kis_stroke_test` 8/8 and `kis_strokes_queue_test`
+21/21 (cancellation, LOD, mutated jobs and concurrent/barrier ordering). Python
+summary tests pass 6/6, including repeated execution/cyclic graph rejection.
+The 64px/256px Buildup/Wash rows of `KisGpuStrokeTest` pass with tracing on and
+off, 6/6 each, with Vulkan validation enabled. The enabled regression trace
+contains 3,044 created/executed jobs and 8,116 job-tagged spans, no dropped
+events; it has no real UI input, as expected. These are correctness checks,
+not benchmark samples. Logs: `%TEMP%/solstice-paint-jobs-{build.log,test.txt,
+stroke-test.txt,queue-test.txt,enabled.txt,disabled.txt}`.
+The six rebuilt libraries/plugin were installed with the app closed; all
+build/install SHA256 hashes match (`solstice-paint-jobs-install.log`). No
+preferences were changed and the real application was not started by the agent.
+
+For the next real-app capture use `%TEMP%/solstice-paint-trace.bat`, a fixed
+RGBA32F view and plain pixel brush. Draw short 64px/256px Buildup/Wash strokes
+with pauses, then close normally. Verify job ancestry/intervals and frame
+coverage before requesting the three-path repeated performance baseline.
+
+Real-app job capture passed: `%TEMP%/solstice-paint-trace-brush.15916.json`
+records 14 strokes, 1,005 linked freehand dispatches, 25,025 created/executed/
+finished/destroyed jobs and 71,276 job-tagged CPU spans. All 2,551 upload
+occurrences reach an explicit swapped-frame chain; nine prepared updates were
+superseded before upload. There are 208,922 events and none were dropped.
+Only 8,018 jobs have a freehand-input creation ancestor. This is not evidence
+that the remaining jobs are unrelated to drawing: timer-driven batch flushes
+need explicit source membership, motivating phase 4.61. Aggregate scheduling
+intervals include all job types in this single process, not a controlled
+CPU/GPU performance comparison or input-to-pixel latency.
+
+### Logical dab and paint-batch trace membership (phase 4.61)
+
+The pixel-brush rendering queue assigns an ID to each accepted logical request,
+including cached copies and postprocessed dabs. `dab.request`,
+`dab.cache_request` and `dab.postprocess_request` record its creating job/input
+context. Copies of the internal rendering-job value preserve the request ID;
+separate queue requests always receive new IDs even when they share pixels.
+Generation spans include the logical request ID and executing job ID.
+
+The asynchronous brush update allocates a batch ID and passes it through
+`KisDabRenderingExecutor::takeReadyDabs` to the rendering queue. `dab.in_batch`
+is recorded only when a completed request is actually returned, after count/
+byte-limit checks. Retained cache entries, requests not ready yet and already
+consumed requests do not create extra membership records. This keeps input
+sources distinct when one timer-driven flush consumes multiple earlier inputs.
+`batch.ready` records the prepared group; `batch.paint_job` associates scheduled
+GPU-attempt/CPU painting jobs; `batch.dirty_recorded` marks the final sequential
+callback recording the painter's dirty rectangles. Mirroring/wrapping can reuse
+the group; these records do not claim that every member affects every rectangle
+or that a skipped mirrored job wrote pixels. No `KisRenderedDab` ABI change,
+queue ordering change, new waits or scheduling changes were needed.
+
+The summary reports request kinds, explicit memberships, generation coverage,
+batch counts and batches with multiple traced source inputs. It rejects duplicate
+request IDs and repeated consumption records. It deliberately does not use the
+timer job's creation ancestor as the only source of a batch. Source ancestry is
+still a creation relationship; interpolation can depend on earlier input samples.
+Dirty recording is not GPU completion, projection completion or presentation.
+The remaining priority-1 work includes dirty/projection compression lineage,
+delayed input handling and controlled repeated CPU/projection/brush measurements.
+
+Validation: `KisPaintTraceTest` 7/7, `KisDabRenderingQueueTest` 13/13 and Python
+summary tests 7/7. The new queue test covers two input contexts, ordinary/cached/
+postprocessed requests, pending dependencies, count-limited splitting, empty
+fetches and copied IDs; existing byte-budget and mutable-dab tests also pass.
+The 64px/256px Buildup/Wash `KisGpuStrokeTest` rows pass with tracing enabled and
+disabled (6/6 each) and Vulkan validation. The enabled trace
+`solstice-paint-batches-regression.31100.json` contains 1,836 logical requests,
+all with generation spans and batch membership, 28 prepared/dirty-recorded
+batches and 284 paint-job links, with no dropped events. The no-UI fixture has
+no freehand-input source IDs, as expected. These are correctness checks, not
+performance samples.
+
+The first GPU test launch loaded an old installed default-paintop DLL against
+the new trace API and failed plugin initialization. Installing the rebuilt
+library/plugin set resolved it; both reruns passed. Logs:
+`%TEMP%/solstice-paint-batches-{build.log,test-build.log,trace-test.txt,
+queue-test.txt,enabled.txt,disabled.txt,install.log}`. Real-app batch membership
+has not been verified yet. Defer another manual capture until the remaining
+projection linkage is ready, instead of repeating the same smoke test after
+each instrumentation step. Tracing remains disabled by default; the 262,144
+event bound is unchanged, so long enabled captures can be rejected as incomplete.
+
+### Dirty groups and projection lineage (phase 4.62)
+
+Each completed pixel-brush batch records its ID in its `KisPainter` alongside
+the existing dirty rectangles. The final sequential batch callback is the only
+writer of this diagnostic list. `takeDirtyRegion()` drains both together and
+emits `batch.to_dirty` links into the active explicit dirty-dispatch context.
+The list is bounded to 4,096 batches; overflow marks the trace incomplete so
+summaries reject it. No new locking or waits were added to painter operations.
+
+`FreehandStrokeStrategy::issueSetDirtySignals()` supplies the dirty-group ID
+while collecting all masked painters and calling `setDirty`. When masked-brush
+updates defer that call to a job, the lambda explicitly captures/restores the
+same ID. `KisPaintTrace::FlowScope` is thread-local and restores outer state;
+it is separate from job creation ancestry and is not implicitly inherited by
+arbitrary jobs or timers. Dirty drains outside a known dispatch remain
+unattributed rather than being assigned to a nearby timestamp.
+
+`KisSimpleUpdateQueue` records each projection request and its source context.
+Recursive patch splitting retains the parent-request link. A new walker gets
+a stable ID; requests merged into an existing walker link to that same ID.
+Queue collection/optimization records removed-walker to surviving-walker edges.
+Rectangle/checksum recalculation preserves the walker ID. All existing checks
+for node, crop, update type, clone invalidation and LOD still determine whether
+updates can merge; instrumentation does not change that decision.
+
+The executing merge job installs the walker context around both the merge and
+the existing `continueUpdate` notification. The existing direct image-to-canvas
+connection carries it synchronously into `update.ready`, which links prepared
+canvas updates to that walker. Existing upload/frame links complete the graph.
+Deferred/suppressed UI notifications or projection filters that replay requests
+outside this context are intentionally unlinked. Do not assume the graph covers
+animation, delayed input, every filter or every rendering backend.
+
+The summary follows explicit input/job/dab/batch/dirty/request/walker/update/
+upload/frame edges. It checks frame/upload owner identities and reports whether
+**at least one command descendant** reaches each stage. Superseded updates and
+merged walkers preserve command ancestry; they do not prove that an earlier
+input's pixels survive. Counts do not assert that all split regions have been
+displayed, and no input-to-pixel latency is published. Stronger per-sample
+coverage remains required before the three-path baseline. The trace's extra
+overhead must also be measured.
+
+Validation: `KisPaintTraceTest` 8/8; `kis_simple_update_queue_test` 9/9;
+Python summary tests 8/8. Coverage includes nested/thread-isolated flow state,
+multiple painter batches drained exactly once, recursive splitting, ordinary
+merging, optimize-time merging, checksum recalculation and rejection of a
+cross-canvas or missing-link shortcut. The trace test now uses the standard
+test resource/plugin paths and QApplication; its first QCoreApplication-based
+attempt lacked those paths and was stopped after unnecessary plugin searching.
+This was a test-harness issue, fixed before the successful rerun.
+
+The 64px/256px Buildup/Wash GPU stroke rows pass with tracing on/off (6/6 each,
+including pixel and Undo/Redo comparisons); canvas upload tests pass 28/28.
+Vulkan validation is enabled for these regressions. The enabled stroke trace
+`%TEMP%/solstice-paint-projection-regression.40148.json` contains 1,836 requests
+in 28 batches: all 28 have projection requests and executed merge descendants,
+with zero dropped events. This fixture has no canvas widget or tablet input,
+so its input/frame coverage correctly remains zero. The synthetic Python graph
+test covers the complete explicit chain, not interactive frame delivery.
+
+Logs use `%TEMP%/solstice-paint-projection-` plus `build.log`, `test-build.log`,
+`trace-test.txt`, `queue-test.txt`, `enabled.txt`, `disabled.txt`, `upload.txt`
+and `install.log`. The rebuilt libraries/plugin are installed with the app
+closed. For the combined real-app check, run the existing launcher and draw
+one short stroke each at 64px/256px Buildup/Wash in an RGBA32F document with a
+plain pixel brush and fixed viewport, then close normally. Keep the capture
+short because the unchanged 262,144-event bound now includes more lineage.
+Verify input/batch descendants through projection and swapped frames, no
+dropped events and no suspicious cross-document associations before collecting
+performance baselines. Priority 1 remains in progress; priorities 2–4 have
+not started.
+
+Real-app follow-up (October 5): `%TEMP%/solstice-paint-trace-brush.41716.json`
+contains four accepted stroke beginnings/ends and 68 accepted moves, with zero
+dropped events. All 21 input-linked batches have projection-request, executed
+merge, canvas-update and swapped-command descendants. All 234 upload occurrences
+have render/blit coverage and a swapped-frame chain. These are command ancestry
+checks, not a guarantee of pixel survival or complete coverage of every input.
+Only 64 of the 76 accepted dispatches have a swapped-command descendant; the
+remaining dispatches must not be treated as measured latency samples or declared
+lost without examining whether they generated paint work. Preset, size and
+painting-mode metadata are not recorded, so the requested four conditions cannot
+be independently verified from this capture.
+
+There are also 80 batches without input links. Brush stroke previews use their
+own RGB8 image and `FreehandStrokeStrategy`, so background preview rendering is
+a source-supported explanation for this population, not a proven per-batch
+classification. Do not report 80 lost canvas updates or compare process-wide
+CPU-span aggregates against GPU brush timings. The offline analyzer now reports
+input-linked batches separately at every pipeline stage, including those without
+a swapped descendant. Its eight tests pass, including an unrelated same-time
+batch, a wrong-canvas swap and a missing projection edge. This analysis-only
+change needs no DLL replacement. Priority 1 is still incomplete: per-sample
+coverage, workload identification, tracing overhead and the three-path baseline
+remain before publishing latency results.
+
+### Input audit and workload conditions (phase 4.63)
+
+`summarize.py` now audits each accepted input through job creation, logical dab
+requests and batch membership. Traversal stops at batches, so a shared batch or
+merged projection does not assign another input's requests to this input. Each
+row reports requests lacking a ready batch and batches lacking any swapped
+command descendant. An input with one presented batch and another missing batch
+does not pass the all-request check. Inputs without requests are reported by
+begin/move/end kind; they are not assigned a zero latency or declared lost.
+This is still command ancestry, not coverage of all rectangles within each batch.
+
+Reanalysis of capture 41716: all 64 inputs that created requests have all their
+requests in batches with swapped-command descendants. No request from these
+inputs lacks batch membership. The other 12 accepted inputs comprise four begins,
+four moves and four ends with no recorded request descendants. This resolves the
+earlier 64/76 count at the request level; it does not prove those inputs could
+not influence later interpolation or delayed drawing.
+
+When tracing is enabled, `KisToolFreehand::initStroke` snapshots the GUI preset
+name, existing stored MD5 (without generating one), engine ID, nominal brush
+size, incremental flag, image dimensions, color model and depth. The incremental
+flag corresponds to Buildup/Wash for the pixel engine. `KisPaintTrace` stores these
+under `metadata.stroke_conditions`, keyed by accepted begin input ID and canvas
+identity. At most 1,024 snapshots are kept; overflow marks the capture incomplete.
+No disk access, preset serialization, configuration change or GPU wait is added
+to stroke start. Disabled tracing does not construct the snapshot. An unscoped
+begin has no invented input ID and remains without conditions. The analyzer
+rejects duplicate or wrong-input/canvas condition records; older captures remain
+readable and report missing conditions.
+
+These are GUI settings at stroke start, not pressure-adjusted dab sizes or proof
+of GPU execution. Stored MD5 does not identify unsaved preset edits. Conditions
+are not yet propagated as a stroke ID onto every later input/job; do not assign
+them to later samples merely by nearest timestamp. Selection, mirrors, smoothing,
+view transform and other workload conditions still need control in the manual
+protocol. Automated coverage does not verify this GUI hook in an actual stroke.
+
+Validation: `KisPaintTraceTest` 9/9 (including snapshot immutability, zero-input
+suppression, bounded storage and disabled-process behavior); Python tests 10/10
+(including partial batches, unbatched requests, mixed input sources and condition
+identity mismatches). The 64px/256px Buildup/Wash stroke rows pass with tracing
+enabled and disabled, 6/6 each, with Vulkan validation. Build and installation
+completed; hashes of all six installed library/plugin files match build outputs.
+Logs use `%TEMP%/solstice-paint-conditions-` followed by `build.log`, `test.txt`,
+`enabled.txt`, `disabled.txt` and `install.log`. The first compile found a const
+smart-pointer access to the non-const `paintIncremental()` API; the local handle
+was corrected before the successful build. No painting algorithm changed.
+
+Tracing-cost check on October 5, same Windows/Blackwell development environment:
+`KisGpuStrokeTest` with `KRITA_GPU_STROKE_REPEATS=3`, validation disabled. Three
+fresh processes per tracing state, ordered off/on, on/off, off/on. Each process
+warms up each workload/path, then records three samples; the table is the median
+of the three process medians in milliseconds. Rows test 1024x1024, four RGBA32F
+layers, four image workers, no canvas/input dispatch, and untimed verification
+readback. Pixel and Undo/Redo checks passed in all six processes.
+
+| Workload | CPU off / on | GPU projection off / on | GPU projection + brush off / on |
+| --- | ---: | ---: | ---: |
+| 64px Buildup | 4.781 / 4.760 | 8.014 / 8.179 | 8.785 / 9.241 |
+| 64px Wash | 5.416 / 5.437 | 8.846 / 8.724 | 9.297 / 9.563 |
+| 256px Buildup | 7.792 / 7.938 | 11.249 / 11.097 | 10.023 / 10.723 |
+| 256px Wash | 10.113 / 10.772 | 13.770 / 13.905 | 15.652 / 14.753 |
+
+Raw results: `%TEMP%/solstice-trace-overhead-{1,2,3}-{off,on}.txt`. Enabled traces
+have PIDs 7216, 40672 and 42292, each with 51,992 events and no drops. Across rows,
+median differences range from about -5.7% to +7.0%; several ranges overlap, and
+the 256px GPU-brush Wash row is faster with tracing in this run. This is evidence
+that run variation matters, not evidence that tracing improves performance or
+that one correction factor is valid. This fixture does not execute GUI condition
+snapshots, pointer dispatch or frame tracing. Do not subtract these numbers from
+interactive measurements or replace README's representative benchmarks with them.
+
+Priority 1 remains in progress. Next: complete per-sample split-region coverage,
+explicit stroke identity across accepted inputs, and controlled interactive
+CPU/projection/brush captures with the new condition records. Defer another
+identical manual smoke test until that capture protocol is ready. Priorities 2–4
+remain deferred in accordance with `gpu-work-priorities.md`.
+
+### Recorded branch completeness (phase 4.64)
+
+The offline pipeline summary now includes `recorded_branch_audit`. Starting at
+input-linked batches, every recorded dirty/request/walker/update/upload branch
+must reach a swapped frame; one successful sibling no longer hides a pending
+split request or second canvas update. Superseded updates and merged walkers
+retain their explicit downstream obligations. Update replacement/merge edges
+are accepted only between known, matching canvas owners. Shared downstream
+work can conservatively keep several inputs unresolved.
+
+An iterative reverse-topological pass evaluates the graph in linear time and
+rejects cycles, including cycles with a swapped frame. It avoids recursion-limit
+failures on long chains. Unresolved leaf counts identify the stage where links
+stop: missing dirty dispatch, projection child/walker, canvas update, upload,
+frame coverage or swap. The report includes up to 16 terminal IDs for inspection.
+These counts describe recorded paths, not proof of lost drawing: offscreen work,
+resets, suppressed notifications and missing instrumentation remain unresolved.
+
+The request audit's earlier `all_requested_dabs_have_swapped_batch_command`
+field remains available and keeps its weaker meaning (some descendant per
+batch). The new `all_requested_dabs_have_all_recorded_branches_swapped` field
+also requires every recorded downstream branch. Neither field certifies
+rectangular coverage: dirty/projection coordinates are not recorded, so an
+unrecorded split or a rectangle mismatch cannot be detected by this graph.
+Do not publish input-to-pixel latency from either field.
+
+Validation: Python tests 12/12, including one missing split sibling, multiple
+canvas updates, merged/superseded resolution, cross-canvas replacement rejection,
+a cycle and a 3,000-node chain. Reanalysis of real-app capture 41716 passes the
+stronger check for all 21 input-linked batches and 64 request-producing inputs,
+with zero unresolved terminals. The no-canvas regression capture 40148 correctly
+has no input-linked population; zero unresolved rows there is not a presentation
+pass. This change is offline analysis/documentation only: no DLL rebuild or
+new interactive capture is needed. Next remains geometric coverage and explicit
+stroke identity, followed by the controlled interactive comparison.
+
+### Image-space rectangle coverage (phase 4.65)
+
+`KisPaintTrace::rectangle` records signed x/y/width/height and explicit LOD in
+the existing bounded event buffer. JSON rectangle construction occurs at export;
+the active recording path stores a `QRect` value. A negative LOD marks the trace
+incomplete rather than inventing a coordinate scale. Existing schema-2 captures
+remain readable. The extra rectangle/LOD fields enlarge in-memory event records
+when tracing is enabled; phase-4.63 tracing-cost numbers are not a calibration
+for this version. The 262,144-event limit and opt-in behavior remain unchanged.
+
+Hooks:
+
+- `KisSimpleUpdateQueue::addJob`: `projection.request_rect` for every requested
+  rectangle, including empty split pieces, in the request's image/LOD space.
+- `KisUpdateJobItem::runMergeJob`: after the merger returns, record the walker's
+  final `requestedRect()` and `changeRect()` as `projection.executed_request_rect`
+  and `projection.change_rect`, with its node owner and LOD. This includes the
+  effects of queue merging/recalculation; it does not certify individual writes.
+- `KisCanvas2::startUpdateCanvasProjection`: `update.request_rect` records the
+  notification's image rectangle. `KisImage::notifyProjectionUpdated` has already
+  upscaled it to LOD 0. The canvas identity stays attached to each update.
+
+`build-tools/paint-trace/geometry.py` follows explicit request splitting and
+walker merging, then checks whether the union of executed requested rectangles
+covers each requested rectangle. Bounding boxes are insufficient: subtraction
+preserves holes and uses half-open boundaries derived from x/y/width/height.
+It separately checks a walker's change rectangle against canvas notification
+rectangles **per canvas**, never by combining areas from different views.
+Only LOD 0 is evaluated. Missing coordinate records, unknown/mismatched owners,
+other LODs and excessive fragmentation are reported as unverified. Rectangle
+lists are capped at 1,024 for analysis and subtraction at 100,000 piece checks;
+exceeding those budgets does not become a successful coverage result.
+
+These are declared image-space regions, not pixel survival or whole-pipeline
+display coverage. A walker's requested region does not prove each pixel was
+modified. Canvas notification coverage does not establish which tiles were
+uploaded or which viewport pixels reached a swap. Dirty-group geometry, tile
+transfer coverage, image-to-widget mapping and view changes still require work
+before an input-to-pixel baseline. Old captures without coordinates correctly
+produce unverified results, rather than being retroactively certified.
+
+Validation: `KisPaintTraceTest` 10/10, including signed/empty rectangles and LOD
+serialization; `kis_simple_update_queue_test` 9/9 with tracing enabled. The first
+queue run had tracing unset and skipped the trace-only row; rerunning with the
+flag passed all rows. Python tests 17/17 include holes, touching edges, negative
+coordinates, overlapping unions, per-view isolation, wrong owner/LOD, missing
+coordinates, bounded analysis and 100 deterministic comparisons against an
+independent small-pixel-set oracle. Run all analysis tests with:
+
+```bat
+python -B -m unittest discover -s build-tools/paint-trace -p test_*.py
+```
+
+The four 64px/256px Buildup/Wash GPU stroke rows pass with tracing on/off and
+Vulkan validation (6/6 each, including initialization/cleanup). Trace
+`%TEMP%/solstice-paint-regions-regression.2684.json` has zero dropped events;
+all 100 projection requests pass rectangle containment. Its 293 executed walkers
+have no canvas links because the fixture has no window; that stage is explicitly
+unverified, not passed. Build/install completed and all six installed DLL/plugin
+hashes match the build. Logs use `%TEMP%/solstice-paint-regions-` plus `build.log`,
+`test.txt`, `queue.txt`, `enabled.txt`, `disabled.txt` and `install.log`.
+
+Actual GUI condition/rectangle capture remains pending. Combine it with the
+remaining display-geometry work rather than requesting another identical smoke
+test at this intermediate stage. No application launch, termination or preference
+change was performed. Priority 1 remains in progress.
+
+### Upload and widget geometry (phase 4.66)
+
+For completed `updateCanvasProjection` calls with `paintTraceUploadIssued`,
+`KisOpenGLCanvas2` records the dirty image rectangle clipped to current image
+bounds, every tile's `realPatchRect()` clipped to those bounds, the corresponding
+logical-widget rectangles and the actual dirty widget rectangle passed to the
+existing render/blit coverage tracker. Geometry is keyed by the unique upload
+occurrence ID, not a reusable buffer/pointer or update ID. The patch list is read
+only after the renderer has issued all upload commands; it is command geometry,
+not a new GPU completion check.
+
+Supported mapping is invertible affine scaling/translation with zero cross-axis
+terms, including negative scale (mirror display), LOD 0 and no wrap-around view.
+Use `QRectF` mapping followed by `toAlignedRect()` and widget clipping, matching
+the renderer's logical-pixel coordinate convention. Image expectations are
+clipped before mapping, while the tracked dirty rectangle includes the renderer's
+existing two-pixel growth. The analyzer checks that this tracked rectangle covers
+the visible expectation; it does not demand that image patches cover that border.
+Rotated/sheared/projective views, wrap-around and nonzero LOD record
+`update.geometry_unsupported`; they are not accepted as verified geometry.
+
+`KisCanvasPaintTrace::setView` compares the transform, widget rectangle, device
+pixel ratio and wrap mode before upload tracking and before painting. Changes
+clear pending upload/frame tracking and emit `frame.reset`. This is conservative:
+it prevents acknowledgments against stale coordinates and can leave pending work
+unattributed, but does not alter actual painting, upload or widget scheduling.
+The tracing object and these checks exist only with opt-in tracing enabled.
+
+The offline `geometry.transfers` report combines three containment checks
+(image patch union, mapped widget patch union, tracked render/blit rectangle)
+with same-widget `frame.covered_upload` and swapped/replaced frame links.
+It rejects acknowledgments preceding the upload and treats an intervening view
+reset as unverified. Successful status is `covered_to_swapped_commands`, not
+pixel visibility or physical scanout. `outside_image`/`outside_view` are exclusions,
+not successful presentation. Missing metadata, patches, unsupported mapping,
+nonzero LOD, uncovered regions and absent swaps have separate statuses.
+
+Validation: mapping/coverage tests 6/6, including negative coordinates, clipping,
+mirror display, offscreen regions, rejected rotation/wrap/singular transforms,
+pan/scale/DPR/viewport/wrap invalidation, delayed blits and partial renders.
+Vulkan-validation-enabled `KisGpuCanvasUploadTest` passes 28/28. Analysis tests
+19/19 include image/widget/tracking holes, wrong-widget swaps, replacement
+chains, stale acknowledgments, resets, offscreen exclusions and old metadata.
+The real OpenGL widget integration still requires the combined manual capture.
+Build and install completed; logs use `%TEMP%/solstice-paint-display-` followed by
+`build.log`, `trace-test.txt`, `upload.txt` and `install.log`.
+
+Combined real-app check: run `%TEMP%/solstice-paint-trace.bat`, create RGBA32F,
+use a plain pixel brush without texture/masked tip, keep zoom/pan/rotation fixed,
+and draw one short stroke each at 64px Buildup, 64px Wash, 256px Buildup and 256px
+Wash. Close normally. Inspect condition records, projection rectangle containment,
+per-view notification coverage and each upload's transfer geometry/swap status,
+with no dropped events. Keep it short to stay below the event bound. No app is
+launched or terminated by the agent, and no preferences are changed.
+
+Priority 1 remains incomplete. These stage checks are not yet a joined guarantee
+of every input's visible pixels: explicit stroke identity, dirty-group geometry,
+notification compression/transfer coverage linkage and controlled repeated
+three-path captures still need completion. Superseded pixels and offscreen work
+also require explicit sample inclusion rules before publishing latency.
+
+Combined real-app follow-up (October 5, capture
+`%TEMP%/solstice-paint-trace-brush.2572.json`, 22,257,961 bytes): no dropped events.
+All four accepted begins have condition records for `paintbrush`, preset
+`b) Basic-4 Flow Opacity`, RGBA/F32, 2480x3508. Actual nominal sizes/modes were
+64.2358px Wash, 64.24px Buildup, 256.1px Wash and 256.1px Buildup. These satisfy
+the approximate-size integration check, not an exact-size controlled benchmark.
+
+There are 91 accepted dispatches: four begins, 83 moves and four ends. The 80
+request-producing inputs have all requests assigned to batches; all recorded
+branches from their 33 batches reach swapped commands. Eleven dispatches (four
+begins, three moves and four ends) have no recorded request descendants. Another
+68 batches are not input-linked and are excluded from this painting population.
+
+Geometry results: all 37 projection requests have covered requested regions;
+466 walker/canvas notification checks pass. Another 70 executed walkers have no
+canvas link and remain unverified for that stage. All 70 finish within the first
+9.759ms of the trace, before the first stroke at 11,269.060ms; their change
+rectangles comprise two full-image sets of 35 patches. This supports startup
+refresh as their context, rather than lost stroke updates; do not certify those
+unnotified walkers as presented. There are 467 canvas updates in total, including
+one without a merge parent, and 16 superseded updates.
+
+All 450 upload occurrences pass image patch containment, mapped widget patch
+containment, tracked-widget containment and same-widget swapped-command coverage.
+No upload has unsupported mapping, intervening view invalidation, an uncovered
+region or a missing acknowledgment. Seven `frame.reset` events exist globally;
+none invalidates an upload's acknowledged interval. This validates the installed
+condition/geometry hooks for this fixed-view real-app workload. It does not
+establish pixel survival, physical display timing, or a three-path latency
+baseline. No native changes or reinstall were needed for this log analysis.
+
+### Explicit stroke membership and joined checks (phase 4.67)
+
+`KisToolFreehand` records `stroke.input` edges from accepted input IDs to the
+begin input ID. A tracing-only dynamic QObject property, `solsticePaintTraceStroke`,
+holds the current ID on that tool instance; no exported class layout changes.
+Every begin replaces the value, including an unscoped begin with zero. Move/end
+read it; end emits `stroke.ended` and removes it before scheduling the helper's
+end processing. Tool destruction also destroys the property. Deactivation's
+existing `endStroke()` path clears it. These are diagnostic operations only when
+tracing is enabled, with no persistent configuration or painting changes.
+An unscoped input remains unassociated; no nearby timestamp is substituted.
+
+`stroke_summary` validates that the input and its begin belong to the same
+canvas, rejects conflicting memberships and makes the condition snapshot
+available via the explicit begin ID. Begins themselves are already explicitly
+identified by their accepted event/condition record. Older logs retain unknown
+membership for later moves/end events. `stroke.ended` describes tool finalization,
+not asynchronous job completion or presentation.
+
+The pipeline input audit now follows each input's recorded downstream branches
+and joins their projection-request geometry, executed-walker notification geometry
+and upload/display geometry. Shared downstream branches are checked conservatively
+in full, so a failure can exclude several inputs. `sample_readiness` combines
+those checks with complete request/batch membership, all recorded branches reaching
+swaps, known stroke conditions and a recorded stroke end. Its exclusions state
+which prerequisite is missing; inputs without requests are excluded rather than
+assigned zero latency. `recorded_checks_passed` is deliberately not named
+"latency valid": dirty-group and compressed-update geometry, input interpolation
+dependencies and pixel survival are not yet established. No timing metric is
+published by this change.
+
+Validation: all Python analysis tests 21/21, including a complete synthetic
+joined chain, removal of a required rectangle, missing old-log membership,
+conflicting strokes and cross-canvas association. Reanalysis of real-app capture
+2572 finds no joined-stage geometry failures among the 80 request-producing
+inputs. It correctly produces zero passing readiness rows because later-input
+membership and stroke-end records were not instrumented in that version; this
+does not invalidate the earlier stage-by-stage integration result.
+
+`kritaui` rebuilt and installed. Vulkan-validation-enabled 64px/256px Buildup/Wash
+stroke rows pass with tracing enabled and disabled, 6/6 each. These headless
+regressions do not exercise the GUI membership hook; its interactive verification
+is pending. Logs use `%TEMP%/solstice-paint-samples-` followed by `build.log`,
+`install.log`, `enabled.txt` and `disabled.txt`. No application launch, termination
+or preferences change was performed. Defer another identical manual capture until
+the remaining dirty-group and compressed-update geometry linkage is ready, then
+verify membership and the complete protocol together before three-path sampling.
+
+### Dirty and compressed-update geometry bridges (phase 4.68)
+
+`FreehandStrokeStrategy::issueSetDirtySignals` records `dirty.source_rect` after
+collecting all painter dirty regions, before masking normalization/partitioning.
+`dirty.submitted_rect` records the actual rectangles immediately before calling
+the target node's `setDirty`, including inside the delayed masked-brush job.
+Both use the dispatch ID, target-node owner and projection's current LOD. Empty
+vectors produce an explicit empty rectangle rather than absent metadata. Existing
+job order, masking partitioning and painting behavior are unchanged.
+
+`geometry.bridges` checks source-region containment in submitted regions and
+submitted-region containment in the directly linked projection request regions.
+This complements the existing request-to-executed-walker check. It is group-level
+provenance; it does not claim that each member dab affects every group rectangle.
+Only the established LOD-0 coordinate convention is accepted; unknown owners,
+missing records and other LODs remain unverified. Intentional clipping or other
+unmodeled coordinate changes must not be interpreted as lost pixels solely from
+a gap report.
+
+Each supported upload also records `update.upload_bounds_rect`. The analyzer
+follows same-canvas `update.merged`/`update.superseded` edges to actual upload
+occurrences, verifies widget-to-canvas identity via `canvas.created`, and checks
+that the original notification rectangle (clipped to the image bounds) is
+covered by the union of descendant upload expectations. All descendant bounds
+must agree; resizing, cross-canvas edges, missing metadata and absent transfers
+remain unverified. Existing per-upload patch/widget/frame checks then verify the
+upload expectations. Outside-image notifications are exclusions, not presentation
+successes. The input-level readiness report now requires both new bridge checks.
+
+Validation: all Python tests 24/24. Cases include holes after masking partitioning,
+truncated projection requests, chained replacement/merge, clipping to image bounds,
+cross-node/canvas rejection, image-bound changes and missing bridge records despite
+otherwise successful frame ancestry. Vulkan-validation-enabled ordinary 64/256px
+Buildup/Wash tests pass with tracing on/off (6/6 each); the masked-150-texture0
+row passes with tracing enabled (3/3 including initialization/cleanup).
+
+Trace `%TEMP%/solstice-paint-bridges-regression.45344.json` verifies both dirty
+bridges for all 28 ordinary groups. The masked trace
+`%TEMP%/solstice-paint-bridges-masked.39864.json` verifies all six masked groups,
+including delayed submission. Both have zero dropped events. These fixtures have
+no canvas and cannot verify real update compression or tool membership. `kritaui`
+rebuilt/installed; logs use `%TEMP%/solstice-paint-bridges-` plus `build.log`,
+`install.log`, `enabled.txt`, `disabled.txt` and `masked.txt`.
+
+Combined real-app capture `%TEMP%/solstice-paint-trace-brush.45816.json` passed
+after normal closure. Four RGBA32F strokes on a 2480x3508 image record the Pixel
+engine and `b) Basic-4 Flow Opacity`, approximately 64px/256px in Wash/Buildup.
+All 106 accepted inputs have explicit stroke membership; all four stroke ends
+are recorded. All 94 request-producing inputs pass the joined checks, including
+dirty bridges and compressed-update coverage. The other 12 inputs have no
+recorded dab requests and remain excluded. All 40 input-linked batches reach
+their recorded swapped-command branches; all 472 upload geometry/frame checks
+pass. There are zero dropped events.
+
+This does not certify the entire process: 58 batches without input links,
+70 walker records without canvas links and one notification without an upload
+remain outside the verified drawing-input population. They are not automatically
+lost painting updates. Older captures intentionally lack the new records and
+must not be retroactively accepted by the stricter gate.
+
+Priority 1 remains open until controlled three-path sampling and its timing
+analysis are complete. The recorded checks still describe command/region
+provenance, not all interpolation dependencies, pixel survival or physical scanout;
+any timing report must name its actual Qt presentation boundary and inclusion rules.
+
+### Qt command-presentation timing (phase 4.69)
+
+`build-tools/paint-trace/timing.py` consumes the joined readiness gate. Only an
+input with exactly one finite, nonnegative mouse/tablet receipt timestamp and
+verified geometry for every downstream upload is timed. The endpoint is the
+latest required same-widget swap acknowledgment from `summarize_transfers`,
+including frame replacement. An earlier successful sibling or unrelated later
+swap cannot substitute for this endpoint. Missing, ambiguous, nonfinite or
+reversed timestamps exclude the input. The analyzer reports per-stroke sample
+counts, median, nearest-rank p95 and maximum in milliseconds; it does not pool
+different strokes or processes. Shared batches/frames correlate samples.
+
+All 29 Python tests pass, including the full joined-chain timing case, latest
+required upload, unrelated swaps, invalid/duplicate receipts, incomplete geometry,
+invalid/reversed acknowledgments and separate stroke populations. This phase is
+offline analysis only: no native rebuild, installation or additional runtime
+instrumentation cost. Existing command coverage remains distinct from physical
+scanout, pixel survival and complete interpolation dependencies.
+
+Reanalysis of `solstice-paint-trace-brush.45816.json` yields 94 timed inputs and
+12 exclusions without dab requests. Exploratory single-process results follow;
+these are not a controlled baseline or evidence that GPU beats CPU:
+
+| Recorded condition | Inputs | Median ms | p95 ms | Maximum ms |
+| --- | ---: | ---: | ---: | ---: |
+| ~64px Wash | 24 | 24.08 | 40.90 | 48.62 |
+| ~64px Buildup | 26 | 18.66 | 39.65 | 43.02 |
+| ~256px Wash | 22 | 55.48 | 64.53 | 66.29 |
+| ~256px Buildup | 22 | 53.00 | 90.27 | 94.75 |
+
+CPU-requested feasibility capture `solstice-paint-trace-cpu.43504.json` records
+`projection_env=0`, `brush_env=0`, zero dropped events and four ended strokes.
+All 95 accepted inputs have stroke membership. All 83 request-producing inputs,
+22 input-linked batches and 275 uploads pass the joined checks and timing gate;
+the other 12 inputs have no dab requests. Outside this population, 81 unlinked
+batches, 70 walkers without canvas links and one notification without an upload
+remain unverified. Recorded conditions are the same preset/hash and RGBA32F
+2480x3508 image, with nominal sizes 64.4551/64.46px and 255.96px:
+
+| Recorded condition | Inputs | Median ms | p95 ms | Maximum ms |
+| --- | ---: | ---: | ---: | ---: |
+| ~64px Buildup | 21 | 21.48 | 43.13 | 48.29 |
+| ~64px Wash | 21 | 18.66 | 31.50 | 43.11 |
+| ~256px Buildup | 19 | 18.94 | 42.98 | 42.98 |
+| ~256px Wash | 22 | 19.52 | 37.56 | 40.91 |
+
+This verifies that the timing/geometry gate also works with the CPU-requested
+configuration. Sizes, stroke order and hand-drawn inputs differ from the earlier
+brush-requested capture, and each has only one process: do not calculate speedups
+or treat these as a controlled baseline.
+
+Projection-requested feasibility capture `solstice-paint-trace-projection.31336.json`
+records `projection_env=1`, `brush_env=0`, zero dropped events and four ended
+strokes. All 97 accepted inputs have explicit membership. All 76 request-producing
+inputs, 23 input-linked batches and 241 uploads pass the joined checks and timing
+gate. The other 21 inputs (four begin, 13 move, four end) have no recorded dab
+requests. Outside this population, 15 unlinked batches, 70 walkers without canvas
+links and one notification without upload remain unverified. All four snapshots
+record exactly 64px/256px, the same preset/hash, RGBA32F and 2480x3508 dimensions.
+
+| Recorded condition | Inputs | Median ms | p95 ms | Maximum ms |
+| --- | ---: | ---: | ---: | ---: |
+| 64px Buildup | 17 | 20.43 | 46.29 | 46.29 |
+| 64px Wash | 18 | 16.80 | 32.30 | 32.30 |
+| 256px Buildup | 20 | 49.19 | 76.08 | 80.80 |
+| 256px Wash | 21 | 43.67 | 78.00 | 78.12 |
+
+These single-process observations validate the analysis in the third requested
+configuration, not GPU execution or a speed comparison. The longer 256px intervals
+are a candidate for controlled reproduction, not evidence of their cause.
+
+The subsequent brush-requested capture `solstice-paint-trace-brush.45824.json`
+records both environment flags as 1, zero dropped events and four ended strokes.
+All 98 accepted inputs have membership. All 81 request-producing inputs, 27
+input-linked batches and 275 uploads pass the joined checks and timing gate;
+17 inputs without dab requests are excluded. Outside this population, 13 unlinked
+batches, 70 walkers without canvas links and one notification without upload
+remain unverified. Sizes are exactly 64px/256px, in Buildup/Wash order, with the
+same preset/hash and RGBA32F 2480x3508 image as the projection-requested capture.
+
+| Recorded condition | Inputs | Median ms | p95 ms | Maximum ms |
+| --- | ---: | ---: | ---: | ---: |
+| 64px Buildup | 22 | 23.97 | 45.72 | 49.55 |
+| 64px Wash | 18 | 23.11 | 38.06 | 38.06 |
+| 256px Buildup | 18 | 41.74 | 52.94 | 52.94 |
+| 256px Wash | 23 | 36.40 | 51.91 | 51.93 |
+
+Feasibility now passes in all three requested configurations. These are still
+single-process hand-drawn observations, with differing input counts and slightly
+different CPU brush sizes. Do not calculate speedups or update README benchmarks.
+The launch logs contain ggml Vulkan initialization, which is not evidence of the
+painting engine's effective GPU path. Before repeated baseline captures, establish
+per-workload projection/brush/interop success or CPU fallback attribution; the
+current environment flags and region trace alone do not establish this. Retain
+all feasibility captures separately from the eventual controlled baseline.
+
+#### Controlled capture protocol
+
+Track the current series, selected installed binary hashes and capture acceptance
+in [paint-trace-baseline-runs.md](paint-trace-baseline-runs.md). CPU run 1 passed
+trace checks: 16 strokes, 302 timed inputs, zero dropped events. Excluding the
+four explicit warm-up strokes leaves 12 strokes / 222 inputs. Run 2 (projection)
+also passed, leaving 12 measured strokes / 218 inputs, with CPU brush and shared
+buffer uploads observed. Run 3 (brush) passed with 12 measured strokes / 228 inputs,
+successful brush submission and shared-buffer evidence. Round 1 is complete;
+run 4 (projection) also passed with 12 measured strokes / 220 inputs and the same
+observed paths as run 2. Run 5 (brush) passed with 12 measured strokes / 236 inputs
+and the same observed paths as run 3. Run 6 (CPU) passed with 12 measured strokes /
+232 inputs and the same observed paths as run 1. Run 7 (brush) passed with 12
+measured strokes / 231 inputs and the same observed paths as runs 3 and 5.
+Run 8 (CPU) passed with 12 measured strokes / 255 inputs and the same observed
+paths as runs 1 and 6. Run 9 (projection) passed with 12 measured strokes / 236
+inputs. All nine captures are complete; see phase 4.72 and the run sheet's
+completed comparison. The observed scene reuses child images rather than doing
+multilayer stack composition; retain that distinction when reporting results.
+
+1. Use the same installed build, machine, tablet/mouse, display refresh rate and
+   window geometry. Close other heavy workloads. Record build revision and local
+   diff, driver/display settings and preset edits alongside the captures.
+2. Prepare one RGBA32F 2480x3508 document with a white background and one empty
+   paint layer. Reopen this same document for every fresh process; never save the
+   measured strokes into it. Use `b) Basic-4 Flow Opacity`, Normal blend, full
+   opacity, no selection, channel locks, mirror, texture or masked brush. Keep
+   smoothing, pressure behavior, zoom, pan and rotation identical. Use a fixed
+   axis-aligned LOD-0 view and keep the complete strokes within the viewport.
+3. The user starts `build-tools\paint-trace\run.cmd <devroot> <mode>` from Command
+   Prompt. Modes are `cpu`, `projection`, `brush`; they request CPU only, GPU
+   projection with CPU brush, and GPU projection with GPU brush respectively.
+   The agent must not launch or terminate the app or alter `kritarc`.
+4. Each process uses exactly 64px Buildup, 64px Wash, 256px Buildup, 256px Wash,
+   in that order. For each condition make one warm-up stroke, wait for completion,
+   then three short strokes of approximately equal length and duration in clean,
+   separate regions. Leave a pause between strokes. Do not pan/zoom mid-stroke.
+   Record deviations; normal closure flushes the trace. If overflow occurs,
+   discard the run and shorten/split the protocol equally for every mode.
+5. First capture one process per mode as a feasibility pass, using just one short
+   stroke per condition (four strokes total, no warm-up). These are feasibility
+   captures only and must not be pooled with the eventual baseline. For that
+   baseline, use three fresh processes per mode in rounds `cpu/projection/brush`,
+   `projection/brush/cpu`, `brush/cpu/projection`. Do not mix earlier exploratory
+   captures or native instrumentation revisions into the baseline. Label warm-up
+   stroke IDs explicitly in the analysis notes; the summarizer does not guess
+   warm-up status or discard the first input automatically.
+6. Run `python -B build-tools/paint-trace/summarize.py <trace files...>` and retain
+   its JSON with the original logs. Check every condition snapshot, exclusion
+   count, membership and geometry gate before comparing timing. Report per-stroke
+   counts/median/p95 and per-process variation, with warm-up strokes separated;
+   samples within a stroke are not independent trials. Hand drawing differences
+   must be reported rather than attributed entirely to GPU changes.
+
+Environment flags express requested configurations only. Effective GPU brush,
+projection and interop/fallback use still needs corroboration before publishing
+an actual GPU-path baseline; do not relabel CPU fallback as GPU success. This
+protocol and timing metric prepare that comparison but do not complete priority 1
+or the physical input-to-pixel acceptance criterion. README benchmark figures
+remain unchanged until comparable results exist.
+
+### Explicit execution-path evidence (phase 4.70)
+
+Trace-only markers now distinguish actual submission from API success/no-op:
+
+- `KisGpuBrushPainter` emits `path.brush.submitted` with the executing job ID
+  only after a nonzero `submitAndFinish` result. Empty successful operations
+  cannot produce this marker. BrushOp records CPU and failed-attempt CPU branches
+  as `path.brush.cpu` / `path.brush.cpu_fallback`, skipping already-combined mirrors.
+- `KisGpuProjectionCompositor` emits `path.compositor.submitted` only after
+  successful submission, using the current flow and job IDs. Within a merger
+  this identifies the executing walker. The shared compositor also serves other
+  operations, so only explicitly matched walker IDs count as projection evidence.
+  `KisAsyncMerger` records its direct CPU apply branch; `KisGpuMergeBatch` records
+  CPU replay after a failed batch. A walker may legitimately contain both paths.
+- After a renderer reports uploads issued, `KisOpenGLCanvas2` records whether
+  its tile list still uses GPU shared buffers or CPU pixels, keyed by the unique
+  upload ID. Interop-failure readback replaces GPU references before this point,
+  so those uploads are counted as CPU-source uploads. Mixed lists keep both markers.
+
+`build-tools/paint-trace/paths.py` associates these records with each input's
+explicit batch jobs, executed walkers and uploads. It reports evidence counts
+and identities without evidence. It never infers CPU execution from absent GPU
+markers, nor GPU execution from environment flags. Shared identities are deduped
+within each input, but rows across inputs must not be summed as independent work.
+These markers add no waits, queries, persistent settings or painting decisions.
+Submission is not completion, and CPU branches can have no pixel effect. Wash
+preview/final merge and internal leaf work are not fully classified: this is
+evidence for the observed stages, not an all-GPU stroke certification. Missing
+records in earlier captures remain unknown and do not invalidate their geometry
+checks. Do not use this evidence report alone as a new latency inclusion gate.
+
+Validation: Python analysis tests 32/32, including mixed paths, unrelated events,
+missing/zero identities and shared jobs, plus prior timing/geometry coverage.
+Vulkan-validation-enabled 64px/256px Buildup/Wash regressions pass with tracing
+on/off (6/6 each). Trace `solstice-paint-path-regression.41940.json` has no dropped
+events and records 12 brush submissions, 233 compositor submissions, 272 CPU brush
+branches and 368 CPU projection branches across the fixture's CPU/GPU runs.
+Those process-wide counts are instrumentation evidence, not timing samples.
+Canvas upload regressions pass 28/28 with Vulkan validation. `kritaimage`,
+`kritaui`, version library and default paintops plugin are installed and match
+their build outputs by SHA-256; the user had already closed the application.
+Build/test/install logs use `%TEMP%/solstice-paint-path-` prefixes. Real-app
+association of path markers with the four measured strokes remains to be checked.
+
+Real-app capture `solstice-paint-trace-brush.46604.json` subsequently verifies
+explicit brush and canvas attribution. Both requested flags are 1, with no dropped
+events; all four strokes ended and all 96 accepted inputs have membership. All
+83 request-producing inputs, 26 input-linked batches and 298 upload occurrences
+pass the joined geometry/timing checks. Thirteen inputs without dab requests are
+excluded. Conditions are exactly 64px/256px Buildup/Wash with the same Pixel preset
+and RGBA32F 2480x3508 image. For every one of the 83 included inputs, all linked
+brush job identities have successful submission evidence and all descendant
+uploads have shared-buffer evidence, with no recorded CPU branch in those stages.
+
+Projection attribution is only partial: all 43 Wash inputs have compositor
+submission evidence for their walkers, while all 40 Buildup inputs have no
+projection-path evidence. Do not classify the latter as CPU fallback or GPU
+projection. `KisAsyncMerger::setupProjection` has an oblige-child reuse path that
+leaves `m_currentProjection` empty, intentionally skipping composition; other
+recalculation/no-op paths also remain unclassified. This is a candidate explanation
+from code inspection, not yet established by the trace. Before another baseline
+capture, distinguish explicit reuse/skip decisions from missing instrumentation.
+
+Process-wide records include 26 brush submissions, 170 compositor submissions,
+45 CPU brush branches and 298 shared-buffer uploads. The CPU branches are outside
+the included input-linked jobs and must not be attributed to these strokes. As in
+earlier captures, 15 unlinked batches, 70 walkers without canvas links and one
+notification without upload are not certified. Exploratory timing medians/p95
+in ms are 25.53/47.69 (64 Buildup, 21 inputs), 20.30/42.42 (64 Wash, 23),
+52.29/74.50 (256 Buildup, 19), and 41.76/60.23 (256 Wash, 20). These use the new
+native markers and are not pooled with older instrumentation or used as speedups.
+
+### Projection reuse and skip evidence (phase 4.71)
+
+`KisAsyncMerger` now records `path.projection.child_reused` in the existing
+oblige-child setup branch, `no_target` when the corresponding composition call
+has no destination, and `invisible` when an invisible leaf is skipped. An empty
+walker records `empty_walk`. Root and extra-node recalculation record
+`root_recalculated` / `extra_recalculated` after the existing call returns.
+`KisLayer::updateProjection` records `original_reused` after releasing an unneeded
+projection device, `masks_applied` after its mask branch, and `recalculate_skipped`
+for its existing early return. All use the current walker flow ID; node ownership
+is retained where available. Conditions and painting behavior are unchanged.
+
+The path analyzer reports these decisions separately from CPU apply and GPU
+submission. Recalculation alone proves neither backend; reuse of a layer original
+does not prove reuse of the entire group. One known walker cannot hide another
+walker without evidence. These markers explain skipped work without claiming all
+internal processing is classified. Older captures remain unknown; do not infer
+reuse retrospectively from the absence of submission markers.
+
+Validation: 34 Python tests pass, including separate reuse/skip and CPU/GPU
+evidence, mixed processing and an unknown sibling walker. The four ordinary
+64px/256px Buildup/Wash regression rows pass with tracing on/off and Vulkan
+validation (6/6 each including setup/cleanup). Trace
+`solstice-paint-reuse-regression.19132.json` has zero dropped events and records
+873 original-reuse decisions, 385 root recalculations, 364 CPU apply branches
+and 89 mask branches across the fixture's runs. This fixture does not exercise
+the oblige-child branch, so the real-app Buildup diagnosis remains pending.
+`kritaimage` and version DLLs are installed and match build SHA-256 values;
+logs use `%TEMP%/solstice-paint-reuse-` prefixes.
+
+One combined real-app capture is requested using the existing `brush` launcher:
+same RGBA32F document, fixed viewport and exact 64px Buildup, 64px Wash, 256px
+Buildup, 256px Wash short strokes, then normal closure. Check the Buildup walker
+decision records alongside successful brush submissions and shared-buffer
+uploads before scheduling controlled baseline repetitions.
+
+Real-app capture `solstice-paint-trace-brush.23828.json` completes this check.
+Both environment flags are 1, with zero dropped events. All 96 accepted inputs
+have membership and all four strokes ended. All 80 request-producing inputs,
+26 input-linked batches and 306 uploads pass the joined geometry/timing checks;
+16 inputs without dab requests are excluded. Sizes are exactly 64px/256px in
+Buildup/Wash order, with the same preset/hash and RGBA32F 2480x3508 image.
+
+All 40 included Buildup inputs have `child_reused`, `no_target`, `original_reused`
+and `root_recalculated` evidence for their downstream walkers, with no identities
+without evidence. This establishes the previously suspected reuse/skip path:
+missing compositor submissions here do not indicate CPU fallback. All 40 Wash
+inputs additionally have `masks_applied` and compositor submission evidence.
+The compositor is shared with Wash processing; its marker is not necessarily
+a separate layer-stack composition. All 80 inputs have successful brush submission
+and shared-buffer canvas evidence, without recorded CPU branches in those linked
+stages. This establishes the recorded paths, not that every internal operation
+or the complete stroke runs on GPU.
+
+Outside the included population, 13 unlinked batches, 70 walkers without canvas
+links and one notification without upload remain unverified. The process-wide
+39 CPU brush markers do not belong to the included input-linked jobs. Exploratory
+median/p95 ms: 27.03/41.51 (64 Buildup, 22 inputs), 22.17/47.44 (64 Wash, 19),
+51.41/70.44 (256 Buildup, 18), 35.28/50.90 (256 Wash, 21). Keep this capture separate
+from the controlled baseline and earlier instrumentation revisions. Integration
+verification is complete for this workload; priority 1 still needs the planned
+three-process-per-configuration comparison, with actual paths reported rather
+than assuming every requested projection configuration performs composition.
+
+### Nine-process software-timing baseline (phase 4.72)
+
+Completed on October 6, 2026 without changing the phase-4.71 native binaries.
+The [run sheet](paint-trace-baseline-runs.md#completed-comparison-october-6-2026)
+records all nine hashes, explicit warm-up IDs, per-stroke values, sample counts,
+hierarchical aggregation and observed paths. Its local archive contains original
+traces, launch logs, full summaries and `comparison.json`.
+
+All 2,799 request-producing inputs passed joined checks, with zero dropped events;
+683 accepted inputs without dab requests were excluded. Removing 36 warm-up
+strokes leaves 108 measured strokes and 2,078 inputs. This completes the scheduled
+manual software-boundary baseline, not the stronger physical input-to-pixel goal.
+The user is not asked to repeat this nine-run series. CPU/GPU process ranges
+overlap at 64px; 256px CPU summary medians are smaller. Shared-buffer configurations
+are candidates for examining transfer preparation, waits, dirty area and scheduling.
+No causal attribution follows from these observations alone. The scene reuses
+child images, so this is not a GPU multilayer-stack comparison.
+
+Next: priority 2 overhead decomposition, using existing traces for initial
+analysis before adding narrowly scoped CPU/GPU measurements. Preserve actual
+submission/reuse classification, do not sum overlapping spans, and do not infer
+GPU execution time from CPU recording spans. The published software-timing
+results retain manual-input, missing display-context and uncalibrated trace-cost
+limitations; they do not establish a general GPU speedup. Earlier synthetic
+benchmark values are retained separately; README links the new results.
+
+### Upload-boundary wall-interval analysis (phase 4.73)
+
+Priority 2 begins with offline reanalysis; no native binary or setting changes.
+`build-tools/paint-trace/overhead.py` consumes only already-verified timing inputs
+and their explicit descendant upload IDs. Each required upload must have exactly
+one finite, nonnegative issue timestamp within the verified input/swap interval.
+It partitions that interval at the **latest required upload-issued timestamp**:
+input receipt to that boundary, and that boundary to the last required Qt swap.
+Unrelated uploads are ignored. Missing, ambiguous or reversed timestamps exclude
+the input rather than inventing an association. The partitions add to total wall
+time for each input; independently aggregated medians/p95 do not necessarily add.
+
+This is a chronological partition, not a GPU timer or causal critical path.
+The first part includes job queues, dab generation, brush processing, projection,
+canvas preparation/upload and any waits before the marker; the second includes
+remaining canvas/presentation work and the Qt acknowledgment. Asynchronous stages
+overlap; do not sum CPU spans or call the first partition transfer-only cost.
+
+Validation: all Python tests 39/39. New cases cover last-required versus unrelated
+uploads, exact per-input partition, missing/duplicate/nonfinite timestamps,
+out-of-interval timestamps, empty verified population and nonadditive medians.
+All nine raw baseline logs reanalyzed successfully with zero additional timing
+exclusions; original timing reports are unchanged. All 2,078 measured inputs
+remain after the same explicit warm-up exclusions. Original archived summaries
+are untouched; each run adds `upload-boundary.json`, with the aggregate in
+`%TEMP%/solstice-paint-baseline-471/upload-boundary-comparison.json`.
+
+Aggregation follows the baseline hierarchy independently per component: median
+of three measured stroke medians per process, then median of three processes.
+The values below are milliseconds (before / after latest required upload issue):
+
+| Condition | CPU | CPU brush + shared buffer | GPU brush + shared buffer |
+| --- | ---: | ---: | ---: |
+| 64px Buildup | 16.55 / 3.26 | 16.56 / 2.98 | 17.33 / 1.43 |
+| 64px Wash | 15.91 / 3.76 | 14.77 / 3.24 | 16.68 / 2.42 |
+| 256px Buildup | 19.77 / 2.31 | 31.20 / 2.74 | 23.01 / 1.08 |
+| 256px Wash | 15.85 / 2.92 | 23.10 / 0.91 | 19.73 / 2.71 |
+
+For 256px Buildup, process ranges before the boundary are 17.10–21.38 (CPU),
+24.49–31.52 (CPU brush/shared buffer), and 18.95–26.63 (GPU brush/shared buffer).
+After it, ranges are 2.25–3.23, 0.51–2.99, and 0.66–1.56 respectively. For 256px
+Wash, before ranges are 14.68–17.64, 22.96–27.16, 19.60–22.06; after ranges are
+2.46–3.24, 0.65–1.73, 2.02–3.54. Preserve overlap/variation and manual-input
+limitations. The larger shared-buffer-mode intervals appear predominantly before
+upload issuance, not as an increased trailing Qt acknowledgment interval.
+
+Next investigation is the pre-upload region: distinguish queue delay, canvas
+preparation, source staging and actual synchronization, correlating update IDs
+instead of matching nearby timestamps. Existing broad `canvas.prepare` and
+`canvas.upload` spans are not sufficient to uniquely assign every sub-operation
+or GPU wait. Vulkan timestamp measurements, submission counts and transfer byte
+accounting remain open priority-2 work. No runtime optimization or causally
+established bottleneck is claimed; no further manual capture is requested for
+this offline step.
 
 ## Risks and open questions
 

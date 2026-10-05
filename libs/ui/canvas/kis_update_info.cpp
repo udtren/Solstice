@@ -4,6 +4,7 @@
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 #include "kis_update_info.h"
+#include "KisPaintTrace.h"
 #include <KisStaticInitializer.h>
 
 /**
@@ -16,6 +17,7 @@ KIS_DECLARE_STATIC_INITIALIZER {
 }
 
 KisUpdateInfo::KisUpdateInfo()
+    : m_paintTraceId(KisPaintTrace::nextId())
 {
 }
 
@@ -84,6 +86,8 @@ bool KisOpenGLUpdateInfo::tryMergeWith(const KisOpenGLUpdateInfo &rhs)
     m_dirtyImageRect |= rhs.m_dirtyImageRect;
 
     tileList.append(rhs.tileList);
+
+    KisPaintTrace::link("update.merged", nullptr, rhs.paintTraceId(), paintTraceId());
 
     return true;
 }

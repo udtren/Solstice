@@ -5,6 +5,7 @@
  */
 
 #include "KisDabRenderingJob.h"
+#include "KisPaintTrace.h"
 
 #include <QElapsedTimer>
 
@@ -25,20 +26,22 @@ KisDabRenderingJob::KisDabRenderingJob(int _seqNo, KisDabRenderingJob::JobType _
 }
 
 KisDabRenderingJob::KisDabRenderingJob(const KisDabRenderingJob &rhs)
-    : seqNo(rhs.seqNo),
-      generationInfo(rhs.generationInfo),
-      type(rhs.type),
-      originalDevice(rhs.originalDevice),
-      postprocessedDevice(rhs.postprocessedDevice),
-      status(rhs.status),
-      opacity(rhs.opacity),
-      flow(rhs.flow)
+    : seqNo(rhs.seqNo)
+    , paintTraceId(rhs.paintTraceId)
+    , generationInfo(rhs.generationInfo)
+    , type(rhs.type)
+    , originalDevice(rhs.originalDevice)
+    , postprocessedDevice(rhs.postprocessedDevice)
+    , status(rhs.status)
+    , opacity(rhs.opacity)
+    , flow(rhs.flow)
 {
 }
 
 KisDabRenderingJob &KisDabRenderingJob::operator=(const KisDabRenderingJob &rhs)
 {
     seqNo = rhs.seqNo;
+    paintTraceId = rhs.paintTraceId;
     generationInfo = rhs.generationInfo;
     type = rhs.type;
     originalDevice = rhs.originalDevice;
@@ -82,6 +85,7 @@ int KisDabRenderingJobRunner::executeOneJob(KisDabRenderingJob *job,
                                             KisDabRenderingQueue *parentQueue)
 {
     using namespace KisDabCacheUtils;
+    KisPaintTrace::Scope trace("dab.generate_and_postprocess", parentQueue, job, job->paintTraceId);
 
     KIS_SAFE_ASSERT_RECOVER_NOOP(job->type == KisDabRenderingJob::Dab ||
                                  job->type == KisDabRenderingJob::Postprocess);

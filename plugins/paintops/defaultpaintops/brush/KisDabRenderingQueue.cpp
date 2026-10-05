@@ -5,6 +5,7 @@
  */
 
 #include "KisDabRenderingQueue.h"
+#include "KisPaintTrace.h"
 
 #include "KisDabRenderingJob.h"
 #include "KisRenderedDab.h"
@@ -172,6 +173,11 @@ KisDabRenderingJobSP KisDabRenderingQueue::addDab(const KisDabCacheUtils::DabReq
         }
     }
 
+    job->paintTraceId = KisPaintTrace::nextId();
+    const char *traceType = job->type == KisDabRenderingJob::Dab ? "dab.request"
+        : job->type == KisDabRenderingJob::Copy                  ? "dab.cache_request"
+                                                                 : "dab.postprocess_request";
+    KisPaintTrace::link(traceType, this, job->paintTraceId, KisPaintTrace::currentCause());
     m_d->jobs.append(job);
 
     KisDabRenderingJobSP jobToRun;
@@ -282,8 +288,11 @@ void KisDabRenderingQueue::Private::cleanPaintedDabs()
     }
 }
 
-QList<KisRenderedDab>
-KisDabRenderingQueue::takeReadyDabs(bool returnMutableDabs, int oneTimeLimit, bool *someDabsLeft, quint64 maxDabBytes)
+QList<KisRenderedDab> KisDabRenderingQueue::takeReadyDabs(bool returnMutableDabs,
+                                                          int oneTimeLimit,
+                                                          bool *someDabsLeft,
+                                                          quint64 maxDabBytes,
+                                                          quint64 paintTraceBatch)
 {
     QMutexLocker l(&m_d->mutex);
 
@@ -338,6 +347,8 @@ KisDabRenderingQueue::takeReadyDabs(bool returnMutableDabs, int oneTimeLimit, bo
 
 
         renderedDabs.append(dab);
+        if (paintTraceBatch)
+            KisPaintTrace::link("dab.in_batch", this, j->paintTraceId, paintTraceBatch);
 
         m_d->lastPaintedJob = i;
     }

@@ -11,9 +11,9 @@
 
 #include "kis_layer.h"
 
+#include "KisPaintTrace.h"
 #include "kis_abstract_projection_plane.h"
 #include "kis_projection_leaf.h"
-
 
 class KisBaseRectsWalker;
 typedef KisSharedPtr<KisBaseRectsWalker> KisBaseRectsWalkerSP;
@@ -119,6 +119,11 @@ public:
     KisBaseRectsWalker()
         : m_levelOfDetail(0)
     {
+    }
+
+    quint64 paintTraceId() const
+    {
+        return m_paintTraceId;
     }
 
     virtual ~KisBaseRectsWalker() {
@@ -537,6 +542,7 @@ private:
     int m_levelOfDetail {0};
 
     bool m_clonesDontInvalidateFrames {false};
+    const quint64 m_paintTraceId = KisPaintTrace::nextId();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(KisBaseRectsWalker::SubtreeVisitFlags);

@@ -19,6 +19,7 @@ ecm_mark_as_test(KisRandomGenerator2DDemo)
 
 
 kis_add_tests(
+    KisPaintTraceTest.cpp
     kis_base_node_test.cpp
     kis_fast_math_test.cpp
     kis_node_test.cpp

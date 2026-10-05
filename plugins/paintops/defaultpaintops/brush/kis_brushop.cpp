@@ -10,6 +10,7 @@
  */
 
 #include "kis_brushop.h"
+#include "KisPaintTrace.h"
 
 #include <QRect>
 
@@ -159,6 +160,7 @@ struct KisBrushOp::UpdateSharedState {
     KisPainter *painter = 0;
     QList<KisRenderedDab> dabsQueue;
     bool gpuMirrorsPainted = false; // published by a sequential job before reflection jobs
+    quint64 paintTraceBatch = 0;
 
     // speed metrics
     QVector<QPointF> dabPoints;
@@ -214,6 +216,8 @@ void KisBrushOp::addDabPaintingJobs(const QVector<QRect> &rects,
         // For mirror passes, the preceding sequential barrier also ensures
         // that all source pixels and positions have finished reflecting.
         KritaUtils::addJobSequential(jobs, [state, rects, mirroredPass]() {
+            KisPaintTrace::Scope trace("brush.gpu_attempt_and_fallback", state->painter);
+            KisPaintTrace::link("batch.paint_job", state->painter, KisPaintTrace::currentJob(), state->paintTraceBatch);
             if (state->gpuMirrorsPainted)
                 return;
             if (!mirroredPass && state->painter->hasMirroring()) {
@@ -225,6 +229,7 @@ void KisBrushOp::addDabPaintingJobs(const QVector<QRect> &rects,
             if (!KisGpuBrushPainter::paint(state->painter, state->dabsQueue, paintRects)) {
                 for (const QRect &rc : rects)
                     state->painter->bltFixed(rc, state->dabsQueue);
+                KisPaintTrace::link("path.brush.cpu_fallback", state->painter, KisPaintTrace::currentJob());
             } else if (mirroredPass && qEnvironmentVariableIntValue("KRITA_GPU_BRUSH_DEBUG") == 1) {
                 static QAtomicInt messages{0};
                 if (messages.fetchAndAddRelaxed(1) < 12)
@@ -235,8 +240,15 @@ void KisBrushOp::addDabPaintingJobs(const QVector<QRect> &rects,
     } else {
         Q_FOREACH (const QRect &rc, rects) {
             KritaUtils::addJobConcurrent(jobs, [rc, state]() {
-                if (!state->gpuMirrorsPainted)
+                KisPaintTrace::Scope trace("brush.cpu_composite", state->painter);
+                KisPaintTrace::link("batch.paint_job",
+                                    state->painter,
+                                    KisPaintTrace::currentJob(),
+                                    state->paintTraceBatch);
+                if (!state->gpuMirrorsPainted) {
                     state->painter->bltFixed(rc, state->dabsQueue);
+                    KisPaintTrace::link("path.brush.cpu", state->painter, KisPaintTrace::currentJob());
+                }
             });
         }
     }
@@ -252,6 +264,7 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
         UpdateSharedStateSP state = m_updateSharedState;
 
         state->painter = painter();
+        state->paintTraceBatch = KisPaintTrace::nextId();
 
         {
             const qreal dabRenderingTime = m_dabExecutor->averageDabRenderingTime();
@@ -269,12 +282,16 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
             // destination tables, clipped records and selection coverage.
             const quint64 byteLimit =
                 m_isRgbaFloatImage && KisGpuBrushPainter::supports(painter()) ? quint64(32) << 20 : ~quint64(0);
-            state->dabsQueue =
-                m_dabExecutor->takeReadyDabs(painter()->hasMirroring(), dabsLimit, &someDabsAreStillInQueue, byteLimit);
+            state->dabsQueue = m_dabExecutor->takeReadyDabs(painter()->hasMirroring(),
+                                                            dabsLimit,
+                                                            &someDabsAreStillInQueue,
+                                                            byteLimit,
+                                                            state->paintTraceBatch);
         }
 
         KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(!state->dabsQueue.isEmpty(),
                                              std::make_pair(m_currentUpdatePeriod, false));
+        KisPaintTrace::link("batch.ready", painter(), state->paintTraceBatch, KisPaintTrace::currentJob());
 
         const int diameter = m_dabExecutor->averageDabSize();
         const qreal spacing = m_avgSpacing.rollingMean();
@@ -362,8 +379,13 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
                     Q_FOREACH(const QRect &rc, state->allDirtyRects) {
                         state->painter->addDirtyRect(rc);
                     }
+                    KisPaintTrace::link("batch.dirty_recorded",
+                                        state->painter,
+                                        state->paintTraceBatch,
+                                        KisPaintTrace::currentJob());
 
                     state->painter->setAverageOpacity(state->dabsQueue.last().averageOpacity);
+                    state->painter->recordPaintTraceBatch(state->paintTraceBatch);
 
                     const int updateRenderingTime = state->dabRenderingTimer.elapsed();
                     const qreal dabRenderingTime = m_dabExecutor->averageDabRenderingTime();

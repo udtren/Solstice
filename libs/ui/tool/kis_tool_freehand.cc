@@ -10,11 +10,13 @@
  */
 
 #include "kis_tool_freehand.h"
+#include "KisPaintTrace.h"
+#include <QApplication>
+#include <QJsonObject>
 #include <QPainter>
 #include <QRect>
-#include <QThreadPool>
-#include <QApplication>
 #include <QScreen>
+#include <QThreadPool>
 
 #include <Eigen/Core>
 
@@ -176,6 +178,35 @@ void KisToolFreehand::deactivate()
 
 void KisToolFreehand::initStroke(KoPointerEvent *event)
 {
+    if (KisPaintTrace::enabled()) {
+        // Diagnostic-only QObject property avoids changing this exported tool's ABI.
+        const quint64 input = KisPaintTrace::currentInput();
+        setProperty("solsticePaintTraceStroke", QVariant::fromValue(input));
+        KisPaintTrace::link("stroke.input", dynamic_cast<KisCanvas2 *>(canvas()), input, input);
+        KisPaintTrace::link("input.accepted_begin",
+                            dynamic_cast<KisCanvas2 *>(canvas()),
+                            KisPaintTrace::currentInput());
+        auto preset = currentPaintOpPreset();
+        if (preset && preset->settings()) {
+            auto settings = preset->settings();
+            const auto currentImage = image();
+            QJsonObject conditions{{"preset_name", preset->name()},
+                                   {"preset_stored_md5", preset->md5Sum(false)},
+                                   {"engine", preset->paintOp().id()},
+                                   {"nominal_size_px", settings->paintOpSize()},
+                                   {"incremental", settings->paintIncremental()}};
+            if (currentImage) {
+                conditions.insert("image_width", currentImage->width());
+                conditions.insert("image_height", currentImage->height());
+                conditions.insert("image_color_model", currentImage->colorSpace()->colorModelId().id());
+                conditions.insert("image_color_depth", currentImage->colorSpace()->colorDepthId().id());
+            }
+            KisPaintTrace::strokeConditions(dynamic_cast<KisCanvas2 *>(canvas()),
+                                            KisPaintTrace::currentInput(),
+                                            conditions);
+        }
+    }
+    KisPaintTrace::Scope trace("tool.begin", KisPaintTrace::enabled() ? image().data() : nullptr, canvas());
     m_helper->initPaint(event,
                         convertToPixelCoord(event),
                         image(),
@@ -185,11 +216,33 @@ void KisToolFreehand::initStroke(KoPointerEvent *event)
 
 void KisToolFreehand::doStroke(KoPointerEvent *event)
 {
+    if (KisPaintTrace::enabled()) {
+        KisPaintTrace::link("input.accepted_move", dynamic_cast<KisCanvas2 *>(canvas()), KisPaintTrace::currentInput());
+        KisPaintTrace::link("stroke.input",
+                            dynamic_cast<KisCanvas2 *>(canvas()),
+                            KisPaintTrace::currentInput(),
+                            property("solsticePaintTraceStroke").toULongLong());
+    }
+    KisPaintTrace::Scope trace("tool.move", KisPaintTrace::enabled() ? image().data() : nullptr, canvas());
     m_helper->paintEvent(event);
 }
 
 void KisToolFreehand::endStroke()
 {
+    if (KisPaintTrace::enabled()) {
+        KisPaintTrace::link("input.accepted_end", dynamic_cast<KisCanvas2 *>(canvas()), KisPaintTrace::currentInput());
+        const quint64 stroke = property("solsticePaintTraceStroke").toULongLong();
+        KisPaintTrace::link("stroke.input",
+                            dynamic_cast<KisCanvas2 *>(canvas()),
+                            KisPaintTrace::currentInput(),
+                            stroke);
+        KisPaintTrace::link("stroke.ended",
+                            dynamic_cast<KisCanvas2 *>(canvas()),
+                            stroke,
+                            KisPaintTrace::currentInput());
+        setProperty("solsticePaintTraceStroke", QVariant());
+    }
+    KisPaintTrace::Scope trace("tool.end", KisPaintTrace::enabled() ? image().data() : nullptr, canvas());
     m_helper->endPaint();
     bool paintOpIgnoredEvent = currentPaintOpPreset()->settings()->mouseReleaseEvent();
     Q_UNUSED(paintOpIgnoredEvent);
