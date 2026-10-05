@@ -127,6 +127,7 @@ struct KisLightnessStrengthOptionData : KisCurveOptionData
     }
 };
 
+#include <lager/cursor.hpp>
 
 class KisCurveOptionWidget;
 
@@ -144,6 +145,11 @@ PAINTOP_EXPORT KisCurveOptionWidget* createSaturationOptionWidget();
 PAINTOP_EXPORT KisCurveOptionWidget* createValueOptionWidget();
 PAINTOP_EXPORT KisCurveOptionWidget* createRateOptionWidget();
 PAINTOP_EXPORT KisCurveOptionWidget* createStrengthOptionWidget();
+
+// Variants bound to a state owned by KisPaintOpOptionsModel
+PAINTOP_EXPORT KisCurveOptionWidget *createOpacityOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createRotationOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createRateOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
 
 PAINTOP_EXPORT KisCurveOptionWidget* createMaskingOpacityOptionWidget();
 PAINTOP_EXPORT KisCurveOptionWidget* createMaskingSizeOptionWidget();

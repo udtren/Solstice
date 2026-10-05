@@ -47,6 +47,8 @@
 #include <kis_image.h>
 #include <kis_node.h>
 #include <brushengine/kis_paintop_config_widget.h>
+#include "KisPaintOpOptionsModel.h"
+#include "kis_paintop_settings_widget.h"
 #include <kis_action.h>
 
 #include "kis_canvas2.h"
@@ -656,6 +658,15 @@ void KisPaintopBox::setCurrentPaintop(const KoID& paintop)
     setCurrentPaintop(preset);
 }
 
+namespace
+{
+KisPaintOpOptionsModel *optionsModelFor(KisPaintOpConfigWidget *widget)
+{
+    KisPaintOpSettingsWidget *settingsWidget = dynamic_cast<KisPaintOpSettingsWidget *>(widget);
+    return settingsWidget ? settingsWidget->optionsModel() : nullptr;
+}
+} // namespace
+
 void KisPaintopBox::setCurrentPaintop(KisPaintOpPresetSP preset)
 {
     if (preset == m_resourceProvider->currentPreset()) {
@@ -672,6 +683,10 @@ void KisPaintopBox::setCurrentPaintop(KisPaintOpPresetSP preset)
 
         if (m_optionWidget) {
             m_optionWidget->hide();
+
+            if (KisPaintOpOptionsModel *model = optionsModelFor(m_optionWidget)) {
+                model->detachPreset();
+            }
         }
 
     }
@@ -694,6 +709,13 @@ void KisPaintopBox::setCurrentPaintop(KisPaintOpPresetSP preset)
     m_optionWidget->setNode(m_viewManager->activeNode());
 
     m_presetsEditor->setPaintOpSettingsWidget(m_optionWidget);
+
+    if (KisPaintOpOptionsModel *model = optionsModelFor(m_optionWidget)) {
+        // LOD settings are written by the Brush Editor, not by an option
+        model->setPreservedKeys({QStringLiteral("lodUserAllowed"), QStringLiteral("lodSizeThreshold")});
+        model->attachPreset(preset);
+    }
+
     m_presetsEditor->readOptionSetting(preset->settings());
 
     m_resourceProvider->setPaintOpPreset(preset);
@@ -1429,11 +1451,14 @@ void KisPaintopBox::slotGuiChangedCurrentPreset() // Called only when UI is chan
 
         KisPaintOpPreset::UpdatedPostponer postponer(preset);
 
-        // clear all the properties before dumping the stuff into the preset,
-        // some of the options add the values incrementally
-        // (e.g. KisPaintOpUtils::RequiredBrushFilesListTag), therefore they
-        // may add up if we pass the same preset multiple times
-        preset->settings()->resetSettings();
+        // An attached options model writes the options itself, one option
+        // at a time; only the Brush Editor's own keys are written here.
+        KisPaintOpOptionsModel *model = optionsModelFor(m_optionWidget);
+        if (!model || !model->isAttachedTo(preset->settings().data())) {
+            // clear all the properties before dumping the stuff into the
+            // preset, so that keys no option writes any more are dropped
+            preset->settings()->resetSettings();
+        }
 
         m_presetsEditor->writeOptionSetting(const_cast<KisPaintOpSettings*>(preset->settings().data()));
     }

@@ -73,6 +73,17 @@ public:
         virtual void setDirty(bool value) = 0;
         virtual bool isDirty() const = 0;
         virtual void notifySettingsChanged() = 0;
+
+        /**
+         * Records a key whose value changed or that was removed. Recorded
+         * keys are delivered with the next settings-changed notification.
+         */
+        virtual void recordChangedKey(const QString &key);
+
+        /**
+         * Records that any key may have changed, e.g. after a reset.
+         */
+        virtual void recordAllKeysChanged();
     };
 
     using UpdateListenerSP = QSharedPointer<UpdateListener>;
@@ -319,6 +330,14 @@ public:
      * onPropertyChanged() callback
      */
     void setProperty(const QString & name, const QVariant & value) override;
+
+    /**
+     * Removes \p name and records it as changed for the update listener.
+     * Unlike setProperty(), this sends no notification and does not change
+     * the dirty state. KisPropertiesConfiguration::removeProperty() is not
+     * virtual, so removals through a base-class pointer are not recorded.
+     */
+    void removeProperty(const QString &name);
 
     virtual QList<KisUniformPaintOpPropertySP> uniformProperties(KisPaintOpSettingsSP settings, QPointer<KisPaintOpPresetUpdateProxy> updateProxy);
 

@@ -167,3 +167,14 @@ KisCurveOptionDataCommon KisCurveOptionModel::bakedOptionData() const
     data.strengthValue = effectiveStrengthValueNorm();
     return data;
 }
+
+KisCurveOptionDataCommon KisCurveOptionModel::bakeOptionData(const KisCurveOptionDataCommon &data,
+                                                             bool externallyEnabled,
+                                                             const RangeState &strengthRange)
+{
+    KisCurveOptionDataCommon result = data;
+    result.isChecked = data.isChecked && externallyEnabled;
+    std::tie(result.strengthMinValue, result.strengthMaxValue) = strengthRange;
+    result.strengthValue = qBound(result.strengthMinValue, data.strengthValue, result.strengthMaxValue);
+    return result;
+}
