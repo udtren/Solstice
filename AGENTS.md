@@ -86,8 +86,9 @@ Read these before adding or updating any feature:
   `docs/agent/brush-stroke-preview.md`
 - Solstice visual branding checklist:
   `docs/agent/solstice-visual-branding-todo.md`
-- Brush option shared model plan (not implemented):
-  `docs/agent/brush-option-shared-model-plan.md`
+- Brush option shared model plan (phase 0 investigated, not implemented):
+  `docs/agent/brush-option-shared-model-plan.md`, findings in
+  `docs/agent/brush-option-shared-model-phase0.md`
 - UI modernization plan (not implemented):
   `docs/agent/ui-modernization-plan.md`
 - GitHub Actions Windows trial builds: `docs/agent/github-actions.md`
