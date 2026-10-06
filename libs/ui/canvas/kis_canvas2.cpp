@@ -406,7 +406,8 @@ void KisCanvas2::setup()
     connect(&m_d->canvasUpdateCompressor, SIGNAL(timeout()), SLOT(slotDoCanvasUpdate()));
 #endif
 
-    connect(this, SIGNAL(sigCanvasCacheUpdated()), &m_d->frameRenderStartCompressor, SLOT(start()));
+    // Always queued: the slot may upload at once and must not run inside the emitter.
+    connect(this, SIGNAL(sigCanvasCacheUpdated()), SLOT(slotCanvasCacheUpdated()), Qt::QueuedConnection);
     connect(&m_d->frameRenderStartCompressor, SIGNAL(timeout()), SLOT(updateCanvasProjection()));
 
     connect(this, SIGNAL(sigContinueResizeImage(qint32,qint32)), SLOT(finishResizingImage(qint32,qint32)));
@@ -1101,6 +1102,21 @@ void KisCanvas2::KisCanvas2Private::buildSharedProjectionUpdates(
     // Together, so the GUI applies the shared upload in one pass.
     if (projectionUpdatesCompressor.putUpdateInfos(infos)) {
         Q_EMIT q->sigCanvasCacheUpdated();
+    }
+}
+
+void KisCanvas2::slotCanvasCacheUpdated()
+{
+    // GPU engine (Solstice, phase 4.92): a shared GPU upload costs about
+    // 0.2-0.3ms of GUI time, and Qt already paces paints to the screen
+    // (update compression). Holding updates for the fps-limit window only
+    // delayed fresh pixels by up to 1000 / fpsLimit ms before the next frame.
+    static const bool immediate = qEnvironmentVariableIntValue("KRITA_GPU_CANVAS_IMMEDIATE_UPLOAD") != 0
+        || !qEnvironmentVariableIsSet("KRITA_GPU_CANVAS_IMMEDIATE_UPLOAD");
+    if (immediate && m_d->canvasWidget && m_d->canvasWidget->sharesProjectionUploads()) {
+        updateCanvasProjection();
+    } else {
+        m_d->frameRenderStartCompressor.start();
     }
 }
 

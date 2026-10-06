@@ -6036,6 +6036,72 @@ checks ran in a separate process, 49252, and the user reported them OK.
   temporary target tiles.
 - **Other Wash strokes.** They vary within the range of hand-drawn strokes.
 
+### Immediate canvas uploads on the shared GPU path (phase 4.92)
+
+Breakdown of the canvas side in PID 51608, for each timed input's last
+required upload (`canvas.py` in the session scratchpad; medians):
+
+| Stage | Buildup | Wash |
+| --- | --- | --- |
+| `update.ready` to GUI `canvas.upload` start | 1.58ms | 1.99ms |
+| `canvas.upload` span | 0.21ms | 0.27ms |
+| Upload issued to `frame.submitted` | 1.32ms | 2.08ms |
+| Frame submitted to swapped | 0.09ms | 0.10ms |
+| Input to required swap | 5.40ms | 8.19ms |
+
+Frames were submitted about every 6.4ms.
+
+- **Where the time goes.** `sigCanvasCacheUpdated` (emitted after
+  `update.ready`) started `frameRenderStartCompressor`: FIRST_ACTIVE, with a
+  delay of 1000 / `fpsLimit` (3ms with the user's `fpsLimit=300`). An update
+  arriving inside that window waited for it to end before
+  `updateCanvasProjection()` uploaded it.
+  - This build has `KRITA_QT_HAS_UPDATE_COMPRESSION_PATCH`, so
+    `slotDoCanvasUpdate()` hands the repaint to Qt, which paces paints to the
+    screen.
+  - The compressor was a second pacing layer in front of an upload that costs
+    only 0.2-0.3ms of GUI time on the shared GPU path.
+- **Change.**
+  - `sigCanvasCacheUpdated` now connects, always queued, to
+    `KisCanvas2::slotCanvasCacheUpdated()`.
+  - When the canvas widget `sharesProjectionUploads()`, the slot runs
+    `updateCanvasProjection()` at once. Pending updates are taken together;
+    later queued calls find nothing and do nothing.
+  - Otherwise, including CPU uploads, it starts the compressor as before.
+  - `KRITA_GPU_CANVAS_IMMEDIATE_UPLOAD=0` restores the compressor for
+    comparisons.
+  - Paint pacing (Qt) and the frame rate are unchanged; each frame shows newer
+    pixels.
+
+Tests: `KisGpuCanvasUploadTest` 38/38, `KisCanvasUpdateBatcherTest` 8/8.
+Installed ui; hashes match.
+
+Real-app capture PID 12232: 6 strokes, 0 dropped events. The manual checks ran
+in a separate process, 42220, and the user reported them OK: flicker, pan,
+zoom and rotate, long strokes, mirror, Undo/Redo, non-paint tools.
+
+| Stage (median, ms) | Buildup 4.91 → 4.92 | Wash 4.91 → 4.92 |
+| --- | --- | --- |
+| `update.ready` to upload issued | 1.74 → 0.14 | 2.12 → 0.15 |
+| Upload issued to frame submitted | 1.32 → 3.09 | 2.08 → 2.44 |
+| Input to required swap | 5.40 → 5.60 | 8.19 → 5.72 |
+
+- **Per-stroke input-to-swap medians:**
+  - Buildup: 6.4 / 5.4 / 5.5ms (4.91: 5.2 / 5.0 / 6.2).
+  - Wash: 7.9 / 5.1 / 6.5ms (4.91: 10.8 / 7.8 / 7.5; its first Wash stroke
+    was slower).
+- **Findings.**
+  - The upload now starts at once, but most of the saved time moved into
+    waiting for the next frame. Frames are submitted about every 6.2ms (the
+    display refresh with Qt's update compression), and the waits on either
+    side of the upload are both bounded by that cadence.
+  - Buildup is unchanged within noise. Wash improved, partly because uploads
+    no longer queue behind longer merges.
+- **What remains.** About 5.5ms from input to swap, of which about 2.5-3ms is
+  waiting for the next refresh tick and about 2.5ms is input, brush, merge
+  and upload. Further gains on the canvas side would need presentation timed
+  to the refresh (rendering just before the tick), not shorter queues.
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.

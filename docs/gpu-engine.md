@@ -218,7 +218,12 @@ document was noticeably slower: the GPU programs it needs were prepared on
 first use, separately for each parallel task. They are now prepared once,
 in the background shortly after Krita starts. In a capture, the first Wash
 stroke then reached the screen in about 11ms instead of about 36ms, and the
-first Buildup stroke in about 5ms instead of about 14ms. With mirroring and
+first Buildup stroke in about 5ms instead of about 14ms. With the GPU engine,
+finished canvas updates are now sent to the display texture immediately
+instead of after the frame-rate limiter's interval; Wash strokes reached the
+screen in about 5.7ms (median) instead of about 8.2ms, while Buildup strokes
+stayed at about 5.5ms. Most of the remaining time is waiting for the screen's
+next refresh. With mirroring and
 blend modes such as Overlay or Dodge, where mirrored dabs overlap the stroke,
 the result can differ slightly from a CPU stroke because the dabs are grouped
 differently; the CPU brush shows the same kind of variation between strokes.

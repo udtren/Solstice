@@ -284,6 +284,9 @@ private Q_SLOTS:
     /// of the canvas representation.
     void startUpdateCanvasProjection(const QRect & rc);
     void updateCanvasProjection();
+    /// GPU engine (Solstice, phase 4.92): uploads at once on the shared GPU
+    /// upload path, otherwise starts the frame render compressor.
+    void slotCanvasCacheUpdated();
 
     void slotBeginUpdatesBatch();
     void slotEndUpdatesBatch();

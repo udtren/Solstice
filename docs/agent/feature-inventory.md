@@ -136,6 +136,9 @@ in `kis_brushop.cpp`, and completed upload-source inspection in
 Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
 and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
 from CPU/GPU execution and preserves missing evidence for other walkers.
+Phase 4.92 adds `KisCanvas2::slotCanvasCacheUpdated()` (`libs/ui/canvas/kis_canvas2.*`): immediate
+`updateCanvasProjection()` on the shared GPU upload path instead of `frameRenderStartCompressor`
+(`KRITA_GPU_CANVAS_IMMEDIATE_UPLOAD=0` restores it).
 Phase 4.91 shares compute pipelines per context: `KisGpuContext::sharedComputePipeline()` and
 `sharedComputePipelineCompileCount()` in `libs/gpu/KisGpuContext.*`, `shared_ptr` pipelines in
 `KisGpuLayerCompositor`, `KisGpuDabCompositor` (both with `preparePipelines()`),
