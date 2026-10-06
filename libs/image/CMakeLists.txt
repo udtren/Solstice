@@ -371,7 +371,8 @@ set(einspline_SRCS
 )
 
 # GPU engine (Solstice, docs/agent/gpu-engine.md): GPU-resident tiles
-list(APPEND kritaimage_LIB_SRCS gpu/KisGpuMergeBatch.cpp gpu/KisGpuEngineSettings.cpp gpu/KisGpuBrushPainter.cpp)
+list(APPEND kritaimage_LIB_SRCS gpu/KisGpuMergeBatch.cpp gpu/KisGpuEngineSettings.cpp gpu/KisGpuBrushPainter.cpp
+    gpu/KisGpuTransformWorker.cpp)
 if(HAVE_KRITA_GPU_ENGINE)
     list(APPEND kritaimage_LIB_SRCS
         gpu/KisGpuTileBackend.cpp

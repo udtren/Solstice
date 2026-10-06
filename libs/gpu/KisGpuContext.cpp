@@ -454,6 +454,14 @@ bool KisGpuContext::Private::createDevice(const Options &options, QString *error
     features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     features.features.shaderInt64 = VK_TRUE;
     features.pNext = &features13;
+    {
+        // Optional (phase 4.94): exact transform resampling uses doubles.
+        VkPhysicalDeviceFeatures2 supported{};
+        supported.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        vk.vkGetPhysicalDeviceFeatures2(physicalDevice, &supported);
+        info.supportsFloat64 = supported.features.shaderFloat64 == VK_TRUE;
+        features.features.shaderFloat64 = supported.features.shaderFloat64;
+    }
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

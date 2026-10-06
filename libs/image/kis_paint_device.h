@@ -284,6 +284,13 @@ public:
     void purgeDefaultPixels();
 
     /**
+     * GPU engine (Solstice): pixels were written without a writable CPU
+     * iterator (which invalidates the cached bounds on creation), e.g. by a
+     * GPU tile access. Drops the cached exact bounds, region and thumbnails.
+     */
+    void invalidateCachedBounds();
+
+    /**
      * Sets the default pixel. New data will be initialised with this pixel. The pixel is copied: the
      * caller still owns the pointer and needs to delete it to avoid memory leaks.
      * If frame ID is given, set default pixel for that frame. Otherwise use active frame.

@@ -13,23 +13,25 @@
 #include <qmath.h>
 #include <klocalizedstring.h>
 
+#include <QElapsedTimer>
 #include <QTransform>
 
 #include <KoColorSpace.h>
 #include <KoCompositeOpRegistry.h>
 #include <KoColor.h>
 
-#include "kis_paint_device.h"
+#include "gpu/KisGpuTransformWorker.h"
 #include "kis_debug.h"
-#include "kis_selection.h"
-#include "kis_iterator_ng.h"
-#include "kis_random_accessor_ng.h"
 #include "kis_filter_strategy.h"
-#include "kis_painter.h"
 #include "kis_filter_weights_applicator.h"
-#include "kis_progress_update_helper.h"
-#include "kis_pixel_selection.h"
 #include "kis_image.h"
+#include "kis_iterator_ng.h"
+#include "kis_paint_device.h"
+#include "kis_painter.h"
+#include "kis_pixel_selection.h"
+#include "kis_progress_update_helper.h"
+#include "kis_random_accessor_ng.h"
+#include "kis_selection.h"
 
 #ifdef HAVE_KRITA_GPU_ENGINE
 #include "gpu/KisGpuTileAccess.h"
@@ -222,6 +224,117 @@ void KisTransformWorker::transformPass(KisPaintDevice *src, KisPaintDevice *dst,
     updateBounds<T>(m_boundRect, dstBounds);
 }
 
+namespace
+{
+/**
+ * GPU engine (Solstice, phase 4.94): plans one transformPass() with the same
+ * CPU classes, for KisGpuTransformWorker. False if a line is empty (the CPU
+ * pass keeps such a line's source pixels, which the GPU does not reproduce).
+ */
+bool planGpuPass(KisPaintDeviceSP device,
+                 const QRect &boundRect,
+                 bool vertical,
+                 double scale,
+                 double shear,
+                 double dx,
+                 KisFilterStrategy *filter,
+                 KisGpuTransformWorker::PlannedPass *pass)
+{
+    const int srcStart = vertical ? boundRect.y() : boundRect.x();
+    const int srcLen = vertical ? boundRect.height() : boundRect.width();
+    const int firstLine = vertical ? boundRect.x() : boundRect.y();
+    const int numLines = vertical ? boundRect.width() : boundRect.height();
+    const bool clampToEdge = shear == 0.0;
+
+    KisFilterWeightsBuffer buffer(filter, qAbs(scale));
+    KisFilterWeightsApplicator applicator(device, device, scale, shear, dx, clampToEdge);
+    const qreal support = filter->support(buffer.weightsPositionScale().toFloat());
+
+    pass->lineRanges.resize(numLines * 2);
+    KisFilterWeightsApplicator::LinePos dstBounds;
+    for (int i = 0; i < numLines; i++) {
+        const KisFilterWeightsApplicator::LineSetup setup =
+            applicator.setupLine(KisFilterWeightsApplicator::LinePos(srcStart, srcLen),
+                                 firstLine + i,
+                                 &buffer,
+                                 support);
+        if (setup.dstEnd <= setup.dstStart) {
+            return false;
+        }
+        pass->lineRanges[2 * i] = setup.dstStart;
+        pass->lineRanges[2 * i + 1] = setup.dstEnd;
+        dstBounds.unite(KisFilterWeightsApplicator::LinePos(setup.dstStart, setup.dstEnd - setup.dstStart));
+    }
+
+    pass->vertical = vertical;
+    pass->scale = scale;
+    pass->shear = shear;
+    pass->dx = dx;
+    pass->weightsPositionScale = buffer.weightsPositionScale().to256Frac();
+    pass->srcStart = srcStart;
+    pass->srcEnd = srcStart + srcLen;
+    pass->clampToEdge = clampToEdge;
+    pass->lineFirst = firstLine;
+    pass->maxSpan = buffer.maxSpan();
+    pass->weights.resize(256 * (pass->maxSpan + 2));
+    for (int i = 0; i < 256; i++) {
+        KisFixedPoint offset;
+        offset.from256Frac(i);
+        const KisFilterWeightsBuffer::FilterWeights *weights = buffer.weights(offset);
+        qint32 *entry = pass->weights.data() + i * (pass->maxSpan + 2);
+        entry[0] = weights->span;
+        entry[1] = weights->centerIndex;
+        for (int j = 0; j < pass->maxSpan; j++) {
+            entry[2 + j] = j < weights->span ? weights->weight[j] : 0;
+        }
+    }
+    pass->srcRect = boundRect;
+    // updateBounds<>() of transformPass()
+    pass->dstRect = boundRect;
+    if (vertical) {
+        pass->dstRect.setTop(dstBounds.start());
+        pass->dstRect.setHeight(dstBounds.size());
+    } else {
+        pass->dstRect.setLeft(dstBounds.start());
+        pass->dstRect.setWidth(dstBounds.size());
+    }
+    return true;
+}
+
+/// Both passes on the GPU, or false with @p device and @p boundRect unchanged.
+bool runGpuPasses(KisPaintDeviceSP device,
+                  QRect *boundRect,
+                  KisFilterStrategy *filter,
+                  double xScale,
+                  double xShear,
+                  double xDx,
+                  double yScale,
+                  double yShear,
+                  double yDx)
+{
+    if (!filter || boundRect->isEmpty() || !KisGpuTransformWorker::canRun(device)) {
+        return false;
+    }
+    QElapsedTimer timer;
+    timer.start();
+    KisGpuTransformWorker::PlannedPass xPass;
+    KisGpuTransformWorker::PlannedPass yPass;
+    if (!planGpuPass(device, *boundRect, false, xScale, xShear, xDx, filter, &xPass)
+        || !planGpuPass(device, xPass.dstRect, true, yScale, yShear, yDx, filter, &yPass)) {
+        return false;
+    }
+    const qint64 planned = timer.nsecsElapsed();
+    if (!KisGpuTransformWorker::runPlannedPasses(device, xPass, yPass)) {
+        return false;
+    }
+    if (qEnvironmentVariableIntValue("KRITA_GPU_TRANSFORM_DEBUG") == 1) {
+        qInfo() << "GPU transform plan ms" << planned / 1e6 << "passes ms" << (timer.nsecsElapsed() - planned) / 1e6;
+    }
+    *boundRect = yPass.dstRect;
+    return true;
+}
+} // namespace
+
 template<typename T>
 void swapValues(T *a, T *b) {
     T c = *a;
@@ -235,7 +348,20 @@ bool KisTransformWorker::run()
     // Batch before exactBounds() starts reading edge tiles individually.
     KisGpuTileAccess::syncToCpu(m_dev, m_dev->extent());
 #endif
-    return runPartial(m_dev->exactBounds());
+    // GPU engine (Solstice, phase 4.94): every pixel lies inside exactBounds(),
+    // which the GPU passes rely on.
+    m_wholeDevice = true;
+    QElapsedTimer timer;
+    timer.start();
+    const QRect bounds = m_dev->exactBounds();
+    const qint64 boundsTime = timer.nsecsElapsed();
+    const bool result = runPartial(bounds);
+    m_wholeDevice = false;
+    if (qEnvironmentVariableIntValue("KRITA_GPU_TRANSFORM_DEBUG") == 1) {
+        qInfo() << "transform run: exactBounds ms" << boundsTime / 1e6 << "runPartial ms"
+                << (timer.nsecsElapsed() - boundsTime) / 1e6;
+    }
+    return result;
 }
 
 bool KisTransformWorker::runPartial(const QRect &processRect)
@@ -284,8 +410,17 @@ bool KisTransformWorker::runPartial(const QRect &processRect)
         bool yShearPresent = !qFuzzyCompare(m_yshear, 0.0);
 
         if (scalePresent || (xShearPresent && yShearPresent)) {
-            transformPass <KisHLineIteratorSP>(m_dev.data(), m_dev.data(), xscale, yscale *  m_xshear, 0, m_filter, portion);
-            transformPass <KisVLineIteratorSP>(m_dev.data(), m_dev.data(), yscale, m_yshear, 0, m_filter, portion);
+            if (!(m_wholeDevice
+                  && runGpuPasses(m_dev, &m_boundRect, m_filter, xscale, yscale * m_xshear, 0, yscale, m_yshear, 0))) {
+                transformPass<KisHLineIteratorSP>(m_dev.data(),
+                                                  m_dev.data(),
+                                                  xscale,
+                                                  yscale * m_xshear,
+                                                  0,
+                                                  m_filter,
+                                                  portion);
+                transformPass<KisVLineIteratorSP>(m_dev.data(), m_dev.data(), yscale, m_yshear, 0, m_filter, portion);
+            }
         } else if (xShearPresent) {
             transformPass <KisHLineIteratorSP>(m_dev.data(), m_dev.data(), xscale, m_xshear, 0, m_filter, portion);
         } else if (yShearPresent) {
@@ -395,11 +530,15 @@ bool KisTransformWorker::runPartial(const QRect &processRect)
         qreal e = m.m22() - m.m21() * m.m12() / m.m11();
         qreal f = m.m32() - m.m31() * m.m12() / m.m11();
 
-        // First Pass (X)
-        transformPass <KisHLineIteratorSP>(m_dev.data(), m_dev.data(), a, b, c, m_filter, progressPortion);
+        // GPU engine (Solstice, phase 4.94): both passes on the GPU when
+        // possible, bit-identical to the CPU passes below.
+        if (!(m_wholeDevice && runGpuPasses(m_dev, &m_boundRect, m_filter, a, b, c, e, d, f))) {
+            // First Pass (X)
+            transformPass<KisHLineIteratorSP>(m_dev.data(), m_dev.data(), a, b, c, m_filter, progressPortion);
 
-        // Second Pass (Y)
-        transformPass <KisVLineIteratorSP>(m_dev.data(), m_dev.data(), e, d, f, m_filter, progressPortion);
+            // Second Pass (Y)
+            transformPass<KisVLineIteratorSP>(m_dev.data(), m_dev.data(), e, d, f, m_filter, progressPortion);
+        }
 
 #if 0
         /************************************************************/
@@ -450,7 +589,12 @@ bool KisTransformWorker::runPartial(const QRect &processRect)
      * Purge the tiles which might be left after scaling down the
      * image
      */
+    QElapsedTimer purgeTimer;
+    purgeTimer.start();
     m_dev->purgeDefaultPixels();
+    if (qEnvironmentVariableIntValue("KRITA_GPU_TRANSFORM_DEBUG") == 1) {
+        qInfo() << "transform purgeDefaultPixels ms" << purgeTimer.nsecsElapsed() / 1e6;
+    }
 
     return true;
 }

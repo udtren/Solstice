@@ -31,8 +31,10 @@
 #include <KisGpuLayerStackCompositor.h>
 #include <KisGpuTileFill.h>
 
+#include "gpu/KisGpuMergeBatch.h"
 #include "gpu/KisGpuTileAccess.h"
 #include "gpu/KisGpuTileBackend.h"
+#include "gpu/KisGpuTransformWorker.h"
 #include "kis_datamanager.h"
 #include "kis_filter_strategy.h"
 #include "kis_liquify_transform_worker.h"
@@ -82,6 +84,8 @@ private Q_SLOTS:
     void testCpuTransformsBatchReadback_data();
     void testCpuTransformsBatchReadback();
     void testTransformSequenceUndo();
+    void testGpuTransformMatchesCpu_data();
+    void testGpuTransformMatchesCpu();
     void testCompositeMatchesCpu();
     void testUndoRedo();
     void testCopyOnWriteIsolation();
@@ -749,6 +753,149 @@ void KisGpuPaintDeviceTest::testCpuTransformsBatchReadback()
     QVERIFY(read(gpu) == before);
     command->redo();
     QVERIFY(read(gpu) == after);
+}
+
+void KisGpuPaintDeviceTest::testGpuTransformMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("filterId");
+    QTest::addColumn<double>("xscale");
+    QTest::addColumn<double>("yscale");
+    QTest::addColumn<double>("xshear");
+    QTest::addColumn<double>("yshear");
+    QTest::addColumn<double>("degrees");
+    QTest::addColumn<double>("dx");
+    QTest::addColumn<double>("dy");
+    QTest::addColumn<QString>("variant");
+    struct Case {
+        const char *name;
+        double xscale, yscale, xshear, yshear, degrees, dx, dy;
+    };
+    const Case cases[] = {
+        {"scale-rotate", 0.9, 0.9, 0, 0, 10, 120.3, 80.6},
+        {"upscale-rotate", 1.7, 1.7, 0, 0, -30, -15.2, 7.9},
+        {"downscale-rotate", 0.33, 0.41, 0, 0, 44, 3.3, -2.1},
+        {"rotate-only", 1, 1, 0, 0, 5, 0.37, 0.61},
+        {"subpixel-scale", 1.0004, 0.9996, 0, 0, 0, 0.5, 0.25},
+        {"nonuniform", 0.6, 1.4, 0, 0, -12, 40, -30},
+        {"flip-scale", -1.3, 0.8, 0, 0, 20, 10, 10},
+        {"quadrant", 1.1, 0.9, 0, 0, 100, 5, 6},
+        {"shear-scale", 1.2, 0.85, 0.3, 0.1, 0, 4, 2},
+        {"shear-both", 1, 1, -0.25, 0.4, 0, 0, 0},
+        {"tiny", 0.02, 0.03, 0, 0, 7, 0, 0},
+    };
+    for (bool f16 : {false, true}) {
+        for (const Case &c : cases) {
+            for (const QString variant : {"plain", "offset", "opaque-default"}) {
+                if (f16 && variant != "plain")
+                    continue;
+                QTest::newRow(qPrintable(QString("%1-%2-Bicubic-%3").arg(f16 ? "f16" : "f32", c.name, variant)))
+                    << f16 << QStringLiteral("Bicubic") << c.xscale << c.yscale << c.xshear << c.yshear << c.degrees
+                    << c.dx << c.dy << variant;
+            }
+        }
+        for (const QString filterId :
+             {"Hermite", "NearestNeighbor", "Bilinear", "Bell", "BSpline", "Lanczos3", "Mitchell"}) {
+            QTest::newRow(qPrintable(QString("%1-scale-rotate-%2-plain").arg(f16 ? "f16" : "f32", filterId)))
+                << f16 << filterId << 0.7 << 1.3 << 0.0 << 0.0 << 17.0 << 2.5 << -3.5 << QStringLiteral("plain");
+        }
+    }
+}
+
+void KisGpuPaintDeviceTest::testGpuTransformMatchesCpu()
+{
+    // Phase 4.94: KisTransformWorker's resampling passes on the GPU must equal
+    // the CPU passes bit for bit, including the bound rect, borders and Undo.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QString, filterId);
+    QFETCH(double, xscale);
+    QFETCH(double, yscale);
+    QFETCH(double, xshear);
+    QFETCH(double, yshear);
+    QFETCH(double, degrees);
+    QFETCH(double, dx);
+    QFETCH(double, dy);
+    QFETCH(QString, variant);
+    if (!m_backend->context().deviceInfo().supportsFloat64)
+        QSKIP("shaderFloat64 is not supported");
+    const bool previousProjection = KisGpuMergeBatch::isEnabled();
+    KisGpuMergeBatch::setEnabled(true);
+    const auto restore = qScopeGuard([&]() {
+        KisGpuMergeBatch::setEnabled(previousProjection);
+        qunsetenv("KRITA_GPU_TRANSFORM");
+    });
+    KisFilterStrategy *filter = KisFilterStrategyRegistry::instance()->value(filterId);
+    QVERIFY(filter);
+    const auto *cs = rgbaFloat(f16);
+    const QRect bounds(-64, -64, 1024, 1024);
+    const QRect content(37, -21, 301, 263);
+    KisPaintDeviceSP source = new KisPaintDevice(cs);
+    source->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+    if (variant == "opaque-default") {
+        KoColor paper(cs);
+        cs->fromNormalisedChannelsValue(paper.data(), {0.95f, 0.9f, 0.85f, 1.0f});
+        source->setDefaultPixel(paper);
+    }
+    if (f16) {
+        // Random F32 values converted to half by the color space.
+        KisPaintDeviceSP f32 = new KisPaintDevice(rgbaFloat(false));
+        fillRandom(f32, content, 11);
+        const auto floats = readPixels(f32, content);
+        QByteArray raw(content.width() * content.height() * cs->pixelSize(), Qt::Uninitialized);
+        rgbaFloat(false)->convertPixelsTo(reinterpret_cast<const quint8 *>(floats.data()),
+                                          reinterpret_cast<quint8 *>(raw.data()),
+                                          cs,
+                                          content.width() * content.height(),
+                                          KoColorConversionTransformation::internalRenderingIntent(),
+                                          KoColorConversionTransformation::internalConversionFlags());
+        source->writeBytes(reinterpret_cast<const quint8 *>(raw.constData()), content);
+    } else {
+        fillRandom(source, content, 11);
+    }
+    if (variant == "offset")
+        source->moveTo(13, -7);
+
+    auto transform = [&](KisPaintDeviceSP device) {
+        KisTransformWorker
+            worker(device, xscale, yscale, xshear, yshear, degrees * M_PI / 180.0, dx, dy, KoUpdaterPtr(), filter);
+        return worker.run();
+    };
+    KisPaintDeviceSP cpu = new KisPaintDevice(*source);
+    qputenv("KRITA_GPU_TRANSFORM", "0");
+    const quint64 before = KisGpuTransformWorker::runCount();
+    QVERIFY(transform(cpu));
+    QCOMPARE(KisGpuTransformWorker::runCount(), before);
+
+    KisPaintDeviceSP gpu = new KisPaintDevice(*source);
+    qputenv("KRITA_GPU_TRANSFORM", "1");
+    const QRect checkRect = (cpu->exactBounds() | source->exactBounds()).adjusted(-80, -80, 80, 80);
+    const auto original = readPixels(gpu, checkRect);
+    KisTransaction transaction(gpu);
+    QVERIFY(transform(gpu));
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo(); // the first redo after endAndTake() only arms the command
+    QCOMPARE(KisGpuTransformWorker::runCount(), before + 1);
+
+    const auto expected = readPixels(cpu, checkRect);
+    const auto actual = readPixels(gpu, checkRect);
+    if (expected != actual) {
+        for (size_t i = 0; i < expected.size(); ++i) {
+            if (std::memcmp(&expected[i], &actual[i], sizeof(float))) {
+                const int pixel = int(i / 4);
+                qInfo() << "first mismatch at"
+                        << checkRect.topLeft() + QPoint(pixel % checkRect.width(), pixel / checkRect.width())
+                        << "channel" << i % 4 << "CPU" << expected[i] << "GPU" << actual[i];
+                break;
+            }
+        }
+    }
+    QVERIFY(expected == actual);
+    QCOMPARE(gpu->exactBounds(), cpu->exactBounds());
+    command->undo();
+    QVERIFY(readPixels(gpu, checkRect) == original);
+    command->redo();
+    QVERIFY(readPixels(gpu, checkRect) == expected);
 }
 
 void KisGpuPaintDeviceTest::testTransformSequenceUndo()
@@ -2092,8 +2239,13 @@ void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
     }
 
     // Transform Tool final renders (also its live in-stack preview), single call.
-    {
+    // Phase 4.94: the affine passes on the GPU (KisGpuTransformWorker).
+    const bool previousProjection = KisGpuMergeBatch::isEnabled();
+    KisGpuMergeBatch::setEnabled(true);
+    for (bool gpuTransform : {false, true}) {
+        qputenv("KRITA_GPU_TRANSFORM", gpuTransform ? "1" : "0");
         std::vector<double> samples;
+        const quint64 runs = KisGpuTransformWorker::runCount();
         for (int i = 0; i < 3; ++i) {
             KisPaintDeviceSP device = fresh();
             KisFilterStrategy *strategy = new KisBicubicFilterStrategy();
@@ -2104,8 +2256,11 @@ void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
             samples.push_back(timer.nsecsElapsed() / 1e6);
             delete strategy;
         }
-        report("affine scale+rotate bicubic", median3(samples));
+        QCOMPARE(KisGpuTransformWorker::runCount() - runs, gpuTransform ? quint64(3) : quint64(0));
+        report(gpuTransform ? "affine scale+rotate GPU" : "affine scale+rotate bicubic", median3(samples));
     }
+    qunsetenv("KRITA_GPU_TRANSFORM");
+    KisGpuMergeBatch::setEnabled(previousProjection);
     {
         QVector<QPointF> original, transformed;
         for (int y = 0; y < 3; ++y)

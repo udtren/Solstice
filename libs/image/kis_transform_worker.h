@@ -133,6 +133,8 @@ private:
     KisFilterStrategy *m_filter;
     QRect m_boundRect;
     bool m_forceSubPixelTranslation {false};
+    // GPU engine (Solstice, phase 4.94): run() processes the whole device.
+    bool m_wholeDevice{false};
 };
 
 #endif // KIS_TRANSFORM_VISITOR_H_

@@ -60,6 +60,8 @@ kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f32 shaders/canvas_patche
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f16 shaders/canvas_patches.comp DEFINES DST_F16)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f16_f32 shaders/canvas_patches.comp DEFINES SRC_F16)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f16_f16 shaders/canvas_patches.comp DEFINES SRC_F16 DST_F16)
+kis_gpu_add_shader(kritagpu_SHADERS transform_pass_rgba32f shaders/transform_pass.comp)
+kis_gpu_add_shader(kritagpu_SHADERS transform_pass_rgba16f shaders/transform_pass.comp DEFINES TILE_F16)
 
 set(kritagpu_LIB_SRCS
     KisGpuVulkanFunctions.cpp
@@ -73,6 +75,7 @@ set(kritagpu_LIB_SRCS
     KisGpuDabCompositor.cpp
     KisGpuLayerCompositor.cpp
     KisGpuCanvasPatchWriter.cpp
+    KisGpuTransformPass.cpp
 )
 
 if(WIN32)

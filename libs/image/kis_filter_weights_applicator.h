@@ -183,8 +183,20 @@ public:
         int m_size;
     };
 
-    template <class T>
-    LinePos processLine(LinePos srcLine, int line, KisFilterWeightsBuffer *buffer, qreal filterSupport) {
+    /**
+     * GPU engine (Solstice, phase 4.94): the destination range and source
+     * borders of a line, shared by processLine() and the GPU transform pass.
+     * An empty line has dstEnd <= dstStart.
+     */
+    struct LineSetup {
+        int dstStart = 0;
+        int dstEnd = 0;
+        int leftSrcBorder = 0;
+        int rightSrcBorder = 0;
+    };
+
+    LineSetup setupLine(LinePos srcLine, int line, KisFilterWeightsBuffer *buffer, qreal filterSupport)
+    {
         int dstStart;
         int dstEnd;
 
@@ -220,14 +232,35 @@ public:
             rightSrcBorder = getRightSrcNeedBorder(dstStart, line, buffer);
         }
 
-        if (dstStart >= dstEnd)  return LinePos(dstStart, 0);
-        if (leftSrcBorder >= rightSrcBorder) return LinePos(dstStart, 0);
+        LineSetup setup;
+        setup.dstStart = dstStart;
+        setup.dstEnd = dstStart;
+        if (dstStart >= dstEnd)
+            return setup;
+        if (leftSrcBorder >= rightSrcBorder)
+            return setup;
         if (leftSrcBorder > srcLine.start()) {
             leftSrcBorder = srcLine.start();
         }
         if (srcLine.end() > rightSrcBorder) {
             rightSrcBorder = srcLine.end();
         }
+        setup.dstEnd = dstEnd;
+        setup.leftSrcBorder = leftSrcBorder;
+        setup.rightSrcBorder = rightSrcBorder;
+        return setup;
+    }
+
+    template<class T>
+    LinePos processLine(LinePos srcLine, int line, KisFilterWeightsBuffer *buffer, qreal filterSupport)
+    {
+        const LineSetup setup = setupLine(srcLine, line, buffer, filterSupport);
+        if (setup.dstEnd <= setup.dstStart)
+            return LinePos(setup.dstStart, 0);
+        const int dstStart = setup.dstStart;
+        const int dstEnd = setup.dstEnd;
+        const int leftSrcBorder = setup.leftSrcBorder;
+        const int rightSrcBorder = setup.rightSrcBorder;
 
         int pixelSize = m_src->pixelSize();
         KoMixColorsOp *mixOp = m_src->colorSpace()->mixColorsOp();

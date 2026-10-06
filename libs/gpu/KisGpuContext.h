@@ -33,6 +33,8 @@ struct KRITAGPU_EXPORT KisGpuDeviceInfo {
     /// Size of the largest DEVICE_LOCAL | HOST_VISIBLE heap (Resizable BAR).
     VkDeviceSize hostVisibleDeviceLocalBytes = 0;
     bool supportsExternalMemoryInterop = false;
+    /// shaderFloat64 is enabled (GPU transforms reproduce the CPU's double math).
+    bool supportsFloat64 = false;
 
     bool isNvidia() const;
     /**

@@ -128,6 +128,9 @@ KisGpuTileAccess::KisGpuTileAccess(KisPaintDeviceSP device, const QRect &rect, M
     d->mode = mode;
     d->deviceOffset = QPoint(device->x(), device->y());
     d->pixelSize = device->pixelSize();
+    // Like a writable CPU iterator: cached bounds must not survive the write.
+    if (mode != ReadOnly)
+        device->invalidateCachedBounds();
 
     if (!rect.isEmpty()) {
         const QRect dmRect = rect.translated(-d->deviceOffset);
@@ -532,6 +535,9 @@ void KisGpuTileAccess::finishUnsubmitted(KisGpuCommandList &commands, const QVec
 void KisGpuTileAccess::publish(quint64 timelineValue)
 {
     KIS_SAFE_ASSERT_RECOVER_RETURN(d->prepared && !d->finished);
+    // Bounds computed while the GPU wrote may describe the old content.
+    if (d->mode != ReadOnly && timelineValue && d->device)
+        d->device->invalidateCachedBounds();
     // Include already-current COW sources, which have no upload entry.
     // Every recorded address remains protected after its CPU pin is released.
     for (KisTileGpuState *state : d->pins) {

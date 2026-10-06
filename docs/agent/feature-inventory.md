@@ -136,6 +136,15 @@ in `kis_brushop.cpp`, and completed upload-source inspection in
 Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
 and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
 from CPU/GPU execution and preserves missing evidence for other walkers.
+Phase 4.94 adds GPU affine transform passes:
+- new `libs/gpu/KisGpuTransformPass.*` and `libs/gpu/shaders/transform_pass.comp`;
+- new `libs/image/gpu/KisGpuTransformWorker.*`;
+- `planGpuPass()/runGpuPasses()` and `m_wholeDevice` in `libs/image/kis_transform_worker.*`;
+- `KisFilterWeightsApplicator::setupLine()` in `libs/image/kis_filter_weights_applicator.h`;
+- `KisGpuDeviceInfo::supportsFloat64` and the optional `shaderFloat64` in `libs/gpu/KisGpuContext.*`;
+- `KisPaintDevice::invalidateCachedBounds()` (`libs/image/kis_paint_device.*`), called by write
+  accesses in `libs/image/gpu/KisGpuTileAccess.cpp`;
+- tests: `KisGpuPaintDeviceTest::testGpuTransformMatchesCpu` and the benchmark's GPU affine row.
 Phase 4.92 adds `KisCanvas2::slotCanvasCacheUpdated()` (`libs/ui/canvas/kis_canvas2.*`): immediate
 `updateCanvasProjection()` on the shared GPU upload path instead of `frameRenderStartCompressor`
 (`KRITA_GPU_CANVAS_IMMEDIATE_UPLOAD=0` restores it).

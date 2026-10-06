@@ -1,0 +1,293 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * One resampling pass of KisTransformWorker (GPU engine phase 4.94):
+ * KisFilterWeightsApplicator::processLine() for every line at once, writing
+ * every pixel of the destination tile grid.
+ *
+ * The result equals the CPU pass bit for bit:
+ *  - calculateBlendSpan(): KisFixedPoint integer arithmetic, the double
+ *    dstToSrc() with a correctly rounded division, and truncation to int;
+ *  - KoMixColorsOpImpl::mixColors() with qint16 weights: double
+ *    accumulation in the CPU order (no contraction), correctly rounded
+ *    divisions, clamping to the channel type and double -> float (-> half)
+ *    rounding to nearest even;
+ *  - borders: the line's first/last source pixel when clamping to edge
+ *    (shear == 0), the device default pixel otherwise.
+ * Pixels outside a line's destination range get the default pixel, which is
+ * what the in-place CPU pass leaves there (the source line is cleared).
+ *
+ * Compile with -DTILE_F16 for RGBA16F tiles.
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+#ifdef TILE_F16
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#define PIXEL f16vec4
+#else
+#define PIXEL vec4
+#endif
+
+layout(local_size_x = 64, local_size_y = 1) in;
+
+layout(buffer_reference, std430, buffer_reference_align = 8) buffer TilePixels
+{
+    PIXEL px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer AddressTable
+{
+    uint64_t addr[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer LineTable
+{
+    ivec2 range[]; // [dstStart, dstEnd) per line
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer WeightTable
+{
+    int value[]; // per offset (256): span, centerIndex, weights[maxSpan]
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer Params
+{
+    double scale;
+    double shear;
+    double dx;
+    int weightsPositionScale; // KisFixedPoint raw value
+    int srcStart;
+    int srcEnd;
+    int clampToEdge;
+    int vertical; // 0: lines are rows (x pass), 1: lines are columns (y pass)
+    int lineFirst;
+    int lineCount;
+    int maxSpan;
+    ivec2 srcGridOrigin; // image coordinates of the source grid's first tile
+    int srcGridWidth;
+    int srcGridHeight;
+    ivec2 dstGridOrigin;
+    int dstGridWidth;
+    int dstGridHeight;
+    vec4 defaultPixel;
+};
+
+layout(push_constant) uniform Constants
+{
+    Params params;
+    AddressTable srcTiles;
+    AddressTable dstTiles;
+    LineTable lines;
+    WeightTable weights;
+}
+constants;
+
+uvec2 bitsOf(double value)
+{
+    return unpackDouble2x32(value);
+}
+
+// The double @p steps representable values away from @p value (same sign).
+double neighborDouble(double value, int steps)
+{
+    uvec2 parts = unpackDouble2x32(value);
+    uint64_t bits = (uint64_t(parts.y) << 32) | uint64_t(parts.x);
+    bits = uint64_t(int64_t(bits) + int64_t(steps));
+    return packDouble2x32(uvec2(uint(bits & 0xffffffffUL), uint(bits >> 32)));
+}
+
+// Correctly rounded a / b (the CPU's IEEE division) for finite operands.
+double exactDivide(double a, double b)
+{
+    precise double q = a / b;
+    if (a == 0.0LF || isinf(q) || isnan(q))
+        return q;
+    double best = q;
+    double bestResidual = abs(fma(-q, b, a));
+    for (int i = -2; i <= 2; ++i) {
+        if (i == 0)
+            continue;
+        precise double candidate = neighborDouble(q, i);
+        precise double residual = abs(fma(-candidate, b, a));
+        if (residual < bestResidual) {
+            best = candidate;
+            bestResidual = residual;
+        }
+    }
+    return best;
+}
+
+// double -> float, rounded to nearest even like a C++ conversion.
+float toFloat(double value)
+{
+    precise float f = float(value);
+    if (isinf(f) || isnan(f) || double(f) == value)
+        return f;
+    float best = f;
+    double bestError = abs(double(f) - value);
+    for (int i = -1; i <= 1; i += 2) {
+        uint bits = floatBitsToUint(f);
+        float candidate = uintBitsToFloat(uint(int(bits) + i));
+        double error = abs(double(candidate) - value);
+        if (error < bestError || (error == bestError && (floatBitsToUint(candidate) & 1u) == 0u)) {
+            best = candidate;
+            bestError = error;
+        }
+    }
+    return best;
+}
+
+#ifdef TILE_F16
+// Imath float -> half rounding (nearest even, denormals included).
+float roundToHalf(float value)
+{
+    uint x = floatBitsToUint(value);
+    if (value == 0.0)
+        return value;
+    uint sign = (x >> 16) & 0x8000u;
+    int e = int((x >> 23) & 0xffu) - 127 + 15;
+    uint m = x & 0x007fffffu;
+    uint h;
+    if (e <= 0) {
+        if (e < -10)
+            return uintBitsToFloat(sign << 16);
+        m |= 0x00800000u;
+        int t = 14 - e;
+        uint a = (1u << uint(t - 1)) - 1u;
+        uint b = (m >> uint(t)) & 1u;
+        h = sign | ((m + a + b) >> uint(t));
+    } else {
+        h = (sign | (uint(e) << 10)) + ((m + 0x00000fffu + ((m >> 13) & 1u)) >> 13);
+    }
+    return unpackHalf2x16(h).x;
+}
+const double ChannelMax = 65504.0LF; // HALF_MAX
+#else
+const double ChannelMax = 3.4028234663852886e38LF; // FLT_MAX
+#endif
+
+float storeChannel(double value)
+{
+    if (value > ChannelMax)
+        value = ChannelMax;
+    if (value < -ChannelMax)
+        value = -ChannelMax;
+    float f = toFloat(value);
+#ifdef TILE_F16
+    f = roundToHalf(f);
+#endif
+    return f;
+}
+
+vec4 sourcePixel(int x, int y)
+{
+    const ivec2 p = ivec2(x, y) - constants.params.srcGridOrigin;
+    const ivec2 tile = p >> 6;
+    if (any(lessThan(p, ivec2(0))) || tile.x >= constants.params.srcGridWidth
+        || tile.y >= constants.params.srcGridHeight)
+        return constants.params.defaultPixel;
+    const uint64_t address = constants.srcTiles.addr[tile.y * constants.params.srcGridWidth + tile.x];
+    if (address == 0)
+        return constants.params.defaultPixel;
+    const ivec2 inTile = p & 63;
+    return vec4(TilePixels(address).px[inTile.y * 64 + inTile.x]);
+}
+
+// Source pixel at position @p pos of @p line, with the line's borders.
+vec4 linePixel(int pos, int line)
+{
+    const int start = constants.params.srcStart;
+    const int end = constants.params.srcEnd;
+    if (pos < start || pos >= end) {
+        if (constants.params.clampToEdge == 0)
+            return constants.params.defaultPixel;
+        pos = pos < start ? start : end - 1;
+    }
+    return constants.params.vertical != 0 ? sourcePixel(line, pos) : sourcePixel(pos, line);
+}
+
+int toIntCeil(int d)
+{
+    return d >= 0 ? (d + 255) >> 8 : -((-d) >> 8);
+}
+
+int toIntFloor(int d)
+{
+    return d >= 0 ? d >> 8 : -((-d + 255) >> 8);
+}
+
+vec4 resample(int pos, int line)
+{
+    // calculateBlendSpan(): dst_c = l_to_c(dst_l) in 24.8 fixed point.
+    const int dstC = pos * 256 + 128;
+    precise double dstCenter = double(dstC) / 256.0LF;
+    precise double shifted = dstCenter - constants.params.dx;
+    precise double lineShear = double(line) * constants.params.shear;
+    precise double numerator = shifted - lineShear;
+    const double inSrc = exactDivide(numerator, constants.params.scale);
+    precise double inSrcScaled = inSrc * 256.0LF;
+    const int dstCInSrc = int(inSrcScaled); // static_cast<int>: truncation
+    const int nextC = toIntCeil(dstCInSrc - 128) * 256 + 128;
+    const int offset = ((nextC - dstCInSrc) * constants.params.weightsPositionScale) >> 8;
+    const int entry = offset * (constants.params.maxSpan + 2);
+    const int span = constants.weights.value[entry];
+    const int centerIndex = constants.weights.value[entry + 1];
+    const int first = toIntFloor(nextC) - centerIndex;
+
+    // KoMixColorsOpImpl::mixColors() with weights summing to 255.
+    precise double totalR = 0.0LF;
+    precise double totalG = 0.0LF;
+    precise double totalB = 0.0LF;
+    precise double totalAlpha = 0.0LF;
+    for (int k = 0; k < span; ++k) {
+        const vec4 color = linePixel(first + k, line);
+        const double weight = double(constants.weights.value[entry + 2 + k]);
+        precise double alphaTimesWeight = double(color.a) * weight;
+        precise double r = double(color.r) * alphaTimesWeight;
+        precise double g = double(color.g) * alphaTimesWeight;
+        precise double b = double(color.b) * alphaTimesWeight;
+        totalR = totalR + r;
+        totalG = totalG + g;
+        totalB = totalB + b;
+        totalAlpha = totalAlpha + alphaTimesWeight;
+    }
+    if (!(totalAlpha > 0.0LF))
+        return vec4(0.0);
+    return vec4(storeChannel(exactDivide(totalR, totalAlpha)),
+                storeChannel(exactDivide(totalG, totalAlpha)),
+                storeChannel(exactDivide(totalB, totalAlpha)),
+                storeChannel(exactDivide(totalAlpha, 255.0LF)));
+}
+
+void main()
+{
+    const int gridPixelsX = constants.params.dstGridWidth * 64;
+    const int gridPixelsY = constants.params.dstGridHeight * 64;
+    const int gx = int(gl_GlobalInvocationID.x);
+    const int gy = int(gl_GlobalInvocationID.y);
+    if (gx >= gridPixelsX || gy >= gridPixelsY)
+        return;
+    const int x = constants.params.dstGridOrigin.x + gx;
+    const int y = constants.params.dstGridOrigin.y + gy;
+    const int line = constants.params.vertical != 0 ? x : y;
+    const int pos = constants.params.vertical != 0 ? y : x;
+
+    vec4 result = constants.params.defaultPixel;
+    const int lineIndex = line - constants.params.lineFirst;
+    if (lineIndex >= 0 && lineIndex < constants.params.lineCount) {
+        const ivec2 range = constants.lines.range[lineIndex];
+        if (pos >= range.x && pos < range.y)
+            result = resample(pos, line);
+    }
+
+    const ivec2 tile = ivec2(gx, gy) >> 6;
+    const uint64_t address = constants.dstTiles.addr[tile.y * constants.params.dstGridWidth + tile.x];
+    if (address == 0)
+        return;
+    const ivec2 inTile = ivec2(gx, gy) & 63;
+    TilePixels(address).px[inTile.y * 64 + inTile.x] = PIXEL(result);
+}

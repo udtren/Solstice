@@ -223,7 +223,14 @@ finished canvas updates are now sent to the display texture immediately
 instead of after the frame-rate limiter's interval; Wash strokes reached the
 screen in about 5.7ms (median) instead of about 8.2ms, while Buildup strokes
 stayed at about 5.5ms. Most of the remaining time is waiting for the screen's
-next refresh. With mirroring and
+next refresh.
+
+The Transform Tool's scale, rotate and shear (Free Transform without
+perspective) are now applied on the GPU for RGBA 32/16-bit float layers. The
+result is identical to the CPU result, pixel for pixel. In a measurement on a
+2480x3508 layer, applying a scale and rotation took about 63ms instead of
+about 430ms. The preview while editing, perspective, warp, Puppet Warp,
+Liquify, cage and mesh transforms still run on the CPU. With mirroring and
 blend modes such as Overlay or Dodge, where mirrored dabs overlap the stroke,
 the result can differ slightly from a CPU stroke because the dabs are grouped
 differently; the CPU brush shows the same kind of variation between strokes.

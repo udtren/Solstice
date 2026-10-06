@@ -6155,6 +6155,117 @@ Notes:
 
   This needs the user's choice.
 
+### GPU affine transform passes (phase 4.94)
+
+The user chose the Transform Tool, starting with the affine transform.
+
+**How the CPU worker works.** `KisTransformWorker::runPartial` resamples with
+two in-place passes, `transformPass<H>` then `transformPass<V>`. The general
+branch uses `a, b, c` / `e, d, f`; the shear branch uses
+`xscale, yscale*xshear, 0` / `yscale, yshear, 0`.
+
+- Each line runs `KisFilterWeightsApplicator::processLine`. For every
+  destination pixel, `calculateBlendSpan` uses `KisFixedPoint` (24.8)
+  arithmetic plus one double `dstToSrc()` division to pick one of the 256
+  `KisFilterWeightsBuffer` entries (`qint16` weights summing to 255).
+- `KoMixColorsOpImpl::mixColors` blends with double accumulators
+  (`mixtype` is double for float and half), divides, clamps to
+  +-FLT_MAX / +-HALF_MAX, and stores; half stores go double -> float -> half.
+- Source pixels outside the line come from the line's first/last pixel when
+  `shear == 0` (clamp to edge); otherwise from the device default pixel.
+- The source line is cleared to the default pixel, then the destination range
+  is written.
+
+**GPU implementation.**
+
+- **`libs/gpu/shaders/transform_pass.comp`** (RGBA32F/F16):
+  - One invocation per pixel of the destination tile grid.
+  - Resampled pixels inside each line's `[dstStart, dstEnd)`; the default
+    pixel elsewhere, which is what the in-place CPU passes leave there.
+  - The span lookup is the same integer fixed-point code with `precise`
+    doubles and a correctly rounded division (fma residual over neighbouring
+    doubles), plus `int()` truncation.
+  - Accumulation follows the CPU's order without contraction. Divisions are
+    correctly rounded, and double -> float uses nearest-even with neighbour
+    checks; F16 then rounds like Imath (`roundToHalf`).
+  - A non-positive total alpha gives zeros, as the CPU's `memset`.
+- **`KisGpuTransformPass`** (`libs/gpu`) records a pass from line ranges,
+  weights and tile tables. It requires `shaderFloat64`, which `KisGpuContext`
+  now enables when supported (`KisGpuDeviceInfo::supportsFloat64`).
+- **`KisFilterWeightsApplicator::setupLine()`** now holds the line setup from
+  `processLine()` (destination range and source borders); `processLine()`
+  calls it. Both the CPU and the GPU plan use the same code.
+- **`kis_transform_worker.cc::planGpuPass()/runGpuPasses()`** plan both
+  passes with the CPU classes. The weights headers define non-inline
+  functions and can only be included in this translation unit.
+- **`KisGpuTransformWorker::runPlannedPasses()`** (`libs/image/gpu`):
+  - The x pass goes from the device (`ReadOnly`) into a temporary device
+    (`WriteOnly`).
+  - The y pass goes from the temporary device into the device, `WriteOnly`
+    over the tile grid of source | x rect | y rect.
+  - Each pass is its own submission and waits; on failure the device is
+    unchanged and the CPU passes run.
+  - The written rect is then downloaded in one batch, because the following
+    CPU `purgeDefaultPixels()` downloaded the tiles one by one (about 250ms
+    instead of about 15ms).
+- **Scope.**
+  - Only `KisTransformWorker::run()` (`m_wholeDevice`): `runPartial()` callers
+    may have pixels outside the rect, which the in-place CPU passes leave
+    untouched.
+  - RGBA32F/F16, with LOD 0, no wrap-around, and a line setup that is never
+    empty (an empty CPU line keeps its source pixels).
+  - `KRITA_GPU_TRANSFORM=0` disables it; it is also off when the GPU engine
+    is disabled.
+  - The 90-degree quadrant pre-rotation, simple translations and flips, and
+    the single-pass shear stay on the CPU, as do the perspective worker, warp,
+    Puppet Warp, Liquify, cage and mesh.
+  - The Transform Tool's live preview renders at a preview level of detail,
+    so it stays on the CPU. The final apply (`transformDevice` ->
+    `KisTransformWorker::run()`) uses the GPU. Free Transform's perspective
+    pass returns at once for an identity perspective.
+- **Cached bounds.** GPU writes did not invalidate `KisPaintDevice`'s cached
+  bounds, whereas writable CPU iterators invalidate them when created. The
+  first parity run returned the pre-transform `exactBounds()`. New
+  `KisPaintDevice::invalidateCachedBounds()` is now called by
+  `KisGpuTileAccess` for write accesses at construction and on publish.
+- **Debug.** `KRITA_GPU_TRANSFORM_DEBUG=1` prints stage times; trace scope
+  `transform.gpu_passes`.
+
+**Tests** (Vulkan validation):
+
+- New `KisGpuPaintDeviceTest::testGpuTransformMatchesCpu`, 58 rows, all
+  bit-identical to the CPU, with exact bounds and Undo/Redo:
+  - F32 and F16;
+  - scale+rotate, upscale, downscale, rotate only, sub-pixel scale,
+    non-uniform, flip+scale, 100 degrees (quadrant), shear+scale, two-axis
+    shear and tiny scale;
+  - plain, offset device and opaque default pixel variants;
+  - every filter strategy.
+- `KisGpuPaintDeviceTest` 209 (1 skipped: the opt-in benchmark),
+  `KisGpuProjectionTest` 199, `KisGpuBrushTest` 4451, `KisGpuStrokeTest` 360,
+  `KisGpuBrushJobsTest` 41, `KisGpuEngineTest` 11, `KisGpuCanvasUploadTest` 38,
+  `KisGpuGLInteropTest` 3.
+- `kis_transform_worker_test` 40, also with `KRITA_GPU_PROJECTION=1`; its
+  devices are mostly 8-bit, which the GPU path does not handle.
+- `kis_paint_device_test` 51.
+
+**Benchmark** (2480x3508 RGBA32F, scale 0.9, rotate 10 degrees, bicubic,
+CPU-resident source): CPU 432ms, GPU 63ms (6.8x).
+
+- The GPU passes take 33-56ms. The compute is about 3ms per pass; the rest is
+  uploading a CPU-resident source, allocating the destination tiles and the
+  batched download.
+- Planning takes 0.1ms.
+
+Installed gpu/image/ui/defaultpaintops; hashes match. The user reported the
+manual checks OK on 2026-10-06:
+- Free Transform scale and rotate on normal and Background layers: speed,
+  result, Undo/Redo;
+- flips, large down- and upscales;
+- RGBA16F documents;
+- unchanged perspective, warp, Puppet Warp and Liquify;
+- image resize and rotate.
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.

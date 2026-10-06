@@ -1500,6 +1500,11 @@ void KisPaintDevice::crop(const QRect &rect)
     m_d->currentStrategy()->crop(rect);
 }
 
+void KisPaintDevice::invalidateCachedBounds()
+{
+    m_d->cache()->invalidate();
+}
+
 void KisPaintDevice::purgeDefaultPixels()
 {
     KisDataManagerSP dm = m_d->dataManager();
