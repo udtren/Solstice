@@ -5695,6 +5695,65 @@ Not yet measured in the app. Manual checks: Soft brushes (default and edited
 curves, softness by pressure), RGBA 16-bit float documents with the Basic-4 and
 Soft brushes, mirror, Undo/Redo. The user reported them OK on 2026-10-06.
 
+### GPU brush update period (phase 4.88)
+
+- **Problem.** In the 4.84/4.85 captures, dabs were ready about 0.06ms after
+  their request but waited about 10ms for the next batch. `KisBrushOp`
+  returns an update period of 10-100ms (upstream, tuned for CPU rasterization
+  by worker threads), and `FreehandStrokeStrategy::tryDoUpdate()` starts a
+  batch only when `elapsed() > period`. With inputs every 5ms, the strict
+  `> 10` let only every third input start a batch.
+- **Change.**
+  - On the GPU path (`m_isRgbaFloatImage && KisGpuBrushPainter::supports()`),
+    `KisBrushOp::doAsynchronousUpdate()` returns `gpuMinimumUpdatePeriod()`
+    both before taking a batch and from the batch's final job, overriding the
+    adaptive and byte-limit values.
+  - The default is -1, so every trigger (input, or a finished dab job, which
+    is a `FreehandStrokeRunnableJobDataWithUpdate`) starts a batch once the
+    previous one is done. Only one batch is in flight (`m_updateSharedState`).
+    The 32 MiB byte budget per batch is unchanged.
+  - `KRITA_GPU_BRUSH_MIN_UPDATE_MS` (-1 to 100, read once) overrides the
+    default for comparisons. `setGpuMinimumUpdatePeriodForTesting()` overrides
+    it in tests; a value below -1 restores the default.
+  - `FreehandStrokeStrategy` starts at -1 instead of 40ms when the GPU brush is
+    enabled, so the first batch is not delayed either.
+  - The CPU path is unchanged.
+- **Batch partition and mirrors.** Each batch paints its dabs and then their
+  reflections. With mirroring and a non-commutative blend mode (overlay, dodge
+  and so on), where reflections overlap the original dabs, the result depends on
+  how the stroke is split into batches. This holds for the CPU path as well,
+  whose split also depends on timing. With -1, 74 rows of
+  `testBlendModes`/`testHalfBlendModes` (mirrored, Buildup) failed against the
+  CPU reference by up to 0.05. With `KRITA_GPU_BRUSH_MIN_UPDATE_MS` 0, 4 or 10
+  they passed. So the cause is the different split, not the GPU math. Those
+  mirrored blend-mode rows now give the GPU path the 10ms period. The new
+  unmirrored rows (overlay, dodge, saturation; Buildup and Wash) keep the -1
+  default and match the CPU.
+
+Tests (Vulkan validation): `KisGpuStrokeTest` 360/360 (6 new unmirrored rows).
+Installed ui/defaultpaintops. Manual checks (fast diagonal and horizontal
+strokes with Basic-4 and Soft, mirror, Wash, Undo/Redo, long strokes) were
+reported OK by the user on 2026-10-06.
+
+Real-app capture PID 45620 (6 strokes, 0 dropped events; the separate
+manual-check process 18676 overflowed and is not analyzed), against 4.85
+PID 39228. Both use Basic-4 at 256px with similar dab rates (760-980 vs
+620-1150 dabs/s):
+
+| Metric (per stroke) | 4.85 | 4.88 |
+| --- | --- | --- |
+| Dab request to batch intake, median | 10.0-11.0ms | 0.33-0.81ms (one stroke 4.5ms) |
+| Dab request to batch intake, p95 | 20.0-25.0ms | 5.1-5.5ms |
+| Batches per stroke | 4-7 (3-41 dabs) | 20-31 (1-11 dabs) |
+| Input to swap, median | 18.1-23.7ms | 7.0-12.7ms |
+| Input to swap, p95 | 40.4-46.4ms | 11.6-39.3ms |
+
+Byte-limited batches: none in either capture. Covered-to-swapped commands
+rose from 516 to 1125, consistent with more, smaller canvas updates. Strokes
+are hand-drawn, so the numbers vary with direction and speed. Still, the
+removed wait matches the old 10ms period, and every stroke improved its median
+input-to-swap.
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.

@@ -201,6 +201,16 @@ the CPU time spent preparing dabs during strokes by about eight times. The
 time to the screen stayed in the same range; the brush's own update interval
 is now the largest remaining wait.
 
+With the GPU brush, the brush no longer waits for its minimum update interval
+(10ms or more): a new GPU update starts as soon as new dabs are ready and the
+previous update has finished. Painting without the GPU brush is unchanged. In a
+capture of six Basic-4 strokes at 256px, the median time from input to the
+screen fell from about 18-24ms to 7-13ms per stroke. Hand-drawn strokes vary,
+so treat these numbers as an observation. With mirroring and
+blend modes such as Overlay or Dodge, where mirrored dabs overlap the stroke,
+the result can differ slightly from a CPU stroke because the dabs are grouped
+differently; the CPU brush shows the same kind of variation between strokes.
+
 The labels describe observed paths: this scene reused child images and skipped
 extra layer composition, so the middle column is **not a GPU layer-compositing
 benchmark**. GPU brush submissions and shared-buffer transfers were recorded;

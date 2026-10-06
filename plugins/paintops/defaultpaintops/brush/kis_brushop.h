@@ -37,6 +37,11 @@ public:
     /// GPU engine (Solstice): dabs whose skipped CPU generation had to be
     /// rendered for a CPU use (diagnostics, tests).
     static quint64 materializedDabCount();
+    /// GPU engine (Solstice): the update period on the GPU brush path (ms;
+    /// -1 means every stroke trigger). KRITA_GPU_BRUSH_MIN_UPDATE_MS overrides it.
+    static int gpuMinimumUpdatePeriod();
+    /// Overrides gpuMinimumUpdatePeriod(); a value below -1 restores the default.
+    static void setGpuMinimumUpdatePeriodForTesting(int period);
 
     KisBrushOp(const KisPaintOpSettingsSP settings, KisPainter * painter, KisNodeSP node, KisImageSP image);
     ~KisBrushOp() override;

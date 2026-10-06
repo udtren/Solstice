@@ -161,6 +161,14 @@ namespace
 {
 std::atomic<quint64> s_materializedDabs{0};
 
+int initialGpuUpdatePeriod()
+{
+    bool valid = false;
+    const int value = qEnvironmentVariableIntValue("KRITA_GPU_BRUSH_MIN_UPDATE_MS", &valid);
+    return valid ? qBound(-1, value, 100) : -1;
+}
+std::atomic<int> s_gpuUpdatePeriod{initialGpuUpdatePeriod()};
+
 void materializePendingDabs(QList<KisRenderedDab> &dabs)
 {
     for (KisRenderedDab &dab : dabs) {
@@ -175,6 +183,19 @@ void materializePendingDabs(QList<KisRenderedDab> &dabs)
 quint64 KisBrushOp::materializedDabCount()
 {
     return s_materializedDabs.load();
+}
+
+int KisBrushOp::gpuMinimumUpdatePeriod()
+{
+    // GPU engine (Solstice, phase 4.88): -1 lets the stroke start a batch at
+    // every trigger (input or finished dab job) once the previous batch is
+    // done. KRITA_GPU_BRUSH_MIN_UPDATE_MS overrides it for comparisons.
+    return s_gpuUpdatePeriod.load();
+}
+
+void KisBrushOp::setGpuMinimumUpdatePeriodForTesting(int period)
+{
+    s_gpuUpdatePeriod = period < -1 ? initialGpuUpdatePeriod() : qMin(period, 100);
 }
 
 struct KisBrushOp::UpdateSharedState {
@@ -293,6 +314,14 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
     bool someDabsAreStillInQueue = false;
     bool stoppedByByteLimit = false;
     const bool hasPreparedDabsAtStart = m_dabExecutor->hasPreparedDabs();
+
+    // GPU engine (Solstice, phase 4.88): on the GPU path a batch costs a
+    // submission, not CPU rasterization by worker threads, so the CPU-tuned
+    // 10-100 ms update period only delays dabs that are already ready.
+    const bool gpuPath = m_isRgbaFloatImage && KisGpuBrushPainter::supports(painter());
+    if (gpuPath) {
+        m_currentUpdatePeriod = gpuMinimumUpdatePeriod();
+    }
 
     if (!m_updateSharedState && hasPreparedDabsAtStart) {
         m_updateSharedState = toQShared(new UpdateSharedState());
@@ -414,7 +443,7 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
         }
 
         KritaUtils::addJobSequential(jobs,
-                [state, this, someDabsAreStillInQueue, stoppedByByteLimit] () {
+                [state, this, someDabsAreStillInQueue, stoppedByByteLimit, gpuPath] () {
                     Q_FOREACH(const QRect &rc, state->allDirtyRects) {
                         state->painter->addDirtyRect(rc);
                     }
@@ -465,6 +494,9 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
                     // in flight at a time (m_updateSharedState).
                     if (someDabsAreStillInQueue && stoppedByByteLimit) {
                         m_currentUpdatePeriod = 0;
+                    }
+                    if (gpuPath) {
+                        m_currentUpdatePeriod = gpuMinimumUpdatePeriod();
                     }
 
 

@@ -136,6 +136,11 @@ in `kis_brushop.cpp`, and completed upload-source inspection in
 Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
 and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
 from CPU/GPU execution and preserves missing evidence for other walkers.
+Phase 4.88 shortens the GPU brush update period: `KisBrushOp::gpuMinimumUpdatePeriod()`
+and `setGpuMinimumUpdatePeriodForTesting()` (`KRITA_GPU_BRUSH_MIN_UPDATE_MS`) applied in
+`doAsynchronousUpdate()` of `plugins/paintops/defaultpaintops/brush/kis_brushop.*`, and the
+initial period in `libs/ui/tool/strokes/freehand_stroke.cpp`; unmirrored blend-mode rows
+in `KisGpuStrokeTest`.
 Phases 4.86/4.87 add RGBA16F and Soft (curve) generated dabs:
 `KisProceduralCircleDab::halfPixels/matchesPixel()/softFadeAt()`, Soft accessors in
 `libs/image/kis_curve_circle_mask_generator.*`, the Soft table cache and F16 color in

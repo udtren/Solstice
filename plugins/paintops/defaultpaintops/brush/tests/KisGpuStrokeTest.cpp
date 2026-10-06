@@ -282,6 +282,11 @@ private Q_SLOTS:
                 for (int channels : {15, 7, 5})
                     QTest::newRow(qPrintable(QString("%1-wash%2-channels%3").arg(mode).arg(wash).arg(channels)))
                         << 128 << wash << true << false << false << false << channels << mode;
+        // Phase 4.88: without mirrors the GPU batches at its own (shorter) period.
+        for (const auto &mode : {COMPOSITE_OVERLAY, COMPOSITE_DODGE, COMPOSITE_SATURATION})
+            for (bool wash : {false, true})
+                QTest::newRow(qPrintable(QString("%1-wash%2-unmirrored").arg(mode).arg(wash)))
+                    << 128 << wash << false << false << false << false << 15 << mode;
     }
     void testBlendModes()
     {
@@ -364,7 +369,13 @@ private:
         QFETCH(bool, alphaOnly);
         const auto previousBrush = qgetenv("KRITA_GPU_BRUSH");
         const bool previousProjection = KisGpuMergeBatch::isEnabled();
+        // Each batch paints its dabs and then their reflections, so with
+        // mirrors and a non-commutative blend mode the result depends on how
+        // the stroke is split into batches. Give both paths the CPU period.
+        if (mirrors && !modeOverride.isEmpty())
+            KisBrushOp::setGpuMinimumUpdatePeriodForTesting(10);
         const auto restore = qScopeGuard([&]() {
+            KisBrushOp::setGpuMinimumUpdatePeriodForTesting(-2);
             if (previousBrush.isNull())
                 qunsetenv("KRITA_GPU_BRUSH");
             else

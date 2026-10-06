@@ -32,6 +32,7 @@
 
 #include "brushengine/kis_paintop_utils.h"
 #include "KisAsynchronousStrokeUpdateHelper.h"
+#include "gpu/KisGpuBrushPainter.h"
 
 struct FreehandStrokeStrategy::Private
 {
@@ -61,7 +62,9 @@ struct FreehandStrokeStrategy::Private
     KisStrokeEfficiencyMeasurer efficiencyMeasurer;
 
     QElapsedTimer timeSinceLastUpdate;
-    int currentUpdatePeriod = 40;
+    // GPU engine (Solstice, phase 4.88): with the GPU brush, attempt the
+    // first update at once; the paint op then returns its own period.
+    int currentUpdatePeriod = KisGpuBrushPainter::isEnabled() ? -1 : 40;
 
     const bool needsAsynchronousUpdates = false;
     std::mutex updateEntryMutex;
