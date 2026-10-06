@@ -104,6 +104,14 @@ public:
     create(KisGpuContext &context, KisGpuTileFormat format, QString *errorMessage = nullptr);
 
     /**
+     * Compiles the context's shared pipelines for @p format (basic and, with
+     * @p extended, the extended blend modes) so a later create()/record()
+     * does not wait for compilation. Thread-safe; returns false on failure.
+     */
+    static bool
+    preparePipelines(KisGpuContext &context, KisGpuTileFormat format, bool extended, QString *errorMessage = nullptr);
+
+    /**
      * @param layerTiles layer-major, layerTiles[layer * tileCount + tile]; 0 skips the tile
      * @param dstTiles destination tiles (read and written)
      * @param mask optional single-layer coverage; copied into the
@@ -122,8 +130,9 @@ private:
     explicit KisGpuLayerCompositor(KisGpuContext &context);
 
     KisGpuContext &m_context;
-    std::unique_ptr<KisGpuComputePipeline> m_pipeline;
-    std::unique_ptr<KisGpuComputePipeline> m_extendedPipeline;
+    // Shared by all compositors of the context (KisGpuContext::sharedComputePipeline).
+    std::shared_ptr<KisGpuComputePipeline> m_pipeline;
+    std::shared_ptr<KisGpuComputePipeline> m_extendedPipeline;
     bool m_f16 = false;
     std::unique_ptr<KisGpuBuffer> m_tables;
 };

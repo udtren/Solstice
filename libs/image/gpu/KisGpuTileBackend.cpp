@@ -9,6 +9,8 @@
 #include <KisGpuBuffer.h>
 #include <KisGpuCommandList.h>
 #include <KisGpuContext.h>
+#include <KisGpuDabCompositor.h>
+#include <KisGpuLayerCompositor.h>
 
 #include <QMutexLocker>
 #include <QSet>
@@ -81,6 +83,24 @@ KisGpuTileBackend *KisGpuTileBackend::instance()
         s_instance = new KisGpuTileBackend(std::move(context));
     });
     return s_instance;
+}
+
+bool KisGpuTileBackend::preparePipelines()
+{
+    KisGpuTileBackend *backend = instance();
+    if (!backend)
+        return false;
+    KisGpuContext &context = backend->context();
+    KisPaintTrace::Scope trace("gpu.prepare_pipelines", backend);
+    QString error;
+    // The first Wash merges and dab batches used to compile these on demand,
+    // in every work context (about 60-140ms each).
+    bool ok = KisGpuDabCompositor::preparePipelines(context, &error);
+    for (KisGpuTileFormat format : {KisGpuTileFormat::RGBA32F, KisGpuTileFormat::RGBA16F})
+        ok = KisGpuLayerCompositor::preparePipelines(context, format, true, &error) && ok;
+    if (!ok)
+        warnKrita << "GPU engine: preparing compute pipelines failed:" << error;
+    return ok;
 }
 
 KisGpuTileBackend *KisGpuTileBackend::existingInstance()

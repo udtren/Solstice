@@ -4,12 +4,15 @@
  */
 
 #include "KisGpuContext.h"
+#include "KisGpuComputePipeline.h"
 
 #include <QAtomicInt>
 #include <QVector>
 
 #include <chrono>
 #include <cstring>
+#include <map>
+#include <utility>
 
 #include <kis_debug.h>
 
@@ -90,6 +93,14 @@ struct KisGpuContext::Private {
     quint64 lastSubmitted = 0;
     int injectedSubmitFailures = 0; // guarded by queueMutex
 
+    struct SharedPipeline {
+        QMutex mutex; // held while compiling
+        std::shared_ptr<KisGpuComputePipeline> pipeline;
+    };
+    QMutex pipelinesMutex;
+    std::map<std::pair<const quint32 *, quint32>, std::shared_ptr<SharedPipeline>> pipelines;
+    QAtomicInt pipelineCompiles;
+
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
                                                         VkDebugUtilsMessageTypeFlagsEXT types,
                                                         const VkDebugUtilsMessengerCallbackDataEXT *data,
@@ -105,10 +116,42 @@ KisGpuContext::KisGpuContext()
 {
 }
 
+std::shared_ptr<KisGpuComputePipeline> KisGpuContext::sharedComputePipeline(const quint32 *spirv,
+                                                                            size_t spirvSizeBytes,
+                                                                            quint32 pushConstantSize,
+                                                                            QString *errorMessage)
+{
+    std::shared_ptr<Private::SharedPipeline> entry;
+    {
+        QMutexLocker locker(&d->pipelinesMutex);
+        auto &slot = d->pipelines[std::make_pair(spirv, pushConstantSize)];
+        if (!slot)
+            slot = std::make_shared<Private::SharedPipeline>();
+        entry = slot;
+    }
+    QMutexLocker locker(&entry->mutex);
+    if (!entry->pipeline) {
+        std::unique_ptr<KisGpuComputePipeline> pipeline =
+            KisGpuComputePipeline::create(*this, spirv, spirvSizeBytes, pushConstantSize, errorMessage);
+        if (!pipeline)
+            return nullptr;
+        entry->pipeline = std::move(pipeline);
+        d->pipelineCompiles.ref();
+    }
+    return entry->pipeline;
+}
+
+int KisGpuContext::sharedComputePipelineCompileCount() const
+{
+    return d->pipelineCompiles.loadAcquire();
+}
+
 KisGpuContext::~KisGpuContext()
 {
     if (d->device) {
         d->vk.vkDeviceWaitIdle(d->device);
+        // Shared pipelines not referenced elsewhere are destroyed here.
+        d->pipelines.clear();
         if (d->timeline) {
             d->vk.vkDestroySemaphore(d->device, d->timeline, nullptr);
         }

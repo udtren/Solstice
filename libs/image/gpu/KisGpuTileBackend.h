@@ -41,6 +41,14 @@ public:
     /// The backend if it has already been created, without trying to create it.
     static KisGpuTileBackend *existingInstance();
     static QString unavailableReason();
+    /**
+     * GPU engine (Solstice, phase 4.91): compiles the dab and layer compositor
+     * pipelines (RGBA32F/F16, basic and extended blend modes) ahead of the
+     * first stroke. Blocking and thread-safe; meant for a background thread.
+     * Pipelines that are already compiled are reused. Returns false if the
+     * backend is unavailable or a compilation failed (later use retries).
+     */
+    static bool preparePipelines();
 
     KisGpuContext &context();
 

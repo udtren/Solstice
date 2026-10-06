@@ -2321,6 +2321,24 @@ private:
         QCOMPARE(pixels(gpu->paintDevice(), bounds), after);
     }
 private Q_SLOTS:
+    void testPreparePipelines()
+    {
+        // Phase 4.91: compiling ahead is idempotent; afterwards, new work
+        // contexts and Wash previews compile nothing.
+        auto &context = KisGpuTileBackend::instance()->context();
+        QVERIFY(KisGpuTileBackend::preparePipelines());
+        const int compiled = context.sharedComputePipelineCompileCount();
+        QVERIFY(KisGpuTileBackend::preparePipelines());
+        QVERIFY(KisGpuProjectionCompositor::resetWorkContextsForTesting());
+        const QRect bounds(-77, -29, 131, 93);
+        KisPaintDeviceSP source = new KisPaintDevice(space()), destination = new KisPaintDevice(space());
+        KisPainter sourcePainter(source), painter(destination);
+        QVERIFY(KisGpuBrushPainter::paint(&sourcePainter, makeDabs(5, 89)));
+        painter.setCompositeOpId(COMPOSITE_OVERLAY);
+        QVERIFY(KisGpuBrushPainter::paintWashPreview(&painter, source, bounds));
+        context.waitIdle();
+        QCOMPARE(context.sharedComputePipelineCompileCount(), compiled);
+    }
     void testWashPreviewBaseCopy_data()
     {
         QTest::addColumn<bool>("half");

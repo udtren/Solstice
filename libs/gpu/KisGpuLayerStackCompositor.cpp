@@ -64,8 +64,7 @@ KisGpuLayerStackCompositor::create(KisGpuContext &context, KisGpuTileFormat form
         break;
     }
 
-    compositor->m_pipeline =
-        KisGpuComputePipeline::create(context, spirv, spirvSize, sizeof(PushConstants), errorMessage);
+    compositor->m_pipeline = context.sharedComputePipeline(spirv, spirvSize, sizeof(PushConstants), errorMessage);
     if (!compositor->m_pipeline) {
         return nullptr;
     }

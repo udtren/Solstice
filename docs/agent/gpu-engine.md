@@ -5965,6 +5965,77 @@ Undo/Redo and F16.
   - This is the next candidate: a first-use cost of Wash, likely the new layer
     projection and its first GPU residency.
 
+### Shared and precompiled compute pipelines (phase 4.91)
+
+- **Cause of the slow first Wash stroke.** In the slowest first-Wash merge of
+  PID 52420, 58.7ms of the 64.8ms passed between `compositor.wait_context` and
+  `compositor.prepare_target`. The tile work itself took about 6ms.
+  - That gap is `KisGpuLayerCompositor::create()`, which compiled the
+    composite pipeline without a pipeline cache.
+  - Every `KisGpuProjectionCompositor` work context owned its own compositor.
+    The first parallel Wash merges each compiled the same shader: 12 merges at
+    about 60ms, then about 10 at 20-30ms.
+  - Buildup never uses this compositor. `KisGpuDabCompositor` (one per brush
+    work slot), the layer stack compositor, tile fill and canvas patch writer
+    had the same per-instance pattern.
+- **Shared pipelines.** `KisGpuContext::sharedComputePipeline(spirv, size,
+  pushConstantSize)` compiles a pipeline once per context and embedded SPIR-V
+  array, keyed by pointer and push-constant size.
+  - A per-entry mutex makes concurrent callers wait for one compilation, while
+    different pipelines compile in parallel. Failures are not cached.
+  - The context releases its references after `vkDeviceWaitIdle` and before
+    destroying the device.
+  - All `KisGpuComputePipeline::create` users now go through it and hold a
+    `shared_ptr`: layer, dab and layer stack compositors, tile fill, canvas
+    patch writer. Dispatch only records commands, so sharing is thread-safe.
+  - `sharedComputePipelineCompileCount()` exposes the number of compilations.
+- **Precompiling.**
+  - `KisGpuLayerCompositor::preparePipelines(context, format, extended)` and
+    `KisGpuDabCompositor::preparePipelines(context)` compile ahead of use.
+  - `KisGpuTileBackend::preparePipelines()` prepares the dab pipelines and
+    the F32/F16 basic and extended layer pipelines (trace
+    `gpu.prepare_pipelines`).
+  - `KisGpuEngineUi::install()` (main window construction, app only) starts it
+    on `QThreadPool::globalInstance()` when the GPU engine is enabled. The
+    backend is created there if needed and is never destroyed.
+- **Cold compile times** on the RTX PRO 6000 (`testSharedComputePipelines`, a
+  fresh context):
+  - F32 basic composite: 60ms, with 12 concurrent creates sharing that single
+    compilation.
+  - F32 extended: 136ms.
+  - F16 basic and extended: 211ms.
+
+Tests (Vulkan validation):
+
+- New `KisGpuEngineTest::testSharedComputePipelines`: one compilation under
+  concurrency, prepared pipelines reused, dab pipelines shared.
+- New `KisGpuBrushTest::testPreparePipelines`: precompiling is idempotent, and
+  a Wash preview on fresh work contexts compiles nothing afterwards.
+- `KisGpuBrushTest` 4451, `KisGpuStrokeTest` 360, `KisGpuProjectionTest` 199,
+  `KisGpuBrushJobsTest` 41, `KisGpuPaintDeviceTest` 151, `KisGpuEngineTest` 11,
+  `KisGpuCanvasUploadTest` 38 and `KisGpuGLInteropTest` 3.
+- Installed gpu/image/ui/defaultpaintops; hashes match.
+
+Real-app capture PID 51608 (Background layer, 0 dropped events). The manual
+checks ran in a separate process, 49252, and the user reported them OK.
+
+- **Precompile.** `gpu.prepare_pipelines` started with the trace and took
+  624ms in the background, ending long before the first press at 19.8s.
+
+| Stroke (median, ms) | Input to last upload (4.90 → 4.91) | Input to swap (4.90 → 4.91) |
+| --- | --- | --- |
+| First Buildup | 8.1 → 3.0 | 14.1 → 5.2 |
+| Other Buildup | 3.2 / 2.8 → 3.2 / 3.7 | 7.5 / 5.4 → 5.0 / 6.2 |
+| First Wash | 31.6 → 5.7 | 36.2 → 10.8 |
+| Other Wash | 3.6 / 3.4 → 4.4 / 4.3 | 5.8 / 6.5 → 7.8 / 7.5 |
+
+- **First Wash merges.** The first 16 took 2.7-5.4ms; the rest 0.1-1.2ms
+  (previously about 60ms).
+- **Remaining first-use cost.** About 3-5ms per merge over the first few
+  batches remains, likely first GPU residency of the new layer projection and
+  temporary target tiles.
+- **Other Wash strokes.** They vary within the range of hand-drawn strokes.
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.

@@ -87,7 +87,7 @@ std::unique_ptr<KisGpuCanvasPatchWriter> KisGpuCanvasPatchWriter::create(KisGpuC
         spirv = halfFloatOutput ? CanvasPatchesF32ToF16 : CanvasPatchesF32ToF32;
         spirvSize = halfFloatOutput ? sizeof(CanvasPatchesF32ToF16) : sizeof(CanvasPatchesF32ToF32);
     }
-    writer->m_pipeline = KisGpuComputePipeline::create(context, spirv, spirvSize, sizeof(PushConstants), errorMessage);
+    writer->m_pipeline = context.sharedComputePipeline(spirv, spirvSize, sizeof(PushConstants), errorMessage);
     return writer->m_pipeline ? std::move(writer) : nullptr;
 }
 

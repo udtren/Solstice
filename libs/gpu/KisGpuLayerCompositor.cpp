@@ -76,12 +76,30 @@ KisGpuLayerCompositor::create(KisGpuContext &context, KisGpuTileFormat format, Q
     const bool f16 = format == KisGpuTileFormat::RGBA16F;
     compositor->m_f16 = f16;
     compositor->m_pipeline =
-        KisGpuComputePipeline::create(context,
-                                      f16 ? CompositeLayersRgba16f : CompositeLayersRgba32f,
+        context.sharedComputePipeline(f16 ? CompositeLayersRgba16f : CompositeLayersRgba32f,
                                       f16 ? sizeof(CompositeLayersRgba16f) : sizeof(CompositeLayersRgba32f),
                                       sizeof(PushConstants),
                                       errorMessage);
     return compositor->m_pipeline ? std::move(compositor) : nullptr;
+}
+
+bool KisGpuLayerCompositor::preparePipelines(KisGpuContext &context,
+                                             KisGpuTileFormat format,
+                                             bool extended,
+                                             QString *errorMessage)
+{
+    const bool f16 = format == KisGpuTileFormat::RGBA16F;
+    if (!context.sharedComputePipeline(f16 ? CompositeLayersRgba16f : CompositeLayersRgba32f,
+                                       f16 ? sizeof(CompositeLayersRgba16f) : sizeof(CompositeLayersRgba32f),
+                                       sizeof(PushConstants),
+                                       errorMessage))
+        return false;
+    return !extended
+        || context.sharedComputePipeline(f16 ? CompositeLayersExtendedRgba16f : CompositeLayersExtendedRgba32f,
+                                         f16 ? sizeof(CompositeLayersExtendedRgba16f)
+                                             : sizeof(CompositeLayersExtendedRgba32f),
+                                         sizeof(PushConstants),
+                                         errorMessage);
 }
 
 bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
@@ -135,8 +153,7 @@ bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
     // Compile the extra rounding constraints separately so they cannot affect
     // established modes through shared-expression optimization.
     if (extended && !m_extendedPipeline) {
-        m_extendedPipeline = KisGpuComputePipeline::create(
-            m_context,
+        m_extendedPipeline = m_context.sharedComputePipeline(
             m_f16 ? CompositeLayersExtendedRgba16f : CompositeLayersExtendedRgba32f,
             m_f16 ? sizeof(CompositeLayersExtendedRgba16f) : sizeof(CompositeLayersExtendedRgba32f),
             sizeof(PushConstants),

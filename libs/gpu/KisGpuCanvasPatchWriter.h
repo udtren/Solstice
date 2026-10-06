@@ -80,7 +80,7 @@ private:
     explicit KisGpuCanvasPatchWriter(KisGpuContext &context);
 
     KisGpuContext &m_context;
-    std::unique_ptr<KisGpuComputePipeline> m_pipeline;
+    std::shared_ptr<KisGpuComputePipeline> m_pipeline; // KisGpuContext::sharedComputePipeline
     std::unique_ptr<KisGpuBuffer> m_tables;
     bool m_halfFloatOutput = false;
 };

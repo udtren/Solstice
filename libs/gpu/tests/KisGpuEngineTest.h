@@ -31,6 +31,7 @@ private Q_SLOTS:
     void testConcurrentSubmissionTiming();
     void testCompositeOverMatchesKoCompositeOp();
     void testCompositeOverF16();
+    void testSharedComputePipelines();
     void benchmarkCompositeStack();
 
 private:

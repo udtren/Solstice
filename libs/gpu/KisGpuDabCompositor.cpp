@@ -146,8 +146,15 @@ void KisGpuDabCompositor::releaseUpload()
 std::unique_ptr<KisGpuDabCompositor> KisGpuDabCompositor::create(KisGpuContext &context, QString *error)
 {
     std::unique_ptr<KisGpuDabCompositor> result(new KisGpuDabCompositor(context));
-    result->m_pipeline = KisGpuComputePipeline::create(context, Shader, sizeof(Shader), sizeof(PushConstants), error);
+    result->m_pipeline = context.sharedComputePipeline(Shader, sizeof(Shader), sizeof(PushConstants), error);
     return result->m_pipeline ? std::move(result) : nullptr;
+}
+bool KisGpuDabCompositor::preparePipelines(KisGpuContext &context, QString *error)
+{
+    return context.sharedComputePipeline(Shader, sizeof(Shader), sizeof(PushConstants), error)
+        && context.sharedComputePipeline(ExtendedShader, sizeof(ExtendedShader), sizeof(PushConstants), error)
+        && context.sharedComputePipeline(HalfShader, sizeof(HalfShader), sizeof(PushConstants), error)
+        && context.sharedComputePipeline(HalfExtendedShader, sizeof(HalfExtendedShader), sizeof(PushConstants), error);
 }
 bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
                                  const QVector<VkDeviceAddress> &tiles,
@@ -181,26 +188,21 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
         return false;
     const bool extended = mode >= CompositeMode::SoftLightSvg;
     if (half && extended && !m_halfExtendedPipeline) {
-        m_halfExtendedPipeline = KisGpuComputePipeline::create(m_context,
-                                                               HalfExtendedShader,
-                                                               sizeof(HalfExtendedShader),
-                                                               sizeof(PushConstants),
-                                                               error);
+        m_halfExtendedPipeline = m_context.sharedComputePipeline(HalfExtendedShader,
+                                                                 sizeof(HalfExtendedShader),
+                                                                 sizeof(PushConstants),
+                                                                 error);
         if (!m_halfExtendedPipeline)
             return false;
     }
     if (half && !extended && !m_halfPipeline) {
-        m_halfPipeline =
-            KisGpuComputePipeline::create(m_context, HalfShader, sizeof(HalfShader), sizeof(PushConstants), error);
+        m_halfPipeline = m_context.sharedComputePipeline(HalfShader, sizeof(HalfShader), sizeof(PushConstants), error);
         if (!m_halfPipeline)
             return false;
     }
     if (!half && extended && !m_extendedPipeline) {
-        m_extendedPipeline = KisGpuComputePipeline::create(m_context,
-                                                           ExtendedShader,
-                                                           sizeof(ExtendedShader),
-                                                           sizeof(PushConstants),
-                                                           error);
+        m_extendedPipeline =
+            m_context.sharedComputePipeline(ExtendedShader, sizeof(ExtendedShader), sizeof(PushConstants), error);
         if (!m_extendedPipeline)
             return false;
     }

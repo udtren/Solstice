@@ -16,6 +16,8 @@
 #include "KisGpuVulkanFunctions.h"
 #include "kritagpu_export.h"
 
+class KisGpuComputePipeline;
+
 struct KRITAGPU_EXPORT KisGpuDeviceInfo {
     QString name;
     quint32 vendorId = 0;
@@ -121,6 +123,20 @@ public:
 
     /// Tests: the next @p count submissions fail without reaching the queue.
     void injectSubmitFailuresForTesting(int count);
+
+    /**
+     * GPU engine (Solstice, phase 4.91): compiles a compute pipeline once per
+     * context and embedded SPIR-V array; later calls share it. Thread-safe:
+     * concurrent callers of the same pipeline wait for one compilation, other
+     * pipelines compile in parallel. Failures are not cached. The context
+     * releases its references before destroying the device.
+     */
+    std::shared_ptr<KisGpuComputePipeline> sharedComputePipeline(const quint32 *spirv,
+                                                                 size_t spirvSizeBytes,
+                                                                 quint32 pushConstantSize,
+                                                                 QString *errorMessage = nullptr);
+    /// Number of shared pipelines compiled so far (tests and diagnostics).
+    int sharedComputePipelineCompileCount() const;
 
 private:
     KisGpuContext();

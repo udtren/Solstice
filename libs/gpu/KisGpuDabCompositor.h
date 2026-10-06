@@ -100,6 +100,9 @@ public:
     };
     ~KisGpuDabCompositor();
     static std::unique_ptr<KisGpuDabCompositor> create(KisGpuContext &context, QString *error = nullptr);
+    /// Compiles the context's shared F32/F16, basic/extended dab pipelines
+    /// ahead of use (phase 4.91). Thread-safe; false on failure.
+    static bool preparePipelines(KisGpuContext &context, QString *error = nullptr);
     /// Required reusable allocation, rounded to 256 KiB; zero on invalid/oversized input.
     static quint64 requiredUploadBytes(int tileCount,
                                        const QVector<Dab> &dabs,
@@ -129,10 +132,11 @@ public:
 private:
     explicit KisGpuDabCompositor(KisGpuContext &context);
     KisGpuContext &m_context;
-    std::unique_ptr<KisGpuComputePipeline> m_pipeline;
-    std::unique_ptr<KisGpuComputePipeline> m_extendedPipeline;
-    std::unique_ptr<KisGpuComputePipeline> m_halfPipeline;
-    std::unique_ptr<KisGpuComputePipeline> m_halfExtendedPipeline;
+    // Shared by all compositors of the context (KisGpuContext::sharedComputePipeline).
+    std::shared_ptr<KisGpuComputePipeline> m_pipeline;
+    std::shared_ptr<KisGpuComputePipeline> m_extendedPipeline;
+    std::shared_ptr<KisGpuComputePipeline> m_halfPipeline;
+    std::shared_ptr<KisGpuComputePipeline> m_halfExtendedPipeline;
     std::unique_ptr<KisGpuBuffer> m_upload;
 };
 #endif

@@ -14,6 +14,7 @@
 #include <QMessageBox>
 #include <QPointer>
 #include <QPushButton>
+#include <QThreadPool>
 #include <QVBoxLayout>
 
 #include <atomic>
@@ -103,6 +104,13 @@ void KisGpuEngineUi::install()
     KisGpuTileBackend::setFailureListener([]() {
         QMetaObject::invokeMethod(qApp, &showFailureMessage, Qt::QueuedConnection);
     });
+    // Phase 4.91: compile the compositor pipelines in the background so the
+    // first stroke (notably the first Wash stroke) does not wait for them.
+    if (KisGpuMergeBatch::isEnabled()) {
+        QThreadPool::globalInstance()->start([]() {
+            KisGpuTileBackend::preparePipelines();
+        });
+    }
 #endif
 }
 

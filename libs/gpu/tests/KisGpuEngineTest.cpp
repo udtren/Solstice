@@ -22,6 +22,8 @@
 #include <KisGpuBuffer.h>
 #include <KisGpuCommandList.h>
 #include <KisGpuContext.h>
+#include <KisGpuDabCompositor.h>
+#include <KisGpuLayerCompositor.h>
 #include <KisGpuLayerStackCompositor.h>
 #include <KisGpuTilePool.h>
 
@@ -31,6 +33,7 @@
 #include <numeric>
 #include <random>
 #include <set>
+#include <thread>
 
 namespace
 {
@@ -652,6 +655,61 @@ void KisGpuEngineTest::benchmarkCompositeStack()
     qInfo().noquote() << QStringLiteral("  Kernel speed-up vs threaded CPU: F32 x%1, F16 x%2")
                              .arg(cpuThreadedMs / qMax(1e-6, f32.kernelMs), 0, 'f', 1)
                              .arg(cpuThreadedMs / qMax(1e-6, f16.kernelMs), 0, 'f', 1);
+}
+
+void KisGpuEngineTest::testSharedComputePipelines()
+{
+    REQUIRE_GPU();
+    // Phase 4.91: every work context used to compile its own compositor
+    // pipelines; the first parallel Wash merges each waited about 60ms. A
+    // fresh context compiles each pipeline once, also under concurrency.
+    QString error;
+    std::unique_ptr<KisGpuContext> context = KisGpuContext::create(&error);
+    QVERIFY2(context, qPrintable(error));
+    QCOMPARE(context->sharedComputePipelineCompileCount(), 0);
+
+    constexpr int Threads = 12;
+    std::vector<std::unique_ptr<KisGpuLayerCompositor>> compositors(Threads);
+    QElapsedTimer timer;
+    timer.start();
+    {
+        std::vector<std::thread> threads;
+        for (int i = 0; i < Threads; ++i)
+            threads.emplace_back([&, i]() {
+                compositors[size_t(i)] = KisGpuLayerCompositor::create(*context, KisGpuTileFormat::RGBA32F);
+            });
+        for (auto &thread : threads)
+            thread.join();
+    }
+    const double concurrentMs = timer.nsecsElapsed() / 1e6;
+    for (const auto &compositor : compositors)
+        QVERIFY(compositor);
+    QCOMPARE(context->sharedComputePipelineCompileCount(), 1);
+
+    timer.restart();
+    QVERIFY(KisGpuLayerCompositor::preparePipelines(*context, KisGpuTileFormat::RGBA32F, true, &error));
+    const double extendedMs = timer.nsecsElapsed() / 1e6;
+    QCOMPARE(context->sharedComputePipelineCompileCount(), 2);
+    timer.restart();
+    QVERIFY(KisGpuLayerCompositor::preparePipelines(*context, KisGpuTileFormat::RGBA16F, true, &error));
+    const double halfMs = timer.nsecsElapsed() / 1e6;
+    QCOMPARE(context->sharedComputePipelineCompileCount(), 4);
+    // Prepared pipelines are reused without compiling again.
+    QVERIFY(KisGpuLayerCompositor::create(*context, KisGpuTileFormat::RGBA16F));
+    QVERIFY(KisGpuLayerCompositor::preparePipelines(*context, KisGpuTileFormat::RGBA32F, true, &error));
+    QCOMPARE(context->sharedComputePipelineCompileCount(), 4);
+    // Dab compositors share their pipeline as well.
+    auto firstDab = KisGpuDabCompositor::create(*context);
+    auto secondDab = KisGpuDabCompositor::create(*context);
+    QVERIFY(firstDab && secondDab);
+    QCOMPARE(context->sharedComputePipelineCompileCount(), 5);
+    qInfo() << "Shared compositor pipelines: 12 concurrent creates (one compile) ms" << concurrentMs
+            << "F32 extended ms" << extendedMs << "F16 basic+extended ms" << halfMs
+            << "(driver shader caches may shorten repeated runs)";
+    compositors.clear();
+    firstDab.reset();
+    secondDab.reset();
+    QCOMPARE(context->validationErrorCount(), 0);
 }
 
 SIMPLE_TEST_MAIN(KisGpuEngineTest)

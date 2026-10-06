@@ -214,7 +214,11 @@ pixels are now also copied into the live preview on the GPU, in the same step
 as the stroke preview, instead of by the CPU. In a capture on the Background
 layer, Wash strokes then reached the screen as fast as Buildup strokes (about
 6ms median instead of about 11ms). The first Wash stroke after opening a
-document is still noticeably slower; this is being investigated. With mirroring and
+document was noticeably slower: the GPU programs it needs were prepared on
+first use, separately for each parallel task. They are now prepared once,
+in the background shortly after Krita starts. In a capture, the first Wash
+stroke then reached the screen in about 11ms instead of about 36ms, and the
+first Buildup stroke in about 5ms instead of about 14ms. With mirroring and
 blend modes such as Overlay or Dodge, where mirrored dabs overlap the stroke,
 the result can differ slightly from a CPU stroke because the dabs are grouped
 differently; the CPU brush shows the same kind of variation between strokes.

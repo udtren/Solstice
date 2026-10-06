@@ -43,8 +43,7 @@ KisGpuTileFill::create(KisGpuContext &context, KisGpuTileFormat format, QString 
 {
     std::unique_ptr<KisGpuTileFill> fill(new KisGpuTileFill(context));
     const bool f16 = format == KisGpuTileFormat::RGBA16F;
-    fill->m_pipeline = KisGpuComputePipeline::create(context,
-                                                     f16 ? FillTilesRgba16f : FillTilesRgba32f,
+    fill->m_pipeline = context.sharedComputePipeline(f16 ? FillTilesRgba16f : FillTilesRgba32f,
                                                      f16 ? sizeof(FillTilesRgba16f) : sizeof(FillTilesRgba32f),
                                                      sizeof(PushConstants),
                                                      errorMessage);

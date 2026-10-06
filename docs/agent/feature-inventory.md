@@ -136,6 +136,13 @@ in `kis_brushop.cpp`, and completed upload-source inspection in
 Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
 and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
 from CPU/GPU execution and preserves missing evidence for other walkers.
+Phase 4.91 shares compute pipelines per context: `KisGpuContext::sharedComputePipeline()` and
+`sharedComputePipelineCompileCount()` in `libs/gpu/KisGpuContext.*`, `shared_ptr` pipelines in
+`KisGpuLayerCompositor`, `KisGpuDabCompositor` (both with `preparePipelines()`),
+`KisGpuLayerStackCompositor`, `KisGpuTileFill` and `KisGpuCanvasPatchWriter`;
+`KisGpuTileBackend::preparePipelines()` and the background start in `KisGpuEngineUi::install()`
+(`libs/ui/KisGpuEngineUi.cpp`); tests `KisGpuEngineTest::testSharedComputePipelines` and
+`KisGpuBrushTest::testPreparePipelines`.
 Phase 4.90 adds replace layers for the Wash base copy: `KisGpuLayerCompositor::Layer::replace`
 (`libs/gpu/KisGpuLayerCompositor.*` with the 32-byte `LayerParams` fill color, flag 8 and mask handling in
 `libs/gpu/shaders/composite_layers.comp`), `KisGpuProjectionCompositor::Layer::replace`,
