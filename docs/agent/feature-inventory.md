@@ -136,6 +136,10 @@ in `kis_brushop.cpp`, and completed upload-source inspection in
 Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
 and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
 from CPU/GPU execution and preserves missing evidence for other walkers.
+Phase 4.89 adds the chained GPU brush update job in `FreehandStrokeStrategy::tryDoUpdate()`
+(`libs/ui/tool/strokes/freehand_stroke.cpp`) and paint-trace scopes in
+`KisPaintLayer::copyOriginalToProjection()` (`libs/image/kis_paint_layer.cc`) and
+`KisAsyncMerger::startMerge()` (`libs/image/kis_async_merger.cpp`).
 Phase 4.88 shortens the GPU brush update period: `KisBrushOp::gpuMinimumUpdatePeriod()`
 and `setGpuMinimumUpdatePeriodForTesting()` (`KRITA_GPU_BRUSH_MIN_UPDATE_MS`) applied in
 `doAsynchronousUpdate()` of `plugins/paintops/defaultpaintops/brush/kis_brushop.*`, and the

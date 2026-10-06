@@ -255,6 +255,7 @@ void FreehandStrokeStrategy::tryDoUpdate(bool forceEnd)
 
                 std::tie(m_d->currentUpdatePeriod, needsMoreUpdates) =
                     maskedPainter->doAsynchronousUpdate(jobs);
+                const bool startedBatch = !jobs.isEmpty();
 
                 if (!jobs.isEmpty() ||
                     maskedPainter->hasDirtyRegion() ||
@@ -272,6 +273,14 @@ void FreehandStrokeStrategy::tryDoUpdate(bool forceEnd)
                                 this->tryDoUpdate(true);
                             }
                         );
+                    } else if (startedBatch && KisGpuBrushPainter::isEnabled()) {
+                        // GPU engine (Solstice, phase 4.89): dabs finished while
+                        // this batch is in flight get no trigger until the next
+                        // input. Check again once it ends; this is a no-op when
+                        // nothing is ready or the paint op's period has not passed.
+                        KritaUtils::addJobSequential(jobs, [this]() {
+                            this->tryDoUpdate();
+                        });
                     }
 
 

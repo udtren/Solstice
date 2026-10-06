@@ -5754,6 +5754,88 @@ are hand-drawn, so the numbers vary with direction and speed. Still, the
 removed wait matches the old 10ms period, and every stroke improved its median
 input-to-swap.
 
+### Wash latency breakdown and chained brush updates (phase 4.89)
+
+Analysis of the 4.88 capture (PID 45620). Each timed input is walked back from
+its last required upload through update, walker, projection request and dirty
+dispatch to its brush batch, always following the latest predecessor:
+
+| Stage (median / p95, ms) | Buildup (63 inputs) | Wash (61 inputs) |
+| --- | --- | --- |
+| Input to batch intake | 0.45 / 5.77 | 3.80 / 6.00 |
+| Batch to dirty dispatch | 0.12 / 0.39 | 0.28 / 1.24 |
+| Projection request to merge start | 0.08 / 0.59 | 0.68 / 4.22 |
+| Projection merge | 0.01 / 0.04 | 3.24 / 5.67 |
+| Update ready to upload issue | 2.16 / 3.75 | 0.85 / 3.12 |
+| Input to last upload | 3.88 / 10.33 | 9.80 / 13.83 |
+
+Two Wash costs stand out.
+
+- **Missed brush triggers.**
+  - Wash dabs were ready 0.23ms after their request (median). The time from a
+    finished dab to its batch had a p75 of 4.7ms, which is the 5ms input
+    interval (Buildup: 2.2ms).
+  - `KisBrushOp::doAsynchronousUpdate()` returns `needsMoreUpdates` when a batch
+    is still in flight and prepared dabs remain. `FreehandStrokeStrategy::tryDoUpdate()`
+    used it only at stroke end. So dabs finished during a batch waited for the
+    next input or the next finished dab job.
+  - Wash batches stay in flight longer (GPU job median 0.25ms vs 0.09ms, plus
+    2ms merges on the same workers), so they miss triggers more often.
+- **Wash merges.** Buildup merges reuse the layer projection (0.01ms). Wash
+  merges recompose the layer projection from the original plus the temporary
+  target, with a median of 2.0ms. The instrumented compositor, tile-access and
+  submit spans inside them account for only about 0.5ms.
+
+Change (implemented, not yet measured in the app):
+
+- **Chained trigger.** When GPU brushing is enabled and an update started a
+  batch, `tryDoUpdate()` appends a sequential job after the batch (and after
+  its dirty signals) that calls `tryDoUpdate()` again. With nothing ready, or
+  while the paint op's period has not passed (the CPU brush path), the call does
+  nothing. The chain continues only while new batches start, and one batch is
+  still in flight at a time. The forced end-of-stroke chain is unchanged.
+- **Trace scopes for the uninstrumented merge time:**
+  - `layer.copy_original` and `layer.wash_preview` in
+    `KisPaintLayer::copyOriginalToProjection()`;
+  - `merge.recalculate_root`, `merge.recalculate_filthy`, `merge.composite`,
+    `merge.write_projection` and `merge.gpu_flush` in
+    `KisAsyncMerger::startMerge()`.
+  - Scopes only record while paint tracing is enabled.
+
+Tests (Vulkan validation where applicable): `KisGpuStrokeTest` 360/360,
+`KisGpuEngineTest` 10/10, `KisGpuPaintDeviceTest` 151/151,
+`kis_async_merger_test` 12/12, `kis_paint_layer_test` 5/5, `kis_walkers_test`
+18/18. Installed image/ui.
+
+The breakdown script is `chain.py`, kept in the session scratchpad; it reuses
+the edge rules of `summarize.py::pipeline_summary`. Manual checks (fast Wash and
+Buildup strokes, mirror, Undo/Redo, stroke ends) were reported OK by the user on
+2026-10-06.
+
+Real-app capture PID 24596: 6 strokes (3 Buildup, 3 Wash), 0 dropped events.
+The manual checks ran in a separate process, 48700.
+
+| Stage (median / p95, ms) | Buildup 4.88 → 4.89 | Wash 4.88 → 4.89 |
+| --- | --- | --- |
+| Input to batch intake | 0.45 / 5.77 → 0.39 / 5.66 | 3.80 / 6.00 → 0.39 / 5.51 |
+| Projection merge | 0.01 → 0.01 | 3.24 / 5.67 → 3.35 / 4.75 |
+| Input to last upload | 3.88 / 10.33 → 3.52 / 7.83 | 9.80 / 13.83 → 7.75 / 14.65 |
+
+- **Batch intake.** In Wash, the finished-dab-to-batch p75 fell from 4.7ms to
+  0.55ms. The remaining p95 of about 5ms is the first dabs of an input whose
+  batch was cut by the previous one.
+- **Input to swap, per-stroke medians.** Buildup 6.5-8.1ms (4.88: 7.0-8.9ms).
+  Wash 11.0-11.5ms (4.88: 11.3-12.7ms).
+- **Wash merge breakdown.** Median 1.64ms over all merges.
+  - `layer.copy_original` takes 1.08ms. This is the CPU `COMPOSITE_COPY` blit
+    of the layer original into the layer projection for every dirty rect, with
+    the projection tiles last written by the GPU preview.
+  - `layer.wash_preview` takes 0.43ms. Compositor preparation and submission
+    are inside it.
+  - The base copy is now the largest single Wash cost. Next candidate: do it
+    on the GPU inside `paintWashPreview` (copy, then composite the temporary
+    target in one submission).
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.

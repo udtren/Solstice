@@ -41,6 +41,7 @@
 #include "gpu/KisGpuMergeBatch.h"
 #include "gpu/KisGpuTileAccess.h"
 #endif
+#include "KisPaintTrace.h"
 
 struct Q_DECL_HIDDEN KisPaintLayer::Private
 {
@@ -168,7 +169,10 @@ void KisPaintLayer::copyOriginalToProjection(const KisPaintDeviceSP original,
 {
     KisIndirectPaintingSupport::ReadLocker l(this);
 
-    KisPainter::copyAreaOptimized(rect.topLeft(), original, projection, rect);
+    {
+        KisPaintTrace::Scope trace("layer.copy_original", this);
+        KisPainter::copyAreaOptimized(rect.topLeft(), original, projection, rect);
+    }
 
     if (hasTemporaryTarget()) {
         KisPainter gc(projection);
@@ -178,6 +182,7 @@ void KisPaintLayer::copyOriginalToProjection(const KisPaintDeviceSP original,
         // Tile-exclusive merge scheduling is enabled only for float images.
         const auto owningImage = image();
         if (owningImage && KisGpuEngineSettings::isGpuColorSpace(owningImage->colorSpace())) {
+            KisPaintTrace::Scope trace("layer.wash_preview", this);
             gpuPainted = KisGpuBrushPainter::paintWashPreview(&gc, temporaryTarget(), rect);
         }
         if (!gpuPainted && KisGpuMergeBatch::isEnabled()) {

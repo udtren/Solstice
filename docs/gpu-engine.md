@@ -206,7 +206,10 @@ With the GPU brush, the brush no longer waits for its minimum update interval
 previous update has finished. Painting without the GPU brush is unchanged. In a
 capture of six Basic-4 strokes at 256px, the median time from input to the
 screen fell from about 18-24ms to 7-13ms per stroke. Hand-drawn strokes vary,
-so treat these numbers as an observation. With mirroring and
+so treat these numbers as an observation. Dabs that become ready while
+an update is still running are now picked up as soon as it ends, instead of at
+the next pen movement; in Wash strokes this lowered the median time to the
+last upload from about 9.8ms to 7.8ms. With mirroring and
 blend modes such as Overlay or Dodge, where mirrored dabs overlap the stroke,
 the result can differ slightly from a CPU stroke because the dabs are grouped
 differently; the CPU brush shows the same kind of variation between strokes.

@@ -198,10 +198,12 @@ void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
         // GPU engine: these steps read the projection composited so far
         if (currentLeaf->isRoot() || (item.m_position & KisMergeWalker::N_EXTRA)
             || currentLeaf->dependsOnLowerNodes()) {
+            KisPaintTrace::Scope trace("merge.gpu_flush", currentLeaf->node().data());
             m_gpuBatch.flush();
         }
 
         if (currentLeaf->isRoot()) {
+            KisPaintTrace::Scope trace("merge.recalculate_root", currentLeaf->node().data());
             currentLeaf->projectionPlane()->recalculate(applyRect, walker.startNode(), item.m_renderFlags);
             KisPaintTrace::link("path.projection.root_recalculated",
                                 currentLeaf->node().data(),
@@ -234,6 +236,7 @@ void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
         if(item.m_position & KisMergeWalker::N_FILTHY) {
             DEBUG_NODE_ACTION("Updating", "N_FILTHY", currentLeaf, applyRect);
             if (currentLeaf->shouldBeRendered()) {
+                KisPaintTrace::Scope trace("merge.recalculate_filthy", currentLeaf->node().data());
                 currentLeaf->accept(originalVisitor);
                 currentLeaf->projectionPlane()->recalculate(applyRect, walker.startNode(), item.m_renderFlags);
             }
@@ -258,9 +261,13 @@ void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
             /* nothing to do */
         }
 
-        compositeWithProjection(currentLeaf, applyRect);
+        {
+            KisPaintTrace::Scope trace("merge.composite", currentLeaf->node().data());
+            compositeWithProjection(currentLeaf, applyRect);
+        }
 
         if(item.m_position & KisMergeWalker::N_TOPMOST) {
+            KisPaintTrace::Scope trace("merge.write_projection", currentLeaf->node().data());
             writeProjection(currentLeaf, useTempProjections, applyRect);
             resetProjection();
         }
@@ -270,7 +277,10 @@ void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
                  walker.levelOfDetail());
     }
 
-    m_gpuBatch.flush();
+    {
+        KisPaintTrace::Scope trace("merge.gpu_flush", this);
+        m_gpuBatch.flush();
+    }
 
     if(notifyClones) {
         doNotifyClones(walker);
