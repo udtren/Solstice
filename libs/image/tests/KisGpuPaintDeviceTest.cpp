@@ -12,6 +12,7 @@
 #include <QScopeGuard>
 #include <QSemaphore>
 #include <QThread>
+#include <QThreadPool>
 
 #include <KoColorModelStandardIds.h>
 #include <KoColorSpace.h>
@@ -33,13 +34,15 @@
 #include "gpu/KisGpuTileAccess.h"
 #include "gpu/KisGpuTileBackend.h"
 #include "kis_datamanager.h"
+#include "kis_filter_strategy.h"
+#include "kis_liquify_transform_worker.h"
 #include "kis_paint_device.h"
 #include "kis_paint_device_writer.h"
 #include "kis_painter.h"
 #include "kis_transaction.h"
 #include "kis_transform_worker.h"
-#include "kis_filter_strategy.h"
 #include "kis_types.h"
+#include "kis_warptransform_worker.h"
 #include "testing_timed_default_bounds.h"
 #include "tiles3/kis_tile.h"
 #include "tiles3/kis_tile_data_pooler.h"
@@ -115,6 +118,7 @@ private Q_SLOTS:
     void testCopySourcePreventsEviction();
     void testConcurrentEviction();
     void benchmarkTransfers();
+    void benchmarkFiltersAndTransforms();
 
 private:
     bool gpuFill(KisPaintDeviceSP device, const QRect &rect, const QVector<float> &color);
@@ -1986,6 +1990,159 @@ void KisGpuPaintDeviceTest::benchmarkTransfers()
     qInfo().noquote() << QStringLiteral("  syncToCpu (batched downloads):      %1 ms").arg(batchedDownload, 0, 'f', 1);
     qInfo().noquote() << QStringLiteral("  readBytes after syncToCpu:          %1 ms").arg(readAfterSync, 0, 'f', 1);
     QVERIFY(firstUpload >= 0 && resident >= 0 && gpuWrite >= 0);
+}
+
+void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
+{
+    // GPU engine priority 4 (phase 4.93): CPU cost of the candidate filters and
+    // transforms on a document-sized RGBA32F layer, to order the GPU work.
+    // Opt-in: several seconds per row.
+    if (!qEnvironmentVariableIsSet("KRITA_GPU_BENCHMARK_FILTERS"))
+        QSKIP("set KRITA_GPU_BENCHMARK_FILTERS=1");
+    REQUIRE_GPU();
+    const auto *cs = rgbaFloat();
+    const QRect bounds(0, 0, 2480, 3508);
+    const int threads = qMax(1, QThread::idealThreadCount());
+    KisPaintDeviceSP source = new KisPaintDevice(cs);
+    source->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+    fillRandom(source, bounds, 7);
+    auto median3 = [](std::vector<double> samples) {
+        std::sort(samples.begin(), samples.end());
+        return samples[samples.size() / 2];
+    };
+    auto fresh = [&]() {
+        KisPaintDeviceSP device = new KisPaintDevice(*source);
+        device->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+        return device;
+    };
+    auto report = [&](const QString &name, double singleMs, double parallelMs = -1) {
+        qInfo().noquote() << QString("%1: %2 ms single call").arg(name, -26).arg(singleMs, 8, 'f', 1)
+                          << (parallelMs >= 0 ? QString("| %1 ms in %2 bands").arg(parallelMs, 7, 'f', 1).arg(threads)
+                                              : QString());
+    };
+
+    // Readback: a whole GPU-written layer brought back to the CPU.
+    {
+        std::vector<double> samples;
+        for (int i = 0; i < 3; ++i) {
+            KisPaintDeviceSP device = new KisPaintDevice(cs);
+            QVERIFY(gpuFill(device, bounds, {0.2f, 0.4f, 0.6f, 0.8f}));
+            QElapsedTimer timer;
+            timer.start();
+            KisGpuTileAccess::syncToCpu(device, bounds);
+            samples.push_back(timer.nsecsElapsed() / 1e6);
+        }
+        report("readback (whole layer)", median3(samples));
+    }
+
+    struct FilterRow {
+        QString name;
+        QString id;
+        QVector<QPair<QString, QVariant>> properties;
+    };
+    const QVector<FilterRow> filters{
+        {"gaussian blur r5", "gaussian blur", {{"horizRadius", 5}, {"vertRadius", 5}}},
+        {"gaussian blur r30", "gaussian blur", {{"horizRadius", 30}, {"vertRadius", 30}}},
+        {"levels", "levels", {{"mode", "lightness"}, {"lightness", "0.08;0.92;1.4;0;1"}}},
+        {"curves (all channels)",
+         "perchannel",
+         {{"curve0", "0,0;0.3,0.2;0.7,0.8;1,1;"},
+          {"curve1", "0,0;0.3,0.2;0.7,0.8;1,1;"},
+          {"curve2", "0,0;0.3,0.2;0.7,0.8;1,1;"},
+          {"curve3", "0,0;0.3,0.2;0.7,0.8;1,1;"},
+          {"curve4", "0,0;0.3,0.2;0.7,0.8;1,1;"}}},
+        {"hsv adjust s+20", "hsvadjustment", {{"s", 20}}},
+        {"unsharp mask", "unsharp", {}},
+    };
+    for (const FilterRow &row : filters) {
+        auto filter = KisFilterRegistry::instance()->value(row.id);
+        if (!filter) {
+            qInfo() << "filter not found:" << row.id;
+            continue;
+        }
+        auto config =
+            filter->defaultConfiguration(KisGlobalResourcesInterface::instance())->cloneWithResourcesSnapshot();
+        for (const auto &property : row.properties)
+            config->setProperty(property.first, property.second);
+        std::vector<double> single, parallel;
+        for (int i = 0; i < 3; ++i) {
+            KisPaintDeviceSP device = fresh();
+            QElapsedTimer timer;
+            timer.start();
+            filter->process(device, bounds, config);
+            single.push_back(timer.nsecsElapsed() / 1e6);
+            // Disjoint bands into a separate destination, like a filter stroke's
+            // parallel patches.
+            KisPaintDeviceSP src = fresh(), dst = fresh();
+            const int band = (bounds.height() + threads - 1) / threads;
+            timer.restart();
+            // QThread workers, as Krita's own (device updates use Qt timers).
+            QThreadPool pool;
+            pool.setMaxThreadCount(threads);
+            for (int t = 0; t < threads; ++t) {
+                const QRect rect = QRect(0, t * band, bounds.width(), band) & bounds;
+                pool.start([&, rect]() {
+                    filter->process(src, dst, KisSelectionSP(), rect, config);
+                });
+            }
+            pool.waitForDone();
+            parallel.push_back(timer.nsecsElapsed() / 1e6);
+        }
+        report(row.name, median3(single), median3(parallel));
+    }
+
+    // Transform Tool final renders (also its live in-stack preview), single call.
+    {
+        std::vector<double> samples;
+        for (int i = 0; i < 3; ++i) {
+            KisPaintDeviceSP device = fresh();
+            KisFilterStrategy *strategy = new KisBicubicFilterStrategy();
+            KisTransformWorker worker(device, 0.9, 0.9, 0, 0, 10.0 * M_PI / 180.0, 120, 80, nullptr, strategy);
+            QElapsedTimer timer;
+            timer.start();
+            worker.run();
+            samples.push_back(timer.nsecsElapsed() / 1e6);
+            delete strategy;
+        }
+        report("affine scale+rotate bicubic", median3(samples));
+    }
+    {
+        QVector<QPointF> original, transformed;
+        for (int y = 0; y < 3; ++y)
+            for (int x = 0; x < 3; ++x) {
+                const QPointF point(bounds.width() * (0.2 + 0.3 * x), bounds.height() * (0.2 + 0.3 * y));
+                original << point;
+                transformed << (x == 1 && y == 1 ? point + QPointF(140, 90) : point);
+            }
+        std::vector<double> samples;
+        for (int i = 0; i < 3; ++i) {
+            KisPaintDeviceSP src = fresh(), dst = new KisPaintDevice(cs);
+            dst->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+            KisWarpTransformWorker worker(KisWarpTransformWorker::RIGID_TRANSFORM, original, transformed, 1.0, nullptr);
+            QElapsedTimer timer;
+            timer.start();
+            worker.run(src, dst);
+            samples.push_back(timer.nsecsElapsed() / 1e6);
+        }
+        report("puppet warp (rigid MLS)", median3(samples));
+    }
+    {
+        std::vector<double> samples;
+        for (int i = 0; i < 3; ++i) {
+            KisLiquifyTransformWorker worker(bounds, nullptr, 8);
+            for (int step = 0; step < 20; ++step)
+                worker.translatePoints(QPointF(600 + step * 60, 1200 + step * 40), QPointF(15, 10), 200, false, 1.0);
+            KisPaintDeviceSP src = fresh(), dst = new KisPaintDevice(cs);
+            dst->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+            QElapsedTimer timer;
+            timer.start();
+            worker.run(src, dst);
+            samples.push_back(timer.nsecsElapsed() / 1e6);
+        }
+        report("liquify (20 moves, sigma 200)", median3(samples));
+    }
+    qInfo() << "Layer" << bounds.size() << "RGBA32F, threads" << threads
+            << "- CPU-resident source except the readback row; medians of 3";
 }
 
 SIMPLE_TEST_MAIN(KisGpuPaintDeviceTest)

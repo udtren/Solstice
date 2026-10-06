@@ -6102,6 +6102,59 @@ zoom and rotate, long strokes, mirror, Undo/Redo, non-paint tools.
   and upload. Further gains on the canvas side would need presentation timed
   to the refresh (rendering just before the tick), not shorter queues.
 
+### Priority 4 baseline: CPU filter and transform costs (phase 4.93)
+
+The user chose priority 4 (filters and transforms) after phase 4.92.
+`KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms`, opt-in with
+`KRITA_GPU_BENCHMARK_FILTERS=1`, measures a 2480x3508 RGBA32F layer (the
+user's document size) with random content, as the median of 3 runs on 32
+hardware threads.
+
+- **Filter rows** time one `KisFilter::process` call over the layer, and the
+  layer split into 32 bands on a `QThreadPool` (source to destination, like a
+  filter stroke's parallel patches).
+- **Transform rows** time one worker call, as the Transform Tool does:
+  - `InplaceTransformStrokeStrategy::reapplyTransform` renders the live
+    preview with `KisTransformUtils::transformDevice`, at a preview level of
+    detail (`forceLodMode`).
+  - The final apply renders at full resolution.
+
+| Operation | Single call | 32 bands |
+| --- | --- | --- |
+| Readback of a GPU-written layer | 14.9ms | - |
+| Gaussian blur r5 | 1021.7ms | 143.5ms |
+| Gaussian blur r30 | 1065.9ms | 199.3ms |
+| Levels (lightness curve) | 173.5ms | 229.2ms |
+| Curves (all channels) | 0.1ms | 24.3ms |
+| HSV adjust s+20 | 175.8ms | 47.6ms |
+| Unsharp mask | 6155.6ms | 389.8ms |
+| Affine scale 0.9 + rotate 10°, bicubic | 440.5ms | - |
+| Puppet Warp (rigid MLS, 9 points) | 601.6ms | - |
+| Liquify (20 moves, sigma 200) | 217.0ms | - |
+
+Notes:
+
+- **Readback is not the bottleneck.** About 15ms for the whole layer, after
+  phases 4.54-4.57 batched it.
+- **The transform workers are single-threaded.** Their full call is the
+  user's wait on apply. Their preview cost scales with the preview level of
+  detail.
+- **Filters are already parallel.** About 140-390ms per full-layer
+  application on this machine.
+- **Suspect rows:**
+  - Curves: the single in-place call returned in 0.1ms, so the properties set
+    by name may not have produced a non-identity transfer. This row needs a
+    configuration built through the filter's own API before it is used.
+  - Levels: slower in bands, probably because each `process` call builds the
+    color transformation.
+- **Proposed order by these numbers:**
+  1. Transform Tool rendering: affine bicubic first, as the most common
+     operation, then the warp/Puppet Warp and Liquify workers.
+  2. The blur family: Gaussian, then Unsharp, which is built on it.
+  3. Per-pixel color adjustments, where parallel CPU code is already fast.
+
+  This needs the user's choice.
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.
