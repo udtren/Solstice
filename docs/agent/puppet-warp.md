@@ -6,9 +6,12 @@ changing user-visible behavior.
 ## Status and architecture
 
 Puppet Warp is a native mode of Krita's Transform Tool under
-`plugins/tools/tool_transform2/`. The current implementation reuses Krita's
-rigid Moving Least Squares (MLS) warp worker. It is not a true
-triangle-mesh/ARAP puppet solver.
+`plugins/tools/tool_transform2/`. Since 2026-10-06 (GPU engine phase 4.95,
+user request) it deforms a triangle mesh of the artwork with an
+as-rigid-as-possible (ARAP) solver, `libs/image/KisPuppetTransformWorker.*`,
+modelled on Clip Studio Paint. Transforms saved before the change carry no
+mesh and keep the legacy rigid Moving Least Squares (MLS) path described under
+"Legacy MLS model".
 
 | Area | Primary files | Responsibility |
 | --- | --- | --- |
@@ -17,6 +20,7 @@ triangle-mesh/ARAP puppet solver.
 | Interaction and preview | `kis_warp_transform_strategy.cpp`, `kis_warp_transform_strategy.h` | Hit-testing, gestures, cursors, mask generation, overlay, and preview deformation. |
 | Persistent state | `tool_transform_args.cc`, `tool_transform_args.h` | Mode, pins, rotations, settings, identity/equality, XML, and effective MLS controls. |
 | Final rendering | `kis_transform_utils.cpp` | Final device transforms and approximate need/change rectangles. |
+| Mesh and solver | `libs/image/KisPuppetTransformWorker.*` | Mesh build/serialization, ARAP solve, point mapping, device and QImage rendering. |
 | Regression coverage | `tests/test_animated_transform_parameters.cpp`, `tests/test_animated_transform_parameters.h` | Serialization, rotation identity, and generated constraints. |
 
 `wdg_tool_transform_ui.py` is generated output. Keep it synchronized with
@@ -33,20 +37,41 @@ State consists of:
 - `m_transfPoints`: transformed pin positions;
 - `m_puppetRotations`: radians per pin;
 - `m_puppetShowMesh`: overlay visibility;
-- `m_puppetExpansion`: expansion in image pixels.
+- `m_puppetExpansion`: expansion in image pixels;
+- `m_puppetMesh`: the solver mesh (`KisPuppetTransformWorker::Mesh`), empty for
+  legacy transforms;
+- `m_puppetOrders`: stacking order per pin (higher on top), index-aligned like
+  the rotations;
+- `m_puppetClickAction`: what a click on a pin does (Select or Delete). This is
+  a tool preference stored in the `KisToolTransform` KConfig group key
+  `puppetClickAction`. It is copied with the arguments but not compared,
+  serialized or part of identity.
 
-`setPoints()` keeps the rotation vector aligned with the pin vectors.
-`removePuppetPoint()` removes all values at the same index. A Puppet transform
+`setPoints()` keeps the rotation and order vectors aligned with the pin
+vectors. `removePuppetPoint()` removes all values at the same index.
+`changePuppetOrder(indexes, change)` implements Order:
+- To front: just above every other pin.
+- Forward: +1.
+- Backward: -1.
+- To back: just below every other pin. A Puppet transform
 is non-identity when any pin moved or any rotation is nonzero.
 
-The existing `warp_transform` XML element adds `rotations`, `showMesh`, and
-`expansion`. Missing rotations load as zero after resizing to the pin count.
+The existing `warp_transform` XML element adds `rotations`, `showMesh`,
+`expansion` and `mesh`. Missing rotations load as zero after resizing to the
+pin count. `mesh` is `Mesh::toString()`: origin, column step, row step (17
+significant digits), columns, rows, the expansion the mesh was built with, and
+the solid-triangle bits in hex. `orders` is saved for Puppet transforms;
+missing orders load as 0. A missing or invalid `mesh` leaves the
+transform on the legacy MLS path, so older documents render as before.
 Mesh visibility and expansion default from the `KisToolTransform` KConfig group
 keys `puppetShowMesh` and `puppetExpansion`.
 
 ## Mesh mask and overlay
 
-The visible mesh is a preview overlay, not solver topology.
+With a mesh, the overlay draws the solver mesh: its grid lines and alternating
+diagonals, sampled at source-pixel resolution and kept only where the mask
+covers them, then mapped through the solved deformation. Legacy transforms
+draw the old display grid, which is not solver topology.
 
 `KisWarpTransformStrategy::Private::updatePuppetMask()`:
 
@@ -76,7 +101,77 @@ Expected edge cases:
 
 ## Deformation model
 
-The implementation converts visible pins into hidden controls passed to
+### Mesh (phase 4.95)
+
+`KisPuppetTransformWorker::Mesh::build(mask, bounds, expansion)`:
+- covers the transaction's original rect with a regular grid of about 24
+  image pixels per cell, clamped to 4-64 columns and rows;
+- splits each cell into two triangles along alternating diagonals, matching
+  the overlay;
+- marks a triangle solid when a mask pixel center lies inside it.
+
+The grid is stored as origin plus column and row steps, so
+`transformSrcAndDst()` and `scale3dSrcAndDst()` map it exactly (translations,
+level-of-detail scaling, any affine map).
+
+`KisWarpTransformStrategy::Private::ensurePuppetMesh()` builds the mesh from
+the preview mask at the start of `recalculateTransformations()`. It runs only
+when the arguments have no mesh or the expansion changed, and stores the mesh
+in the arguments. The preview thumbnail is limited to 2000 px, so rebuilding
+the mask from the full-resolution device on apply could differ; sharing the
+stored mesh keeps preview, overlay, final rendering and bounds identical.
+
+### ARAP solver
+
+`KisPuppetTransformWorker` solves all grid vertices.
+
+- **Energy:** per-triangle ARAP with cotangent edge weights. Triangles without
+  artwork get stiffness 1e-3, so limbs separated by empty space are
+  effectively independent while every point keeps a continuous mapping.
+- **Pins:** each pin adds its center and four points at radius 1.0 x cell
+  size as constraints (barycentric in their triangles, weight 1e4), rotated by
+  the pin rotation. The radius scales with the mesh, so the reduced-detail
+  preview and the full-resolution result agree; the legacy 8-64 px clamp did
+  not scale.
+- **Initial guess:** every vertex starts with the rigid motion of the pin
+  nearest to it along the mesh. That is a multi-source Dijkstra over triangle
+  edges, with empty edges costing 50x. A rotated pin therefore already turns
+  the free part beyond it.
+  - Starting from the smooth MLS field needed hundreds of iterations to carry
+    a 90-degree rotation through a narrow joint: forearm deviations of 126 px
+    after 40 iterations, 12 px after 400.
+- **Iterations:** 40 local/global iterations. The local step fits each
+  triangle's rotation; the global step is one `SimplicialLDLT`
+  factorization reused for x and y.
+- The result is deterministic for the same mesh and pins.
+- `map()` evaluates the piecewise-affine mesh: O(1) cell lookup, barycentric
+  weights, and extrapolation from the border cells outside the grid.
+- `run()` renders like `KisWarpTransformWorker::run()`: it clears the
+  destination, then `processGrid` at 8 px precision.
+- `runOnQImage()` renders the preview in thumbnail space through the
+  strategy's image/thumbnail maps. `approxChangeRect()` maps the rect.
+- `KisTransformUtils::needRect()` returns the source bounds; `changeRect()`
+  returns the mapped rect united with the source rect.
+
+**Pin order.** Each part of the artwork belongs to the pin nearest to it
+along the artwork (the Dijkstra owner kept as `m_owner`); `orderAt()` uses the
+mesh vertex with the largest barycentric weight.
+- With a single order level, rendering is one pass, unchanged.
+- With several levels, `run()` and `runOnQImage()` render each level's grid
+  cells (`OrderFilterOp`) into a temporary device or image. The levels are
+  then composited bottom to top with `COMPOSITE_OVER` (QPainter source-over
+  for the preview).
+- This is needed because the grid polygon ops overwrite pixels: a
+  higher-order part's transparent pixels would otherwise erase a lower one.
+- Orders do not affect the solve.
+
+Timing: a 17x14 grid solves in about 1 ms, the largest 64x64 grid in about
+16 ms. The strategy caches the solved worker between repaints, keyed by mesh,
+pins and rotations.
+
+### Legacy MLS model
+
+Transforms without a mesh convert visible pins into hidden controls passed to
 `KisWarpTransformWorker` in rigid mode.
 
 ### Local rigid constraints
@@ -96,7 +191,8 @@ Moving or rotating the terminal pin transforms these guides, causing the
 unpinned region beyond it to follow. Adding a pin changes the graph and limits
 or splits propagation.
 
-Use identical expanded controls in:
+Use identical expanded controls (legacy) or the identical stored mesh and
+pins (mesh model) in:
 
 - interactive image preview;
 - mesh-overlay deformation;
@@ -123,19 +219,43 @@ Add Puppet-specific multi-layer regression coverage before changing this path.
 - Drag centers to move pins.
 - Hit-test the locked pin annulus for `ROTATE_PIN`; accumulate the incremental
   angle between previous and current mouse vectors about the pin center.
-- Alt-click pin centers for `DELETE_POINT`.
-- Center hits take priority over ring hits.
-- Disable inherited empty-canvas global move, rotate, and scale gestures in
-  Puppet mode.
+- **Deleting pins.** Alt-click pin centers for `DELETE_POINT`. The "Click
+  pin" option set to Delete pin makes a plain click delete as well, in Draw
+  and locked modes.
+- **Hit priority.** Center hits take priority over ring hits.
+- **Selection** (locked mode, `pointsInAction`):
+  - Shift- or Ctrl-click toggles a pin (`MULTIPLE_POINT_SELECTION`).
+  - Dragging on empty canvas selects the pins inside a rectangle
+    (`RUBBER_BAND`); with Shift held at press, it adds to the selection.
+  - A plain click on empty canvas clears the selection.
+  - The rubber band only repaints; it does not recalculate.
+- **Moving and rotating a selection.** Dragging a pin of a multiple selection
+  moves all selected pins by the same delta. Rotating the ring of a selected
+  pin rotates every selected pin's rotation by the angle and orbits the other
+  selected pins about that pin.
+- **Order buttons.** They act on the selection
+  (`KisWarpTransformStrategy::changePuppetOrder()` via
+  `KisToolTransformConfigWidget::sigPuppetOrderChange` and
+  `KisToolTransform::slotPuppetOrderChange`, which commits an undo step).
+- **Options row.** The "Click pin" combo and the Order buttons are built in
+  code under the Puppet options row; `wdg_tool_transform.ui` and its
+  generated `.py` are unchanged.
+- **Disabled gestures.** Disable inherited empty-canvas global move, rotate,
+  and scale gestures in Puppet mode (empty-canvas drags select pins instead).
 - `Show mesh` affects visualization only, never pixels or identity.
 
 ## Known limitations
 
-1. The solver remains global rigid MLS, without per-triangle rigidity energy or
-   iterative ARAP solving.
-2. The displayed grid is not editable solver topology.
-3. Euclidean MST topology may connect anatomically unrelated overlapping limbs.
-4. Terminal guide distances are heuristic and may over-propagate.
+1. The mesh is a regular grid (about 24 px cells, at most 64x64), not a
+   contour-following triangulation. Gaps narrower than a cell can couple
+   neighbouring limbs.
+2. The displayed mesh is not editable.
+3. A joint bends over about one cell around the pin, so a rotated free part
+   turns about the pin but may shift by a few pixels. In the unit test a
+   90-degree elbow rotation turns the forearm by 93 degrees with a 7 px tip
+   offset.
+4. Legacy transforms (no stored mesh) keep the MLS model with its Euclidean MST
+   topology and heuristic terminal guides.
 5. There are no explicit fixed/movable/rotation-disabled/weighted pin types.
 6. There is no ordering/depth control for folded artwork.
 7. Opaque backgrounds mask the entire rectangle.
@@ -144,10 +264,10 @@ Add Puppet-specific multi-layer regression coverage before changing this path.
 
 ## Recommended improvement path
 
-1. Generate silhouette triangulation and infer pin connections by geodesic
-   distance rather than Euclidean distance.
-2. Add a constrained triangular ARAP or comparable rigidity-preserving solver,
-   making visible mesh and solver topology identical.
+1. Done in phase 4.95 for the mesh model: triangular ARAP with geodesic
+   pin ownership; visible mesh and solver topology are identical. Next: a
+   contour-following triangulation and a density setting.
+2. GPU rendering of the mesh warp (planned, GPU engine phase 4.96).
 3. Add explicit pin type, strength, rotation correction, and influence radius
    while preserving backwards-compatible serialized defaults.
 4. Improve masks with Euclidean expansion, configurable alpha threshold,
@@ -168,6 +288,21 @@ cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root
 cmd.exe /d /s /c "call <krita-dev-root>\env.bat && <krita-dev-root>\_build\bin\test_animated_transform_parameters.exe testPuppetTransformSerialization"
 ```
 
+`KisPuppetTransformWorkerTest` (`libs/image/tests`):
+- mesh marking and serialization;
+- identity;
+- pin order stacking of an overlapping forearm (front, back, equal);
+- a rotated elbow turning a free forearm rigidly;
+- a moved pin carrying the free end;
+- scale consistency for the level-of-detail preview;
+- device rendering;
+- 64x64 solve time.
+
+`test_animated_transform_parameters` loads the installed tool plugin: install
+`libs/image` and `tool_transform2` before running it after a
+`ToolTransformArgs` layout change, or it crashes in
+`KisSimpleModifyTransformMaskCommand`.
+
 ```bat
 cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\tools\tool_transform2\cmake_install.cmake
 ```
@@ -181,9 +316,14 @@ Restart after installing. Format modified C++ and run `git diff --check`.
 - Draw/lock placement works.
 - Center drag is local and untouched pins anchor their areas.
 - Ring drag rotates about the correct pin.
+- Rotating an elbow/shoulder/hip pin turns the unpinned part beyond it as one
+  rigid piece (no twisting or smearing), while other pins hold.
 - A terminal hip/shoulder rotates the unpinned branch beyond it.
 - Adding another pin limits previous terminal propagation.
-- Alt-click removes exactly one pin and keeps rotation indices aligned.
+- Alt-click removes exactly one pin and keeps rotation and order indices aligned.
+- "Click pin: Delete pin" deletes with a plain click; "Select pin" restores selection.
+- Shift-click and rectangle selection select several pins; dragging one moves all; ring rotation turns them together.
+- Order buttons change which overlapping part is on top, in the preview and the applied result.
 - The 0 px mesh follows the silhouette without cell protrusion.
 - Expansion changes the boundary correctly.
 - Closed line art fills while open contours remain open.
@@ -197,6 +337,9 @@ Restart after installing. Format modified C++ and run `git diff --check`.
 - Keep the enum appended after existing modes unless migrating the file format.
 - Keep original points, transformed points, and rotations index-aligned.
 - Use one effective-control generator across every deformation and bounds path.
+- Build the mesh once and share it through `ToolTransformArgs`; never rebuild it
+  separately for the final rendering.
+- Keep transforms without a mesh on the legacy MLS path.
 - Missing serialized fields retain safe backwards-compatible defaults.
 - Do not infer interaction correctness from compilation alone; verify
   hit-testing, cursor mode, and press/move/release symmetry interactively.

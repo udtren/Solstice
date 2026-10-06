@@ -35,6 +35,64 @@ ToolTransformArgs::ToolTransformArgs()
     m_meshScaleHandles = configGroup.readEntry("meshScaleHandles", false);
     m_puppetShowMesh = configGroup.readEntry("puppetShowMesh", true);
     m_puppetExpansion = configGroup.readEntry("puppetExpansion", 2);
+    m_puppetClickAction =
+        configGroup.readEntry("puppetClickAction", 0) == int(PuppetDeletePin) ? PuppetDeletePin : PuppetSelectPin;
+}
+
+void ToolTransformArgs::setPuppetClickAction(PuppetClickAction action)
+{
+    m_puppetClickAction = action;
+    KSharedConfig::openConfig()->group("KisToolTransform").writeEntry("puppetClickAction", int(action));
+}
+
+int ToolTransformArgs::puppetOrder(int index) const
+{
+    return index >= 0 && index < m_puppetOrders.size() ? m_puppetOrders[index] : 0;
+}
+
+void ToolTransformArgs::setPuppetOrder(int index, int value)
+{
+    if (index < 0 || index >= m_origPoints.size()) {
+        return;
+    }
+    m_puppetOrders.resize(m_origPoints.size());
+    m_puppetOrders[index] = value;
+}
+
+void ToolTransformArgs::changePuppetOrder(const QVector<int> &indexes, PuppetOrderChange change)
+{
+    m_puppetOrders.resize(m_origPoints.size());
+    int lowest = 0;
+    int highest = 0;
+    bool first = true;
+    for (int i = 0; i < m_puppetOrders.size(); ++i) {
+        if (indexes.contains(i)) {
+            continue;
+        }
+        lowest = first ? m_puppetOrders[i] : qMin(lowest, m_puppetOrders[i]);
+        highest = first ? m_puppetOrders[i] : qMax(highest, m_puppetOrders[i]);
+        first = false;
+    }
+    for (int index : indexes) {
+        if (index < 0 || index >= m_puppetOrders.size()) {
+            continue;
+        }
+        int &order = m_puppetOrders[index];
+        switch (change) {
+        case PuppetOrderToFront:
+            order = highest + 1;
+            break;
+        case PuppetOrderForward:
+            order += 1;
+            break;
+        case PuppetOrderBackward:
+            order -= 1;
+            break;
+        case PuppetOrderToBack:
+            order = lowest - 1;
+            break;
+        }
+    }
 }
 
 void ToolTransformArgs::setPuppetShowMesh(bool value)
@@ -54,6 +112,7 @@ void ToolTransformArgs::setPoints(QVector<QPointF> origPoints, QVector<QPointF> 
     m_origPoints = origPoints;
     m_transfPoints = transfPoints;
     m_puppetRotations.resize(qMin(m_origPoints.size(), m_transfPoints.size()));
+    m_puppetOrders.resize(m_puppetRotations.size());
 }
 
 qreal ToolTransformArgs::puppetRotation(int index) const
@@ -80,6 +139,14 @@ void ToolTransformArgs::removePuppetPoint(int index)
     if (index < m_puppetRotations.size()) {
         m_puppetRotations.removeAt(index);
     }
+    if (index < m_puppetOrders.size()) {
+        m_puppetOrders.removeAt(index);
+    }
+}
+
+KisPuppetTransformWorker ToolTransformArgs::createPuppetWorker() const
+{
+    return KisPuppetTransformWorker(m_puppetMesh, m_origPoints, m_transfPoints, m_puppetRotations, m_puppetOrders);
 }
 
 void ToolTransformArgs::puppetControlPoints(const QVector<QPointF> &originalPoints,
@@ -223,6 +290,9 @@ void ToolTransformArgs::init(const ToolTransformArgs& args)
     m_alpha = args.alpha();
     m_puppetShowMesh = args.m_puppetShowMesh;
     m_puppetExpansion = args.m_puppetExpansion;
+    m_puppetMesh = args.m_puppetMesh;
+    m_puppetOrders = args.m_puppetOrders;
+    m_puppetClickAction = args.m_puppetClickAction;
     m_defaultPoints = args.defaultPoints();
     m_keepAspectRatio = args.keepAspectRatio();
     m_filter = args.m_filter;
@@ -262,6 +332,8 @@ void ToolTransformArgs::clear()
     m_origPoints.clear();
     m_transfPoints.clear();
     m_puppetRotations.clear();
+    m_puppetMesh = KisPuppetTransformWorker::Mesh();
+    m_puppetOrders.clear();
     m_meshTransform = KisBezierTransformMesh();
 }
 
@@ -293,7 +365,8 @@ bool ToolTransformArgs::operator==(const ToolTransformArgs& other) const
     return m_mode == other.m_mode && m_defaultPoints == other.m_defaultPoints && m_origPoints == other.m_origPoints
         && m_transfPoints == other.m_transfPoints && m_warpType == other.m_warpType && m_alpha == other.m_alpha
         && m_puppetRotations == other.m_puppetRotations && m_puppetShowMesh == other.m_puppetShowMesh
-        && m_puppetExpansion == other.m_puppetExpansion && m_transformedCenter == other.m_transformedCenter
+        && m_puppetExpansion == other.m_puppetExpansion && m_puppetMesh == other.m_puppetMesh
+        && m_puppetOrders == other.m_puppetOrders && m_transformedCenter == other.m_transformedCenter
         && m_originalCenter == other.m_originalCenter && m_rotationCenterOffset == other.m_rotationCenterOffset
         && m_transformAroundRotationCenter == other.m_transformAroundRotationCenter && m_aX == other.m_aX
         && m_aY == other.m_aY && m_aZ == other.m_aZ && m_cameraPos == other.m_cameraPos && m_scaleX == other.m_scaleX
@@ -442,6 +515,9 @@ void ToolTransformArgs::transformSrcAndDst(const QTransform &t)
         for (auto &pt : m_transfPoints) {
             pt = t.map(pt);
         }
+        if (m_mode == PUPPET && m_puppetMesh.isValid()) {
+            m_puppetMesh.transform(t);
+        }
     } else if (m_mode == LIQUIFY) {
         KIS_ASSERT_RECOVER_RETURN(m_liquifyWorker);
         m_liquifyWorker->transformSrcAndDst(t);
@@ -571,6 +647,10 @@ void ToolTransformArgs::toXML(QDomElement *e) const
             KisDomUtils::saveValue(&warpEl, "rotations", m_puppetRotations);
             KisDomUtils::saveValue(&warpEl, "showMesh", m_puppetShowMesh);
             KisDomUtils::saveValue(&warpEl, "expansion", m_puppetExpansion);
+            if (m_puppetMesh.isValid()) {
+                KisDomUtils::saveValue(&warpEl, "mesh", m_puppetMesh.toString());
+            }
+            KisDomUtils::saveValue(&warpEl, "orders", m_puppetOrders);
         }
 
         if(m_mode == CAGE){
@@ -685,6 +765,15 @@ ToolTransformArgs ToolTransformArgs::fromXML(const QDomElement &e)
             args.m_puppetRotations.resize(args.m_origPoints.size());
             (void)KisDomUtils::loadValue(warpEl, "showMesh", &args.m_puppetShowMesh);
             (void)KisDomUtils::loadValue(warpEl, "expansion", &args.m_puppetExpansion);
+            // Missing in documents saved before the mesh solver: they keep the
+            // legacy MLS deformation.
+            QString mesh;
+            if (KisDomUtils::loadValue(warpEl, "mesh", &mesh)) {
+                args.m_puppetMesh = KisPuppetTransformWorker::Mesh::fromString(mesh);
+            }
+            // Missing in older documents: every pin at order 0.
+            (void)KisDomUtils::loadValue(warpEl, "orders", &args.m_puppetOrders);
+            args.m_puppetOrders.resize(args.m_origPoints.size());
         }
 
         if (result && warpType >= 0 && warpType < KisWarpTransformWorker::N_MODES) {

@@ -334,6 +334,7 @@ private Q_SLOTS:
     void slotRestartTransform();
     void slotRestartAndContinueTransform();
     void slotEditingFinished();
+    void slotPuppetOrderChange(int change);
 
     void slotMoveDiscreteUp();
     void slotMoveDiscreteUpMore();

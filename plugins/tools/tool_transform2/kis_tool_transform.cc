@@ -1224,6 +1224,7 @@ QWidget* KisToolTransform::createOptionWidget()
     connect(m_optionsWidget, SIGNAL(sigEditingFinished()),
             this, SLOT(slotEditingFinished()));
 
+    connect(m_optionsWidget, SIGNAL(sigPuppetOrderChange(int)), this, SLOT(slotPuppetOrderChange(int)));
 
     connect(mirrorHorizontalAction, SIGNAL(triggered(bool)), m_optionsWidget, SLOT(slotFlipX()));
     connect(mirrorVerticalAction, SIGNAL(triggered(bool)), m_optionsWidget, SLOT(slotFlipY()));
@@ -1377,6 +1378,15 @@ void KisToolTransform::slotRestartAndContinueTransform()
 
 void KisToolTransform::slotEditingFinished()
 {
+    commitChanges();
+}
+
+void KisToolTransform::slotPuppetOrderChange(int change)
+{
+    if (m_currentArgs.mode() != ToolTransformArgs::PUPPET || !m_puppetStrategy->changePuppetOrder(change)) {
+        return;
+    }
+    slotUiChangedConfig(false);
     commitChanges();
 }
 

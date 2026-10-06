@@ -39,6 +39,9 @@ Q_SIGNALS:
     void sigUpdateGlobalConfig();
     void sigRestartAndContinueTransform();
     void sigEditingFinished();
+    /// Puppet Warp: change the stacking order of the selected pins
+    /// (ToolTransformArgs::PuppetOrderChange).
+    void sigPuppetOrderChange(int change);
 
 public Q_SLOTS:
 
@@ -91,6 +94,7 @@ public Q_SLOTS:
     void slotSetMeshModeButtonClicked(bool);
     void slotPuppetShowMeshChanged(bool value);
     void slotPuppetExpansionChanged(int value);
+    void slotPuppetClickActionChanged(int index);
 
     void slotEditCagePoints(bool value);
 
@@ -142,6 +146,9 @@ private:
     QPointF m_handleDir[9];
     QButtonGroup *m_rotationCenterButtons;
     int m_notificationsBlocked;
+    // Puppet Warp pin options, built in code (see the constructor).
+    QWidget *m_puppetPinOptions{nullptr};
+    QComboBox *m_puppetClickActionCombo{nullptr};
     int m_uiSlotsBlocked;
     double m_scaleRatio;
     bool m_configChanged;

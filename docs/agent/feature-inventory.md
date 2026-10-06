@@ -136,6 +136,22 @@ in `kis_brushop.cpp`, and completed upload-source inspection in
 Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
 and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
 from CPU/GPU execution and preserves missing evidence for other walkers.
+Phase 4.95 (Puppet Warp, user request) adds the mesh ARAP model:
+- new `libs/image/KisPuppetTransformWorker.*` and its test
+  `libs/image/tests/KisPuppetTransformWorkerTest.cpp`;
+- `puppetMesh()/setPuppetMesh()/usesPuppetMesh()/createPuppetWorker()/puppetRotations()`
+  plus copy, equality, transform and XML (`mesh`) in `tool_transform_args.*`;
+- the mesh branches in `kis_transform_utils.cpp`;
+- `ensurePuppetMesh()`, `cachedPuppetWorker()`, the image/thumbnail maps and the mesh overlay in
+  `kis_warp_transform_strategy.cpp`;
+- the serialization checks in `tests/test_animated_transform_parameters.cpp`.
+Pin selection, click action and order (same phase, user request):
+- `RUBBER_BAND` mode, multi-pin move and rotate, and `changePuppetOrder()` in
+  `kis_warp_transform_strategy.*`;
+- `PuppetClickAction`, `PuppetOrderChange`, `m_puppetOrders` and XML `orders` in `tool_transform_args.*`;
+- the code-built "Click pin" combo and Order buttons in `kis_tool_transform_config_widget.*`;
+- `slotPuppetOrderChange()` in `kis_tool_transform.*`;
+- order levels (`orderAt()`, `orderLevels()`, `OrderFilterOp`) in `libs/image/KisPuppetTransformWorker.*`.
 Phase 4.94 adds GPU affine transform passes:
 - new `libs/gpu/KisGpuTransformPass.*` and `libs/gpu/shaders/transform_pass.comp`;
 - new `libs/image/gpu/KisGpuTransformWorker.*`;

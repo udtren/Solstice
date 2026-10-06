@@ -40,6 +40,10 @@ public:
     void setTransformFunction(const QPointF &mousePos, bool perspectiveModifierActive, bool shiftModifierActive, bool altModifierActive) override;
     void setTransformType(TransformType type);
 
+    /// Puppet Warp: changes the stacking order of the selected pins.
+    /// Returns false when no pin is selected.
+    bool changePuppetOrder(int change); // ToolTransformArgs::PuppetOrderChange
+
     void paint(QPainter &gc) override;
     QCursor getCurrentCursor() const override;
 

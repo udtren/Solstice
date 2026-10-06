@@ -12,6 +12,7 @@
 #include <QPointF>
 #include <QVector3D>
 #include <kis_warptransform_worker.h>
+#include <KisPuppetTransformWorker.h>
 #include <kis_filter_strategy.h>
 #include "kis_liquify_properties.h"
 #include "kritatooltransform_export.h"
@@ -44,6 +45,20 @@ public:
                         MESH,
                         PUPPET,
                         N_MODES};
+
+    /// Puppet Warp: what a click on a pin does (a tool preference).
+    enum PuppetClickAction {
+        PuppetSelectPin = 0,
+        PuppetDeletePin
+    };
+
+    /// Puppet Warp: stacking order changes for the selected pins.
+    enum PuppetOrderChange {
+        PuppetOrderToFront = 0,
+        PuppetOrderForward,
+        PuppetOrderBackward,
+        PuppetOrderToBack
+    };
 
     /**
      * Initializes the parameters for an identity transformation,
@@ -178,7 +193,43 @@ public:
     void setPuppetExpansion(int value);
 
     qreal puppetRotation(int index) const;
+    inline const QVector<qreal> &puppetRotations() const
+    {
+        return m_puppetRotations;
+    }
+    /// Stacking order of overlapping parts per pin (higher on top), index-aligned.
+    int puppetOrder(int index) const;
+    void setPuppetOrder(int index, int value);
+    inline const QVector<int> &puppetOrders() const
+    {
+        return m_puppetOrders;
+    }
+    /// Applies @p change to the pins at @p indexes, keeping the other pins' orders.
+    void changePuppetOrder(const QVector<int> &indexes, PuppetOrderChange change);
+    inline PuppetClickAction puppetClickAction() const
+    {
+        return m_puppetClickAction;
+    }
+    void setPuppetClickAction(PuppetClickAction action);
     void setPuppetRotation(int index, qreal value);
+    /**
+     * The triangle mesh of a Puppet transform (docs/agent/puppet-warp.md).
+     * With a valid mesh every path deforms through KisPuppetTransformWorker;
+     * without one (older documents) the legacy MLS controls are used.
+     */
+    inline const KisPuppetTransformWorker::Mesh &puppetMesh() const
+    {
+        return m_puppetMesh;
+    }
+    inline void setPuppetMesh(const KisPuppetTransformWorker::Mesh &mesh)
+    {
+        m_puppetMesh = mesh;
+    }
+    inline bool usesPuppetMesh() const
+    {
+        return m_mode == PUPPET && m_puppetMesh.isValid();
+    }
+    KisPuppetTransformWorker createPuppetWorker() const;
     void removePuppetPoint(int index);
     void puppetControlPoints(const QVector<QPointF> &originalPoints,
                              const QVector<QPointF> &transformedPoints,
@@ -363,6 +414,9 @@ private:
     double m_alpha {1.0};
     bool m_puppetShowMesh{true};
     int m_puppetExpansion{2};
+    KisPuppetTransformWorker::Mesh m_puppetMesh;
+    QVector<int> m_puppetOrders;
+    PuppetClickAction m_puppetClickAction{PuppetSelectPin};
 
     //'free transform'-related
     // basically the arguments taken by the transform worker

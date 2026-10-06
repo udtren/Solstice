@@ -146,6 +146,51 @@ void KisAnimatedTransformParametersTest::testPuppetTransformSerialization()
     QCOMPARE(restored.puppetShowMesh(), false);
     QCOMPARE(restored.puppetExpansion(), 7);
     QVERIFY(!restored.isIdentity());
+    // Documents without a mesh keep the legacy MLS deformation.
+    QVERIFY(!restored.usesPuppetMesh());
+
+    // The mesh solver state round-trips and moves with the points.
+    QImage mask(40, 30, QImage::Format_Grayscale8);
+    mask.fill(0);
+    mask.setPixel(5, 5, 255);
+    mask.setPixel(20, 25, 255);
+    ToolTransformArgs meshArgs(args);
+    meshArgs.setPuppetMesh(KisPuppetTransformWorker::Mesh::build(mask, QRectF(0, 0, 160, 120), 7));
+    QVERIFY(meshArgs.usesPuppetMesh());
+    QVERIFY(!(meshArgs == args));
+    QDomDocument meshDocument;
+    QDomElement meshElement = meshDocument.createElement(QStringLiteral("transform"));
+    meshDocument.appendChild(meshElement);
+    meshArgs.toXML(&meshElement);
+    const ToolTransformArgs meshRestored = ToolTransformArgs::fromXML(meshElement);
+    QVERIFY(meshRestored.usesPuppetMesh());
+    QVERIFY(meshRestored.puppetMesh() == meshArgs.puppetMesh());
+    ToolTransformArgs scaled(meshArgs);
+    scaled.scale3dSrcAndDst(0.5);
+    QCOMPARE(scaled.puppetMesh().origin, QPointF(0, 0));
+    QCOMPARE(scaled.puppetMesh().columnStep, meshArgs.puppetMesh().columnStep * 0.5);
+    QCOMPARE(scaled.origPoints()[0], meshArgs.origPoints()[0] * 0.5);
+
+    // Pin orders: index-aligned, changed for selected pins, serialized.
+    ToolTransformArgs ordered(meshArgs);
+    QCOMPARE(ordered.puppetOrders().size(), 2);
+    ordered.changePuppetOrder({1}, ToolTransformArgs::PuppetOrderToFront);
+    QCOMPARE(ordered.puppetOrder(1), 1);
+    // "To back" places the pin just below every other pin.
+    ordered.changePuppetOrder({0}, ToolTransformArgs::PuppetOrderToBack);
+    QCOMPARE(ordered.puppetOrder(0), 0);
+    QVERIFY(ordered.puppetOrder(0) < ordered.puppetOrder(1));
+    ordered.changePuppetOrder({0}, ToolTransformArgs::PuppetOrderBackward);
+    QCOMPARE(ordered.puppetOrder(0), -1);
+    QVERIFY(!(ordered == meshArgs));
+    QDomDocument orderDocument;
+    QDomElement orderElement = orderDocument.createElement(QStringLiteral("transform"));
+    orderDocument.appendChild(orderElement);
+    ordered.toXML(&orderElement);
+    const ToolTransformArgs orderRestored = ToolTransformArgs::fromXML(orderElement);
+    QCOMPARE(orderRestored.puppetOrders(), ordered.puppetOrders());
+    ordered.removePuppetPoint(0);
+    QCOMPARE(ordered.puppetOrders(), QVector<int>{1});
 
     QVector<QPointF> expandedOriginalPoints;
     QVector<QPointF> expandedTransformedPoints;

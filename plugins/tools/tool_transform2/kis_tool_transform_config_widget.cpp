@@ -20,6 +20,31 @@
 #include <kstandardguiitem.h>
 #include <KisSpinBoxI18nHelper.h>
 
+#include <QBoxLayout>
+#include <QComboBox>
+#include <QLabel>
+#include <QToolButton>
+
+namespace
+{
+/// The box layout directly containing @p widget, searched from @p layout.
+QBoxLayout *containingBoxLayout(QLayout *layout, QWidget *widget)
+{
+    if (!layout) {
+        return nullptr;
+    }
+    QBoxLayout *box = qobject_cast<QBoxLayout *>(layout);
+    if (box && box->indexOf(widget) >= 0) {
+        return box;
+    }
+    for (int i = 0; i < layout->count(); ++i) {
+        if (QBoxLayout *found = containingBoxLayout(layout->itemAt(i)->layout(), widget)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+} // namespace
 
 template<typename T> inline T sign(T x) {
     return x > 0 ? 1 : x == (T)0 ? 0 : -1;
@@ -330,6 +355,53 @@ KisToolTransformConfigWidget::KisToolTransformConfigWidget(TransformTransactionP
     connect(puppetExpansionSpinBox, SIGNAL(valueChanged(int)), this, SLOT(slotPuppetExpansionChanged(int)));
     connect(puppetExpansionSpinBox, SIGNAL(editingFinished()), this, SLOT(notifyEditingFinished()));
 
+    // Puppet Warp pin options (Clip Studio Paint's "Click pin" and "Order").
+    // Built in code under the Puppet options row, so wdg_tool_transform.ui and
+    // its generated wdg_tool_transform_ui.py stay unchanged.
+    {
+        m_puppetPinOptions = new QWidget(puppetOptionsWidget->parentWidget());
+        QHBoxLayout *pinLayout = new QHBoxLayout(m_puppetPinOptions);
+        pinLayout->setContentsMargins(0, 0, 0, 0);
+        pinLayout->addWidget(new QLabel(i18nc("@label:listbox Puppet Warp", "Click pin:"), m_puppetPinOptions));
+        m_puppetClickActionCombo = new QComboBox(m_puppetPinOptions);
+        m_puppetClickActionCombo->addItem(i18nc("@item:inlistbox Puppet Warp click action", "Select pin"));
+        m_puppetClickActionCombo->addItem(i18nc("@item:inlistbox Puppet Warp click action", "Delete pin"));
+        m_puppetClickActionCombo->setToolTip(i18n(
+            "What a click on a pin does. Alt-click always deletes a pin.\n"
+            "Shift- or Ctrl-click adds a pin to the selection; drag on the canvas to select pins in a rectangle."));
+        pinLayout->addWidget(m_puppetClickActionCombo);
+        pinLayout->addSpacing(8);
+        pinLayout->addWidget(new QLabel(i18nc("@label Puppet Warp pin stacking order", "Order:"), m_puppetPinOptions));
+        const struct {
+            const char *text;
+            QString toolTip;
+            int change;
+        } orderButtons[] = {
+            {"\u2191\u2191",
+             i18n("Bring the selected pins' parts to the front"),
+             ToolTransformArgs::PuppetOrderToFront},
+            {"\u2191", i18n("Bring the selected pins' parts forward"), ToolTransformArgs::PuppetOrderForward},
+            {"\u2193", i18n("Send the selected pins' parts backward"), ToolTransformArgs::PuppetOrderBackward},
+            {"\u2193\u2193", i18n("Send the selected pins' parts to the back"), ToolTransformArgs::PuppetOrderToBack},
+        };
+        for (const auto &button : orderButtons) {
+            QToolButton *toolButton = new QToolButton(m_puppetPinOptions);
+            toolButton->setText(QString::fromUtf8(button.text));
+            toolButton->setToolTip(button.toolTip);
+            const int change = button.change;
+            connect(toolButton, &QToolButton::clicked, this, [this, change]() {
+                Q_EMIT sigPuppetOrderChange(change);
+            });
+            pinLayout->addWidget(toolButton);
+        }
+        pinLayout->addStretch();
+        if (QBoxLayout *box = containingBoxLayout(puppetOptionsWidget->parentWidget()->layout(), puppetOptionsWidget)) {
+            box->insertWidget(box->indexOf(puppetOptionsWidget) + 1, m_puppetPinOptions);
+        }
+        m_puppetPinOptions->setVisible(puppetOptionsWidget->isVisibleTo(puppetOptionsWidget->parentWidget()));
+        connect(m_puppetClickActionCombo, SIGNAL(currentIndexChanged(int)), SLOT(slotPuppetClickActionChanged(int)));
+    }
+
     tooBigLabelWidget->hide();
 
     connect(canvas->viewManager()->mainWindow(), SIGNAL(themeChanged()), SLOT(slotUpdateIcons()), Qt::UniqueConnection);
@@ -602,6 +674,7 @@ void KisToolTransformConfigWidget::updateConfig(const ToolTransformArgs &config)
         stackedWidget->setCurrentIndex(1);
         warpButton->setChecked(true);
         puppetOptionsWidget->hide();
+        m_puppetPinOptions->hide();
         defaultRadioButton->show();
         densityBox->show();
         groupBox->setToolTip(QString());
@@ -622,11 +695,15 @@ void KisToolTransformConfigWidget::updateConfig(const ToolTransformArgs &config)
         stackedWidget->setCurrentIndex(1);
         puppetButton->setChecked(true);
         puppetOptionsWidget->show();
+        m_puppetPinOptions->show();
+        m_puppetClickActionCombo->setCurrentIndex(int(config.puppetClickAction()));
         defaultRadioButton->hide();
         densityBox->hide();
         customRadioButton->setChecked(true);
         customWarpWidget->setEnabled(true);
-        groupBox->setToolTip(i18n("Click the canvas to add pins. Alt-click a pin to delete it."));
+        groupBox->setToolTip(
+            i18n("Click the canvas to add pins. Alt-click a pin to delete it. "
+                 "Shift-click or drag a rectangle to select several pins and move them together."));
         cmbWarpType->setCurrentIndex((int)config.warpType());
         puppetShowMeshCheckBox->setChecked(config.puppetShowMesh());
         puppetExpansionSpinBox->setValue(config.puppetExpansion());
@@ -846,6 +923,15 @@ void KisToolTransformConfigWidget::slotPuppetShowMeshChanged(bool value)
         return;
     m_transaction->currentConfig()->setPuppetShowMesh(value);
     notifyConfigChanged();
+}
+
+void KisToolTransformConfigWidget::slotPuppetClickActionChanged(int index)
+{
+    if (m_uiSlotsBlocked)
+        return;
+    // A tool preference: it does not change the transform.
+    m_transaction->currentConfig()->setPuppetClickAction(index == 1 ? ToolTransformArgs::PuppetDeletePin
+                                                                    : ToolTransformArgs::PuppetSelectPin);
 }
 
 void KisToolTransformConfigWidget::slotPuppetExpansionChanged(int value)

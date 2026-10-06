@@ -300,7 +300,9 @@ void transformDeviceImpl(const ToolTransformArgs &config,
                          bool cropDst,
                          bool forceSubPixelTranslation)
 {
-    if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
+    if (config.usesPuppetMesh()) {
+        config.createPuppetWorker().run(srcDevice, dstDevice);
+    } else if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
         KoUpdaterPtr updater = helper->updater();
 
         QVector<QPointF> originalPoints;
@@ -399,7 +401,10 @@ QRect KisTransformUtils::needRect(const ToolTransformArgs &config,
 {
     QRect result = rc;
 
-    if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
+    if (config.usesPuppetMesh()) {
+        // A pin can pull pixels from anywhere in the mesh.
+        result = srcBounds;
+    } else if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
         QVector<QPointF> originalPoints;
         QVector<QPointF> transformedPoints;
         warpControlPoints(config, &originalPoints, &transformedPoints);
@@ -431,7 +436,10 @@ QRect KisTransformUtils::changeRect(const ToolTransformArgs &config,
 {
     QRect result = rc;
 
-    if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
+    if (config.usesPuppetMesh()) {
+        // The source area is cleared as well.
+        result = config.createPuppetWorker().approxChangeRect(rc) | rc;
+    } else if (config.mode() == ToolTransformArgs::WARP || config.mode() == ToolTransformArgs::PUPPET) {
         QVector<QPointF> originalPoints;
         QVector<QPointF> transformedPoints;
         warpControlPoints(config, &originalPoints, &transformedPoints);
