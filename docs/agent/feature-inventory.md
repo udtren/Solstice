@@ -136,6 +136,12 @@ in `kis_brushop.cpp`, and completed upload-source inspection in
 Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
 and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
 from CPU/GPU execution and preserves missing evidence for other walkers.
+Phase 4.90 adds replace layers for the Wash base copy: `KisGpuLayerCompositor::Layer::replace`
+(`libs/gpu/KisGpuLayerCompositor.*` with the 32-byte `LayerParams` fill color, flag 8 and mask handling in
+`libs/gpu/shaders/composite_layers.comp`), `KisGpuProjectionCompositor::Layer::replace`,
+`KisGpuBrushPainter::paintWashPreview(..., base)/washBaseCopyCount()`, and the combined path
+in `KisPaintLayer::copyOriginalToProjection()`; tests `KisGpuBrushTest::testWashPreviewBaseCopy`
+and the base-copy assertion in `KisGpuStrokeTest`.
 Phase 4.89 adds the chained GPU brush update job in `FreehandStrokeStrategy::tryDoUpdate()`
 (`libs/ui/tool/strokes/freehand_stroke.cpp`) and paint-trace scopes in
 `KisPaintLayer::copyOriginalToProjection()` (`libs/image/kis_paint_layer.cc`) and

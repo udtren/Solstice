@@ -41,6 +41,11 @@ public:
         quint32 channelMask = 0xf;
         bool halfBrush = false;
         bool explicitChannelFlags = false;
+        /// Copy instead of blending: inside the rect the projection becomes this
+        /// device, its default pixel where it has no data
+        /// (KisPainter::copyAreaOptimized). The default pixels must be equal;
+        /// only leading layers may replace.
+        bool replace = false;
     };
 
     /// Maps a Krita composite op id to a GPU blend op; false if unsupported.
@@ -64,7 +69,7 @@ public:
      * Optional coverage is a tightly packed CPU snapshot in image coordinates,
      * copied before return. It supports one RGBA32F layer in a supported blend mode,
      * or one RGBA16F layer in a supported brush mode, including channel locks,
-     * and is limited to 16 MiB.
+     * and is limited to 16 MiB. Replace layers below it ignore the coverage.
      *
      * @return false on failure; the projection is then unchanged
      */

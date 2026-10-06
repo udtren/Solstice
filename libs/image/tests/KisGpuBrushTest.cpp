@@ -2234,18 +2234,22 @@ private:
         context.waitIdle();
         const auto beforePreview = context.completedValue();
         const auto beforeGpuPreview = KisGpuBrushPainter::washPreviewCount();
+        const auto beforeBaseCopy = KisGpuBrushPainter::washBaseCopyCount();
         const bool previewFailure = previewPath == "failure" || previewPath == "selection-failure";
+        // Phase 4.90: the preview with the base copy, then the plain GPU preview.
         if (previewFailure)
-            context.injectSubmitFailuresForTesting(1);
+            context.injectSubmitFailuresForTesting(2);
         gpu->copyOriginalToProjection(gpu->paintDevice(), gpuPreview, bounds);
         context.waitIdle();
         const auto previewSubmissions = context.completedValue() - beforePreview;
         const bool previewGpu = !previewFailure && previewPath != "offset" && previewPath != "integer";
         QCOMPARE(KisGpuBrushPainter::washPreviewCount() - beforeGpuPreview, previewGpu ? quint64(1) : quint64(0));
+        QCOMPARE(KisGpuBrushPainter::washBaseCopyCount() - beforeBaseCopy, previewGpu ? quint64(1) : quint64(0));
         if (!noCoverage)
             QVERIFY(previewSubmissions > 0);
+        // Without coverage the GPU still submits the base copy.
         if (!limitedReadback)
-            QCOMPARE(previewSubmissions, noCoverage ? quint64(0) : quint64(1));
+            QCOMPARE(previewSubmissions, noCoverage && !previewGpu ? quint64(0) : quint64(1));
         const auto previewPixels = pixels(gpuPreview, bounds);
         const bool ignoreHiddenRgb = !half && mode == COMPOSITE_OVER && (channelBits < 0 || channelBits == 15);
         QVERIFY(difference(pixels(cpuPreview, bounds), previewPixels, ignoreHiddenRgb) <= tolerance);
@@ -2317,6 +2321,104 @@ private:
         QCOMPARE(pixels(gpu->paintDevice(), bounds), after);
     }
 private Q_SLOTS:
+    void testWashPreviewBaseCopy_data()
+    {
+        QTest::addColumn<bool>("half");
+        QTest::addColumn<QString>("mode");
+        QTest::addColumn<QString>("variant");
+        for (bool half : {false, true}) {
+            for (const QString &mode :
+                 {QString(COMPOSITE_OVER), QString(COMPOSITE_ERASE), QString(COMPOSITE_OVERLAY)}) {
+                for (const QString &variant : {"plain",
+                                               "selection",
+                                               "selection-outside",
+                                               "empty-original",
+                                               "opaque-default",
+                                               "background",
+                                               "empty-background",
+                                               "stale-gpu-projection"})
+                    QTest::newRow(qPrintable(QString("%1-%2-%3").arg(half ? "f16" : "f32", mode, variant)))
+                        << half << mode << variant;
+            }
+        }
+    }
+    void testWashPreviewBaseCopy()
+    {
+        // Phase 4.90: copyOriginalToProjection copies the original on the GPU
+        // in the preview submission. The projection holds unrelated pixels
+        // inside and around the rect; the original covers only part of it.
+        QFETCH(bool, half);
+        QFETCH(QString, mode);
+        QFETCH(QString, variant);
+        const auto *cs = space(half);
+        const QRect rect(-77, -29, 213, 141);
+        const QRect around = rect.adjusted(-70, -70, 70, 70);
+        const auto dabs = makeDabs(5, 89, half);
+        KisImageSP image = new KisImage(nullptr, 512, 512, cs, "Wash base copy");
+        KisSharedPtr<PreviewPaintLayer> layer = new PreviewPaintLayer(image, "paint", 255, cs);
+        KoColor fill(cs), stale(cs);
+        cs->fromNormalisedChannelsValue(fill.data(), {0.8f, 0.2f, 0.3f, 0.6f});
+        cs->fromNormalisedChannelsValue(stale.data(), {0.1f, 0.9f, 0.4f, 0.7f});
+        // "background": a Background raster layer (KisDocument::newImage) has an
+        // opaque default pixel, which its projection clone shares.
+        KoColor paper(cs);
+        cs->fromNormalisedChannelsValue(paper.data(), {0.95f, 0.9f, 0.85f, 1.0f});
+        const bool background = variant.endsWith("background");
+        if (variant == "opaque-default" || background)
+            layer->paintDevice()->setDefaultPixel(paper);
+        if (variant != "empty-original" && variant != "empty-background")
+            layer->paintDevice()->fill(rect.adjusted(40, 30, -90, 0), fill);
+        KisPaintDeviceSP target = new KisPaintDevice(cs);
+        KisPainter targetPainter(target);
+        targetPainter.setCompositeOpId(COMPOSITE_ALPHA_DARKEN);
+        QVERIFY(KisGpuBrushPainter::paint(&targetPainter, dabs));
+        layer->setTemporaryTarget(target);
+        layer->setTemporaryCompositeOp(mode);
+        layer->setTemporaryOpacity(0.61);
+        if (variant.startsWith("selection")) {
+            KisSelectionSP selection = new KisSelection();
+            if (variant == "selection")
+                selection->pixelSelection()->select(rect.adjusted(35, 21, -25, -13), 173);
+            else
+                selection->pixelSelection()->select(rect.translated(4096, 4096));
+            layer->setTemporarySelection(selection);
+        }
+        KisPaintDeviceSP cpuProjection = new KisPaintDevice(cs), gpuProjection = new KisPaintDevice(cs);
+        for (auto projection : {cpuProjection, gpuProjection}) {
+            if (background)
+                projection->setDefaultPixel(paper);
+            projection->fill(around, stale);
+        }
+        auto &context = KisGpuTileBackend::instance()->context();
+        if (variant == "stale-gpu-projection") {
+            // Leave the GPU projection's tiles GPU-valid and CPU-stale, as a
+            // previous preview does, before the next base copy.
+            KisPainter gpuPainter(gpuProjection), cpuPainter(cpuProjection);
+            gpuPainter.setCompositeOpId(COMPOSITE_OVER);
+            cpuPainter.setCompositeOpId(COMPOSITE_OVER);
+            QVERIFY(KisGpuBrushPainter::paintWashPreview(&gpuPainter, target, around));
+            cpuPainter.bitBlt(around.topLeft(), target, around);
+        }
+        qputenv("KRITA_GPU_BRUSH", "0");
+        layer->copyOriginalToProjection(layer->paintDevice(), cpuProjection, rect);
+        qputenv("KRITA_GPU_BRUSH", "1");
+        context.waitIdle();
+        const auto beforeBase = KisGpuBrushPainter::washBaseCopyCount();
+        const auto beforeSubmissions = context.completedValue();
+        layer->copyOriginalToProjection(layer->paintDevice(), gpuProjection, rect);
+        context.waitIdle();
+        const bool gpuBase = variant != "opaque-default";
+        QCOMPARE(KisGpuBrushPainter::washBaseCopyCount() - beforeBase, gpuBase ? quint64(1) : quint64(0));
+        if (gpuBase)
+            QCOMPARE(context.completedValue() - beforeSubmissions, quint64(1));
+        // The pixels around the rect must stay untouched; inside it the GPU
+        // matches the CPU copy plus preview.
+        const float tolerance = half ? 1.0f / 1024 : 2e-5f;
+        const float error =
+            difference(pixels(cpuProjection, around), pixels(gpuProjection, around), mode == COMPOSITE_OVER && !half);
+        QVERIFY2(error <= tolerance, qPrintable(QString::number(error)));
+        QVERIFY(!KisGpuTileBackend::instance()->hasFailed());
+    }
     void testWashSelectionChanges()
     {
         const QRect bounds(-77, -29, 131, 93);

@@ -33,6 +33,7 @@ std::atomic<quint64> s_batches{0};
 std::atomic<quint64> s_generatedDabs{0};
 std::atomic<int> s_refusePendingBatches{0};
 std::atomic<quint64> s_washPreviews{0};
+std::atomic<quint64> s_washBaseCopies{0}; // phase 4.90: base copy in the Wash preview submission
 std::atomic<quint64> s_washMerges{0};
 QMutex s_mutex;
 struct Work {
@@ -507,11 +508,15 @@ bool KisGpuBrushPainter::resetStagingForTesting()
 #endif
     return true;
 }
-bool KisGpuBrushPainter::compositeWash(KisPainter *painter, KisPaintDeviceSP source, const QRect &rect)
+bool KisGpuBrushPainter::compositeWash(KisPainter *painter,
+                                       KisPaintDeviceSP source,
+                                       const QRect &rect,
+                                       KisPaintDeviceSP base)
 {
 #ifdef HAVE_KRITA_GPU_ENGINE
     if (!supports(painter) || painter->compositeOpId() == COMPOSITE_ALPHA_DARKEN || !source
-        || source == painter->device() || source->defaultPixel().opacityF() != 0.0)
+        || source == painter->device() || source->defaultPixel().opacityF() != 0.0
+        || (base && (base == painter->device() || base == source)))
         return false;
     const bool half = painter->device()->pixelSize() == 8;
     const auto flags = painter->channelFlags();
@@ -533,10 +538,18 @@ bool KisGpuBrushPainter::compositeWash(KisPainter *painter, KisPaintDeviceSP sou
     QByteArray maskPixels;
     KisGpuLayerCompositor::Mask mask;
     const auto selection = painter->selection();
+    // The base copy covers the whole rect; the Wash layer only the selection.
+    QVector<KisGpuProjectionCompositor::Layer> layers;
+    if (base) {
+        KisGpuProjectionCompositor::Layer copy;
+        copy.device = base;
+        copy.replace = true;
+        layers << copy;
+    }
     if (selection) {
         paintRect &= selection->selectedRect();
         if (paintRect.isEmpty())
-            return true;
+            return !base || KisGpuProjectionCompositor::composite(painter->device(), rect, layers);
         const qint64 bytes = qint64(paintRect.width()) * paintRect.height();
         if (bytes > 4096 * 4096)
             return false;
@@ -544,29 +557,36 @@ bool KisGpuBrushPainter::compositeWash(KisPainter *painter, KisPaintDeviceSP sou
         selection->projection()->readBytes(reinterpret_cast<quint8 *>(maskPixels.data()), paintRect);
         mask = {reinterpret_cast<const quint8 *>(maskPixels.constData()), paintRect};
     }
+    layers << KisGpuProjectionCompositor::Layer{source,
+                                                op,
+                                                opacity,
+                                                false,
+                                                channels,
+                                                half && (op == KisGpuBlendOp::Over || op == KisGpuBlendOp::Erase),
+                                                !flags.isEmpty()};
     return KisGpuProjectionCompositor::composite(painter->device(),
-                                                 paintRect,
-                                                 {{source,
-                                                   op,
-                                                   opacity,
-                                                   false,
-                                                   channels,
-                                                   half && (op == KisGpuBlendOp::Over || op == KisGpuBlendOp::Erase),
-                                                   !flags.isEmpty()}},
+                                                 base ? rect : paintRect,
+                                                 layers,
                                                  nullptr,
                                                  selection ? &mask : nullptr);
 #else
     Q_UNUSED(painter);
     Q_UNUSED(source);
     Q_UNUSED(rect);
+    Q_UNUSED(base);
     return false;
 #endif
 }
-bool KisGpuBrushPainter::paintWashPreview(KisPainter *painter, KisPaintDeviceSP source, const QRect &rect)
+bool KisGpuBrushPainter::paintWashPreview(KisPainter *painter,
+                                          KisPaintDeviceSP source,
+                                          const QRect &rect,
+                                          KisPaintDeviceSP base)
 {
-    if (!compositeWash(painter, source, rect))
+    if (!compositeWash(painter, source, rect, base))
         return false;
 #ifdef HAVE_KRITA_GPU_ENGINE
+    if (base)
+        ++s_washBaseCopies;
     const auto count = ++s_washPreviews;
     if (count <= 3 && qEnvironmentVariableIntValue("KRITA_GPU_BRUSH_DEBUG") == 1)
         qInfo() << "GPU brush: Wash preview" << count << "mode" << painter->compositeOpId() << "rect" << rect;
@@ -593,6 +613,14 @@ quint64 KisGpuBrushPainter::washMergeCount()
 {
 #ifdef HAVE_KRITA_GPU_ENGINE
     return s_washMerges.load();
+#else
+    return 0;
+#endif
+}
+quint64 KisGpuBrushPainter::washBaseCopyCount()
+{
+#ifdef HAVE_KRITA_GPU_ENGINE
+    return s_washBaseCopies.load();
 #else
     return 0;
 #endif

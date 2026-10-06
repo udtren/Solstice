@@ -92,6 +92,10 @@ public:
         quint32 channelMask = 0xf; // RGBA bits; partial channels are used by brushes.
         bool halfBrush = false; // F16 Normal/Erase scalar arithmetic, for Wash only
         bool explicitChannelFlags = false;
+        /// Copy the layer's pixels (@p fill where it has no tile) instead of
+        /// blending, ignoring the other fields and coverage (COMPOSITE_COPY base copy).
+        bool replace = false;
+        float fill[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // tile memory order, as float
     };
 
     ~KisGpuLayerCompositor();

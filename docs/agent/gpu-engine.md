@@ -5836,6 +5836,135 @@ The manual checks ran in a separate process, 48700.
     on the GPU inside `paintWashPreview` (copy, then composite the temporary
     target in one submission).
 
+### GPU base copy in the Wash preview (phase 4.90)
+
+`KisPaintLayer::copyOriginalToProjection()` used to copy the layer original into
+the layer projection with `KisPainter::copyAreaOptimized()` (a CPU
+`COMPOSITE_COPY` blit). The Wash preview then composited the temporary target
+on the GPU. The projection tiles were last written by the previous GPU
+preview, so the CPU copy wrote into GPU-valid, CPU-stale tiles before every
+preview.
+
+- **Replace layers.** `KisGpuLayerCompositor::Layer::replace` (flag 8 in
+  `composite_layers.comp`) sets the pixel to the layer's pixel, or to 0 where
+  the layer has no tile. Opacity, channels and coverage are ignored.
+  - With a coverage mask, pixels outside it now apply only replace layers
+    instead of being skipped. Pixels with no replace layer are written back
+    unchanged.
+  - The coverage op is taken from the top (blended) layer.
+  - `record()` accepts a mask for one blended layer above any number of replace
+    layers.
+- **`KisGpuProjectionCompositor::Layer::replace`.**
+  - Replace layers must lead the stack.
+  - Every replace device needs the projection's default pixel (byte-equal).
+    The shader writes the device's default pixel, `Layer::fill` in tile memory
+    order, where the device has no tile. With equal defaults this matches
+    `copyAreaOptimized`: inside the rect the projection becomes the source, or
+    the shared default where the source has no data. Unequal defaults keep the
+    CPU copy, which may clear to the destination's default.
+  - A replace layer without tiles in the rect still records a clearing pass.
+  - Coverage is dropped when the blended layer has no tiles.
+  - F16 coverage rules apply to the top layer.
+- **`KisGpuBrushPainter::paintWashPreview(painter, source, rect, base)`.**
+  - With `base`, it records the base copy over the whole rect and the Wash
+    layer (selection coverage only on it) in one submission.
+  - Selection without coverage in the rect gives a copy-only submission.
+  - `base` must differ from the destination and the source.
+  - `washBaseCopyCount()` counts successful combined previews.
+- **`KisPaintLayer::copyOriginalToProjection()`.** For a GPU color space with a
+  temporary target, it first tries the combined path (trace
+  `layer.wash_preview_with_copy`). If that path refuses or fails, the projection
+  is unchanged and the previous sequence runs: CPU copy (`layer.copy_original`),
+  the plain GPU preview, then the CPU blend.
+  - A failed combined submission is retried as the plain preview after the CPU
+    copy.
+  - Unaligned originals, unequal defaults, LOD and unsupported modes keep the
+    CPU copy.
+
+Tests (Vulkan validation):
+
+- `KisGpuBrushTest` 4438/4438.
+  - New `testWashPreviewBaseCopy`: F32/F16 × Normal/Erase/Overlay × plain,
+    selection, selection outside the rect, empty original, opaque original
+    default (CPU copy expected) and GPU-stale projection. Each row compares
+    the area around the rect as well and expects one submission.
+  - `testIndirectMerge*` expect the base-copy count. Copy-only submissions
+    occur without coverage, and two injected failures reach the CPU fallback.
+- `KisGpuStrokeTest` 360/360, now asserting base copies in GPU Wash strokes.
+- `KisGpuProjectionTest` 199, `KisGpuBrushJobsTest` 41,
+  `KisGpuPaintDeviceTest` 151, `KisGpuEngineTest` 10, `KisGpuCanvasUploadTest`
+  38, `KisDabRenderingQueueTest` 12 (1 skipped as before), `kis_paint_layer_test`
+  5 and `kis_async_merger_test` 12.
+- The full build stops in the PyKrita SIP module on an unrelated, existing error
+  (`KisPresetChooser::eventFilter` is private).
+
+`benchmarkWashPreview` (12 × 256px dabs, four mirror passes, median of 5, GPU
+preview path) compared with the 4.87 run:
+
+| Mode | Before | After |
+| --- | --- | --- |
+| Normal | 1.15ms | 0.27ms |
+| Erase | 1.11ms | 0.25ms |
+| Selected Normal | 1.89ms | 0.51ms |
+| Selected Erase | 1.35ms | 0.69ms |
+
+First real-app capture, PID 55584: 6 strokes, 0 dropped events. The user
+reported the manual checks OK in a separate process, 49396.
+
+- **Combined path refused.** In every Wash merge, `layer.wash_preview_with_copy`
+  returned after a median of 0.027ms and the CPU copy still ran
+  (`layer.copy_original` 0.64ms).
+- **Cause.** The first version required all-zero default pixels.
+  `KisDocument::newImage()` gives the Background raster layer an opaque
+  default pixel, and the layer projection clones it.
+- **Fix.** The default-pixel rule above (replace fill color, `LayerParams` grows
+  to 32 bytes). New test rows: `background` and `empty-background`, where the
+  original and projection share an opaque default.
+- **Other results.**
+  - Buildup input-to-swap medians: 6.8-7.1ms.
+  - The first Wash stroke of the capture, 11423, had a 35.9ms median to its
+    last upload. Its previews spent 252ms resolving tiles and 1246ms in
+    `layer.wash_preview`, summed over parallel merges; the other two Wash
+    strokes spent 67-125ms and 117-163ms. The code path matched 4.89 there,
+    since the combined path was refused. Cause not determined: check whether
+    it repeats as a first-Wash warm-up.
+  - The other Wash strokes: 7.2/8.7ms to the last upload, swap medians
+    9.7/12.2ms.
+
+Tests after the fix (Vulkan validation): `KisGpuBrushTest` 4450,
+`KisGpuStrokeTest` 360, `KisGpuProjectionTest` 199, `KisGpuBrushJobsTest` 41,
+`KisGpuPaintDeviceTest` 151, `KisGpuEngineTest` 10 and
+`KisGpuCanvasUploadTest` 38. Installed gpu/image/ui/defaultpaintops; hashes
+match.
+
+Capture after the fix, PID 52420: 6 strokes on the Background layer, 0 dropped
+events. The manual checks ran in a separate process, 12736; the user reported
+them OK, including Background and normal layers, selection, eraser, mirror,
+Undo/Redo and F16.
+
+- **Combined path used.** `layer.wash_preview_with_copy` ran in every Wash
+  merge, and `layer.copy_original` no longer appears.
+- **Wash merge median:** 1.93ms → 0.33ms (4.90 first capture; 4.89: 1.64ms).
+
+| Stroke (median, ms) | Input to last upload | Input to swap |
+| --- | --- | --- |
+| Buildup 3597 / 4885 / 6126 | 8.1 / 3.2 / 2.8 | 14.1 / 7.5 / 5.4 |
+| Wash 8515 (first Wash) | 31.6 | 36.2 |
+| Wash 9609 / 11043 | 3.6 / 3.4 | 5.8 / 6.5 |
+
+- **Later Wash strokes** are now as fast as Buildup. In 4.89 the Wash
+  input-to-swap medians were 11.0-11.5ms.
+- **First Wash stroke of the session.** It is slow again, as in the previous
+  capture (35.9ms), so the slowdown repeats.
+  - Its 88 merges spent 1092ms in `layer.wash_preview_with_copy`, about 12ms
+    each; later strokes take about 0.3ms per merge.
+  - Of that time, `tile_access.resolve_tiles` (122ms) and
+    `compositor.prepare_target` (74ms) are instrumented; the rest is not
+    covered yet.
+  - The first Buildup stroke (3597) is also slower than the later ones.
+  - This is the next candidate: a first-use cost of Wash, likely the new layer
+    projection and its first GPU residency.
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.

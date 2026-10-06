@@ -10,6 +10,7 @@
 #include "KisGpuComputePipeline.h"
 #include "KisGpuContext.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include <kis_debug.h>
@@ -51,8 +52,9 @@ struct LayerParams {
     quint32 op;
     quint32 flags;
     quint32 channelMask;
+    float fill[4]; // replace layers: the pixel where the layer has no tile
 };
-static_assert(sizeof(LayerParams) == 16, "must match the shader LayerParams struct");
+static_assert(sizeof(LayerParams) == 32, "must match the shader LayerParams struct");
 
 VkDeviceSize alignUp(VkDeviceSize value, VkDeviceSize alignment)
 {
@@ -104,7 +106,12 @@ bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
     const VkDeviceSize paramsOffset = alignUp(dstTableOffset + dstTableBytes, 16);
     const VkDeviceSize maskOffset = paramsOffset + VkDeviceSize(layers.size()) * sizeof(LayerParams);
     const qint64 maskBytes = mask ? qint64(mask->bounds.width()) * mask->bounds.height() : 0;
-    if (mask && (!mask->data || mask->bounds.isEmpty() || maskBytes > 4096 * 4096 || layers.size() != 1)) {
+    // Coverage applies to one blended layer, optionally above replace layers.
+    const bool singleBlendedLayer =
+        !layers.last().replace && std::all_of(layers.cbegin(), layers.cend() - 1, [](const Layer &layer) {
+            return layer.replace;
+        });
+    if (mask && (!mask->data || mask->bounds.isEmpty() || maskBytes > 4096 * 4096 || !singleBlendedLayer)) {
         if (errorMessage)
             *errorMessage = QStringLiteral("unsupported or oversized layer coverage mask");
         return false;
@@ -153,8 +160,9 @@ bool KisGpuLayerCompositor::record(KisGpuCommandList &commands,
         params[i].opacity = layers[i].opacity;
         params[i].op = quint32(layers[i].op);
         params[i].flags = (layers[i].alphaLocked ? 1u : 0u) | (layers[i].halfBrush ? 2u : 0u)
-            | (layers[i].explicitChannelFlags ? 4u : 0u);
+            | (layers[i].explicitChannelFlags ? 4u : 0u) | (layers[i].replace ? 8u : 0u);
         params[i].channelMask = layers[i].channelMask;
+        std::memcpy(params[i].fill, layers[i].fill, sizeof(params[i].fill));
     }
 
     PushConstants constants{};

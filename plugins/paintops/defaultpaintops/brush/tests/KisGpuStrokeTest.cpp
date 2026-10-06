@@ -505,6 +505,7 @@ private:
                 const auto firstSubmission = context.completedValue();
                 const auto firstComposite = KisGpuMergeBatch::gpuCompositeCount();
                 const auto firstPreview = KisGpuBrushPainter::washPreviewCount();
+                const auto firstBaseCopy = KisGpuBrushPainter::washBaseCopyCount();
                 const auto firstMerge = KisGpuBrushPainter::washMergeCount();
                 const auto firstBatch = KisGpuBrushPainter::batchCount();
                 const auto firstGenerated = KisGpuBrushPainter::generatedDabCount();
@@ -548,6 +549,11 @@ private:
                     QVERIFY(KisGpuBrushPainter::washPreviewCount() > firstPreview);
                 else
                     QCOMPARE(KisGpuBrushPainter::washPreviewCount(), firstPreview);
+                // Phase 4.90: Wash previews copy the layer original on the GPU.
+                if (path == 2 && wash)
+                    QVERIFY(KisGpuBrushPainter::washBaseCopyCount() > firstBaseCopy);
+                else
+                    QCOMPARE(KisGpuBrushPainter::washBaseCopyCount(), firstBaseCopy);
                 if (path == 2 && wash)
                     QVERIFY(KisGpuBrushPainter::washMergeCount() > firstMerge);
                 else

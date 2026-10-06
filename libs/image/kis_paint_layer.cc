@@ -169,12 +169,28 @@ void KisPaintLayer::copyOriginalToProjection(const KisPaintDeviceSP original,
 {
     KisIndirectPaintingSupport::ReadLocker l(this);
 
-    {
+    bool baseCopied = false;
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // GPU engine (Solstice, phase 4.90): copy the original and composite the
+    // Wash preview in one GPU submission, without a CPU write to projection
+    // tiles that the previous preview left on the GPU.
+    if (hasTemporaryTarget()) {
+        const auto owningImage = image();
+        if (owningImage && KisGpuEngineSettings::isGpuColorSpace(owningImage->colorSpace())) {
+            KisPainter gc(projection);
+            setupTemporaryPainter(&gc);
+            KisPaintTrace::Scope trace("layer.wash_preview_with_copy", this);
+            baseCopied = KisGpuBrushPainter::paintWashPreview(&gc, temporaryTarget(), rect, original);
+        }
+    }
+#endif
+
+    if (!baseCopied) {
         KisPaintTrace::Scope trace("layer.copy_original", this);
         KisPainter::copyAreaOptimized(rect.topLeft(), original, projection, rect);
     }
 
-    if (hasTemporaryTarget()) {
+    if (hasTemporaryTarget() && !baseCopied) {
         KisPainter gc(projection);
         setupTemporaryPainter(&gc);
         bool gpuPainted = false;

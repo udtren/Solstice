@@ -47,7 +47,13 @@ public:
     /// Supported RGBA32F/F16 Wash modes, with selection and CPU-compatible channel flags.
     /// Caller must provide tile-exclusive projection scheduling in a float image.
     /// False leaves the destination unchanged for CPU fallback; does not wait.
-    static bool paintWashPreview(KisPainter *painter, KisPaintDeviceSP source, const QRect &rect);
+    /// With @p base, the destination first becomes a copy of @p base inside @p rect
+    /// (KisPainter::copyAreaOptimized) in the same submission (phase 4.90).
+    static bool paintWashPreview(KisPainter *painter,
+                                 KisPaintDeviceSP source,
+                                 const QRect &rect,
+                                 KisPaintDeviceSP base = KisPaintDeviceSP());
+    static quint64 washBaseCopyCount();
     static quint64 washPreviewCount();
     /// Final Wash merge inside the caller's transaction and barrier-protected
     /// merge jobs. Requires disjoint complete 64px tiles on the image grid.
@@ -56,7 +62,10 @@ public:
     static quint64 washMergeCount();
 
 private:
-    static bool compositeWash(KisPainter *painter, KisPaintDeviceSP source, const QRect &rect);
+    static bool compositeWash(KisPainter *painter,
+                              KisPaintDeviceSP source,
+                              const QRect &rect,
+                              KisPaintDeviceSP base = KisPaintDeviceSP());
     static bool paintImpl(KisPainter *painter,
                           const QList<KisRenderedDab> &dabs,
                           const QVector<QRect> *paintRects,

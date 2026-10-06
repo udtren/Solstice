@@ -13,6 +13,7 @@
 #include <KisGpuContext.h>
 #include <KisGpuTilePool.h>
 
+#include <KoColor.h>
 #include <KoColorSpace.h>
 #include <KoCompositeOpRegistry.h>
 
@@ -21,6 +22,8 @@
 #include <QMutexLocker>
 
 #include <algorithm>
+#include <cstring>
+#include <half.h>
 #include <memory>
 #include <vector>
 
@@ -74,6 +77,19 @@ std::unique_ptr<WorkContext> acquireContext(KisGpuContext &context)
     ++s_contextCount;
     locker.unlock();
     return std::unique_ptr<WorkContext>(new WorkContext(context));
+}
+
+/// The device's default pixel in tile memory order (RGBA F32 or F16), as float.
+void defaultPixelAsFloat(KisPaintDeviceSP device, float *fill)
+{
+    const KoColor pixel = device->defaultPixel();
+    if (device->pixelSize() == 8) {
+        const half *channels = reinterpret_cast<const half *>(pixel.data());
+        for (int i = 0; i < 4; ++i)
+            fill[i] = float(channels[i]);
+    } else {
+        std::memcpy(fill, pixel.data(), 4 * sizeof(float));
+    }
 }
 
 void releaseContext(std::unique_ptr<WorkContext> work)
@@ -177,13 +193,33 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
 
     KisGpuTileBackend *backend = KisGpuTileBackend::instance();
     const qint32 pixelSize = projection->pixelSize();
-    const bool halfCoverage = pixelSize == 8 && layers.size() == 1
-        && (layers.first().halfBrush
-            || (layers.first().op > KisGpuBlendOp::Over && layers.first().op != KisGpuBlendOp::Erase
-                && kisGpuSupportsHalfBrushBlend(layers.first().op)));
+    // Replace layers lead the stack; coverage applies to one blended layer.
+    int replaceLayers = 0;
+    while (replaceLayers < layers.size() && layers[replaceLayers].replace)
+        ++replaceLayers;
+    for (int i = replaceLayers; i < layers.size(); i++) {
+        if (layers[i].replace)
+            return fail(QStringLiteral("replace layers must lead the stack"));
+    }
+    // copyAreaOptimized() yields the source's default pixel where the source
+    // has no data only when both devices share it (otherwise it may clear to
+    // the destination's default).
+    const KoColor projectionDefault = projection->defaultPixel();
+    for (int i = 0; i < replaceLayers; i++) {
+        const KoColor layerDefault = layers[i].device->defaultPixel();
+        if (layers[i].device->pixelSize() != pixelSize
+            || std::memcmp(layerDefault.data(), projectionDefault.data(), size_t(pixelSize)))
+            return fail(QStringLiteral("replace requires the projection's default pixel"));
+    }
+    const bool singleBlended = layers.size() - replaceLayers == 1;
+    const Layer &blended = layers.last();
+    const bool halfCoverage = pixelSize == 8 && singleBlended
+        && (blended.halfBrush
+            || (blended.op > KisGpuBlendOp::Over && blended.op != KisGpuBlendOp::Erase
+                && kisGpuSupportsHalfBrushBlend(blended.op)));
     if (mask
         && ((pixelSize != 16 && !halfCoverage) || !mask->data || mask->bounds.isEmpty()
-            || qint64(mask->bounds.width()) * mask->bounds.height() > 4096 * 4096 || layers.size() != 1)) {
+            || qint64(mask->bounds.width()) * mask->bounds.height() > 4096 * 4096 || !singleBlended)) {
         return fail(QStringLiteral("coverage requires one supported RGBA float layer"));
     }
     KisGpuContext &context = backend->context();
@@ -275,7 +311,15 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
         std::unique_ptr<KisGpuTileAccess> access(
             new KisGpuTileAccess(layer.device, rect & extent, KisGpuTileAccess::ReadOnly));
         if (!access->tileCount()) {
-            // Nothing of this layer inside the rect.
+            // Nothing of this layer inside the rect. A replace layer still
+            // clears the rect: all its tile addresses are 0.
+            if (layer.replace) {
+                layerTiles += QVector<VkDeviceAddress>(tileCount, 0);
+                KisGpuLayerCompositor::Layer params;
+                params.replace = true;
+                defaultPixelAsFloat(layer.device, params.fill);
+                layerParams << params;
+            }
             continue;
         }
         const bool prepared = [&] {
@@ -310,18 +354,24 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
             }
         }
         layerTiles += placed;
-        layerParams << KisGpuLayerCompositor::Layer{layer.op,
-                                                    layer.opacity,
-                                                    layer.alphaLocked,
-                                                    layer.channelMask,
-                                                    layer.halfBrush,
-                                                    layer.explicitChannelFlags};
+        KisGpuLayerCompositor::Layer params{layer.op,
+                                            layer.opacity,
+                                            layer.alphaLocked,
+                                            layer.channelMask,
+                                            layer.halfBrush,
+                                            layer.explicitChannelFlags,
+                                            layer.replace};
+        if (layer.replace)
+            defaultPixelAsFloat(layer.device, params.fill);
+        layerParams << params;
         accesses.push_back(std::move(access));
     }
 
     if (ok) {
         KisGpuLayerCompositor::Mask gridMask;
-        if (mask)
+        // Without tiles of the blended layer, only replace layers remain.
+        const bool useMask = mask && !layerParams.isEmpty() && !layerParams.last().replace;
+        if (useMask)
             gridMask = {mask->data, mask->bounds.translated(-gridOrigin)};
         commands.computeBarrier();
         ok = compositor->record(commands,
@@ -331,7 +381,7 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
                                 grid.width(),
                                 rect.translated(-gridOrigin),
                                 errorMessage,
-                                mask ? &gridMask : nullptr);
+                                useMask ? &gridMask : nullptr);
     }
 
     QVector<KisGpuTileAccess *> accessList;

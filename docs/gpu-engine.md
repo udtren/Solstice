@@ -209,7 +209,12 @@ screen fell from about 18-24ms to 7-13ms per stroke. Hand-drawn strokes vary,
 so treat these numbers as an observation. Dabs that become ready while
 an update is still running are now picked up as soon as it ends, instead of at
 the next pen movement; in Wash strokes this lowered the median time to the
-last upload from about 9.8ms to 7.8ms. With mirroring and
+last upload from about 9.8ms to 7.8ms. During Wash strokes the layer's own
+pixels are now also copied into the live preview on the GPU, in the same step
+as the stroke preview, instead of by the CPU. In a capture on the Background
+layer, Wash strokes then reached the screen as fast as Buildup strokes (about
+6ms median instead of about 11ms). The first Wash stroke after opening a
+document is still noticeably slower; this is being investigated. With mirroring and
 blend modes such as Overlay or Dodge, where mirrored dabs overlap the stroke,
 the result can differ slightly from a CPU stroke because the dabs are grouped
 differently; the CPU brush shows the same kind of variation between strokes.

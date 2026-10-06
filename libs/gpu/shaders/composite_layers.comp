@@ -42,6 +42,10 @@
 #endif
 
 const uint FlagAlphaLocked = 1;
+// Replace: the pixel becomes the layer's pixel (its default pixel, fill, where
+// the layer has no tile), ignoring opacity, channels and coverage, like a
+// COMPOSITE_COPY blit (KisPainter::copyAreaOptimized with equal defaults).
+const uint FlagReplace = 8;
 layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer MaskBytes
 {
     uint word[];
@@ -64,6 +68,7 @@ struct LayerParams {
     uint op;
     uint flags;
     uint channelMask;
+    vec4 fill;
 };
 
 layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer LayerTable
@@ -145,23 +150,32 @@ void main()
 
         float coverage = 1.0;
         float maskByte = 255.0;
+        bool outsideMask = false;
         if (params.mask != uint64_t(0)) {
             const ivec2 p = position - params.maskOrigin;
-            if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, params.maskSize))) continue;
-            const uint maskIndex = uint(p.y * params.maskSize.x + p.x);
-            const uint packed = MaskBytes(params.mask).word[maskIndex / 4];
-            maskByte = float((packed >> (8 * (maskIndex % 4))) & 255);
-            // Coverage is restricted to one layer by the host-side API.
-            coverage = maskCoverage((packed >> (8 * (maskIndex % 4))) & 255,
-                                    params.layers.layers[0].op >= OpLinearBurn);
+            if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, params.maskSize))) {
+                // Only replace layers apply outside the coverage.
+                outsideMask = true;
+            } else {
+                const uint maskIndex = uint(p.y * params.maskSize.x + p.x);
+                const uint packed = MaskBytes(params.mask).word[maskIndex / 4];
+                maskByte = float((packed >> (8 * (maskIndex % 4))) & 255);
+                // Coverage is restricted to one blended (top) layer by the host-side API.
+                coverage = maskCoverage((packed >> (8 * (maskIndex % 4))) & 255,
+                                        params.layers.layers[params.layerCount - 1].op >= OpLinearBurn);
+            }
         }
         vec4 result = LOAD_PIXEL(dstTile.px[index]);
         for (uint layer = 0; layer < params.layerCount; layer++) {
             const uint64_t address = params.layerTiles.addr[layer * params.tileCount + tile];
-            if (address == 0) {
+            const LayerParams info = params.layers.layers[layer];
+            if ((info.flags & FlagReplace) != 0) {
+                result = address == 0 ? info.fill : LOAD_PIXEL(TilePixels(address).px[index]);
                 continue;
             }
-            const LayerParams info = params.layers.layers[layer];
+            if (address == 0 || outsideMask) {
+                continue;
+            }
             const vec4 src = LOAD_PIXEL(TilePixels(address).px[index]);
             const bool alphaLocked = (info.flags & FlagAlphaLocked) != 0;
 #ifdef TILE_F16
