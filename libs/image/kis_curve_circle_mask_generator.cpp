@@ -63,6 +63,25 @@ void KisCurveCircleMaskGenerator::setScale(qreal scaleX, qreal scaleY)
     d->fadeMaker.setSquareNormCoeffs(d->xcoef, d->ycoef);
 }
 
+KisCurveCircleMaskGenerator::VectorCoefficients KisCurveCircleMaskGenerator::vectorCoefficients() const
+{
+    VectorCoefficients result;
+    result.xcoef = d->xcoef;
+    result.ycoef = d->ycoef;
+    result.curveResolution = d->curveResolution;
+    result.radius = d->fadeMaker.radius();
+    result.fadeStart = d->fadeMaker.antialiasingFadeStart();
+    result.fadeStartValue = d->fadeMaker.fadeStartValue();
+    result.fadeCoeff = d->fadeMaker.antialiasingFadeCoeff();
+    result.antialias = d->fadeMaker.antialiasingEnabled();
+    return result;
+}
+
+const QVector<qreal> &KisCurveCircleMaskGenerator::curveTable() const
+{
+    return d->curveData;
+}
+
 bool KisCurveCircleMaskGenerator::shouldVectorize() const
 {
     return !shouldSupersample() && spikes() == 2;

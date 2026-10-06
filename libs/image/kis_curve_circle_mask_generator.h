@@ -50,6 +50,22 @@ public:
 
     void setMaskScalarApplicator();
 
+    /// GPU engine (Solstice): state of the vectorized fade, as
+    /// FastRowProcessor reads it (after setSoftness() and setScale()).
+    struct VectorCoefficients {
+        double xcoef = 0.0;
+        double ycoef = 0.0;
+        double curveResolution = 0.0;
+        double radius = 0.0;
+        double fadeStart = 0.0;
+        quint8 fadeStartValue = 0;
+        double fadeCoeff = 0.0;
+        bool antialias = false;
+    };
+    VectorCoefficients vectorCoefficients() const;
+    /// The softness-transformed curve table (curveResolution + 2 values).
+    const QVector<qreal> &curveTable() const;
+
     static void transformCurveForSoftness(qreal softness,const QList<KisCubicCurvePoint> &points, int curveResolution, QVector<qreal> &result);
 
 private:

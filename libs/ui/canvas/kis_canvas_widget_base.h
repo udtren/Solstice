@@ -69,6 +69,10 @@ public: // KisAbstractCanvasWidget
     QVector<QRect> updateCanvasProjection(const QVector<KisUpdateInfoSP> &infoObjects) override;
     using KisAbstractCanvasWidget::updateCanvasProjection;
 
+    /// No shared projection uploads by default (GPU engine, Solstice).
+    bool sharesProjectionUploads() const override;
+    QVector<KisUpdateInfoSP> startUpdateCanvasProjections(const QVector<QRect> &rects) override;
+
     BitDepthMode currentBitDepthMode() const override;
     QString currentBitDepthUserReport() const override;
 

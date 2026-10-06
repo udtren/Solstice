@@ -128,6 +128,79 @@ interval. That earlier interval combines scheduling, drawing, preparation and
 transfer work; it does not isolate a GPU-transfer bottleneck. No new runtime
 optimization or additional manual captures were needed for this analysis.
 
+A further split of the same measured strokes points to different investigation
+areas for Buildup and Wash. At 256px, the interval from projection completion to
+prepared canvas update was about 0.72ms for CPU and 5.03ms for the GPU-brush
+setting. GPU-brush Wash instead showed about 2.02ms in the host projection span
+and 0.25ms afterwards. These are diagnostic stage statistics, not GPU execution
+times or additive portions of input latency. Preparation and synchronization
+still need to be separated before selecting an optimization.
+
+Opt-in diagnostic tracing now separates context reuse, source/target preparation
+and submission on these paths. This adds measurement detail, not a speedup;
+normal runs do not record these events.
+The submission diagnostics also distinguish lock acquisition, transfer-command
+recording, queue submission and state updates. Tile lookup/COW and CPU staging
+have separate scopes; no synchronization policy has been changed.
+Lock-holder diagnostics record holds of at least 10 microseconds to keep traces
+bounded. Overlap with another thread is evidence for investigation, not a
+guarantee that the recorded holder caused all of the delay.
+
+Main command-buffer recording now ends before the shared residency lock is
+acquired, reducing work inside that lock while preserving upload and submission
+order. Correctness regression tests pass, but the first focused real-app
+comparison did not demonstrate a latency improvement; lock contention remains.
+The latest optional diagnostics distinguish the queue's own lock wait from
+the driver submission call, with timestamps logged after the measured locks
+are released. These changes support investigation; they do not claim a speedup.
+
+Those diagnostics showed that most of the waiting was between canvas updates
+from different worker threads, each submitting its own small GPU transfer.
+Canvas updates that arrive at the same time are now prepared together in a
+single GPU submission. Each update still covers exactly its own area, and
+distant areas (for example mirrored strokes) are not enlarged into one large
+rectangle. Soft proofing, channel selection and the CPU canvas path are
+unchanged. In a first real-app capture this cut canvas GPU submissions from
+834 to 241 and the summed lock waiting from about 460ms to 73ms. The measured
+input-to-display times were longer, but those strokes were much shorter and
+faster than in the earlier capture, and the extra time was spent before the
+canvas stage, while brush dabs waited for processing. Neither a speedup nor
+a slowdown of input-to-display time is claimed from this comparison.
+
+Those waiting dabs were limited by the GPU brush's per-update data budget. The
+measured brush turns its dabs with the stroke direction, so a 256px dab needs a
+larger, about 362px square, area on diagonal strokes, and only about 16 dabs
+fit into one update. The brush then waited at least 10ms before the next
+update. Now, when an update is cut short only by that budget, the next update
+starts as soon as the current one finishes. Slower strokes and the CPU brush
+path are unchanged. In the following capture, dabs again waited about 10ms
+for processing, as before the slowdown, and input-to-display times were
+similar to the first capture. The strokes differed in speed and direction, so
+this is not claimed as a speedup.
+
+GPU dab generation has started with the simplest case. With the GPU brush
+enabled, dabs of the default round auto brush on RGBA 32-bit float images are
+now drawn by the GPU from a short description (position, size, shape, fade
+and color) instead of uploading the dab's pixels. The CPU still prepares each
+dab as before, so fallbacks remain exact. Textured, sharpened and image-based
+brushes still upload pixels.
+The Gaussian round mask (used by the Basic-4 presets) is now generated on the
+GPU as well, and so are the Soft round mask (including edited curves and
+softness) and RGBA 16-bit float documents. Its GPU result is identical to the CPU result, pixel for pixel.
+In a first capture with the Basic-4 preset at 256px, every GPU brush update used
+generated dabs. The CPU time to send each update to the GPU fell from about
+1.8ms to 0.4ms. Buildup strokes reached the screen faster than in the earlier
+captures, and Wash strokes were similar. Hand-drawn strokes vary, so this is
+reported as an observation, not a guaranteed speedup.
+
+For these generated dabs the CPU no longer computes the dab image at all once
+the first dabs of a session have been checked against the CPU result. If a CPU
+path still needs the pixels (for example when the GPU cannot take a batch),
+they are computed then, identically to before. In the first capture this cut
+the CPU time spent preparing dabs during strokes by about eight times. The
+time to the screen stayed in the same range; the brush's own update interval
+is now the largest remaining wait.
+
 The labels describe observed paths: this scene reused child images and skipped
 extra layer composition, so the middle column is **not a GPU layer-compositing
 benchmark**. GPU brush submissions and shared-buffer transfers were recorded;

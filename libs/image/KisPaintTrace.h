@@ -19,6 +19,10 @@ namespace KisPaintTrace
 {
 KRITAIMAGE_EXPORT bool enabled();
 KRITAIMAGE_EXPORT void instant(const char *name, const void *owner = nullptr, const void *related = nullptr);
+/// Record a completed external host interval using the same steady_clock epoch.
+/// Call after releasing measured locks; this function records no new interval.
+KRITAIMAGE_EXPORT void
+externalSpan(const char *name, const void *owner, const void *related, qint64 startNs, qint64 endNs, quint64 id);
 /// Process-unique IDs; zero when disabled. Unlike pointer identities, never reused.
 KRITAIMAGE_EXPORT quint64 nextId();
 KRITAIMAGE_EXPORT void link(const char *name, const void *owner, quint64 id, quint64 parent = 0);

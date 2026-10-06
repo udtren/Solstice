@@ -78,6 +78,21 @@ inline quint8 KisGaussCircleMaskGenerator::Private::value(qreal dist) const
     return (quint8) 255 - ret;
 }
 
+KisGaussCircleMaskGenerator::VectorCoefficients KisGaussCircleMaskGenerator::vectorCoefficients() const
+{
+    VectorCoefficients result;
+    result.ycoef = d->ycoef;
+    result.center = d->center;
+    result.distfactor = d->distfactor;
+    result.alphafactor = d->alphafactor;
+    result.radius = d->fadeMaker.radius();
+    result.fadeStart = d->fadeMaker.antialiasingFadeStart();
+    result.fadeStartValue = d->fadeMaker.fadeStartValue();
+    result.fadeCoeff = d->fadeMaker.antialiasingFadeCoeff();
+    result.antialias = d->fadeMaker.antialiasingEnabled();
+    return result;
+}
+
 bool KisGaussCircleMaskGenerator::shouldVectorize() const
 {
     return !shouldSupersample() && spikes() == 2;

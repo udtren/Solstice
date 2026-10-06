@@ -164,10 +164,16 @@ KisDabRenderingJobSP KisDabRenderingQueue::addDab(const KisDabCacheUtils::DabReq
             if (job->type == KisDabRenderingJob::Postprocess) {
                 job->status = KisDabRenderingJob::Running;
                 job->originalDevice = m_d->jobs[lastDabJobIndex]->originalDevice;
+                job->procedural = m_d->jobs[lastDabJobIndex]->procedural;
+                job->proceduralFlips = m_d->jobs[lastDabJobIndex]->proceduralFlips;
+                job->pixelsPending = m_d->jobs[lastDabJobIndex]->pixelsPending;
             } else if (job->type == KisDabRenderingJob::Copy) {
                 job->status = KisDabRenderingJob::Completed;
                 job->originalDevice = m_d->jobs[lastDabJobIndex]->originalDevice;
                 job->postprocessedDevice = m_d->jobs[lastDabJobIndex]->postprocessedDevice;
+                job->procedural = m_d->jobs[lastDabJobIndex]->procedural;
+                job->proceduralFlips = m_d->jobs[lastDabJobIndex]->proceduralFlips;
+                job->pixelsPending = m_d->jobs[lastDabJobIndex]->pixelsPending;
                 m_d->avgExecutionTime(0);
             }
         }
@@ -234,12 +240,18 @@ QList<KisDabRenderingJobSP> KisDabRenderingQueue::notifyJobFinished(int seqNo, i
 
                 j->originalDevice = finishedJob->originalDevice;
                 j->postprocessedDevice = finishedJob->postprocessedDevice;
+                j->procedural = finishedJob->procedural;
+                j->proceduralFlips = finishedJob->proceduralFlips;
+                j->pixelsPending = finishedJob->pixelsPending;
                 j->status = KisDabRenderingJob::Completed;
                 m_d->avgExecutionTime(0);
 
             } else if (j->type == KisDabRenderingJob::Postprocess) {
 
                 j->originalDevice = finishedJob->originalDevice;
+                j->procedural = finishedJob->procedural;
+                j->proceduralFlips = finishedJob->proceduralFlips;
+                j->pixelsPending = finishedJob->pixelsPending;
                 j->status = KisDabRenderingJob::Running;
                 dependentJobs << j;
             }
@@ -292,9 +304,13 @@ QList<KisRenderedDab> KisDabRenderingQueue::takeReadyDabs(bool returnMutableDabs
                                                           int oneTimeLimit,
                                                           bool *someDabsLeft,
                                                           quint64 maxDabBytes,
-                                                          quint64 paintTraceBatch)
+                                                          quint64 paintTraceBatch,
+                                                          bool *stoppedByByteLimit)
 {
     QMutexLocker l(&m_d->mutex);
+    if (stoppedByByteLimit) {
+        *stoppedByByteLimit = false;
+    }
 
     QList<KisRenderedDab> renderedDabs;
     if (m_d->jobs.isEmpty()) return renderedDabs;
@@ -326,8 +342,14 @@ QList<KisRenderedDab> KisDabRenderingQueue::takeReadyDabs(bool returnMutableDabs
         KisFixedPaintDeviceSP resultDevice = j->postprocessedDevice;
         if (maxDabBytes != ~quint64(0) && resultDevice) {
             const QSize size = resultDevice->bounds().size();
-            const quint64 bytes = quint64(size.width()) * size.height() * resultDevice->pixelSize();
+            // GPU engine (Solstice): described dabs upload no pixels. Still
+            // count one byte per pixel to bound the batch area.
+            const quint64 bytes =
+                quint64(size.width()) * size.height() * (j->procedural ? 1 : resultDevice->pixelSize());
             if (!renderedDabs.isEmpty() && (dabBytes > maxDabBytes || bytes > maxDabBytes - dabBytes)) {
+                if (stoppedByByteLimit) {
+                    *stoppedByByteLimit = true;
+                }
                 break;
             }
             dabBytes += bytes;
@@ -338,6 +360,9 @@ QList<KisRenderedDab> KisDabRenderingQueue::takeReadyDabs(bool returnMutableDabs
         }
 
         dab.device = resultDevice;
+        dab.procedural = j->procedural;
+        dab.proceduralFlips = j->proceduralFlips;
+        dab.pixelsPending = j->pixelsPending;
         dab.offset = j->dstDabOffset();
         dab.opacity = j->opacity;
         dab.flow = j->flow;

@@ -58,15 +58,41 @@ public:
         LighterColor,
         Count
     };
+    /**
+     * A default or Gaussian circle auto-brush dab evaluated on the GPU
+     * instead of uploaded pixels (RGBA32F or RGBA16F; KisProceduralCircleDab
+     * in kritaimage defines the math). Shader layout: 112 bytes.
+     */
+    struct Circle {
+        float color[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float centerX = 0.0f, centerY = 0.0f;
+        float cosa = 1.0f, sina = 0.0f;
+        // kind 0: default circle
+        float xcoef = 0.0f, ycoef = 0.0f; // ycoef is shared with kind 1
+        float fadeX = 0.0f, fadeY = 0.0f;
+        // kind 1: Gaussian circle
+        float distfactor = 0.0f, center = 0.0f, alphafactor = 0.0f, radius = 0.0f;
+        float fadeStart = 0.0f, fadeStartValue = 0.0f, fadeCoeff = 0.0f;
+        quint32 kind = 0; // 0 default, 1 Gaussian, 2 Soft (curve)
+        quint32 antialias = 0;
+        quint32 halfPixels = 0; // RGBA16F: alpha rounded to half like Imath
+        VkDeviceAddress curveTable = 0; // kind 2: set by record()
+        float curveResolution = 0.0f; // kind 2
+        quint32 padding1[3] = {0, 0, 0};
+    };
     struct Dab {
-        const void *pixels; // RGBA32F, or RGBA16F when pixelSize is 8
+        const void *pixels = nullptr; // RGBA32F, or RGBA16F when pixelSize is 8; unused when generated
         QPoint origin;
         QSize size;
-        float opacity;
+        float opacity = 1.0f;
         float flow = 1.0f;
         float averageOpacity = 0.0f;
         quint32 mirrorFlags = 0; // source-coordinate reflection: horizontal=1, vertical=2
         QRect clip; // document coordinates; null means the entire dab
+        bool generated = false; // evaluate circle in the size x size dab instead of reading pixels
+        Circle circle;
+        const float *curveTable = nullptr; // Soft kind: uploaded once per distinct pointer
+        int curveTableSize = 0;
     };
     struct Mask {
         const quint8 *pixels;

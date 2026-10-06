@@ -27,6 +27,8 @@ private Q_SLOTS:
     void testDeviceInfo();
     void testTilePoolAllocation();
     void testUploadReadbackRoundTrip();
+    void testEarlyMainFinish();
+    void testConcurrentSubmissionTiming();
     void testCompositeOverMatchesKoCompositeOp();
     void testCompositeOverF16();
     void benchmarkCompositeStack();

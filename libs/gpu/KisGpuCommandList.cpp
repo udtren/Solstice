@@ -111,6 +111,8 @@ VkCommandBuffer KisGpuCommandList::begin()
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vk.vkBeginCommandBuffer(m_commandBuffer, &beginInfo);
     m_recording = true;
+    m_mainEnded = false;
+    m_mainEndSucceeded = false;
     m_preambleRecording = false;
 
     if (m_queryPool) {
@@ -144,27 +146,39 @@ VkCommandBuffer KisGpuCommandList::preamble()
     return m_preamble;
 }
 
-quint64 KisGpuCommandList::submit(const QVector<VkSemaphoreSubmitInfo> &waitSemaphores,
-                                  const QVector<VkSemaphoreSubmitInfo> &signalSemaphores)
+bool KisGpuCommandList::finishMainRecording()
 {
+    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(m_recording, false);
+    if (!m_mainEnded) {
+        m_mainEnded = true;
+        m_mainEndSucceeded = m_context.vk().vkEndCommandBuffer(m_commandBuffer) == VK_SUCCESS;
+    }
+    return m_mainEndSucceeded;
+}
+
+quint64 KisGpuCommandList::submit(const QVector<VkSemaphoreSubmitInfo> &waitSemaphores,
+                                  const QVector<VkSemaphoreSubmitInfo> &signalSemaphores,
+                                  KisGpuSubmitTiming *timing)
+{
+    if (timing)
+        *timing = {};
     const KisGpuVulkanFunctions &vk = m_context.vk();
     KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(m_recording, 0);
-    m_recording = false;
     QVector<VkCommandBuffer> buffers;
-    bool ok = true;
+    bool ok = finishMainRecording();
+    m_recording = false;
     if (m_preambleRecording) {
         m_preambleRecording = false;
-        ok = vk.vkEndCommandBuffer(m_preamble) == VK_SUCCESS;
+        ok = vk.vkEndCommandBuffer(m_preamble) == VK_SUCCESS && ok;
         buffers << m_preamble;
     }
-    ok = vk.vkEndCommandBuffer(m_commandBuffer) == VK_SUCCESS && ok;
     buffers << m_commandBuffer;
     if (!ok) {
         return 0;
     }
     // The main buffer starts with a full barrier, which also orders it after
     // the preamble (earlier in the same batch).
-    m_lastSubmission = m_context.submit(buffers, waitSemaphores, signalSemaphores);
+    m_lastSubmission = m_context.submit(buffers, waitSemaphores, signalSemaphores, timing);
     return m_lastSubmission;
 }
 
@@ -176,7 +190,8 @@ void KisGpuCommandList::abandon()
     }
     if (m_recording) {
         m_recording = false;
-        m_context.vk().vkEndCommandBuffer(m_commandBuffer);
+        if (!m_mainEnded)
+            m_context.vk().vkEndCommandBuffer(m_commandBuffer);
     }
 }
 

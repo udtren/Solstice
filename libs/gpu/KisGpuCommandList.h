@@ -13,6 +13,7 @@
 
 class KisGpuContext;
 class KisGpuBuffer;
+struct KisGpuSubmitTiming;
 
 /**
  * A reusable primary command buffer with its own pool and timestamp queries.
@@ -50,9 +51,14 @@ public:
      */
     VkCommandBuffer preamble();
 
+    /// End main-buffer recording early; preamble recording remains available.
+    /// Idempotent until begin(). Do not record main commands after this call.
+    bool finishMainRecording();
+
     /// Ends recording and submits. Returns the timeline value, or 0 on failure.
     quint64 submit(const QVector<VkSemaphoreSubmitInfo> &waitSemaphores = {},
-                   const QVector<VkSemaphoreSubmitInfo> &signalSemaphores = {});
+                   const QVector<VkSemaphoreSubmitInfo> &signalSemaphores = {},
+                   KisGpuSubmitTiming *timing = nullptr);
     /// Ends recording without submitting (no-op if not recording). The list
     /// can be begun again.
     void abandon();
@@ -88,6 +94,8 @@ private:
     VkQueryPool m_queryPool = VK_NULL_HANDLE;
     quint64 m_lastSubmission = 0;
     bool m_recording = false;
+    bool m_mainEnded = false;
+    bool m_mainEndSucceeded = false;
 };
 
 #endif // KISGPUCOMMANDLIST_H

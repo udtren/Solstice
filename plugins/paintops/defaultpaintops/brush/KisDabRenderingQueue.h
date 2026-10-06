@@ -43,12 +43,16 @@ public:
     QList<KisDabRenderingJobSP> notifyJobFinished(int seqNo, int usecsTime = -1);
 
     /// Optional byte budget counts each returned dab conservatively, even when
-    /// pixels are shared. Always return at least one ready dab to make progress.
+    /// pixels are shared (described dabs, KisRenderedDab::procedural, count one
+    /// byte per pixel). Always return at least one ready dab to make progress.
+    /// @p stoppedByByteLimit: set to true if a ready dab was left only because
+    /// of @p maxDabBytes.
     QList<KisRenderedDab> takeReadyDabs(bool returnMutableDabs = false,
                                         int oneTimeLimit = -1,
                                         bool *someDabsLeft = 0,
                                         quint64 maxDabBytes = ~quint64(0),
-                                        quint64 paintTraceBatch = 0);
+                                        quint64 paintTraceBatch = 0,
+                                        bool *stoppedByByteLimit = nullptr);
 
     bool hasPreparedDabs() const;
 

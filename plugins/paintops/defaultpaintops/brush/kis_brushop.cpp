@@ -10,6 +10,8 @@
  */
 
 #include "kis_brushop.h"
+
+#include <atomic>
 #include "KisPaintTrace.h"
 
 #include <QRect>
@@ -155,6 +157,26 @@ KisSpacingInformation KisBrushOp::paintAt(const KisPaintInformation& info)
     return spacingInfo;
 }
 
+namespace
+{
+std::atomic<quint64> s_materializedDabs{0};
+
+void materializePendingDabs(QList<KisRenderedDab> &dabs)
+{
+    for (KisRenderedDab &dab : dabs) {
+        if (dab.pixelsPending) {
+            dab.materialize();
+            s_materializedDabs++;
+        }
+    }
+}
+} // namespace
+
+quint64 KisBrushOp::materializedDabCount()
+{
+    return s_materializedDabs.load();
+}
+
 struct KisBrushOp::UpdateSharedState {
     // rendering data
     KisPainter *painter = 0;
@@ -188,8 +210,12 @@ void KisBrushOp::addMirroringJobs(Qt::Orientation direction,
         const bool skipMirrorPixels = prevDabDevice && prevDabDevice == dab.device;
 
         KritaUtils::addJobConcurrent(jobs, [state, &dab, direction, skipMirrorPixels]() {
-            if (!state->gpuMirrorsPainted)
+            if (!state->gpuMirrorsPainted) {
                 state->painter->mirrorDab(direction, &dab, skipMirrorPixels);
+                // The pixels are mirrored, by this dab or by the previous one
+                // sharing its device; keep the GPU description in step.
+                dab.proceduralFlips ^= direction == Qt::Horizontal ? 1u : 2u;
+            }
         });
 
         prevDabDevice = dab.device;
@@ -227,6 +253,8 @@ void KisBrushOp::addDabPaintingJobs(const QVector<QRect> &rects,
             }
             const auto *paintRects = state->painter->hasMirroring() ? &rects : nullptr;
             if (!KisGpuBrushPainter::paint(state->painter, state->dabsQueue, paintRects)) {
+                // Dabs whose CPU generation was skipped get their pixels now.
+                materializePendingDabs(state->dabsQueue);
                 for (const QRect &rc : rects)
                     state->painter->bltFixed(rc, state->dabsQueue);
                 KisPaintTrace::link("path.brush.cpu_fallback", state->painter, KisPaintTrace::currentJob());
@@ -238,6 +266,12 @@ void KisBrushOp::addDabPaintingJobs(const QVector<QRect> &rects,
             }
         });
     } else {
+        if (KisRenderedDab::hasPendingPixels(state->dabsQueue)) {
+            // E.g. LOD or another unsupported GPU case after the dabs were described.
+            KritaUtils::addJobSequential(jobs, [state]() {
+                materializePendingDabs(state->dabsQueue);
+            });
+        }
         Q_FOREACH (const QRect &rc, rects) {
             KritaUtils::addJobConcurrent(jobs, [rc, state]() {
                 KisPaintTrace::Scope trace("brush.cpu_composite", state->painter);
@@ -257,6 +291,7 @@ void KisBrushOp::addDabPaintingJobs(const QVector<QRect> &rects,
 std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJobData *> &jobs)
 {
     bool someDabsAreStillInQueue = false;
+    bool stoppedByByteLimit = false;
     const bool hasPreparedDabsAtStart = m_dabExecutor->hasPreparedDabs();
 
     if (!m_updateSharedState && hasPreparedDabsAtStart) {
@@ -286,12 +321,16 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
                                                             dabsLimit,
                                                             &someDabsAreStillInQueue,
                                                             byteLimit,
-                                                            state->paintTraceBatch);
+                                                            state->paintTraceBatch,
+                                                            &stoppedByByteLimit);
         }
 
         KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(!state->dabsQueue.isEmpty(),
                                              std::make_pair(m_currentUpdatePeriod, false));
         KisPaintTrace::link("batch.ready", painter(), state->paintTraceBatch, KisPaintTrace::currentJob());
+        if (stoppedByByteLimit) {
+            KisPaintTrace::link("batch.byte_limited", painter(), state->paintTraceBatch);
+        }
 
         const int diameter = m_dabExecutor->averageDabSize();
         const qreal spacing = m_avgSpacing.rollingMean();
@@ -375,7 +414,7 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
         }
 
         KritaUtils::addJobSequential(jobs,
-                [state, this, someDabsAreStillInQueue] () {
+                [state, this, someDabsAreStillInQueue, stoppedByByteLimit] () {
                     Q_FOREACH(const QRect &rc, state->allDirtyRects) {
                         state->painter->addDirtyRect(rc);
                     }
@@ -417,6 +456,16 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
                     m_currentUpdatePeriod =
                         someDabsAreStillInQueue ? m_minUpdatePeriod :
                         qBound(m_minUpdatePeriod, int(1.5 * approxDabRenderingTime), m_maxUpdatePeriod);
+
+                    // GPU engine (Solstice): a GPU batch cut only by its source
+                    // byte budget (e.g. rotated large dabs) left rendered dabs
+                    // behind. Waiting the minimum period for each such batch
+                    // caps fast strokes below their dab rate, so take the next
+                    // batch as soon as the stroke asks again. Only one batch is
+                    // in flight at a time (m_updateSharedState).
+                    if (someDabsAreStillInQueue && stoppedByByteLimit) {
+                        m_currentUpdatePeriod = 0;
+                    }
 
 
                     { // debug chunk

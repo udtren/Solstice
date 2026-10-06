@@ -1123,6 +1123,25 @@ KisUpdateInfoSP KisOpenGLCanvasRenderer::startUpdateCanvasProjection(const QRect
     return d->openGLImageTextures->updateCache(rc, d->openGLImageTextures->image());
 }
 
+QVector<KisUpdateInfoSP> KisOpenGLCanvasRenderer::startUpdateCanvasProjection(const QVector<QRect> &rects)
+{
+    if (canvas()->proofingConfigUpdated()) {
+        d->openGLImageTextures->setProofingConfig(canvas()->proofingConfiguration());
+        canvas()->setProofingConfigUpdated(false);
+    }
+    QVector<KisUpdateInfoSP> infos;
+    const QVector<KisOpenGLUpdateInfoSP> glInfos =
+        d->openGLImageTextures->updateCache(rects, d->openGLImageTextures->image());
+    for (KisOpenGLUpdateInfoSP info : glInfos) {
+        infos << KisUpdateInfoSP(info.data());
+    }
+    return infos;
+}
+
+bool KisOpenGLCanvasRenderer::sharesProjectionUploads() const
+{
+    return d->openGLImageTextures->usesGpuUpload();
+}
 
 QRect KisOpenGLCanvasRenderer::updateCanvasProjection(KisUpdateInfoSP info)
 {

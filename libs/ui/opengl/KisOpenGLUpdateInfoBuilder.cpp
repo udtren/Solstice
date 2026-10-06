@@ -68,13 +68,40 @@ KisOpenGLUpdateInfoSP KisOpenGLUpdateInfoBuilder::buildUpdateInfo(const QRect &r
                                                                   bool convertColorSpace,
                                                                   bool allowGpuUpload)
 {
-    KisOpenGLUpdateInfoSP info = new KisOpenGLUpdateInfo();
+    return buildUpdateInfos({rect}, projection, bounds, levelOfDetail, convertColorSpace, allowGpuUpload).first();
+}
 
-    QRect updateRect = rect & bounds;
-    if (updateRect.isEmpty()) return info;
+QVector<KisOpenGLUpdateInfoSP> KisOpenGLUpdateInfoBuilder::buildUpdateInfos(const QVector<QRect> &rects,
+                                                                            KisImageSP srcImage)
+{
+    return buildUpdateInfos(rects,
+                            srcImage->projection(),
+                            srcImage->bounds(),
+                            srcImage->currentLevelOfDetail(),
+                            true,
+                            true);
+}
 
-    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(m_d->pool, info);
-    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(m_d->conversionOptions.m_destinationColorSpace, info);
+QVector<KisOpenGLUpdateInfoSP> KisOpenGLUpdateInfoBuilder::buildUpdateInfos(const QVector<QRect> &rects,
+                                                                            KisPaintDeviceSP projection,
+                                                                            const QRect &bounds,
+                                                                            int levelOfDetail,
+                                                                            bool convertColorSpace,
+                                                                            bool allowGpuUpload)
+{
+    QVector<KisOpenGLUpdateInfoSP> infos;
+    QVector<QRect> updateRects;
+    bool hasUpdates = false;
+    for (const QRect &rect : rects) {
+        infos << new KisOpenGLUpdateInfo();
+        updateRects << (rect & bounds);
+        hasUpdates = hasUpdates || !updateRects.last().isEmpty();
+    }
+    if (!hasUpdates)
+        return infos;
+
+    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(m_d->pool, infos);
+    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(m_d->conversionOptions.m_destinationColorSpace, infos);
 
     auto needCreateProofingTransform =
         [this] () {
@@ -108,23 +135,6 @@ KisOpenGLUpdateInfoSP KisOpenGLUpdateInfoBuilder::buildUpdateInfo(const QRect &r
 
     QReadLocker locker(&m_d->lock);
 
-    /**
-     * Why the rect is artificial? That's easy!
-     * It does not represent any real piece of the image. It is
-     * intentionally stretched to get through the overlapping
-     * stripes of neutrality and poke neighbouring tiles.
-     * Thanks to the rect we get the coordinates of all the tiles
-     * involved into update process
-     */
-
-    QRect artificialRect = kisGrowRect(updateRect, m_d->textureBorder);
-    artificialRect &= bounds;
-
-    int firstColumn = xToCol(artificialRect.left());
-    int lastColumn = xToCol(artificialRect.right());
-    int firstRow = yToRow(artificialRect.top());
-    int lastRow = yToRow(artificialRect.bottom());
-
     QBitArray channelFlags; // empty by default
 
     if (!m_d->channelFlags.isEmpty() &&
@@ -133,57 +143,91 @@ KisOpenGLUpdateInfoSP KisOpenGLUpdateInfoBuilder::buildUpdateInfo(const QRect &r
         channelFlags = m_d->channelFlags;
     }
 
-    qint32 numItems = (lastColumn - firstColumn + 1) * (lastRow - firstRow + 1);
-    info->tileList.reserve(numItems);
-
-    QRect alignedUpdateRect = updateRect;
     QRect alignedBounds = bounds;
-
     if (levelOfDetail) {
-        alignedUpdateRect = KisLodTransform::alignedRect(alignedUpdateRect, levelOfDetail);
         alignedBounds = KisLodTransform::alignedRect(alignedBounds, levelOfDetail);
     }
 
-    KisTextureTileUpdateInfoSPList tiles;
+    QVector<KisTextureTileUpdateInfoSPList> tilesPerInfo(infos.size());
+    QVector<QRect> artificialRects(infos.size());
+    KisTextureTileUpdateInfoSPList allTiles;
+    QRect allRects;
 
-    for (int col = firstColumn; col <= lastColumn; col++) {
-        for (int row = firstRow; row <= lastRow; row++) {
+    for (int i = 0; i < infos.size(); i++) {
+        const QRect &updateRect = updateRects[i];
+        if (updateRect.isEmpty())
+            continue;
+        allRects |= rects[i];
 
-            const QRect alignedTileTextureRect = calculatePhysicalTileRect(col, row, bounds, levelOfDetail);
+        /**
+         * Why the rect is artificial? That's easy!
+         * It does not represent any real piece of the image. It is
+         * intentionally stretched to get through the overlapping
+         * stripes of neutrality and poke neighbouring tiles.
+         * Thanks to the rect we get the coordinates of all the tiles
+         * involved into update process
+         */
 
-            KisTextureTileUpdateInfoSP tileInfo(
-                        new KisTextureTileUpdateInfo(col, row,
-                                                     alignedTileTextureRect,
-                                                     alignedUpdateRect,
-                                                     alignedBounds,
-                                                     levelOfDetail,
-                                                     m_d->pool));
-            // Don't update empty tiles
-            if (tileInfo->valid()) {
-                tiles.append(tileInfo);
-            }
-            else {
-                dbgUI << "Trying to create an empty tileinfo record" << col << row << alignedTileTextureRect << updateRect << bounds;
+        QRect artificialRect = kisGrowRect(updateRect, m_d->textureBorder);
+        artificialRect &= bounds;
+        artificialRects[i] = artificialRect;
+
+        int firstColumn = xToCol(artificialRect.left());
+        int lastColumn = xToCol(artificialRect.right());
+        int firstRow = yToRow(artificialRect.top());
+        int lastRow = yToRow(artificialRect.bottom());
+
+        qint32 numItems = (lastColumn - firstColumn + 1) * (lastRow - firstRow + 1);
+        infos[i]->tileList.reserve(numItems);
+
+        QRect alignedUpdateRect = updateRect;
+        if (levelOfDetail) {
+            alignedUpdateRect = KisLodTransform::alignedRect(alignedUpdateRect, levelOfDetail);
+        }
+
+        KisTextureTileUpdateInfoSPList &tiles = tilesPerInfo[i];
+
+        for (int col = firstColumn; col <= lastColumn; col++) {
+            for (int row = firstRow; row <= lastRow; row++) {
+                const QRect alignedTileTextureRect = calculatePhysicalTileRect(col, row, bounds, levelOfDetail);
+
+                KisTextureTileUpdateInfoSP tileInfo(new KisTextureTileUpdateInfo(col,
+                                                                                 row,
+                                                                                 alignedTileTextureRect,
+                                                                                 alignedUpdateRect,
+                                                                                 alignedBounds,
+                                                                                 levelOfDetail,
+                                                                                 m_d->pool));
+                // Don't update empty tiles
+                if (tileInfo->valid()) {
+                    tiles.append(tileInfo);
+                } else {
+                    dbgUI << "Trying to create an empty tileinfo record" << col << row << alignedTileTextureRect
+                          << updateRect << bounds;
+                }
             }
         }
+        allTiles.append(tiles);
     }
 
     bool uploadedOnGpu = false;
 #ifdef HAVE_KRITA_GPU_CANVAS
     // GPU engine (Solstice): produce the patches on the GPU from the
     // GPU-resident projection, display-converted, without CPU pixel data.
+    // The patches of all rects share one upload.
     if (allowGpuUpload && convertColorSpace && !m_d->proofingTransform && channelFlags.isEmpty()
         && KisGpuCanvasUploader::isEnabled()) {
         QString reason;
         uploadedOnGpu = KisGpuCanvasUploader::upload(projection,
-                                                     tiles,
+                                                     allTiles,
                                                      m_d->conversionOptions.m_destinationColorSpace,
                                                      m_d->conversionOptions.m_renderingIntent,
                                                      m_d->conversionOptions.m_conversionFlags,
                                                      &reason);
-        KisGpuCanvasUploader::debugLogBuild(uploadedOnGpu,
-                                            QStringLiteral("lod %1 %2").arg(levelOfDetail).arg(reason),
-                                            rect);
+        KisGpuCanvasUploader::debugLogBuild(
+            uploadedOnGpu,
+            QStringLiteral("lod %1 rects %2 %3").arg(levelOfDetail).arg(rects.size()).arg(reason),
+            allRects);
     } else if (allowGpuUpload && KisGpuCanvasUploader::debugEnabled()) {
         KisGpuCanvasUploader::debugLogBuild(
             false,
@@ -192,41 +236,68 @@ KisOpenGLUpdateInfoSP KisOpenGLUpdateInfoBuilder::buildUpdateInfo(const QRect &r
                 .arg(bool(m_d->proofingTransform))
                 .arg(!channelFlags.isEmpty())
                 .arg(KisGpuCanvasUploader::isEnabled()),
-            rect);
+            allRects);
     }
 #endif
+
+    for (int i = 0; i < infos.size(); i++) {
+        if (updateRects[i].isEmpty())
+            continue;
+
 #ifdef HAVE_KRITA_GPU_ENGINE
-    if (!uploadedOnGpu) {
-        // Projection tiles written by the GPU are downloaded in batches here,
-        // instead of one submission per tile when retrieveData() locks them.
-        KisGpuTileAccess::syncToCpu(projection,
-                                    levelOfDetail ? KisLodTransform::scaledRect(artificialRect, levelOfDetail)
-                                                  : artificialRect);
-    }
+        if (!uploadedOnGpu) {
+            // Projection tiles written by the GPU are downloaded in batches here,
+            // instead of one submission per tile when retrieveData() locks them.
+            KisGpuTileAccess::syncToCpu(projection,
+                                        levelOfDetail ? KisLodTransform::scaledRect(artificialRects[i], levelOfDetail)
+                                                      : artificialRects[i]);
+        }
 #endif
 
-    for (const KisTextureTileUpdateInfoSP &tileInfo : std::as_const(tiles)) {
-        if (!uploadedOnGpu) {
-            tileInfo->retrieveData(projection, channelFlags, m_d->onlyOneChannelSelected, m_d->selectedChannelIndex);
+        for (const KisTextureTileUpdateInfoSP &tileInfo : std::as_const(tilesPerInfo[i])) {
+            if (!uploadedOnGpu) {
+                tileInfo->retrieveData(projection,
+                                       channelFlags,
+                                       m_d->onlyOneChannelSelected,
+                                       m_d->selectedChannelIndex);
 
-            if (convertColorSpace) {
-                if (m_d->proofingTransform) {
-                    tileInfo->proofTo(m_d->conversionOptions.m_destinationColorSpace,
-                                      m_d->proofingConfig->displayFlags,
-                                      m_d->proofingTransform.data());
-                } else {
-                    tileInfo->convertTo(m_d->conversionOptions.m_destinationColorSpace,
-                                        m_d->conversionOptions.m_renderingIntent,
-                                        m_d->conversionOptions.m_conversionFlags);
+                if (convertColorSpace) {
+                    if (m_d->proofingTransform) {
+                        tileInfo->proofTo(m_d->conversionOptions.m_destinationColorSpace,
+                                          m_d->proofingConfig->displayFlags,
+                                          m_d->proofingTransform.data());
+                    } else {
+                        tileInfo->convertTo(m_d->conversionOptions.m_destinationColorSpace,
+                                            m_d->conversionOptions.m_renderingIntent,
+                                            m_d->conversionOptions.m_conversionFlags);
+                    }
                 }
             }
+            infos[i]->tileList.append(tileInfo);
         }
-        info->tileList.append(tileInfo);
-    }
 
-    info->assignDirtyImageRect(rect);
-    info->assignLevelOfDetail(levelOfDetail);
-    return info;
+        infos[i]->assignDirtyImageRect(rects[i]);
+        infos[i]->assignLevelOfDetail(levelOfDetail);
+    }
+    return infos;
+}
+
+bool KisOpenGLUpdateInfoBuilder::usesGpuUpload(KisPaintDeviceSP projection) const
+{
+#ifdef HAVE_KRITA_GPU_CANVAS
+    QReadLocker locker(&m_d->lock);
+    const bool softProofing = m_d->proofingConfig
+        && m_d->proofingConfig->displayFlags.testFlag(KoColorConversionTransformation::SoftProofing);
+    const bool channelSelection =
+        !m_d->channelFlags.isEmpty() && m_d->channelFlags.size() == projection->colorSpace()->channelCount();
+    return !softProofing && !channelSelection && m_d->conversionOptions.m_destinationColorSpace
+        && KisGpuCanvasUploader::canUpload(projection,
+                                           m_d->conversionOptions.m_destinationColorSpace,
+                                           m_d->conversionOptions.m_renderingIntent);
+#else
+    Q_UNUSED(projection);
+    return false;
+#endif
 }
 
 QRect KisOpenGLUpdateInfoBuilder::calculateEffectiveTileRect(int col, int row, const QRect &imageBounds) const

@@ -4,6 +4,7 @@
  */
 
 #include "KisGpuTileAccess.h"
+#include "KisPaintTrace.h"
 
 #include "KisGpuTileBackend.h"
 
@@ -213,90 +214,94 @@ bool KisGpuTileAccess::prepareImpl(KisGpuCommandList &commands, QString *errorMe
     QSet<KisTileData *> uploadedTileData;
     QSet<KisTileData *> scheduledSources;
 
-    d->entries.reserve(tileCount());
-    for (int row = d->grid.top(); row <= d->grid.bottom(); row++) {
-        for (int col = d->grid.left(); col <= d->grid.right(); col++) {
-            Entry entry;
-            entry.tile = d->dataManager->getTile(col, row, writes);
+    {
+        KisPaintTrace::Scope trace("tile_access.resolve_tiles", d.get(), nullptr, KisPaintTrace::currentFlow());
+        d->entries.reserve(tileCount());
+        for (int row = d->grid.top(); row <= d->grid.bottom(); row++) {
+            for (int col = d->grid.left(); col <= d->grid.right(); col++) {
+                Entry entry;
+                entry.tile = d->dataManager->getTile(col, row, writes);
 
-            bool contentFromGpuCopy = false;
-            if (writes) {
-                bool isLocked = false;
-                entry.replaced = entry.tile->detachForExternalWrite(
-                    [&](KisTileData *source) -> KisTileData * {
-                        KisTileGpuState *sourceState = source->gpuState();
-                        if (d->mode == ReadWrite) {
-                            // The clone's content comes from a GPU slot copy of
-                            // the source; a source that is not GPU-current is
-                            // uploaded once by this access (many cleared tiles
-                            // share one default tile data).
-                            sourceState = d->pin(source);
-                            if (!sourceState) {
-                                return source->clone(); // no GPU memory: CPU clone, uploaded below
+                bool contentFromGpuCopy = false;
+                if (writes) {
+                    bool isLocked = false;
+                    entry.replaced = entry.tile->detachForExternalWrite(
+                        [&](KisTileData *source) -> KisTileData * {
+                            KisTileGpuState *sourceState = source->gpuState();
+                            if (d->mode == ReadWrite) {
+                                // The clone's content comes from a GPU slot copy of
+                                // the source; a source that is not GPU-current is
+                                // uploaded once by this access (many cleared tiles
+                                // share one default tile data).
+                                sourceState = d->pin(source);
+                                if (!sourceState) {
+                                    return source->clone(); // no GPU memory: CPU clone, uploaded below
+                                }
+                                if (!sourceState->gpuValid() && !scheduledSources.contains(source)) {
+                                    scheduledSources.insert(source);
+                                    Entry sourceEntry;
+                                    sourceEntry.tileData = source;
+                                    sourceEntry.state = sourceState;
+                                    sourceEntry.generation = sourceState->generation();
+                                    sourceEntry.uploaded = true;
+                                    d->sourceEntries << sourceEntry;
+                                }
+                                contentFromGpuCopy = true;
+                            } else if (sourceState) {
+                                // Protect the old CPU snapshot against eviction and
+                                // disk swapping until the clone has copied it.
+                                sourceState = d->pin(source);
                             }
-                            if (!sourceState->gpuValid() && !scheduledSources.contains(source)) {
-                                scheduledSources.insert(source);
-                                Entry sourceEntry;
-                                sourceEntry.tileData = source;
-                                sourceEntry.state = sourceState;
-                                sourceEntry.generation = sourceState->generation();
-                                sourceEntry.uploaded = true;
-                                d->sourceEntries << sourceEntry;
-                            }
-                            contentFromGpuCopy = true;
-                        } else if (sourceState) {
-                            // Protect the old CPU snapshot against eviction and
-                            // disk swapping until the clone has copied it.
-                            sourceState = d->pin(source);
-                        }
 
-                        // The content is produced on the GPU (slot copy or
-                        // overwrite). The CPU buffer still gets the source's
-                        // CPU content: never a meaningless buffer, even if the
-                        // GPU copy is lost later.
-                        KisTileData *clone;
-                        if (sourceState && sourceState->slot != KisTileGpuState::InvalidSlot) {
-                            // The pin prevents eviction and disk swapping.
-                            clone = KisTileDataStore::instance()->duplicateCpuSnapshot(source);
-                        } else {
-                            source->blockSwapping();
-                            clone = KisTileDataStore::instance()->duplicateCpuSnapshot(source);
-                            source->unblockSwapping();
-                        }
-                        return clone;
-                    },
-                    &isLocked);
-                if (isLocked) {
+                            // The content is produced on the GPU (slot copy or
+                            // overwrite). The CPU buffer still gets the source's
+                            // CPU content: never a meaningless buffer, even if the
+                            // GPU copy is lost later.
+                            KisTileData *clone;
+                            if (sourceState && sourceState->slot != KisTileGpuState::InvalidSlot) {
+                                // The pin prevents eviction and disk swapping.
+                                clone = KisTileDataStore::instance()->duplicateCpuSnapshot(source);
+                            } else {
+                                source->blockSwapping();
+                                clone = KisTileDataStore::instance()->duplicateCpuSnapshot(source);
+                                source->unblockSwapping();
+                            }
+                            return clone;
+                        },
+                        &isLocked);
+                    if (isLocked) {
+                        d->restorePendingContent();
+                        return fail(QStringLiteral("Tile (%1, %2) is locked by a CPU user").arg(col).arg(row));
+                    }
+                    if (!entry.replaced) {
+                        // Writing in place: pre-made COW clones would become stale.
+                        entry.tile->tileData()->dropClones();
+                    }
+                    entry.contentPending = entry.replaced && entry.tile->tileData()->gpuState() == nullptr
+                        && (d->mode == WriteOnly || contentFromGpuCopy);
+                }
+
+                entry.tileData = entry.tile->tileData();
+                entry.state = d->pin(entry.tileData, errorMessage);
+                if (!entry.state) {
+                    d->entries << entry;
                     d->restorePendingContent();
-                    return fail(QStringLiteral("Tile (%1, %2) is locked by a CPU user").arg(col).arg(row));
+                    return false;
                 }
-                if (!entry.replaced) {
-                    // Writing in place: pre-made COW clones would become stale.
-                    entry.tile->tileData()->dropClones();
-                }
-                entry.contentPending = entry.replaced && entry.tile->tileData()->gpuState() == nullptr
-                    && (d->mode == WriteOnly || contentFromGpuCopy);
-            }
+                entry.generation = entry.state->generation();
 
-            entry.tileData = entry.tile->tileData();
-            entry.state = d->pin(entry.tileData, errorMessage);
-            if (!entry.state) {
+                if (contentFromGpuCopy) {
+                    copySources << entry.replaced->gpuState()->slot;
+                    copyTargets << entry.state->slot;
+                } else if (d->mode != WriteOnly && !entry.state->gpuValid()
+                           && !uploadedTileData.contains(entry.tileData)) {
+                    // Absent tiles all share the default tile data: upload it once.
+                    uploadedTileData.insert(entry.tileData);
+                    uploads << d->entries.size();
+                    entry.uploaded = true;
+                }
                 d->entries << entry;
-                d->restorePendingContent();
-                return false;
             }
-            entry.generation = entry.state->generation();
-
-            if (contentFromGpuCopy) {
-                copySources << entry.replaced->gpuState()->slot;
-                copyTargets << entry.state->slot;
-            } else if (d->mode != WriteOnly && !entry.state->gpuValid() && !uploadedTileData.contains(entry.tileData)) {
-                // Absent tiles all share the default tile data: upload it once.
-                uploadedTileData.insert(entry.tileData);
-                uploads << d->entries.size();
-                entry.uploaded = true;
-            }
-            d->entries << entry;
         }
     }
 
@@ -309,6 +314,7 @@ bool KisGpuTileAccess::prepareImpl(KisGpuCommandList &commands, QString *errorMe
     }
 
     if (!uploadEntries.isEmpty()) {
+        KisPaintTrace::Scope trace("tile_access.stage_uploads", d.get(), nullptr, KisPaintTrace::currentFlow());
         const VkDeviceSize tileBytes = pool->tileBytes();
         const VkDeviceSize bytes = tileBytes * uploadEntries.size();
         VkDeviceSize baseOffset = 0;
@@ -422,6 +428,14 @@ quint64 KisGpuTileAccess::submitAndFinish(KisGpuCommandList &commands,
     KisGpuTileBackend *backend = KisGpuTileBackend::existingInstance();
     KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(backend, 0);
 
+    // Main commands no longer change. Only generation-dependent uploads in
+    // the preamble must be recorded while holding the residency mutex.
+    const bool mainReady = [&] {
+        KisPaintTrace::Scope trace("tile_submit.finish_main", backend, &commands, KisPaintTrace::currentFlow());
+        return commands.finishMainRecording();
+    }();
+    KisGpuSubmitTiming submitTiming;
+    const bool traceSubmission = KisPaintTrace::enabled();
     quint64 value = 0;
     {
         // Deciding which uploads still run, checking for the failed state,
@@ -429,33 +443,76 @@ quint64 KisGpuTileAccess::submitAndFinish(KisGpuCommandList &commands,
         // another access doing the same (an older upload could land after a
         // newer one was published) nor with the engine entering the failed
         // state (KisGpuTileBackend::downloadToCpu takes this mutex for that).
-        QMutexLocker locker(&backend->residencyMutex());
+        auto locker = [&] {
+            KisPaintTrace::Scope trace("tile_submit.lock", backend, &commands, KisPaintTrace::currentFlow());
+            return QMutexLocker(&backend->residencyMutex());
+        }();
+        KisPaintTrace::Scope holdTrace("residency.hold.submit", backend, &commands, KisPaintTrace::currentFlow());
 
         if (backend->hasFailed()) {
             dbgImage << "GPU engine: stopped; not submitting";
-        } else {
+        } else if (mainReady) {
             // Uploads run first, in the preamble of the same submission.
-            for (KisGpuTileAccess *access : accesses) {
-                access->recordUploads(commands);
+            {
+                KisPaintTrace::Scope trace("tile_submit.record_uploads",
+                                           &commands,
+                                           nullptr,
+                                           KisPaintTrace::currentFlow());
+                for (KisGpuTileAccess *access : accesses) {
+                    access->recordUploads(commands);
+                }
             }
-            value = commands.submit(waitSemaphores, signalSemaphores);
+            {
+                KisPaintTrace::Scope trace("tile_submit.queue", &commands, nullptr, KisPaintTrace::currentFlow());
+                value = commands.submit(waitSemaphores, signalSemaphores, traceSubmission ? &submitTiming : nullptr);
+            }
         }
         // Not submitted (refused above): end the recording so that the list
         // can be begun again. A failed submit() already ended it.
         commands.abandon();
 
-        for (KisGpuTileAccess *access : accesses) {
-            access->publish(value);
+        {
+            KisPaintTrace::Scope trace("tile_submit.publish", &commands, nullptr, KisPaintTrace::currentFlow());
+            for (KisGpuTileAccess *access : accesses) {
+                access->publish(value);
+            }
         }
     }
 
     // Outside the residency mutex: restoring may download from the GPU,
     // which can enter the failed state (and take the mutex).
-    for (KisGpuTileAccess *access : accesses) {
-        if (!value) {
-            access->d->restorePendingContent();
+    {
+        KisPaintTrace::Scope trace("tile_submit.complete", &commands, nullptr, KisPaintTrace::currentFlow());
+        for (KisGpuTileAccess *access : accesses) {
+            if (!value) {
+                access->d->restorePendingContent();
+            }
+            access->complete(value);
         }
-        access->complete(value);
+    }
+    // Record saved timestamps after residency and completion locks are released.
+    if (traceSubmission) {
+        const quint64 flow = KisPaintTrace::currentFlow();
+        KisPaintTrace::externalSpan("tile_submit.queue_lock",
+                                    backend,
+                                    &commands,
+                                    submitTiming.lockStartNs,
+                                    submitTiming.lockAcquiredNs,
+                                    flow);
+        if (submitTiming.driverStartNs) {
+            KisPaintTrace::externalSpan("tile_submit.queue_prepare",
+                                        backend,
+                                        &commands,
+                                        submitTiming.lockAcquiredNs,
+                                        submitTiming.driverStartNs,
+                                        flow);
+            KisPaintTrace::externalSpan("tile_submit.driver",
+                                        backend,
+                                        &commands,
+                                        submitTiming.driverStartNs,
+                                        submitTiming.driverEndNs,
+                                        flow);
+        }
     }
     return value;
 }

@@ -10,6 +10,7 @@
 #include <QList>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QVector>
 
 #include "kis_update_info.h"
 
@@ -19,9 +20,16 @@ class KisCanvasUpdatesCompressor
 {
 public:
     bool putUpdateInfo(KisUpdateInfoSP info);
+    /**
+     * Puts @p infos in order, atomically: takeUpdateInfo() returns all of
+     * them or none. True if the list was empty before.
+     */
+    bool putUpdateInfos(const QVector<KisUpdateInfoSP> &infos);
     void takeUpdateInfo(KisUpdateInfoList &list);
 
 private:
+    bool putUpdateInfoLocked(KisUpdateInfoSP info);
+
     QMutex m_mutex;
     KisUpdateInfoList m_updatesList;
 };

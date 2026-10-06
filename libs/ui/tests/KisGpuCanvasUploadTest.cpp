@@ -60,6 +60,8 @@ private Q_SLOTS:
     void testTexturesMatchCpu_data();
     void testTexturesMatchCpu();
     void testLutProfilesUseCpu();
+    void testSharedUploadMatchesCpu_data();
+    void testSharedUploadMatchesCpu();
     void testGLImportFailureFallsBackToCpu_data();
     void testGLImportFailureFallsBackToCpu();
     void testInteropSelfTestPreservesBinding();
@@ -123,20 +125,24 @@ struct TextureSet {
     }
 };
 
-/// Applies @p update to @p textures and reads every texture back (level 0).
-std::map<std::pair<int, int>, std::vector<float>> applyAndRead(QOpenGLContext *context,
-                                                               TextureSet &textures,
-                                                               KisOpenGLUpdateInfoBuilder &builder,
-                                                               KisOpenGLUpdateInfoSP update,
-                                                               const QRect &bounds)
+/// Applies @p updates in order, each in its own acquire/release scope like
+/// KisOpenGLImageTextures::recalculateCache(), and reads every texture back (level 0).
+std::map<std::pair<int, int>, std::vector<float>> applyAllAndRead(QOpenGLContext *context,
+                                                                  TextureSet &textures,
+                                                                  KisOpenGLUpdateInfoBuilder &builder,
+                                                                  const QVector<KisOpenGLUpdateInfoSP> &updates,
+                                                                  const QRect &bounds)
 {
     QOpenGLFunctions *f = context->functions();
-    KisGpuCanvasUploader::acquire(update->tileList);
-    for (const KisTextureTileUpdateInfoSP &tileInfo : update->tileList) {
-        const QRect imageRect = builder.calculateEffectiveTileRect(tileInfo->tileCol(), tileInfo->tileRow(), bounds);
-        textures.tile(tileInfo->tileCol(), tileInfo->tileRow(), imageRect, f)->update(*tileInfo, true);
+    for (const KisOpenGLUpdateInfoSP &update : updates) {
+        KisGpuCanvasUploader::acquire(update->tileList);
+        for (const KisTextureTileUpdateInfoSP &tileInfo : update->tileList) {
+            const QRect imageRect =
+                builder.calculateEffectiveTileRect(tileInfo->tileCol(), tileInfo->tileRow(), bounds);
+            textures.tile(tileInfo->tileCol(), tileInfo->tileRow(), imageRect, f)->update(*tileInfo, true);
+        }
+        KisGpuCanvasUploader::release(update->tileList);
     }
-    KisGpuCanvasUploader::release(update->tileList);
 
     auto getTexImage = reinterpret_cast<PFN_glGetTexImage>(context->getProcAddress("glGetTexImage"));
     std::map<std::pair<int, int>, std::vector<float>> result;
@@ -147,6 +153,16 @@ std::map<std::pair<int, int>, std::vector<float>> applyAndRead(QOpenGLContext *c
         result[entry.first] = std::move(pixels);
     }
     return result;
+}
+
+/// Applies @p update to @p textures and reads every texture back (level 0).
+std::map<std::pair<int, int>, std::vector<float>> applyAndRead(QOpenGLContext *context,
+                                                               TextureSet &textures,
+                                                               KisOpenGLUpdateInfoBuilder &builder,
+                                                               KisOpenGLUpdateInfoSP update,
+                                                               const QRect &bounds)
+{
+    return applyAllAndRead(context, textures, builder, {update}, bounds);
 }
 /// Two layers over the whole image, so the projection is a real composite.
 KisImageSP createCanvasImage(const KoColorSpace *space, const QRect &bounds, float valueScale)
@@ -396,6 +412,82 @@ void KisGpuCanvasUploadTest::testLutProfilesUseCpu()
                                                  &conversion));
 }
 
+void KisGpuCanvasUploadTest::testSharedUploadMatchesCpu_data()
+{
+    addConversionRows();
+}
+
+void KisGpuCanvasUploadTest::testSharedUploadMatchesCpu()
+{
+    if (!m_skipReason.isEmpty()) {
+        QSKIP(qPrintable(m_skipReason));
+    }
+    QFETCH(QString, imageDepth);
+    QFETCH(QString, imageProfile);
+    QFETCH(QString, displayDepth);
+    QFETCH(QString, displayProfile);
+    QFETCH(float, valueScale);
+    QFETCH(float, tolerance);
+
+    const KoColorSpace *imageSpace = rgba(imageDepth, imageProfile);
+    const KoColorSpace *displaySpace = rgba(displayDepth, displayProfile);
+    QVERIFY(imageSpace && displaySpace);
+    const QRect bounds(0, 0, 500, 300);
+    KisImageSP image = createCanvasImage(imageSpace, bounds, valueScale);
+    KisOpenGLUpdateInfoBuilder builder;
+    TextureSet cpuTextures;
+    TextureSet gpuTextures;
+    setUpCanvas(builder, displaySpace, {&cpuTextures, &gpuTextures});
+
+    // Concurrent canvas updates, built together as KisCanvas2 batches them:
+    // overlapping ones, a distant one (a separate source access in the same
+    // submission), a single pixel and one outside the image.
+    const QVector<QRect> rects = {QRect(0, 0, 40, 40),
+                                  QRect(430, 240, 70, 60),
+                                  QRect(20, 20, 60, 60),
+                                  QRect(250, 10, 1, 1),
+                                  QRect(600, 0, 10, 10)};
+    KisGpuCanvasUploader::setGLInteropAvailable(false);
+    QVERIFY(!builder.usesGpuUpload(image->projection()));
+    const QVector<KisOpenGLUpdateInfoSP> cpuUpdates = builder.buildUpdateInfos(rects, image);
+    KisGpuCanvasUploader::setGLInteropAvailable(true);
+    QVERIFY(builder.usesGpuUpload(image->projection()));
+    const quint64 before = KisGpuCanvasUploader::uploadCount();
+    const QVector<KisOpenGLUpdateInfoSP> gpuUpdates = builder.buildUpdateInfos(rects, image);
+    QCOMPARE(KisGpuCanvasUploader::uploadCount(), before + 1);
+    QCOMPARE(gpuUpdates.size(), rects.size());
+    QCOMPARE(cpuUpdates.size(), rects.size());
+
+    KisGpuCanvasUpload *shared = nullptr;
+    KisTextureTileUpdateInfoSPList gpuTiles;
+    for (int i = 0; i < rects.size(); i++) {
+        QCOMPARE(gpuUpdates[i]->dirtyImageRect(), cpuUpdates[i]->dirtyImageRect());
+        QCOMPARE(gpuUpdates[i]->tileList.size(), cpuUpdates[i]->tileList.size());
+        for (const KisTextureTileUpdateInfoSP &tile : gpuUpdates[i]->tileList) {
+            QVERIFY(tile->gpuUpload());
+            shared = shared ? shared : tile->gpuUpload();
+            QCOMPARE(tile->gpuUpload(), shared);
+        }
+        gpuTiles.append(gpuUpdates[i]->tileList);
+    }
+    QVERIFY(shared);
+    QVERIFY(gpuUpdates.last()->tileList.isEmpty() && gpuUpdates.last()->dirtyImageRect().isEmpty());
+
+    const TextureContents cpu = applyAllAndRead(&m_glContext, cpuTextures, builder, cpuUpdates, bounds);
+    // KisOpenGLCanvas2::updateCanvasProjection(): one hold over the whole
+    // batch; the per-update holds nest inside it.
+    QVERIFY(KisGpuCanvasUploader::acquire(gpuTiles));
+    const TextureContents gpu = applyAllAndRead(&m_glContext, gpuTextures, builder, gpuUpdates, bounds);
+    QVERIFY(shared->isAcquired());
+    KisGpuCanvasUploader::release(gpuTiles);
+    QVERIFY(!shared->isAcquired());
+
+    QCOMPARE(gpu.size(), cpu.size());
+    QString where;
+    const float worst = maxTextureDifference(cpu, gpu, &where);
+    QVERIFY2(worst <= tolerance, qPrintable(QStringLiteral("max difference %1 at %2").arg(worst).arg(where)));
+}
+
 void KisGpuCanvasUploadTest::testGLImportFailureFallsBackToCpu_data()
 {
     addConversionRows();
@@ -484,9 +576,11 @@ void KisGpuCanvasUploadTest::testGLImportFailureFallsBackToCpu()
         QVERIFY(readBackTiles > 0);
         QCOMPARE(glTiles > 0, step.rects.size() > 1);
 
-        // applyAndRead() acquires again (a no-op now) and releases.
+        // applyAndRead() nests another hold inside ours; release ours after
+        // it, like the scope guard of recalculateCache().
         const TextureContents cpu = applyAndRead(&m_glContext, cpuTextures, builder, cpuUpdate, bounds);
         const TextureContents gpu = applyAndRead(&m_glContext, gpuTextures, builder, gpuUpdate, bounds);
+        KisGpuCanvasUploader::release(gpuUpdate->tileList);
         QCOMPARE(gpu.size(), cpu.size());
         QString where;
         const float worst = maxTextureDifference(cpu, gpu, &where);

@@ -31,6 +31,12 @@ public:
     /// supplied dabs. False leaves every pass for the normal per-pass fallback.
     static bool paintMirrored(KisPainter *painter, const QList<KisRenderedDab> &dabs, const QVector<QRect> &paintRects);
     static quint64 batchCount();
+    /// Dabs evaluated on the GPU from KisRenderedDab::procedural (per pass)
+    /// in submitted batches, instead of uploading their pixels.
+    static quint64 generatedDabCount();
+    /// Tests: refuse the next @p count batches that contain dabs with pending
+    /// pixels (KisRenderedDab::pixelsPending), as a GPU failure would.
+    static void refusePendingBatchesForTesting(int count);
     struct StagingStatistics {
         quint64 bytes = 0;
         int contexts = 0;

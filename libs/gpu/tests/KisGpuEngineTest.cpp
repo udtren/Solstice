@@ -30,6 +30,7 @@
 #include <cstring>
 #include <numeric>
 #include <random>
+#include <set>
 
 namespace
 {
@@ -450,6 +451,113 @@ void KisGpuEngineTest::testUploadReadbackRoundTrip()
     for (quint32 slot : slots) {
         pool.release(slot);
     }
+}
+
+void KisGpuEngineTest::testEarlyMainFinish()
+{
+    REQUIRE_GPU();
+    auto source = KisGpuBuffer::create(*m_context, 16, KisGpuBuffer::Location::Upload);
+    auto readback = KisGpuBuffer::create(*m_context, 16, KisGpuBuffer::Location::Readback);
+    QVERIFY(source && readback);
+    KisGpuCommandList commands(*m_context);
+    for (quint32 value : {11u, 22u}) {
+        commands.begin();
+        commands.copyBuffer(*source, 0, *readback, 0, 16);
+        commands.barrier(VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                         VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                         VK_PIPELINE_STAGE_2_HOST_BIT,
+                         VK_ACCESS_2_HOST_READ_BIT);
+        QVERIFY(commands.finishMainRecording());
+        QVERIFY(commands.finishMainRecording());
+        // Late upload must execute before the already-ended main buffer.
+        m_context->vk().vkCmdFillBuffer(commands.preamble(), source->handle(), 0, 16, value);
+        QVERIFY(commands.submit());
+        QVERIFY(commands.wait());
+        for (int i = 0; i < 4; ++i)
+            QCOMPARE(static_cast<const quint32 *>(readback->mapped())[i], value);
+    }
+    commands.begin();
+    QVERIFY(commands.finishMainRecording());
+    commands.abandon();
+    QVERIFY(!commands.isRecording());
+    commands.begin();
+    QVERIFY(commands.finishMainRecording());
+    m_context->injectSubmitFailuresForTesting(1);
+    QCOMPARE(commands.submit(), quint64(0));
+    commands.abandon();
+    commands.begin();
+    QVERIFY(commands.submit());
+    QVERIFY(commands.wait());
+}
+
+void KisGpuEngineTest::testConcurrentSubmissionTiming()
+{
+    REQUIRE_GPU();
+    const int errorsBefore = m_context->validationErrorCount();
+    struct Result {
+        bool ok = true;
+        QVector<quint64> values;
+        QVector<KisGpuSubmitTiming> timings;
+    };
+    std::vector<Result> results(4);
+    QVector<int> workers{0, 1, 2, 3};
+    QThreadPool pool;
+    pool.setMaxThreadCount(4);
+    QtConcurrent::blockingMap(&pool, workers, [&](int worker) {
+        Result &result = results[worker];
+        auto output = KisGpuBuffer::create(*m_context, 16, KisGpuBuffer::Location::Readback);
+        KisGpuCommandList commands(*m_context);
+        if (!output || !commands.isValid()) {
+            result.ok = false;
+            return;
+        }
+        for (int iteration = 0; iteration < 32; ++iteration) {
+            const quint32 expected = quint32(worker * 32 + iteration + 1);
+            commands.begin();
+            m_context->vk().vkCmdFillBuffer(commands.commandBuffer(), output->handle(), 0, 16, expected);
+            commands.barrier(VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                             VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                             VK_PIPELINE_STAGE_2_HOST_BIT,
+                             VK_ACCESS_2_HOST_READ_BIT);
+            KisGpuSubmitTiming timing;
+            const quint64 value = commands.submit({}, {}, &timing);
+            if (!value || !commands.wait()) {
+                result.ok = false;
+                return;
+            }
+            for (int word = 0; word < 4; ++word)
+                result.ok = result.ok && static_cast<const quint32 *>(output->mapped())[word] == expected;
+            result.values << value;
+            result.timings << timing;
+        }
+    });
+    std::set<quint64> submitted;
+    for (const Result &result : results) {
+        QVERIFY(result.ok);
+        QCOMPARE(result.values.size(), 32);
+        for (quint64 value : result.values)
+            QVERIFY(submitted.insert(value).second);
+        for (const KisGpuSubmitTiming &timing : result.timings) {
+            QVERIFY(timing.lockStartNs > 0);
+            QVERIFY(timing.lockStartNs <= timing.lockAcquiredNs);
+            QVERIFY(timing.lockAcquiredNs <= timing.driverStartNs);
+            QVERIFY(timing.driverStartNs <= timing.driverEndNs);
+        }
+    }
+    KisGpuCommandList commands(*m_context);
+    commands.begin();
+    m_context->injectSubmitFailuresForTesting(1);
+    KisGpuSubmitTiming refused;
+    refused.driverEndNs = 1;
+    QCOMPARE(commands.submit({}, {}, &refused), quint64(0));
+    QVERIFY(refused.lockStartNs > 0);
+    QVERIFY(refused.lockAcquiredNs >= refused.lockStartNs);
+    QCOMPARE(refused.driverStartNs, qint64(0));
+    QCOMPARE(refused.driverEndNs, qint64(0));
+    commands.begin();
+    QVERIFY(commands.submit());
+    QVERIFY(commands.wait());
+    QCOMPARE(m_context->validationErrorCount(), errorsBefore);
 }
 
 void KisGpuEngineTest::testCompositeOverMatchesKoCompositeOp()

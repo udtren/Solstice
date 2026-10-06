@@ -17,6 +17,7 @@
 #include <QVector>
 #include <atomic>
 #include <chrono>
+#include <cstring>
 
 namespace
 {
@@ -72,6 +73,10 @@ struct Recorder {
                 const QRect &rect = {},
                 int lod = -1)
     {
+        // Per-tile holds are numerous. Retain only diagnostically significant
+        // residency holds; omitted short holds are not recorder overflow.
+        if (duration >= 0 && duration < 10000 && std::strncmp(name, "residency.hold.", 15) == 0)
+            return;
         const Event event{name,
                           quintptr(owner),
                           quintptr(related),
@@ -145,6 +150,7 @@ struct Recorder {
                                             {"clock", "steady_clock"},
                                             {"time_unit", "microseconds"},
                                             {"event_limit", eventLimit},
+                                            {"residency_hold_min_us", 10},
                                             {"dropped_events", double(lost)},
                                             {"projection_env", projection},
                                             {"brush_env", brush},
@@ -309,6 +315,17 @@ KisPaintTrace::InputScope::~InputScope()
 {
     if (m_active)
         inputId = m_previous;
+}
+
+void KisPaintTrace::externalSpan(const char *name,
+                                 const void *owner,
+                                 const void *related,
+                                 qint64 startNs,
+                                 qint64 endNs,
+                                 quint64 id)
+{
+    if (enabled() && startNs > 0 && endNs >= startNs)
+        recorder().append(name, owner, related, startNs, endNs - startNs, id, 0, jobId);
 }
 
 bool KisPaintTrace::flush()

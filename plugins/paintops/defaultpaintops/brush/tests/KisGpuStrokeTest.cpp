@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "../KisBrushOpSettings.h"
+#include "../KisDabRenderingJob.h"
 #include "../kis_brushop.h"
 #include "../kis_brushop_settings_widget.h"
 #include <KisAsynchronousStrokeUpdateHelper.h>
@@ -101,6 +102,8 @@ private Q_SLOTS:
     }
     void cleanupTestCase()
     {
+        qInfo() << "dab CPU generations skipped" << KisDabRenderingJobRunner::skippedGenerationCount()
+                << "materialized for CPU use" << KisBrushOp::materializedDabCount();
         if (auto *backend = KisGpuTileBackend::existingInstance()) {
             backend->flush();
             QCOMPARE(backend->context().validationErrorCount(), 0);
@@ -133,6 +136,47 @@ private Q_SLOTS:
     }
     void testStroke()
     {
+        runStroke(false);
+    }
+    void testGaussStroke_data()
+    {
+        testStroke_data();
+    }
+    void testRefusedPendingBatches_data()
+    {
+        testStroke_data();
+    }
+    void testRefusedPendingBatches()
+    {
+        // Phase 4.85: refused GPU batches of dabs without CPU pixels fall back
+        // to the CPU after materialization, with unchanged parity.
+        m_refusePendingBatches = 2;
+        auto restore = qScopeGuard([this]() {
+            m_refusePendingBatches = 0;
+            KisGpuBrushPainter::refusePendingBatchesForTesting(0);
+        });
+        runStroke(false);
+    }
+    void testSoftStroke_data()
+    {
+        testStroke_data();
+    }
+    void testSoftStroke()
+    {
+        // Phase 4.87: the Soft (curve) circle mask.
+        m_maskGenerator = QStringLiteral("soft");
+        auto restore = qScopeGuard([this]() {
+            m_maskGenerator = QStringLiteral("default");
+        });
+        runStroke(false);
+    }
+    void testGaussStroke()
+    {
+        // Phase 4.84: the Gaussian circle mask (the measured Basic-4 preset family).
+        m_maskGenerator = QStringLiteral("gauss");
+        auto restore = qScopeGuard([this]() {
+            m_maskGenerator = QStringLiteral("default");
+        });
         runStroke(false);
     }
     void testEraseStroke_data()
@@ -302,6 +346,8 @@ private Q_SLOTS:
     }
 
 private:
+    QString m_maskGenerator = QStringLiteral("default");
+    int m_refusePendingBatches = 0;
     void runStroke(bool erase,
                    bool selectionOnly = false,
                    int channelBits = -1,
@@ -338,9 +384,11 @@ private:
             QStringLiteral(
                 "<Brush useAutoSpacing=\"0\" angle=\"0.37\" spacing=\"%2\" density=\"1\" BrushVersion=\"2\" "
                 "type=\"auto_brush\" randomness=\"0\"><MaskGenerator spikes=\"2\" hfade=\"0.7\" ratio=\"0.6\" "
-                "diameter=\"%1\" id=\"default\" type=\"circle\" antialiasEdges=\"1\" vfade=\"0.6\"/></Brush>")
+                "diameter=\"%1\" id=\"%3\" type=\"circle\" antialiasEdges=\"1\" vfade=\"0.6\" "
+                "softness_curve=\"0,1;0.3,0.85;0.7,0.2;1,0;\"/></Brush>")
                 .arg(diameter)
-                .arg(diameter == 300 ? 0.02 : 0.1));
+                .arg(diameter == 300 ? 0.02 : 0.1)
+                .arg(m_maskGenerator));
         KisPaintingModeOptionData paintingMode;
         paintingMode.paintingMode = wash ? enumPaintingMode::WASH : enumPaintingMode::BUILDUP;
         paintingMode.write(settings.data());
@@ -448,6 +496,10 @@ private:
                 const auto firstPreview = KisGpuBrushPainter::washPreviewCount();
                 const auto firstMerge = KisGpuBrushPainter::washMergeCount();
                 const auto firstBatch = KisGpuBrushPainter::batchCount();
+                const auto firstGenerated = KisGpuBrushPainter::generatedDabCount();
+                const auto firstSkipped = KisDabRenderingJobRunner::skippedGenerationCount();
+                const auto firstMaterialized = KisBrushOp::materializedDabCount();
+                KisGpuBrushPainter::refusePendingBatchesForTesting(path == 2 ? m_refusePendingBatches : 0);
                 QElapsedTimer timer;
                 timer.start();
                 const auto stroke = image->startStroke(new FreehandStrokeStrategy(resources,
@@ -489,10 +541,30 @@ private:
                     QVERIFY(KisGpuBrushPainter::washMergeCount() > firstMerge);
                 else
                     QCOMPARE(KisGpuBrushPainter::washMergeCount(), firstMerge);
-                if (path == 2)
+                // Refused batches (testRefusedPendingBatches) may be all of them.
+                if (path == 2 && !m_refusePendingBatches)
                     QVERIFY(batches > 0);
-                else
+                else if (path != 2)
                     QCOMPARE(batches, quint64(0));
+                // Phase 4.83: the circle dabs of RGBA32F strokes are evaluated
+                // on the GPU; textured dabs and RGBA16F keep their pixels.
+                const auto generated = KisGpuBrushPainter::generatedDabCount() - firstGenerated;
+                // Phase 4.86: RGBA16F dabs are generated too.
+                if (path == 2 && !textured && !m_refusePendingBatches)
+                    QVERIFY(generated > 0);
+                else if (path != 2 || textured)
+                    QCOMPARE(generated, quint64(0));
+                // Phase 4.85: after the first verified dabs of each mask kind,
+                // their CPU generation is skipped; every CPU use materializes them.
+                const auto skipped = KisDabRenderingJobRunner::skippedGenerationCount() - firstSkipped;
+                if (path == 2 && !textured)
+                    QVERIFY(skipped > 0);
+                else
+                    QCOMPARE(skipped, quint64(0));
+                const auto materialized = KisBrushOp::materializedDabCount() - firstMaterialized;
+                if (path == 2 && !textured && m_refusePendingBatches)
+                    QVERIFY(materialized > 0);
+                KisGpuBrushPainter::refusePendingBatchesForTesting(0);
                 const auto after = pixels(layer->paintDevice());
                 const auto projection = pixels(image->projection());
                 QVERIFY(difference(before, after) > 0.01f);

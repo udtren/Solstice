@@ -29,7 +29,8 @@ typedef QSharedPointer<KisTextureTileUpdateInfo> KisTextureTileUpdateInfoSP;
  * One GPU-written set of canvas patches in a buffer shared with OpenGL
  * (GPU engine phase 3.2). Owned by the KisTextureTileUpdateInfo objects
  * that reference it; the buffer returns to its pool when the last one is
- * destroyed.
+ * destroyed. The tiles may belong to several update infos of one canvas
+ * batch (KisCanvas2): GL holds then nest, see glAcquire().
  */
 class KRITAUI_EXPORT KisGpuCanvasUpload
 {
@@ -43,7 +44,11 @@ public:
 
     /// GL side (GUI thread, canvas context current).
     quint32 glBuffer();
-    /// False if GL cannot import the buffer; GL must not read it then.
+    /**
+     * False if GL cannot import the buffer; GL must not read it then.
+     * Successful calls nest: GL may read the buffer until the matching
+     * number of glRelease() calls. The last one ends the GL use for good.
+     */
     bool glAcquire();
     void glRelease();
     /// glAcquire() succeeded: the GL buffer holds the patches.
@@ -59,6 +64,7 @@ public:
 private:
     KisGpuGLSharedBuffer *m_buffer;
     quint64 m_byteSize;
+    int m_holds = 0;
     bool m_acquired = false;
     bool m_released = false;
     bool m_failed = false;
@@ -98,11 +104,24 @@ public:
     static bool isEnabled();
 
     /**
+     * True if upload() supports @p projection and @p dstColorSpace with
+     * @p intent (it can still fail, e.g. on GPU errors). Cheap after the
+     * first call for a pair of profiles.
+     */
+    static bool canUpload(KisPaintDeviceSP projection,
+                          const KoColorSpace *dstColorSpace,
+                          KoColorConversionTransformation::Intent intent);
+
+    /**
      * Writes the patches of @p tiles (whose geometry is set) from
      * @p projection, display-converted to @p dstColorSpace, and attaches the
      * result to the tiles (KisTextureTileUpdateInfo::setGpuUpload()).
      * Returns false (and changes nothing) if the conversion or the formats
      * are not supported or the GPU fails; the caller then uses the CPU path.
+     *
+     * One submission for all tiles. Patches closer than one GPU tile share
+     * a source access; distant ones keep separate accesses instead of
+     * reading the tiles of their bounding rect.
      */
     static bool upload(KisPaintDeviceSP projection,
                        const QVector<KisTextureTileUpdateInfoSP> &tiles,

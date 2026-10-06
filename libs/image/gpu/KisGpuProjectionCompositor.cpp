@@ -209,10 +209,20 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
         }
     }
 
-    std::unique_ptr<WorkContext> work = acquireContext(context);
+    std::unique_ptr<WorkContext> work = [&] {
+        KisPaintTrace::Scope trace("compositor.acquire_context",
+                                   projection.data(),
+                                   nullptr,
+                                   KisPaintTrace::currentFlow());
+        return acquireContext(context);
+    }();
     // Waiting outside the pool mutex lets unrelated completed contexts remain
     // available to other workers. On failure, do not reset or overwrite tables.
-    if (!work->commands.isValid() || !work->commands.wait()) {
+    const bool contextReady = [&] {
+        KisPaintTrace::Scope trace("compositor.wait_context", projection.data(), nullptr, KisPaintTrace::currentFlow());
+        return work->commands.isValid() && work->commands.wait();
+    }();
+    if (!contextReady) {
         releaseContext(std::move(work));
         return fail(QStringLiteral("GPU work context is unavailable"));
     }
@@ -247,7 +257,13 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     QVector<VkDeviceAddress> layerTiles;
     QVector<KisGpuLayerCompositor::Layer> layerParams;
 
-    bool ok = target.prepare(commands, uploads, errorMessage);
+    bool ok = [&] {
+        KisPaintTrace::Scope trace("compositor.prepare_target",
+                                   projection.data(),
+                                   nullptr,
+                                   KisPaintTrace::currentFlow());
+        return target.prepare(commands, uploads, errorMessage);
+    }();
     const QRect grid = target.tileGrid();
     const int tileCount = target.tileCount();
     const QPoint gridOrigin = target.tileOrigin(grid.left(), grid.top());
@@ -262,7 +278,14 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
             // Nothing of this layer inside the rect.
             continue;
         }
-        if (!access->prepare(commands, uploads, errorMessage)) {
+        const bool prepared = [&] {
+            KisPaintTrace::Scope trace("compositor.prepare_layer",
+                                       projection.data(),
+                                       nullptr,
+                                       KisPaintTrace::currentFlow());
+            return access->prepare(commands, uploads, errorMessage);
+        }();
+        if (!prepared) {
             ok = false;
             accesses.push_back(std::move(access));
             break;
@@ -318,6 +341,10 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     }
 
     if (ok) {
+        KisPaintTrace::Scope trace("compositor.submit_finish",
+                                   projection.data(),
+                                   nullptr,
+                                   KisPaintTrace::currentFlow());
         work->lastUse = KisGpuTileAccess::submitAndFinish(commands, accessList);
         ok = work->lastUse != 0;
         if (ok) {

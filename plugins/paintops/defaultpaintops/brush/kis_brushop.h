@@ -34,6 +34,9 @@ class KisBrushOp : public KisBrushBasedPaintOp
 {
 
 public:
+    /// GPU engine (Solstice): dabs whose skipped CPU generation had to be
+    /// rendered for a CPU use (diagnostics, tests).
+    static quint64 materializedDabCount();
 
     KisBrushOp(const KisPaintOpSettingsSP settings, KisPainter * painter, KisNodeSP node, KisImageSP image);
     ~KisBrushOp() override;

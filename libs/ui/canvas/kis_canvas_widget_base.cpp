@@ -228,6 +228,20 @@ QVector<QRect> KisCanvasWidgetBase::updateCanvasProjection(const QVector<KisUpda
     return dirtyViewRects;
 }
 
+bool KisCanvasWidgetBase::sharesProjectionUploads() const
+{
+    return false;
+}
+
+QVector<KisUpdateInfoSP> KisCanvasWidgetBase::startUpdateCanvasProjections(const QVector<QRect> &rects)
+{
+    QVector<KisUpdateInfoSP> infos;
+    for (const QRect &rc : rects) {
+        infos << startUpdateCanvasProjection(rc);
+    }
+    return infos;
+}
+
 KoToolProxy *KisCanvasWidgetBase::toolProxy() const
 {
     return m_d->toolProxy;

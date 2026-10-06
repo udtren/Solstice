@@ -78,6 +78,15 @@ public:
     // Called from KisCanvas2::startUpdateProjection
     virtual KisUpdateInfoSP startUpdateCanvasProjection(const QRect & rc) = 0;
 
+    /**
+     * GPU engine (Solstice): true if concurrent projection updates should be
+     * built together by startUpdateCanvasProjections(), which then shares
+     * the GPU work between them (KisCanvas2 batches them).
+     */
+    virtual bool sharesProjectionUploads() const = 0;
+    /// One update per rect, in order.
+    virtual QVector<KisUpdateInfoSP> startUpdateCanvasProjections(const QVector<QRect> &rects) = 0;
+
     // Called from KisCanvas2::updateCanvasProjection
     virtual QRect updateCanvasProjection(KisUpdateInfoSP info) = 0;
     virtual QVector<QRect> updateCanvasProjection(const QVector<KisUpdateInfoSP> &infoObjects) = 0;

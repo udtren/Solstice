@@ -7,6 +7,7 @@
 #include "KisGpuComputePipeline.h"
 #include "KisGpuContext.h"
 #include <QHash>
+#include <QSet>
 #include <cstring>
 namespace
 {
@@ -43,6 +44,8 @@ struct PushConstants {
     qint32 maskX, maskY, maskWidth, maskHeight;
 };
 static_assert(sizeof(DabRecord) == 64 && sizeof(PushConstants) == 64, "shader layout");
+static_assert(sizeof(KisGpuDabCompositor::Circle) == 112, "shader circle layout");
+constexpr quint32 GeneratedDabFlag = 4;
 static_assert(sizeof(TileRecord) == 16, "shader tile layout");
 VkDeviceSize aligned(VkDeviceSize bytes)
 {
@@ -52,6 +55,7 @@ struct UploadLayout {
     VkDeviceSize tableOffset = 0, maskOffset = 0, maskBytes = 0, capacity = 0;
     QVector<VkDeviceSize> offsets;
     QHash<const void *, VkDeviceSize> sourceOffsets;
+    QHash<const float *, VkDeviceSize> tableOffsets; // Soft curve tables
 };
 bool planUpload(int tileCount,
                 const QVector<KisGpuDabCompositor::Dab> &dabs,
@@ -68,6 +72,23 @@ bool planUpload(int tileCount,
     // Consecutive identical dabs commonly share their fixed paint device.
     QHash<const void *, QSize> sourceSizes;
     for (const auto &dab : dabs) {
+        if (dab.generated) {
+            // Parameters instead of pixels, for the destination format.
+            if ((pixelSize == 8) != (dab.circle.halfPixels != 0) || dab.size.isEmpty() || dab.mirrorFlags > 3)
+                return false;
+            if (dab.circle.kind == 2) {
+                // The kernel reads index + 1 for distances up to 1.
+                if (!dab.curveTable || dab.curveTableSize < int(dab.circle.curveResolution) + 2)
+                    return false;
+            }
+            layout.offsets << bytes;
+            bytes += sizeof(KisGpuDabCompositor::Circle);
+            if (dab.circle.kind == 2 && !layout.tableOffsets.contains(dab.curveTable)) {
+                layout.tableOffsets.insert(dab.curveTable, bytes);
+                bytes += aligned(VkDeviceSize(dab.curveTableSize) * sizeof(float));
+            }
+            continue;
+        }
         if (!dab.pixels || dab.size.isEmpty() || dab.mirrorFlags > 3
             || quint64(dab.size.width()) * dab.size.height() > KisGpuDabCompositor::MaxUploadBytes / pixelSize)
             return false;
@@ -208,6 +229,7 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
         tileRecords[i] = {tiles[i], tileOrigin.x(), tileOrigin.y()};
     }
     auto *records = reinterpret_cast<DabRecord *>(out + tableOffset);
+    QSet<const float *> copiedTables;
     for (int i = 0; i < dabs.size(); ++i) {
         const auto &dab = dabs[i];
         const QRect clip = dab.clip.isNull() ? QRect(dab.origin, dab.size) : dab.clip;
@@ -219,13 +241,25 @@ bool KisGpuDabCompositor::record(KisGpuCommandList &commands,
                       dab.opacity,
                       dab.flow,
                       dab.averageOpacity,
-                      dab.mirrorFlags,
+                      dab.mirrorFlags | (dab.generated ? GeneratedDabFlag : 0),
                       {0, 0},
                       clip.x(),
                       clip.y(),
                       clip.width(),
                       clip.height()};
-        if (sourceOffsets.remove(dab.pixels)) {
+        if (dab.generated) {
+            KisGpuDabCompositor::Circle circle = dab.circle;
+            if (circle.kind == 2) {
+                const VkDeviceSize tableOffset = layout.tableOffsets.value(dab.curveTable);
+                circle.curveTable = m_upload->deviceAddress() + tableOffset;
+                // Shared tables are copied once; every record keeps its address.
+                if (!copiedTables.contains(dab.curveTable)) {
+                    copiedTables.insert(dab.curveTable);
+                    std::memcpy(out + tableOffset, dab.curveTable, size_t(dab.curveTableSize) * sizeof(float));
+                }
+            }
+            std::memcpy(out + offsets[i], &circle, sizeof(circle));
+        } else if (sourceOffsets.remove(dab.pixels)) {
             std::memcpy(out + offsets[i], dab.pixels, size_t(dab.size.width()) * dab.size.height() * pixelSize);
         }
     }

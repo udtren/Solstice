@@ -9,6 +9,7 @@
 #include "kritaui_export.h"
 #include <QScopedPointer>
 #include <QSharedPointer>
+#include <QVector>
 
 class KisProofingConfiguration;
 typedef QSharedPointer<KisProofingConfiguration> KisProofingConfigurationSP;
@@ -50,6 +51,25 @@ public:
                                           int levelOfDetail,
                                           bool convertColorSpace,
                                           bool allowGpuUpload = false);
+    /**
+     * GPU engine (Solstice): one update info per rect of @p rects, in order,
+     * as buildUpdateInfo(rect, srcImage, true) would return. On the GPU path
+     * all of them share one upload (one submission); otherwise each is built
+     * on the CPU. The canvas uses it for concurrent updates (KisCanvas2).
+     */
+    QVector<KisOpenGLUpdateInfoSP> buildUpdateInfos(const QVector<QRect> &rects, KisImageSP srcImage);
+    QVector<KisOpenGLUpdateInfoSP> buildUpdateInfos(const QVector<QRect> &rects,
+                                                    KisPaintDeviceSP projection,
+                                                    const QRect &bounds,
+                                                    int levelOfDetail,
+                                                    bool convertColorSpace,
+                                                    bool allowGpuUpload);
+    /**
+     * True if converted updates of @p projection currently take the GPU
+     * canvas path (no soft proofing or channel selection, supported
+     * conversion). A hint: the build can still fall back to the CPU.
+     */
+    bool usesGpuUpload(KisPaintDeviceSP projection) const;
 
     QRect calculatePhysicalTileRect(int col, int row, const QRect &imageBounds, int levelOfDetail) const;
     QRect calculateEffectiveTileRect(int col, int row, const QRect &imageBounds) const;

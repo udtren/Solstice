@@ -136,6 +136,68 @@ in `kis_brushop.cpp`, and completed upload-source inspection in
 Phase 4.71 adds reuse, skip and recalculation decisions in `kis_async_merger.cpp`
 and `KisLayer::updateProjection` in `kis_layer.cc`. `paths.py` keeps them distinct
 from CPU/GPU execution and preserves missing evidence for other walkers.
+Phases 4.86/4.87 add RGBA16F and Soft (curve) generated dabs:
+`KisProceduralCircleDab::halfPixels/matchesPixel()/softFadeAt()`, Soft accessors in
+`libs/image/kis_curve_circle_mask_generator.*`, the Soft table cache and F16 color in
+`libs/brush/kis_auto_brush.*`, F16 acceptance in `KisDabRenderingJob.cpp`, the 112-byte
+`KisGpuDabCompositor::Circle` with curve tables, `paint_dabs.comp::roundToHalf()/softFade()`;
+tests in `KisGpuBrushTest` (F16 rows, Soft shapes) and `KisGpuStrokeTest::testSoftStroke`.
+Phase 4.85 skips CPU generation of verified described dabs: `KisRenderedDab::pixelsPending`
+and `materialize()` in `libs/image/KisRenderedDab.h`, `KisProceduralCircleDab::render()`;
+`describeWithoutPixels()`, the per-kind verification gate and Postprocess handling in
+`plugins/paintops/defaultpaintops/brush/KisDabRenderingJob.*`; propagation in
+`KisDabRenderingQueue.cpp`; materialization before CPU use and `materializedDabCount()` in
+`kis_brushop.*`; test hook `KisGpuBrushPainter::refusePendingBatchesForTesting()`; tests
+`testPendingDabsFallBackToMaterializedPixels` and `KisGpuStrokeTest::testRefusedPendingBatches`.
+Phase 4.84 adds `KisGaussCircleMaskGenerator::vectorCoefficients()` in
+`libs/image/kis_gauss_circle_mask_generator.*`, read accessors in
+`libs/image/kis_antialiasing_fade_maker.h`, Gaussian support in
+`KisAutoBrush::proceduralCircleDab()` and the fused/exact math in
+`KisProceduralCircleDab.h` and `paint_dabs.comp`; tests `testGeneratedCircleDabsExact`
+and `KisGpuStrokeTest::testGaussStroke`.
+Phase 4.83 (priority 3 step 1) adds `libs/image/KisProceduralCircleDab.h` and
+`KisRenderedDab::procedural/proceduralFlips`; `KisCircleMaskGenerator::vectorCoefficients()`
+in `libs/image/kis_circle_mask_generator.*`; `KisAutoBrush::proceduralCircleDab()` in
+`libs/brush/kis_auto_brush.*`; description and pixel self-check in
+`plugins/paintops/defaultpaintops/brush/KisDabRenderingJob.*`, propagation in
+`KisDabRenderingQueue.*` and flip tracking in `kis_brushop.cpp` (CPU mirror jobs).
+GPU side: `KisGpuDabCompositor::Circle`/`Dab::generated`, `paint_dabs.comp::generatedCircle()`,
+`KisGpuBrushPainter::generatedDabCount()`; tests in `KisGpuBrushTest` and `KisGpuStrokeTest`.
+Phase 4.82 adds an optional `stoppedByByteLimit` result to
+`plugins/paintops/defaultpaintops/brush/KisDabRenderingQueue.*` /
+`KisDabRenderingExecutor.*` and, in `kis_brushop.cpp`, a zero update period
+after GPU batches cut by the source byte budget (`batch.byte_limited` trace link);
+`tests/KisDabRenderingQueueTest.cpp` checks the flag.
+Phase 4.81 batches concurrent canvas projection updates: new
+`libs/ui/canvas/KisCanvasUpdateBatcher.*` (in `libs/ui/CMakeLists.txt`) and
+`KisCanvasUpdateBatcherTest` (in `libs/ui/tests/CMakeLists.txt`); upstream touch
+points are `kis_canvas2.cpp` (`startUpdateCanvasProjection()` batching path),
+`kis_canvas_updates_compressor.*` (`putUpdateInfos()`),
+`kis_abstract_canvas_widget.h` / `kis_canvas_widget_base.*`
+(`sharesProjectionUploads()`, `startUpdateCanvasProjections()` defaults),
+`kis_opengl_canvas2.*` (overrides, batch-wide GL hold), `KisOpenGLCanvasRenderer.*`,
+`kis_opengl_image_textures.*` and `KisOpenGLUpdateInfoBuilder.*`
+(`buildUpdateInfos()`; single-rect build delegates). `KisGpuCanvasUploader.*`
+adds per-region source accesses in one submission and nested GL holds.
+Phase 4.80 adds optional queue-lock/driver timestamps in `libs/gpu/KisGpuContext.*`
+and `KisGpuCommandList.*`, deferred external-span recording in paint trace/tile
+access, and four-thread submission/readback/timeline/failure regression coverage.
+Phase 4.79 adds early main-buffer finalization in `libs/gpu/KisGpuCommandList.*`
+and invokes it before residency locking in tile access; preamble and queue order
+remain unchanged. Engine tests cover late preamble ordering and failed reuse.
+Phase 4.78 adds residency-holder scopes in `gpu/KisGpuTileBackend.cpp` and
+`gpu/KisGpuTileAccess.cpp`, a documented 10us hold threshold in `KisPaintTrace.cpp`,
+and process/owner/thread overlap analysis in `build-tools/paint-trace/residency.py`.
+Phase 4.77 adds opt-in tile preparation and submission substage scopes in
+`gpu/KisGpuTileAccess.cpp`, preserving residency-lock lifetime and call order.
+Phase 4.76 adds opt-in flow/job-linked CPU scopes in `KisGpuCanvasUploader.cpp`
+and `gpu/KisGpuProjectionCompositor.cpp` for context reuse, preparation and
+submission. Original waits, call order and failure handling remain unchanged.
+Phase 4.75 adds explicit walker-to-ready joins and per-stroke CPU merge and
+post-merge preparation intervals; ambiguous/missing records are excluded.
+Phase 4.74 extends `overhead.py` with direct-parent update-ready to issue
+intervals for deduplicated verified uploads, excluding ambiguous timestamps;
+these mixed-condition diagnostics are not per-input latency partitions.
 Phase 4.73 adds offline `overhead.py`: verified input intervals are partitioned
 at their last required upload issue, with timestamp validation and regression
 tests. It introduces no native hooks and is not a GPU execution-time measurement.

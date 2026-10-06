@@ -154,6 +154,10 @@ public:
 
     KisOpenGLUpdateInfoSP updateCache(const QRect& rect, KisImageSP srcImage);
     KisOpenGLUpdateInfoSP updateCacheNoConversion(const QRect& rect);
+    /// GPU engine (Solstice): one update per rect, sharing one GPU upload when possible.
+    QVector<KisOpenGLUpdateInfoSP> updateCache(const QVector<QRect> &rects, KisImageSP srcImage);
+    /// GPU engine (Solstice): updateCache() currently takes the GPU canvas path.
+    bool usesGpuUpload() const;
 
     void recalculateCache(KisUpdateInfoSP info, bool blockMipmapRegeneration);
 

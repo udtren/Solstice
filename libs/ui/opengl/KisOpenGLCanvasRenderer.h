@@ -83,6 +83,8 @@ public:
     void setDisplayConfig(const KisDisplayConfig &config);
     void finishResizingImage(qint32 w, qint32 h);
     KisUpdateInfoSP startUpdateCanvasProjection(const QRect & rc);
+    QVector<KisUpdateInfoSP> startUpdateCanvasProjection(const QVector<QRect> &rects);
+    bool sharesProjectionUploads() const;
     QRect updateCanvasProjection(KisUpdateInfoSP info);
 
     void setLodResetInProgress(bool value);

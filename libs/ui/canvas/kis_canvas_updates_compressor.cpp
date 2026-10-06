@@ -9,11 +9,25 @@
 
 bool KisCanvasUpdatesCompressor::putUpdateInfo(KisUpdateInfoSP info)
 {
+    QMutexLocker l(&m_mutex);
+    return putUpdateInfoLocked(info);
+}
+
+bool KisCanvasUpdatesCompressor::putUpdateInfos(const QVector<KisUpdateInfoSP> &infos)
+{
+    QMutexLocker l(&m_mutex);
+    for (const KisUpdateInfoSP &info : infos) {
+        putUpdateInfoLocked(info);
+    }
+    // Like putUpdateInfo(): true if no older update is left in the list.
+    return !m_updatesList.isEmpty() && infos.contains(m_updatesList.first());
+}
+
+bool KisCanvasUpdatesCompressor::putUpdateInfoLocked(KisUpdateInfoSP info)
+{
     const int levelOfDetail = info->levelOfDetail();
     const QRect newUpdateRect = info->dirtyImageRect();
     if (newUpdateRect.isEmpty()) return false;
-
-    QMutexLocker l(&m_mutex);
 
     if (info->canBeCompressed()) {
         KisUpdateInfoList::iterator it = m_updatesList.begin();

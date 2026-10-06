@@ -11,6 +11,8 @@
 #include <KisDabCacheUtils.h>
 #include <kis_fixed_paint_device.h>
 #include <kis_types.h>
+#include <KisProceduralCircleDab.h>
+#include <QSharedPointer>
 #include "kritadefaultpaintops_export.h"
 
 class KisDabRenderingQueue;
@@ -45,6 +47,12 @@ public:
     JobType type = Dab;
     KisFixedPaintDeviceSP originalDevice;
     KisFixedPaintDeviceSP postprocessedDevice;
+    /// GPU engine (Solstice): description of postprocessedDevice for GPU
+    /// evaluation, and the mirroring of its pixels (KisRenderedDab).
+    QSharedPointer<const KisProceduralCircleDab> procedural;
+    quint32 proceduralFlips = 0;
+    /// The CPU generation was skipped: the devices have bounds, not pixels.
+    bool pixelsPending = false;
 
     // high-level members, not directly related to job execution itself
     Status status = New;
@@ -67,6 +75,9 @@ public:
     void run() override;
 
     static int executeOneJob(KisDabRenderingJob *job, KisDabCacheUtils::DabRenderingResources *resources, KisDabRenderingQueue *parentQueue);
+
+    /// GPU engine (Solstice): dabs whose CPU generation was skipped (tests).
+    static quint64 skippedGenerationCount();
 
 private:
     KisDabRenderingJobSP m_job;

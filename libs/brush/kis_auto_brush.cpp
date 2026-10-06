@@ -31,6 +31,10 @@
 #include <kis_brush_mask_applicator_base.h>
 #include "kis_algebra_2d.h"
 #include <KisOptimizedBrushOutline.h>
+#include <KisProceduralCircleDab.h>
+#include <kis_circle_mask_generator.h>
+#include <kis_gauss_circle_mask_generator.h>
+#include <kis_curve_circle_mask_generator.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <stdlib.h>
@@ -61,6 +65,12 @@ struct KisAutoBrush::Private {
     qreal randomness;
     qreal density;
     int idealThreadCountCached;
+
+    // GPU engine (Solstice): the float form of the Soft generator's curve
+    // table, reused while the (implicitly shared) table is unchanged, so the
+    // dabs of a stroke share one upload. Owned by this brush clone.
+    QVector<qreal> proceduralCurveSource;
+    QSharedPointer<const QVector<float>> proceduralCurveTable;
 };
 
 KisAutoBrush::KisAutoBrush(KisMaskGenerator* as, qreal angle, qreal randomness, qreal density)
@@ -276,6 +286,100 @@ inline void fillPixelOptimized_general(quint8 *color, quint8 *buf, int size, int
         memcpy(buf, color, pixelSize);
         buf += pixelSize;
     }
+}
+
+bool KisAutoBrush::proceduralCircleDab(KisDabShape const &shape,
+                                       const KisPaintInformation &info,
+                                       double subPixelX,
+                                       double subPixelY,
+                                       qreal softnessFactor,
+                                       const quint8 *color,
+                                       KisProceduralCircleDab *dab,
+                                       bool halfColor) const
+{
+    auto *circle = dynamic_cast<KisCircleMaskGenerator *>(d->shape.data());
+    auto *gauss = dynamic_cast<KisGaussCircleMaskGenerator *>(d->shape.data());
+    auto *soft = dynamic_cast<KisCurveCircleMaskGenerator *>(d->shape.data());
+    if ((!circle && !gauss && !soft) || !color || !dab || d->randomness != 0.0 || d->density != 1.0) {
+        return false;
+    }
+
+    // The same state and values as generateMaskAndApplyMaskOrCreateDab().
+    d->shape->setSoftness(softnessFactor); // softness must be set first
+    d->shape->setScale(shape.scaleX(), shape.scaleY());
+    if (!d->shape->shouldVectorize()) {
+        return false;
+    }
+
+    const QPointF hotSpot = this->hotSpot(shape, info);
+    const double centerX = hotSpot.x() - 0.5 + subPixelX;
+    const double centerY = hotSpot.y() - 0.5 + subPixelY;
+    const qreal angle = shape.rotation() + KisBrush::angle();
+
+    // FastRowProcessor receives float arguments.
+    *dab = KisProceduralCircleDab();
+    dab->centerX = float(centerX);
+    dab->centerY = float(centerY);
+    dab->cosa = float(std::cos(double(angle)));
+    dab->sina = float(std::sin(double(angle)));
+    if (circle) {
+        const KisCircleMaskGenerator::VectorCoefficients coefficients = circle->vectorCoefficients();
+        dab->kind = KisProceduralCircleDab::DefaultCircle;
+        dab->xcoef = float(coefficients.xcoef);
+        dab->ycoef = float(coefficients.ycoef);
+        dab->fadeX = float(coefficients.fadeX);
+        dab->fadeY = float(coefficients.fadeY);
+        dab->antialias = coefficients.antialias;
+    } else if (soft) {
+        const KisCurveCircleMaskGenerator::VectorCoefficients coefficients = soft->vectorCoefficients();
+        dab->kind = KisProceduralCircleDab::SoftCircle;
+        dab->xcoef = float(coefficients.xcoef);
+        dab->ycoef = float(coefficients.ycoef);
+        dab->curveResolution = float(coefficients.curveResolution);
+        dab->radius = float(coefficients.radius);
+        dab->fadeStart = float(coefficients.fadeStart);
+        dab->fadeStartValue = float(coefficients.fadeStartValue);
+        dab->fadeCoeff = float(coefficients.fadeCoeff);
+        dab->antialias = coefficients.antialias;
+        const QVector<qreal> &source = soft->curveTable();
+        const bool sameTable = d->proceduralCurveTable
+            && (source.constData() == d->proceduralCurveSource.constData() || source == d->proceduralCurveSource);
+        if (!sameTable) {
+            QVector<float> table(source.size());
+            for (int i = 0; i < source.size(); i++) {
+                table[i] = float(source[i]); // as the vector gather converts it
+            }
+            d->proceduralCurveTable.reset(new QVector<float>(table));
+        }
+        d->proceduralCurveSource = source;
+        // The kernel reads index + 1 for every distance up to 1.
+        if (d->proceduralCurveTable->size() < int(coefficients.curveResolution) + 2) {
+            return false;
+        }
+        dab->curveTable = d->proceduralCurveTable;
+    } else {
+        const KisGaussCircleMaskGenerator::VectorCoefficients coefficients = gauss->vectorCoefficients();
+        dab->kind = KisProceduralCircleDab::GaussCircle;
+        dab->ycoef = float(coefficients.ycoef);
+        dab->distfactor = float(coefficients.distfactor);
+        dab->center = float(coefficients.center);
+        dab->alphafactor = float(coefficients.alphafactor);
+        dab->radius = float(coefficients.radius);
+        dab->fadeStart = float(coefficients.fadeStart);
+        dab->fadeStartValue = float(coefficients.fadeStartValue);
+        dab->fadeCoeff = float(coefficients.fadeCoeff);
+        dab->antialias = coefficients.antialias;
+    }
+    if (halfColor) {
+        const half *channels = reinterpret_cast<const half *>(color);
+        for (int i = 0; i < 4; i++) {
+            dab->color[i] = float(channels[i]);
+        }
+        dab->halfPixels = true;
+    } else {
+        memcpy(dab->color, color, sizeof(dab->color));
+    }
+    return true;
 }
 
 void KisAutoBrush::generateMaskAndApplyMaskOrCreateDab(KisFixedPaintDeviceSP dst,

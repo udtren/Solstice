@@ -11,7 +11,8 @@ import statistics
 from geometry import summarize_geometry
 from timing import summarize_timing
 from paths import summarize_paths
-from overhead import summarize_overhead
+from overhead import summarize_overhead, summarize_ready_to_issue, summarize_projection_preparation
+from residency import summarize_residency
 
 
 def lineage_counts(events):
@@ -106,6 +107,9 @@ def summarize(document):
         "sample_readiness": readiness,
         "command_presentation_timing": timing,
         "upload_boundary_timing": summarize_overhead(events, pipeline, timing),
+        "ready_to_issue_timing": summarize_ready_to_issue(events, pipeline, timing),
+        "projection_preparation_timing": summarize_projection_preparation(events, pipeline, timing),
+        "residency_contention": summarize_residency(events),
         "execution_path_evidence": summarize_paths(events, pipeline),
         "limitations": [
             "Stage durations and job waits are process-wide and can include background preview work.",

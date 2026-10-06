@@ -84,6 +84,7 @@
 #include "input/kis_input_manager.h"
 #include "kis_painting_assistants_decoration.h"
 
+#include "KisCanvasUpdateBatcher.h"
 #include "kis_canvas_updates_compressor.h"
 
 #include <KisStrokeSpeedMonitor.h>
@@ -181,6 +182,7 @@ public:
         , toolProxy(parent)
         , proofingConfig(new KisProofingConfiguration)
         , displayColorConverter(resourceManager, view)
+        , projectionUpdateBatcher(parent)
         , inputActionGroupsMaskInterface(new CanvasInputActionGroupsMaskInterface(this))
         , regionOfInterestUpdateCompressor(100, KisSignalCompressor::FIRST_INACTIVE)
         , referencesBoundsUpdateCompressor(100, KisSignalCompressor::FIRST_INACTIVE)
@@ -242,6 +244,16 @@ public:
     KisDisplayColorConverter displayColorConverter;
 
     KisCanvasUpdatesCompressor projectionUpdatesCompressor;
+    /**
+     * GPU engine (Solstice): projection updates that arrive concurrently are
+     * built together, sharing one GPU upload, instead of one submission per
+     * update competing for the GPU queue. A thread returns only after its
+     * update is built and in the compressor, as without batching, so the
+     * update still reads the projection before later walkers can change it.
+     */
+    KisCanvasUpdateBatcher projectionUpdateBatcher;
+    void buildSharedProjectionUpdates(const QVector<KisCanvasUpdateBatcher::Request> &requests);
+
     QScopedPointer<KisCanvasAnimationState> animationPlayer;
     KisAnimationFrameCacheSP frameCache;
     bool lodPreferredInImage = false;
@@ -1051,12 +1063,44 @@ void KisCanvas2::finishResizingImage(qint32 w, qint32 h)
 void KisCanvas2::startUpdateCanvasProjection(const QRect & rc)
 {
     KisPaintTrace::Scope trace("canvas.prepare", this);
+    if (m_d->canvasWidget->sharesProjectionUploads()) {
+        m_d->projectionUpdateBatcher.process({rc, KisPaintTrace::currentFlow()},
+                                             [this](const QVector<KisCanvasUpdateBatcher::Request> &requests) {
+                                                 m_d->buildSharedProjectionUpdates(requests);
+                                             });
+        return;
+    }
     KisUpdateInfoSP info = m_d->canvasWidget->startUpdateCanvasProjection(rc);
     KisPaintTrace::link("update.ready", this, info->paintTraceId(), KisPaintTrace::currentFlow());
     // sigImageUpdated has already upscaled image coordinates to LOD 0.
     KisPaintTrace::rectangle("update.request_rect", this, info->paintTraceId(), rc, 0);
     if (m_d->projectionUpdatesCompressor.putUpdateInfo(info)) {
         Q_EMIT sigCanvasCacheUpdated();
+    }
+}
+
+void KisCanvas2::KisCanvas2Private::buildSharedProjectionUpdates(
+    const QVector<KisCanvasUpdateBatcher::Request> &requests)
+{
+    QVector<QRect> rects;
+    for (const KisCanvasUpdateBatcher::Request &request : requests) {
+        rects << request.rect;
+    }
+    const QVector<KisUpdateInfoSP> infos = canvasWidget->startUpdateCanvasProjections(rects);
+    KIS_SAFE_ASSERT_RECOVER_RETURN(infos.size() == requests.size());
+
+    for (int i = 0; i < infos.size(); i++) {
+        // Each update keeps the projection walker of its own thread.
+        KisPaintTrace::link("update.ready", q, infos[i]->paintTraceId(), requests[i].flow);
+        // sigImageUpdated has already upscaled image coordinates to LOD 0.
+        KisPaintTrace::rectangle("update.request_rect", q, infos[i]->paintTraceId(), requests[i].rect, 0);
+        if (i > 0) {
+            KisPaintTrace::link("update.batched", q, infos[i]->paintTraceId(), infos.first()->paintTraceId());
+        }
+    }
+    // Together, so the GUI applies the shared upload in one pass.
+    if (projectionUpdatesCompressor.putUpdateInfos(infos)) {
+        Q_EMIT q->sigCanvasCacheUpdated();
     }
 }
 

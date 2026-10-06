@@ -31,6 +31,13 @@
 
 #include "config-qt-patches-present.h"
 
+#ifdef HAVE_KRITA_GPU_CANVAS
+#include <QScopeGuard>
+
+#include "opengl/KisGpuCanvasUploader.h"
+#include "opengl/kis_texture_tile_update_info.h"
+#endif
+
 static bool OPENGL_SUCCESS = false;
 
 class KisOpenGLCanvas2::CanvasBridge
@@ -464,6 +471,15 @@ KisUpdateInfoSP KisOpenGLCanvas2::startUpdateCanvasProjection(const QRect & rc)
     return d->renderer->startUpdateCanvasProjection(rc);
 }
 
+bool KisOpenGLCanvas2::sharesProjectionUploads() const
+{
+    return d->renderer->sharesProjectionUploads();
+}
+
+QVector<KisUpdateInfoSP> KisOpenGLCanvas2::startUpdateCanvasProjections(const QVector<QRect> &rects)
+{
+    return d->renderer->startUpdateCanvasProjection(rects);
+}
 
 QRect KisOpenGLCanvas2::updateCanvasProjection(KisUpdateInfoSP info)
 {
@@ -536,6 +552,23 @@ QRect KisOpenGLCanvas2::updateCanvasProjection(KisUpdateInfoSP info)
 QVector<QRect> KisOpenGLCanvas2::updateCanvasProjection(const QVector<KisUpdateInfoSP> &infoObjects)
 {
     KisOpenGLContextSwitchLockSkipOnQt5 contextLock(this);
+#ifdef HAVE_KRITA_GPU_CANVAS
+    // GPU engine (Solstice): updates of one canvas batch share a GPU upload
+    // (KisCanvas2 puts them into the compressor together, so they arrive
+    // here together). Hold the shared buffers until every update has read
+    // them; the per-update holds of recalculateCache() nest inside.
+    KisTextureTileUpdateInfoSPList gpuTiles;
+    for (const KisUpdateInfoSP &info : infoObjects) {
+        if (const auto *glInfo = dynamic_cast<const KisOpenGLUpdateInfo *>(info.data())) {
+            gpuTiles.append(glInfo->tileList);
+        }
+    }
+    // A failed import is handled again (read back) by each update.
+    KisGpuCanvasUploader::acquire(gpuTiles);
+    auto releaseGpuUploads = qScopeGuard([&gpuTiles]() {
+        KisGpuCanvasUploader::release(gpuTiles);
+    });
+#endif
     return KisCanvasWidgetBase::updateCanvasProjection(infoObjects);
 }
 

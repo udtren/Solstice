@@ -41,6 +41,15 @@ struct KRITAGPU_EXPORT KisGpuDeviceInfo {
     QString summary() const;
 };
 
+/// Optional host timestamps in std::chrono::steady_clock nanoseconds.
+/// Zero driver timestamps mean submission was refused before the driver call.
+struct KisGpuSubmitTiming {
+    qint64 lockStartNs = 0;
+    qint64 lockAcquiredNs = 0;
+    qint64 driverStartNs = 0;
+    qint64 driverEndNs = 0;
+};
+
 /**
  * Process-level Vulkan instance, device, and compute queue for the GPU engine.
  *
@@ -102,7 +111,8 @@ public:
     /// Submits several command buffers in one batch, executed in order.
     quint64 submit(const QVector<VkCommandBuffer> &commandBuffers,
                    const QVector<VkSemaphoreSubmitInfo> &waitSemaphores = {},
-                   const QVector<VkSemaphoreSubmitInfo> &signalSemaphores = {});
+                   const QVector<VkSemaphoreSubmitInfo> &signalSemaphores = {},
+                   KisGpuSubmitTiming *timing = nullptr);
 
     /// Blocks until the timeline reaches @p value. Returns false on timeout/device loss.
     bool wait(quint64 value, quint64 timeoutNs = UINT64_MAX) const;

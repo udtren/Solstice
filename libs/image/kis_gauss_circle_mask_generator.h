@@ -37,6 +37,21 @@ public:
 
     void setMaskScalarApplicator();
 
+    /// GPU engine (Solstice): constants of the vectorized fade, as
+    /// FastRowProcessor reads them (after setScale()).
+    struct VectorCoefficients {
+        double ycoef = 0.0;
+        double center = 0.0;
+        double distfactor = 0.0;
+        double alphafactor = 0.0;
+        double radius = 0.0;
+        double fadeStart = 0.0;
+        quint8 fadeStartValue = 0;
+        double fadeCoeff = 0.0;
+        bool antialias = false;
+    };
+    VectorCoefficients vectorCoefficients() const;
+
 private:
 
     qreal norme(qreal a, qreal b) const {

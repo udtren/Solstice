@@ -8,6 +8,7 @@
 #include <QAtomicInt>
 #include <QVector>
 
+#include <chrono>
 #include <cstring>
 
 #include <kis_debug.h>
@@ -532,9 +533,20 @@ quint64 KisGpuContext::submit(VkCommandBuffer commandBuffer,
 
 quint64 KisGpuContext::submit(const QVector<VkCommandBuffer> &commandBuffers,
                               const QVector<VkSemaphoreSubmitInfo> &waitSemaphores,
-                              const QVector<VkSemaphoreSubmitInfo> &signalSemaphores)
+                              const QVector<VkSemaphoreSubmitInfo> &signalSemaphores,
+                              KisGpuSubmitTiming *timing)
 {
+    const auto stamp = [] {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+    };
+    if (timing) {
+        *timing = {};
+        timing->lockStartNs = stamp();
+    }
     QMutexLocker locker(&d->queueMutex);
+    if (timing)
+        timing->lockAcquiredNs = stamp();
 
     if (d->injectedSubmitFailures > 0) {
         d->injectedSubmitFailures--;
@@ -569,7 +581,11 @@ quint64 KisGpuContext::submit(const QVector<VkCommandBuffer> &commandBuffers,
     submitInfo.signalSemaphoreInfoCount = quint32(signalInfos.size());
     submitInfo.pSignalSemaphoreInfos = signalInfos.data();
 
+    if (timing)
+        timing->driverStartNs = stamp();
     const VkResult result = d->vk.vkQueueSubmit2(d->queue, 1, &submitInfo, VK_NULL_HANDLE);
+    if (timing)
+        timing->driverEndNs = stamp();
     if (result != VK_SUCCESS) {
         warnKrita << "GPU engine: vkQueueSubmit2 failed:" << kisGpuVkResultString(result);
         return 0;

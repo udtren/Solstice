@@ -59,13 +59,15 @@ QList<KisRenderedDab> KisDabRenderingExecutor::takeReadyDabs(bool returnMutableD
                                                              int oneTimeLimit,
                                                              bool *someDabsLeft,
                                                              quint64 maxDabBytes,
-                                                             quint64 paintTraceBatch)
+                                                             quint64 paintTraceBatch,
+                                                             bool *stoppedByByteLimit)
 {
     return m_d->renderingQueue->takeReadyDabs(returnMutableDabs,
                                               oneTimeLimit,
                                               someDabsLeft,
                                               maxDabBytes,
-                                              paintTraceBatch);
+                                              paintTraceBatch,
+                                              stoppedByByteLimit);
 }
 
 bool KisDabRenderingExecutor::hasPreparedDabs() const

@@ -9,11 +9,19 @@
 
 #include <QElapsedTimer>
 
+#include <atomic>
+
 #include <KisRunnableStrokeJobsInterface.h>
 #include <KisRunnableStrokeJobData.h>
 
 #include "KisDabCacheUtils.h"
 #include "KisDabRenderingQueue.h"
+
+#include <KoColorModelStandardIds.h>
+#include <KoColorSpace.h>
+#include <kis_auto_brush.h>
+
+#include "gpu/KisGpuBrushPainter.h"
 
 #include <tool/strokes/FreehandStrokeRunnableJobDataWithUpdate.h>
 
@@ -32,6 +40,9 @@ KisDabRenderingJob::KisDabRenderingJob(const KisDabRenderingJob &rhs)
     , type(rhs.type)
     , originalDevice(rhs.originalDevice)
     , postprocessedDevice(rhs.postprocessedDevice)
+    , procedural(rhs.procedural)
+    , proceduralFlips(rhs.proceduralFlips)
+    , pixelsPending(rhs.pixelsPending)
     , status(rhs.status)
     , opacity(rhs.opacity)
     , flow(rhs.flow)
@@ -46,6 +57,9 @@ KisDabRenderingJob &KisDabRenderingJob::operator=(const KisDabRenderingJob &rhs)
     type = rhs.type;
     originalDevice = rhs.originalDevice;
     postprocessedDevice = rhs.postprocessedDevice;
+    procedural = rhs.procedural;
+    proceduralFlips = rhs.proceduralFlips;
+    pixelsPending = rhs.pixelsPending;
     status = rhs.status;
     opacity = rhs.opacity;
     flow = rhs.flow;
@@ -66,6 +80,153 @@ QPoint KisDabRenderingJob::dstDabOffset() const
 }
 
 
+
+namespace
+{
+/// GPU engine (Solstice, phase 4.85): skip the CPU generation of a mask
+/// kind only after this many of its dabs matched their description exactly
+/// in this process; any mismatch disables skipping for that kind.
+constexpr int VerifiedDabsBeforeSkipping = 16;
+std::atomic<int> s_verifiedDabs[3] = {{0}, {0}, {0}};
+std::atomic<bool> s_mismatch[3] = {{false}, {false}, {false}};
+std::atomic<quint64> s_skippedGenerations{0};
+
+int kindIndex(const KisProceduralCircleDab &circle)
+{
+    return circle.kind == KisProceduralCircleDab::GaussCircle ? 1
+        : circle.kind == KisProceduralCircleDab::SoftCircle  ? 2
+                                                             : 0;
+}
+
+quint32 mirrorFlips(const KisDabCacheUtils::DabGenerationInfo &di)
+{
+    return (di.mirrorProperties.horizontalMirror ? 1u : 0u) | (di.mirrorProperties.verticalMirror ? 2u : 0u);
+}
+
+/// The GPU description of the dab @p di generates, or null when the dab is
+/// not an RGBA F32 vectorized circle auto-brush dab.
+QSharedPointer<KisProceduralCircleDab> buildCircleDab(const KisDabCacheUtils::DabGenerationInfo &di,
+                                                      KisDabCacheUtils::DabRenderingResources *resources,
+                                                      const KisFixedPaintDeviceSP &dab)
+{
+    if (!KisGpuBrushPainter::isEnabled() || !di.solidColorFill || di.needsPostprocessing || !dab
+        || !resources->brush || resources->brush->brushApplication() == IMAGESTAMP) {
+        return {};
+    }
+    const KoColorSpace *cs = dab->colorSpace();
+    const bool f32 = cs->colorDepthId() == Float32BitsColorDepthID && cs->pixelSize() == 16;
+    const bool f16 = cs->colorDepthId() == Float16BitsColorDepthID && cs->pixelSize() == 8;
+    if (cs->colorModelId() != RGBAColorModelID || (!f32 && !f16) || !di.paintColor.colorSpace()
+        || *di.paintColor.colorSpace() != *cs) {
+        return {};
+    }
+    const auto *autoBrush = dynamic_cast<const KisAutoBrush *>(resources->brush.data());
+    QSharedPointer<KisProceduralCircleDab> circle(new KisProceduralCircleDab());
+    if (!autoBrush
+        || !autoBrush->proceduralCircleDab(di.shape,
+                                           di.info,
+                                           di.subPixel.x(),
+                                           di.subPixel.y(),
+                                           di.softnessFactor,
+                                           di.paintColor.data(),
+                                           circle.data(),
+                                           f16)) {
+        return {};
+    }
+    return circle;
+}
+
+/**
+ * GPU engine (Solstice): describes a freshly generated dab for GPU
+ * evaluation (KisProceduralCircleDab), or returns null. The description is
+ * checked against the generated pixels along the middle row and column, so
+ * a different CPU path (scalar applicator, other generator) is never
+ * described.
+ */
+QSharedPointer<const KisProceduralCircleDab> describeCircleDab(const KisDabCacheUtils::DabGenerationInfo &di,
+                                                               KisDabCacheUtils::DabRenderingResources *resources,
+                                                               KisFixedPaintDeviceSP dab,
+                                                               quint32 *flips)
+{
+    QSharedPointer<KisProceduralCircleDab> circle = buildCircleDab(di, resources, dab);
+    if (!circle) {
+        return {};
+    }
+
+    const QRect bounds = dab->bounds();
+    if (bounds.isEmpty() || bounds.topLeft() != QPoint()) {
+        return {};
+    }
+    const quint32 mirror = mirrorFlips(di);
+    const int width = bounds.width();
+    const int height = bounds.height();
+    auto matches = [&](int x, int y) {
+        const int gx = (mirror & 1) ? width - 1 - x : x;
+        const int gy = (mirror & 2) ? height - 1 - y : y;
+        // Exact: the fades have thresholds, and any other CPU kernel (one
+        // without the fused multiply-adds, a scalar path) must be rejected.
+        // NaN only at the degenerate n == normFade == 1 point; refuse it.
+        return circle->matchesPixel(dab->constData(), width, x, y, gx, gy);
+    };
+    bool exact = true;
+    for (int x = 0; exact && x < width; x++) {
+        exact = matches(x, height / 2);
+    }
+    for (int y = 0; exact && y < height; y++) {
+        exact = matches(width / 2, y);
+    }
+    if (!exact) {
+        s_mismatch[kindIndex(*circle)] = true;
+        return {};
+    }
+    s_verifiedDabs[kindIndex(*circle)]++;
+    *flips = mirror;
+    return circle;
+}
+
+/**
+ * GPU engine (Solstice, phase 4.85): when the kind of the dab is verified,
+ * sizes @p dab like the CPU generator would and returns its description
+ * without generating the pixels (KisRenderedDab::pixelsPending). Null means
+ * generate the dab normally.
+ */
+QSharedPointer<const KisProceduralCircleDab>
+describeWithoutPixels(const KisDabCacheUtils::DabGenerationInfo &di,
+                      KisDabCacheUtils::DabRenderingResources *resources,
+                      KisFixedPaintDeviceSP dab,
+                      quint32 *flips)
+{
+    if (!KisGpuBrushPainter::isEnabled()) {
+        return {};
+    }
+    QSharedPointer<KisProceduralCircleDab> circle = buildCircleDab(di, resources, dab);
+    if (!circle) {
+        return {};
+    }
+    const int kind = kindIndex(*circle);
+    if (s_mismatch[kind] || s_verifiedDabs[kind] < VerifiedDabsBeforeSkipping) {
+        return {};
+    }
+    const int width =
+        resources->brush->maskWidth(di.shape, di.subPixel.x(), di.subPixel.y(), di.info);
+    const int height =
+        resources->brush->maskHeight(di.shape, di.subPixel.x(), di.subPixel.y(), di.info);
+    if (width <= 0 || height <= 0) {
+        return {};
+    }
+    // The same bounds as generateMaskAndApplyMaskOrCreateDab(); the buffer
+    // stays allocated so that CPU reflections of pending pixels are safe.
+    dab->setRect(QRect(0, 0, width, height));
+    dab->lazyGrowBufferWithoutInitialization();
+    *flips = mirrorFlips(di);
+    return circle;
+}
+} // namespace
+
+quint64 KisDabRenderingJobRunner::skippedGenerationCount()
+{
+    return s_skippedGenerations.load();
+}
 
 KisDabRenderingJobRunner::KisDabRenderingJobRunner(KisDabRenderingJobSP job,
                                                    KisDabRenderingQueue *parentQueue,
@@ -95,11 +256,25 @@ int KisDabRenderingJobRunner::executeOneJob(KisDabRenderingJob *job,
 
     resources->syncResourcesToSeqNo(job->seqNo, job->generationInfo.info);
 
+    bool generated = false;
     if (job->type == KisDabRenderingJob::Dab) {
         // TODO: thing about better interface for the reverse queue link
         job->originalDevice = parentQueue->fetchCachedPaintDevice();
 
-        generateDab(job->generationInfo, resources, &job->originalDevice);
+        quint32 flips = 0;
+        QSharedPointer<const KisProceduralCircleDab> pending =
+            describeWithoutPixels(job->generationInfo, resources, job->originalDevice, &flips);
+        if (pending) {
+            job->procedural = pending;
+            job->proceduralFlips = flips;
+            job->pixelsPending = true;
+            s_skippedGenerations++;
+            KisPaintTrace::link("dab.generation_skipped", parentQueue, job->paintTraceId);
+        } else {
+            job->pixelsPending = false;
+            generateDab(job->generationInfo, resources, &job->originalDevice);
+            generated = true;
+        }
     }
 
     // by now the original device should be already prepared
@@ -120,13 +295,34 @@ int KisDabRenderingJobRunner::executeOneJob(KisDabRenderingJob *job,
                 *job->postprocessedDevice = *job->originalDevice;
             }
 
+            // GPU engine (Solstice): the shared original of a pending dab
+            // has no pixels; render them into this job's own copy.
+            if (job->pixelsPending && job->procedural) {
+                job->postprocessedDevice->lazyGrowBufferWithoutInitialization();
+                job->procedural->render(job->postprocessedDevice->data(),
+                                        job->postprocessedDevice->bounds().width(),
+                                        job->postprocessedDevice->bounds().height(),
+                                        job->proceduralFlips & 3);
+            }
+
             postProcessDab(job->postprocessedDevice,
                            job->generationInfo.dstDabRect.topLeft(),
                            job->generationInfo.info,
                            resources);
+
+            // The postprocessed pixels are not described.
+            job->procedural.reset();
+            job->proceduralFlips = 0;
+            job->pixelsPending = false;
         } else {
             job->postprocessedDevice = job->originalDevice;
         }
+    }
+
+    if (generated) {
+        job->proceduralFlips = 0;
+        job->procedural =
+            describeCircleDab(job->generationInfo, resources, job->postprocessedDevice, &job->proceduralFlips);
     }
 
     return executionTime.nsecsElapsed() / 1000;

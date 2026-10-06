@@ -16,6 +16,7 @@
 #include <QScopedPointer>
 
 class KisMaskGenerator;
+struct KisProceduralCircleDab;
 
 /**
  * XXX: docs!
@@ -73,6 +74,23 @@ public:
 
     void toXML(QDomDocument& , QDomElement&) const override;
     const KisMaskGenerator* maskGenerator() const;
+
+    /**
+     * GPU engine (Solstice): the parameters of the dab that
+     * generateMaskAndApplyMaskOrCreateDab() produces for these arguments,
+     * when it is a vectorized default or Gaussian circle without randomness
+     * or density.
+     * Returns false otherwise. @p color: RGBA F32 bytes of the paint color,
+     * or RGBA F16 bytes when @p halfColor (phase 4.86).
+     */
+    bool proceduralCircleDab(KisDabShape const &shape,
+                             const KisPaintInformation &info,
+                             double subPixelX,
+                             double subPixelY,
+                             qreal softnessFactor,
+                             const quint8 *color,
+                             KisProceduralCircleDab *dab,
+                             bool halfColor = false) const;
     qreal randomness() const;
     qreal density() const;
 

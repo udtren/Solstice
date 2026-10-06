@@ -4,6 +4,7 @@
  */
 
 #include "KisGpuCanvasUploader.h"
+#include "KisPaintTrace.h"
 
 #include <KisGpuBuffer.h>
 #include <KisGpuCommandList.h>
@@ -23,12 +24,14 @@
 #include <QSet>
 #include <QtEndian>
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <memory>
 #include <vector>
 
 #include <kis_debug.h>
+#include <kis_global.h>
 
 #include "gpu/KisGpuMergeBatch.h"
 #include "gpu/KisGpuTileAccess.h"
@@ -42,6 +45,8 @@ constexpr GLenum PixelUnpackBuffer = 0x88EC;
 constexpr int CurveSize = 4096;
 constexpr VkDeviceSize MinimumBufferSize = VkDeviceSize(8) << 20;
 constexpr VkDeviceSize PatchAlignment = 256;
+/// Tile size of KisGpuTileAccess (the data manager tiles).
+constexpr int SourceTileSize = 64;
 
 /// -1: not checked yet, 0: unavailable, 1: available
 std::atomic<int> s_glInterop{-1};
@@ -382,12 +387,18 @@ quint32 KisGpuCanvasUpload::glBuffer()
 
 bool KisGpuCanvasUpload::glAcquire()
 {
+    // After the last release, the next Vulkan write of the buffer may
+    // already be waiting for GL: all readers must hold it together.
+    KIS_SAFE_ASSERT_RECOVER_NOOP(!m_released);
     if (!m_acquired && !m_failed) {
         if (m_buffer->glAcquire()) {
             m_acquired = true;
         } else {
             m_failed = true;
         }
+    }
+    if (m_acquired && !m_released) {
+        m_holds++;
     }
     return m_acquired;
 }
@@ -444,7 +455,7 @@ bool KisGpuCanvasUpload::isAcquired() const
 
 void KisGpuCanvasUpload::glRelease()
 {
-    if (m_acquired && !m_released) {
+    if (m_acquired && !m_released && m_holds > 0 && --m_holds == 0) {
         m_buffer->glRelease();
         m_released = true;
     }
@@ -707,6 +718,15 @@ bool KisGpuCanvasUploader::conversionFor(const KoColorSpace *src,
     return true;
 }
 
+bool KisGpuCanvasUploader::canUpload(KisPaintDeviceSP projection,
+                                     const KoColorSpace *dstColorSpace,
+                                     KoColorConversionTransformation::Intent intent)
+{
+    KisGpuCanvasPatchWriter::Conversion conversion;
+    return isEnabled() && KisGpuTileAccess::isSupported(projection) && isRgbaFloat(dstColorSpace)
+        && conversionFor(projection->colorSpace(), dstColorSpace, intent, &conversion);
+}
+
 bool KisGpuCanvasUploader::upload(KisPaintDeviceSP projection,
                                   const QVector<KisTextureTileUpdateInfoSP> &tiles,
                                   const KoColorSpace *dstColorSpace,
@@ -751,13 +771,31 @@ bool KisGpuCanvasUploader::upload(KisPaintDeviceSP projection,
     const bool halfOutput = dstColorSpace->pixelSize() == 8;
     const quint32 outputPixelSize = dstColorSpace->pixelSize();
 
-    // Source rect: union of the patch centers (in the current LOD plane).
-    QRect sourceRect;
+    // Source regions: unions of the patch centers (in the current LOD plane).
+    // Centers closer than one GPU tile are merged, so no tile belongs to two
+    // accesses; distant updates of a canvas batch are not widened to their
+    // bounding rect. The patches of one update rect form a single region.
+    QVector<QRect> sourceRects;
     for (const KisTextureTileUpdateInfoSP &tile : tiles) {
-        sourceRect |= tile->realPatchRect();
+        QRect rect = tile->realPatchRect();
+        for (int i = 0; i < sourceRects.size();) {
+            if (kisGrowRect(sourceRects[i], SourceTileSize).intersects(rect)) {
+                rect |= sourceRects.takeAt(i);
+                i = 0;
+            } else {
+                i++;
+            }
+        }
+        sourceRects << rect;
     }
 
-    std::unique_ptr<WorkContext> work = acquireContext(context);
+    std::unique_ptr<WorkContext> work = [&] {
+        KisPaintTrace::Scope trace("canvas.gpu.acquire_context",
+                                   projection.data(),
+                                   nullptr,
+                                   KisPaintTrace::currentFlow());
+        return acquireContext(context);
+    }();
     std::unique_ptr<KisGpuCanvasPatchWriter> &writer = work->writers[(halfSource ? 2 : 0) + (halfOutput ? 1 : 0)];
     if (!writer) {
         writer = KisGpuCanvasPatchWriter::create(context,
@@ -771,15 +809,64 @@ bool KisGpuCanvasUploader::upload(KisPaintDeviceSP projection,
     }
 
     KisGpuCommandList &commands = work->commands;
-    commands.begin();
-    KisGpuTileAccess access(projection, sourceRect, KisGpuTileAccess::ReadOnly);
-    if (!access.prepare(commands, errorMessage)) {
-        KisGpuTileAccess::finishUnsubmitted(commands, {&access});
+    {
+        KisPaintTrace::Scope trace("canvas.gpu.begin", projection.data(), nullptr, KisPaintTrace::currentFlow());
+        commands.begin();
+    }
+    std::vector<std::unique_ptr<KisGpuTileAccess>> sources;
+    QVector<KisGpuTileAccess *> accesses;
+    for (const QRect &rect : std::as_const(sourceRects)) {
+        sources.emplace_back(new KisGpuTileAccess(projection, rect, KisGpuTileAccess::ReadOnly));
+        accesses << sources.back().get();
+    }
+    const bool prepared = [&] {
+        KisPaintTrace::Scope trace("canvas.gpu.prepare_source",
+                                   projection.data(),
+                                   nullptr,
+                                   KisPaintTrace::currentFlow());
+        for (KisGpuTileAccess *access : std::as_const(accesses)) {
+            if (!access->prepare(commands, errorMessage)) {
+                return false;
+            }
+        }
+        return true;
+    }();
+    bool disjoint = true;
+    for (int i = 0; i < accesses.size(); i++) {
+        for (int j = i + 1; j < accesses.size(); j++) {
+            disjoint = disjoint && !accesses[i]->tileGrid().intersects(accesses[j]->tileGrid());
+        }
+    }
+    KIS_SAFE_ASSERT_RECOVER_NOOP(disjoint);
+    if (!prepared || !disjoint) {
+        KisGpuTileAccess::finishUnsubmitted(commands, accesses);
         releaseContext(std::move(work));
         return false;
     }
-    const QRect grid = access.tileGrid();
-    const QPoint gridOrigin = access.tileOrigin(grid.left(), grid.top());
+
+    // One address table over the tile grids of all sources. Cells between
+    // the sources stay 0 (no patch reads them).
+    QRect grid;
+    for (KisGpuTileAccess *access : std::as_const(accesses)) {
+        grid |= access->tileGrid();
+    }
+    QVector<VkDeviceAddress> addresses(grid.width() * grid.height(), 0);
+    for (KisGpuTileAccess *access : std::as_const(accesses)) {
+        const QRect part = access->tileGrid();
+        const QVector<VkDeviceAddress> partAddresses = access->addresses();
+        KIS_SAFE_ASSERT_RECOVER(partAddresses.size() == part.width() * part.height())
+        {
+            KisGpuTileAccess::finishUnsubmitted(commands, accesses);
+            releaseContext(std::move(work));
+            return false;
+        }
+        for (int row = 0; row < part.height(); row++) {
+            std::copy_n(partAddresses.constData() + row * part.width(),
+                        part.width(),
+                        addresses.data() + (part.top() - grid.top() + row) * grid.width() + part.left() - grid.left());
+        }
+    }
+    const QPoint gridOrigin = accesses.first()->tileOrigin(grid.left(), grid.top());
 
     QVector<KisGpuCanvasPatchWriter::Patch> patches;
     QVector<quint64> byteOffsets;
@@ -801,22 +888,23 @@ bool KisGpuCanvasUploader::upload(KisPaintDeviceSP projection,
         totalBytes += (bytes + PatchAlignment - 1) / PatchAlignment * PatchAlignment;
     }
 
-    KisGpuGLSharedBuffer *buffer = acquireBuffer(context, totalBytes, errorMessage);
+    KisGpuGLSharedBuffer *buffer = [&] {
+        KisPaintTrace::Scope trace("canvas.gpu.acquire_buffer",
+                                   projection.data(),
+                                   nullptr,
+                                   KisPaintTrace::currentFlow());
+        return acquireBuffer(context, totalBytes, errorMessage);
+    }();
     if (!buffer) {
-        KisGpuTileAccess::finishUnsubmitted(commands, {&access});
+        KisGpuTileAccess::finishUnsubmitted(commands, accesses);
         releaseContext(std::move(work));
         return false;
     }
 
     commands.computeBarrier();
-    if (!writer->record(commands,
-                        access.addresses(),
-                        grid.width(),
-                        patches,
-                        buffer->deviceAddress(),
-                        conversion,
-                        errorMessage)) {
-        KisGpuTileAccess::finishUnsubmitted(commands, {&access});
+    if (!writer
+             ->record(commands, addresses, grid.width(), patches, buffer->deviceAddress(), conversion, errorMessage)) {
+        KisGpuTileAccess::finishUnsubmitted(commands, accesses);
         releaseBuffer(buffer);
         releaseContext(std::move(work));
         return false;
@@ -843,10 +931,16 @@ bool KisGpuCanvasUploader::upload(KisPaintDeviceSP projection,
                          VK_ACCESS_2_HOST_READ_BIT);
     }
 
-    const quint64 value = KisGpuTileAccess::submitAndFinish(commands,
-                                                            {&access},
-                                                            buffer->vulkanWriteWaits(),
-                                                            {buffer->vulkanDoneSignal()});
+    const quint64 value = [&] {
+        KisPaintTrace::Scope trace("canvas.gpu.submit_finish",
+                                   projection.data(),
+                                   nullptr,
+                                   KisPaintTrace::currentFlow());
+        return KisGpuTileAccess::submitAndFinish(commands,
+                                                 accesses,
+                                                 buffer->vulkanWriteWaits(),
+                                                 {buffer->vulkanDoneSignal()});
+    }();
     buffer->finishVulkanWrite(value != 0);
     if (probe && value && commands.wait() && takeDebugSlot()) {
         QString text;

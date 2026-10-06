@@ -548,9 +548,14 @@ void KisDabRenderingQueueTest::testByteBudget()
         QList<KisRenderedDab> result;
         while (queue.hasPreparedDabs()) {
             bool left = false;
-            auto batch = queue.takeReadyDabs(mutableDabs, -1, &left, limit);
+            bool stoppedByBytes = true;
+            auto batch = queue.takeReadyDabs(mutableDabs, -1, &left, limit, 0, &stoppedByBytes);
             if (batch.isEmpty())
                 break; // turn a no-progress regression into a failed test, not a hang
+            // Only the byte budget can stop an unlimited batch with dabs left,
+            // and only a stopped batch leaves ready dabs here.
+            if (stoppedByBytes != left || (stoppedByBytes && limit == ~quint64(0)))
+                return QList<KisRenderedDab>();
             quint64 bytes = 0;
             for (const auto &dab : batch)
                 bytes += quint64(dab.device->bounds().width()) * dab.device->bounds().height() * cs->pixelSize();

@@ -11,6 +11,7 @@
 #include "kis_selection.h"
 #include <KoColorModelStandardIds.h>
 #include <KoCompositeOpRegistry.h>
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -29,6 +30,8 @@
 namespace
 {
 std::atomic<quint64> s_batches{0};
+std::atomic<quint64> s_generatedDabs{0};
+std::atomic<int> s_refusePendingBatches{0};
 std::atomic<quint64> s_washPreviews{0};
 std::atomic<quint64> s_washMerges{0};
 QMutex s_mutex;
@@ -182,6 +185,9 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
 #ifdef HAVE_KRITA_GPU_ENGINE
     if (!supports(painter) || dabs.isEmpty())
         return false;
+    if (s_refusePendingBatches.load() > 0 && KisRenderedDab::hasPendingPixels(dabs)
+        && s_refusePendingBatches.fetch_sub(1) > 0)
+        return false;
     QRect bounds;
     using Mode = KisGpuDabCompositor::CompositeMode;
     const bool alphaDarken = painter->compositeOpId() == COMPOSITE_ALPHA_DARKEN;
@@ -214,6 +220,7 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
         mode = alphaMode;
     }
     QVector<KisGpuDabCompositor::Dab> inputs;
+    quint64 generatedDabs = 0;
     const auto selection = painter->selection();
     const auto appendPass = [&](const QList<KisRenderedDab> &passDabs, const QVector<QRect> &rects, quint32 flips) {
         QRegion covered;
@@ -242,19 +249,60 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
             parameters.setOpacityAndAverage(float(dab.opacity), float(dab.averageOpacity));
             // Disjoint fragments of a dab never touch the same destination
             // pixel. Preserve dab/pass order, and upload their shared source once.
+            // Phases 4.83/4.84: an RGBA32F default or Gaussian circle dab is evaluated on the GPU
+            // from its description instead of uploading its pixels. The pixel
+            // reflections since generation combine with this pass's reflection.
+            // RGBA32F and (phase 4.86) RGBA16F descriptions; the dab color
+            // space already equals the device's.
+            const bool generated = dab.procedural && pixelSize == (dab.procedural->halfPixels ? 8 : 16);
+            KisGpuDabCompositor::Circle circle;
+            if (generated) {
+                const KisProceduralCircleDab &source = *dab.procedural;
+                circle.centerX = source.centerX;
+                circle.centerY = source.centerY;
+                circle.cosa = source.cosa;
+                circle.sina = source.sina;
+                circle.xcoef = source.xcoef;
+                circle.ycoef = source.ycoef;
+                circle.fadeX = source.fadeX;
+                circle.fadeY = source.fadeY;
+                circle.distfactor = source.distfactor;
+                circle.center = source.center;
+                circle.alphafactor = source.alphafactor;
+                circle.radius = source.radius;
+                circle.fadeStart = source.fadeStart;
+                circle.fadeStartValue = source.fadeStartValue;
+                circle.fadeCoeff = source.fadeCoeff;
+                circle.kind = quint32(source.kind);
+                circle.halfPixels = source.halfPixels ? 1 : 0;
+                circle.curveResolution = source.curveResolution;
+                std::copy(source.color, source.color + 4, circle.color);
+                circle.antialias = source.antialias ? 1 : 0;
+            }
             for (const QRect &clip : clipped) {
                 if (inputs.size() >= 65536)
                     return false; // bound host metadata before preparing any tiles
                 passBounds |= clip;
-                inputs << KisGpuDabCompositor::Dab{dab.device->constData(),
-                                                   dab.offset,
-                                                   dab.device->bounds().size(),
-                                                   float(dab.opacity),
-                                                   float(dab.flow),
-                                                   *parameters.lastOpacity,
-                                                   flips,
-                                                   clip};
+                KisGpuDabCompositor::Dab input;
+                input.pixels = dab.device->constData();
+                input.origin = dab.offset;
+                input.size = dab.device->bounds().size();
+                input.opacity = float(dab.opacity);
+                input.flow = float(dab.flow);
+                input.averageOpacity = *parameters.lastOpacity;
+                input.mirrorFlags = generated ? flips ^ (dab.proceduralFlips & 3) : flips;
+                input.clip = clip;
+                input.generated = generated;
+                input.circle = circle;
+                if (generated && dab.procedural->kind == KisProceduralCircleDab::SoftCircle) {
+                    if (!dab.procedural->curveTable)
+                        return false;
+                    input.curveTable = dab.procedural->curveTable->constData();
+                    input.curveTableSize = dab.procedural->curveTable->size();
+                }
+                inputs << input;
             }
+            generatedDabs += generated ? 1 : 0;
         }
         bounds |= passBounds;
         return true;
@@ -373,6 +421,10 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     if (!value)
         return false;
     KisPaintTrace::link("path.brush.submitted", painter, KisPaintTrace::currentJob());
+    if (generatedDabs) {
+        KisPaintTrace::link("path.brush.generated_dabs", painter, KisPaintTrace::currentJob());
+        s_generatedDabs += generatedDabs;
+    }
     work->lastUse = value;
     // A submitted write must never be replayed by CPU fallback, even on device loss.
     // Existing tile readback/content-loss reporting handles subsequent CPU reads.
@@ -403,6 +455,24 @@ bool KisGpuBrushPainter::paintImpl(KisPainter *painter,
     return false;
 #endif
 }
+void KisGpuBrushPainter::refusePendingBatchesForTesting(int count)
+{
+#ifdef HAVE_KRITA_GPU_ENGINE
+    s_refusePendingBatches = count;
+#else
+    Q_UNUSED(count);
+#endif
+}
+
+quint64 KisGpuBrushPainter::generatedDabCount()
+{
+#ifdef HAVE_KRITA_GPU_ENGINE
+    return s_generatedDabs.load();
+#else
+    return 0;
+#endif
+}
+
 quint64 KisGpuBrushPainter::batchCount()
 {
 #ifdef HAVE_KRITA_GPU_ENGINE

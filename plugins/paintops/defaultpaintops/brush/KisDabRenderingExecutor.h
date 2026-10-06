@@ -38,7 +38,8 @@ public:
                                         int oneTimeLimit = -1,
                                         bool *someDabsLeft = 0,
                                         quint64 maxDabBytes = ~quint64(0),
-                                        quint64 paintTraceBatch = 0);
+                                        quint64 paintTraceBatch = 0,
+                                        bool *stoppedByByteLimit = nullptr);
 
     bool hasPreparedDabs() const;
 

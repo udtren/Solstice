@@ -292,6 +292,24 @@ KisOpenGLUpdateInfoSP KisOpenGLImageTextures::updateCacheNoConversion(const QRec
     return updateCacheImpl(rect, m_image, false);
 }
 
+QVector<KisOpenGLUpdateInfoSP> KisOpenGLImageTextures::updateCache(const QVector<QRect> &rects, KisImageSP srcImage)
+{
+    if (!m_initialized) {
+        QVector<KisOpenGLUpdateInfoSP> infos;
+        for (int i = 0; i < rects.size(); i++) {
+            infos << new KisOpenGLUpdateInfo();
+        }
+        return infos;
+    }
+    return m_updateInfoBuilder.buildUpdateInfos(rects, srcImage);
+}
+
+bool KisOpenGLImageTextures::usesGpuUpload() const
+{
+    KisImageSP image = m_image;
+    return m_initialized && image && m_updateInfoBuilder.usesGpuUpload(image->projection());
+}
+
 // TODO: add sanity checks about the conformance of the passed srcImage!
 KisOpenGLUpdateInfoSP KisOpenGLImageTextures::updateCacheImpl(const QRect& rect, KisImageSP srcImage, bool convertColorSpace)
 {

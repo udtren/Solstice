@@ -58,6 +58,17 @@ KisCircleMaskGenerator::~KisCircleMaskGenerator()
 {
 }
 
+KisCircleMaskGenerator::VectorCoefficients KisCircleMaskGenerator::vectorCoefficients() const
+{
+    VectorCoefficients result;
+    result.xcoef = d->xcoef;
+    result.ycoef = d->ycoef;
+    result.fadeX = d->transformedFadeX;
+    result.fadeY = d->transformedFadeY;
+    result.antialias = d->copyOfAntialiasEdges;
+    return result;
+}
+
 bool KisCircleMaskGenerator::shouldVectorize() const
 {
     return !shouldSupersample() && spikes() == 2;

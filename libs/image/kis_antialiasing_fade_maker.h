@@ -108,6 +108,28 @@ public:
 
 #endif /* !defined XSIMD_NO_SUPPORTED_ARCHITECTURE */
 
+    // GPU engine (Solstice): the state needFade() uses.
+    qreal radius() const
+    {
+        return m_radius;
+    }
+    qreal antialiasingFadeStart() const
+    {
+        return m_antialiasingFadeStart;
+    }
+    quint8 fadeStartValue() const
+    {
+        return m_fadeStartValue;
+    }
+    qreal antialiasingFadeCoeff() const
+    {
+        return m_antialiasingFadeCoeff;
+    }
+    bool antialiasingEnabled() const
+    {
+        return m_enableAntialiasing;
+    }
+
 private:
     qreal m_radius;
     quint8 m_fadeStartValue;

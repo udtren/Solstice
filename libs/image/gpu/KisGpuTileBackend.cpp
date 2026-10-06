@@ -4,6 +4,7 @@
  */
 
 #include "KisGpuTileBackend.h"
+#include "KisPaintTrace.h"
 
 #include <KisGpuBuffer.h>
 #include <KisGpuCommandList.h>
@@ -113,6 +114,7 @@ KisTileGpuState *KisGpuTileBackend::pinState(KisTileData *td, QString *errorMess
 {
     {
         QMutexLocker locker(&m_residencyMutex);
+        KisPaintTrace::Scope trace("residency.hold.pin_existing", this, nullptr, KisPaintTrace::currentFlow());
         if (KisTileGpuState *state = td->gpuState()) {
             if (state->slot != KisTileGpuState::InvalidSlot) {
                 ++state->pins;
@@ -140,6 +142,7 @@ KisTileGpuState *KisGpuTileBackend::pinState(KisTileData *td, QString *errorMess
         KisTileGpuState *result = nullptr;
         {
             QMutexLocker locker(&m_residencyMutex);
+            KisPaintTrace::Scope trace("residency.hold.pin_allocate", this, nullptr, KisPaintTrace::currentFlow());
             KisTileGpuState *state = td->gpuState();
             if (!state || state->slot == KisTileGpuState::InvalidSlot) {
                 const quint64 other = (tilePool == m_pool32.get() ? m_pool16 : m_pool32)->reservedBytes();
@@ -170,6 +173,7 @@ KisTileGpuState *KisGpuTileBackend::pinState(KisTileData *td, QString *errorMess
 void KisGpuTileBackend::unpinStates(const QVector<KisTileGpuState *> &states)
 {
     QMutexLocker locker(&m_residencyMutex);
+    KisPaintTrace::Scope trace("residency.hold.unpin", this, nullptr, KisPaintTrace::currentFlow());
     for (KisTileGpuState *state : states) {
         KIS_SAFE_ASSERT_RECOVER_RETURN(state->pins > 0);
         --state->pins;
@@ -179,6 +183,7 @@ void KisGpuTileBackend::unpinStates(const QVector<KisTileGpuState *> &states)
 bool KisGpuTileBackend::tryEvict(KisTileData *td)
 {
     QMutexLocker locker(&m_residencyMutex);
+    KisPaintTrace::Scope trace("residency.hold.evict", this, nullptr, KisPaintTrace::currentFlow());
     KisTileGpuState *state = td->gpuState();
     if (!state || state->slot == KisTileGpuState::InvalidSlot)
         return true;
@@ -202,6 +207,7 @@ quint64 KisGpuTileBackend::tryEvictBatch(const QVector<KisTileData *> &tiles)
 {
     KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(tiles.size() <= DownloadBatchTiles, 0);
     QMutexLocker locker(&m_residencyMutex);
+    KisPaintTrace::Scope trace("residency.hold.evict_batch", this, nullptr, KisPaintTrace::currentFlow());
     const quint64 completed = m_context->completedValue();
     QVector<KisTileData *> eligible;
     for (KisTileData *td : tiles) {
@@ -353,6 +359,7 @@ void KisGpuTileBackend::downloadToCpu(const QVector<KisTileData *> &tiles)
         // submitAndFinish() either submitted before this point or sees the
         // failed state and refuses to submit.
         QMutexLocker locker(&m_residencyMutex);
+        KisPaintTrace::Scope trace("residency.hold.fail", this, nullptr, KisPaintTrace::currentFlow());
         m_failed.store(true);
     }
 

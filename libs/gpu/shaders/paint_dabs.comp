@@ -30,6 +30,20 @@ struct Dab {
     ivec4 clip;
 };
 layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer Dabs { Dab dab[]; };
+// A generated circle auto-brush dab (mirrorFlags & 4), see
+// KisProceduralCircleDab: FastRowProcessor<...> math in the same float
+// operation order. kind 0: KisCircleMaskGenerator, 1: KisGaussCircleMaskGenerator.
+struct Circle {
+    vec4 color;
+    float centerX; float centerY; float cosa; float sina;
+    float xcoef; float ycoef; float fadeX; float fadeY;
+    float distfactor; float center; float alphafactor; float radius;
+    float fadeStart; float fadeStartValue; float fadeCoeff; uint kind;
+    uint antialias; uint halfPixels;
+    uint64_t curveTable; float curveResolution; uint padding1; uint padding2; uint padding3;
+};
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer CurveTable { float value[]; };
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer Circles { Circle circle; };
 layout(push_constant) uniform Params {
     Addresses tiles;
     Dabs dabs;
@@ -42,6 +56,235 @@ layout(push_constant) uniform Params {
     ivec2 maskOrigin;
     ivec2 maskSize;
 } params;
+
+// Vulkan rounds float add, subtract and multiply correctly, and NVIDIA
+// fma() is fused, but division and sqrt may be off by a few ulp. The CPU
+// rounds them correctly (SSE/AVX), and the Gaussian fade has thresholds, so
+// choose the neighbor whose exact residual (fma) is smallest.
+float neighborFloat(float x, int steps)
+{
+    return uintBitsToFloat(uint(int(floatBitsToUint(x)) + steps));
+}
+
+// Correctly rounded a / b for finite a >= 0 and b > 0.
+float exactDivide(float a, float b)
+{
+    precise float q = a / b;
+    if (a == 0.0 || isinf(q))
+        return q;
+    float best = q;
+    float bestResidual = abs(fma(-q, b, a));
+    for (int i = -2; i <= 2; ++i) {
+        precise float candidate = neighborFloat(q, i);
+        precise float residual = abs(fma(-candidate, b, a));
+        if (i != 0 && candidate >= 0.0 && residual < bestResidual) {
+            best = candidate;
+            bestResidual = residual;
+        }
+    }
+    return best;
+}
+
+// Correctly rounded sqrt(x) for finite x >= 0.
+float exactSqrt(float x)
+{
+    precise float s = sqrt(x);
+    if (x == 0.0)
+        return 0.0;
+    float best = s;
+    float bestResidual = abs(fma(-s, s, x));
+    for (int i = -2; i <= 2; ++i) {
+        precise float candidate = neighborFloat(s, i);
+        precise float residual = abs(fma(-candidate, candidate, x));
+        if (i != 0 && candidate >= 0.0 && residual < bestResidual) {
+            best = candidate;
+            bestResidual = residual;
+        }
+    }
+    return best;
+}
+
+// xsimd exp<float> on FMA architectures (KisProceduralCircleDab::fusedExp).
+float fusedExp(float a)
+{
+    precise float k = roundEven(1.44269502162933349609375 * a);
+    precise float x = fma(-k, uintBitsToFloat(0x3f318000u), a);
+    x = fma(-k, uintBitsToFloat(0xb95e8083u), x);
+    precise float y = fma(x,
+                          fma(x,
+                              fma(x, fma(x, uintBitsToFloat(0x3ab778cfu), uintBitsToFloat(0x3c098d8bu)),
+                                  uintBitsToFloat(0x3d2aa957u)),
+                              uintBitsToFloat(0x3e2aa9a5u)),
+                          uintBitsToFloat(0x3f000000u));
+    precise float x2 = x * x;
+    precise float result = fma(y, x2, x) + 1.0;
+    result = result * uintBitsToFloat(uint(int(k) + 127) << 23);
+    if (a <= -88.3762626647949)
+        return 0.0;
+    if (a >= 88.3762626647949)
+        return uintBitsToFloat(0x7f800000u);
+    return result;
+}
+
+// VcExtraMath::erf (KisProceduralCircleDab::vectorErf).
+float vectorErf(float x)
+{
+    precise float xa = abs(x);
+    bool limit = xa >= 9.3;
+    if (limit)
+        xa = 0.0;
+    float sign = x < 0.0 ? -1.0 : 1.0;
+    precise float denominator = fma(xa, 0.3275911, 1.0);
+    precise float t = exactDivide(1.0, denominator);
+    precise float e = fusedExp(-xa * xa);
+    precise float poly = fma(fma(fma(fma(1.061405429, t, -1.453152027), t, 1.421413741), t, -0.284496736), t, 0.254829592);
+    precise float pt = poly * t;
+    precise float result = fma(-pt, e, 1.0);
+    if (limit)
+        result = 1.0;
+    return sign * result;
+}
+
+float circleFade(Circle c, ivec2 p)
+{
+    precise float y_ = float(p.y) - c.centerY;
+    precise float sinay_ = c.sina * y_;
+    precise float cosay_ = c.cosa * y_;
+    precise float x_ = float(p.x) - c.centerX;
+    precise float xr = fma(x_, c.cosa, -sinay_);
+    precise float yr = fma(x_, c.sina, cosay_);
+    precise float a = xr * c.xcoef;
+    precise float b = yr * c.ycoef;
+    precise float b2 = b * b;
+    precise float n = fma(a, a, b2);
+    precise float fade = 1.0;
+    if (!(n > 1.0)) {
+        if (c.antialias != 0) {
+            xr = abs(xr) + 1.0;
+            yr = abs(yr) + 1.0;
+        }
+        precise float fa = xr * c.fadeX;
+        precise float fb = yr * c.fadeY;
+        precise float fa2 = fa * fa;
+        precise float normFade = fma(fb, fb, fa2);
+        precise float numerator = n * (normFade - 1.0);
+        precise float denominator = normFade - n;
+        fade = normFade < 1.0 ? 0.0 : exactDivide(numerator, denominator);
+    }
+    return fade;
+}
+
+float gaussFade(Circle c, ivec2 p)
+{
+    precise float y_ = float(p.y) - c.centerY;
+    precise float sinay_ = c.sina * y_;
+    precise float cosay_ = c.cosa * y_;
+    precise float x_ = float(p.x) - c.centerX;
+    precise float xr = fma(x_, c.cosa, -sinay_);
+    precise float yr = fma(x_, c.sina, cosay_);
+    precise float b = yr * c.ycoef;
+    precise float b2 = b * b;
+    precise float squared = fma(xr, xr, b2);
+    precise float dist = exactSqrt(squared);
+
+    // KisAntialiasingFadeMaker1D::needFade() (vector form).
+    bool outside = dist > c.radius;
+    if (outside)
+        dist = 1.0;
+    bool fadeStartMask = false;
+    if (c.antialias != 0) {
+        fadeStartMask = dist > c.fadeStart;
+        if (fadeStartMask && !outside) {
+            precise float ramp = fma(dist - c.fadeStart, c.fadeCoeff, c.fadeStartValue);
+            dist = exactDivide(ramp, 255.0);
+        }
+    }
+    if (outside || fadeStartMask)
+        return dist;
+
+    precise float valDist = dist * c.distfactor;
+    precise float fullFade = (vectorErf(valDist + c.center) - vectorErf(valDist - c.center)) * c.alphafactor;
+    if (fullFade < 0.0)
+        fullFade = 0.0;
+    if (fullFade > 254.974)
+        return 0.0;
+    return exactDivide(255.0 - fullFade, 255.0);
+}
+
+// Imath (OpenEXR 2) half(float): round to nearest even, denormals included.
+// Alpha is finite and in [0, 1].
+float roundToHalf(float value)
+{
+    uint x = floatBitsToUint(value);
+    if (value == 0.0)
+        return value;
+    uint sign = (x >> 16) & 0x8000u;
+    int e = int((x >> 23) & 0xffu) - 127 + 15;
+    uint m = x & 0x007fffffu;
+    uint h;
+    if (e <= 0) {
+        if (e < -10)
+            return uintBitsToFloat(sign << 16);
+        m |= 0x00800000u;
+        int t = 14 - e;
+        uint a = (1u << uint(t - 1)) - 1u;
+        uint b = (m >> uint(t)) & 1u;
+        h = sign | ((m + a + b) >> uint(t));
+    } else {
+        h = (sign | (uint(e) << 10)) + ((m + 0x00000fffu + ((m >> 13) & 1u)) >> 13);
+    }
+    return unpackHalf2x16(h).x;
+}
+
+// KisCurveCircleMaskGenerator (KisProceduralCircleDab::softFadeAt).
+float softFade(Circle c, ivec2 p)
+{
+    precise float y_ = float(p.y) - c.centerY;
+    precise float sinay_ = c.sina * y_;
+    precise float cosay_ = c.cosa * y_;
+    precise float x_ = float(p.x) - c.centerX;
+    precise float xr = fma(x_, c.cosa, -sinay_);
+    precise float yr = fma(x_, c.sina, cosay_);
+    precise float a = xr * c.xcoef;
+    precise float b = yr * c.ycoef;
+    precise float b2 = b * b;
+    precise float dist = fma(a, a, b2);
+
+    bool outside = dist > c.radius;
+    if (outside)
+        dist = 1.0;
+    bool fadeStartMask = false;
+    if (c.antialias != 0) {
+        fadeStartMask = dist > c.fadeStart;
+        if (fadeStartMask && !outside) {
+            precise float ramp = fma(dist - c.fadeStart, c.fadeCoeff, c.fadeStartValue);
+            dist = exactDivide(ramp, 255.0);
+        }
+    }
+    if (outside || fadeStartMask)
+        return dist;
+
+    precise float valDist = dist * c.curveResolution;
+    int index = int(valDist);
+    precise float fraction = valDist - float(index);
+    if (index < 0)
+        index = 0;
+    CurveTable table = CurveTable(c.curveTable);
+    precise float c1 = table.value[index + 1] * fraction;
+    precise float full = fma(table.value[index], 1.0 - fraction, c1);
+    precise float clamped = full > 0.0 ? full : 0.0;
+    return clamped < 1.0 ? 1.0 - clamped : 0.0;
+}
+
+vec4 generatedCircle(Circle c, ivec2 p)
+{
+    precise float fade = c.kind == 1 ? gaussFade(c, p) : c.kind == 2 ? softFade(c, p) : circleFade(c, p);
+    // KoColorSpaceTrait::fillInverseAlphaNormedFloatMaskWithColor: unit * (1 - fade).
+    precise float alpha = 1.0 * (1.0 - fade);
+    if (c.halfPixels != 0)
+        alpha = roundToHalf(alpha);
+    return vec4(c.color.rgb, alpha);
+}
 
 vec4 over(vec4 dst, vec4 src, float opacity, float coverage)
 {
@@ -138,7 +381,8 @@ void main()
             if (p.x < 0 || p.y < 0 || p.x >= dab.width || p.y >= dab.height) continue;
             if ((dab.mirrorFlags & 1) != 0) p.x = dab.width - 1 - p.x;
             if ((dab.mirrorFlags & 2) != 0) p.y = dab.height - 1 - p.y;
-            vec4 source = vec4(Pixels(dab.pixels).px[p.y * dab.width + p.x]);
+            vec4 source = (dab.mirrorFlags & 4) != 0 ? generatedCircle(Circles(dab.pixels).circle, p)
+                                                     : vec4(Pixels(dab.pixels).px[p.y * dab.width + p.x]);
 #ifdef TILE_F16
             if (params.mode == 3) {
                 value = eraseHalf(value, source, dab.opacity, coverage, params.mask != uint64_t(0));

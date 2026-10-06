@@ -824,7 +824,10 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `opengl/KisGpuCanvasUploader.*` (Windows, `HAVE_KRITA_GPU_CANVAS`) | GL interop check, display conversion setup, shared-buffer pool, Vulkan submission of canvas patches, acquire/release on the GUI thread. |
 | `opengl/kis_texture_tile_update_info.h` | `uploadGeometry()` (shared CPU/GPU layout), `setGpuUpload()`. |
 | `opengl/kis_texture_tile.{h,cpp}` | GPU branch of `update()` (upload from the bound shared buffer); class exported for tests. |
-| `opengl/KisOpenGLUpdateInfoBuilder.{h,cpp}` | GPU path for the live canvas (`allowGpuUpload`), CPU fallback with batched downloads. |
+| `opengl/KisOpenGLUpdateInfoBuilder.{h,cpp}` | GPU path for the live canvas (`allowGpuUpload`), CPU fallback with batched downloads; `buildUpdateInfos()` shares one upload between rects. |
+| `canvas/KisCanvasUpdateBatcher.*`, `canvas/kis_canvas2.cpp` | Group commit of concurrent projection updates into shared builds (phase 4.81). |
+| `canvas/kis_canvas_updates_compressor.*` | `putUpdateInfos()`: atomic put of one batch. |
+| `canvas/kis_abstract_canvas_widget.h`, `canvas/kis_canvas_widget_base.*`, `opengl/kis_opengl_canvas2.*`, `opengl/KisOpenGLCanvasRenderer.*`, `opengl/kis_opengl_image_textures.*` | `sharesProjectionUploads()` / `startUpdateCanvasProjections()`; batch-wide GL hold in `KisOpenGLCanvas2::updateCanvasProjection(QVector)`. |
 | `opengl/kis_opengl_image_textures.cpp` | `checkGLInterop()` in `initGL()`; acquire/release around tile updates; readback of failed GL imports. |
 | `KisGpuEngineUi.*` | Conversion offer, failure message, pre-save warning, `KisGpuEngineSettingsWidget`. |
 | `KisMainWindow.cpp` | `install()`, `offerConversion()`, `confirmSave()` hooks. |
@@ -882,6 +885,11 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   change both paths together.
 - A `KisGpuGLSharedBuffer` is never written by Vulkan while GL may still
   read it: it returns to the pool only when no tile info references it.
+- Canvas updates sharing one upload (a `KisCanvasUpdateBatcher` build) are
+  put into the compressor together and applied in one GUI pass under one GL
+  hold. Do not split them across passes or release the hold between them.
+- A batched canvas update's caller returns only after its build submitted and
+  put it, preserving the order relative to later conflicting walkers.
 - The GPU writes projection tiles in place only while merge jobs that
   share a tile are kept apart (`KisUpdaterContext::walkerIntersectsJob`)
   and only for projections on the 64 px image grid.
@@ -4700,6 +4708,992 @@ or GPU wait. Vulkan timestamp measurements, submission counts and transfer byte
 accounting remain open priority-2 work. No runtime optimization or causally
 established bottleneck is claimed; no further manual capture is requested for
 this offline step.
+
+### Direct update-ready to upload-issue analysis (phase 4.74)
+
+2026-10-06: offline analysis only; no native rebuild or installation.
+`overhead.summarize_ready_to_issue()` adds `ready_to_issue_timing` to the normal
+paint-trace summary. It selects uploads linked to verified timing inputs,
+deduplicates shared uploads across inputs, and joins each upload's explicit
+parent to exactly one `update.ready` event. Missing/duplicate markers and
+nonfinite, negative, boolean or reversed timestamps are excluded. It never
+matches by timestamp proximity or substitutes an older compressed update.
+
+Reanalysis of the nine archived phase-4.71 captures produced these exploratory
+process summaries (all verified inputs, including warm-ups and all conditions):
+
+| Run | Unique uploads | Median ms | P95 ms |
+| --- | ---: | ---: | ---: |
+| 01 CPU | 734 | 2.164 | 3.822 |
+| 02 projection | 692 | 3.033 | 8.427 |
+| 03 brush | 757 | 1.764 | 10.029 |
+| 04 projection | 681 | 2.630 | 9.459 |
+| 05 brush | 739 | 1.818 | 5.143 |
+| 06 CPU | 701 | 2.107 | 3.691 |
+| 07 brush | 750 | 1.754 | 5.281 |
+| 08 CPU | 941 | 1.714 | 8.800 |
+| 09 projection | 790 | 2.364 | 7.800 |
+
+No selected upload was excluded. These are upload-weighted mixed-condition
+diagnostics, not replacements for the measured-stroke baseline or evidence of
+a speedup. The interval includes event-loop/compressor waiting and upload
+processing. It excludes residence of earlier merged/superseded updates and
+can start before a later input joins that update. Therefore it must not be
+subtracted from per-input latency or summed across overlapping updates.
+The existing native `update.ready` marker occurs after preparation; preparation
+and the earlier drawing/projection scheduling remain unresolved. GPU execution
+timestamps, transfer volume and submission overhead remain open.
+
+Validation: 42 Python tests pass, including direct-parent selection despite an
+older merged update, deduplication, missing/ambiguous/invalid timestamps, and
+empty verified input sets. Run `python -B -m unittest discover -s
+build-tools/paint-trace -p 'test_*.py'` from the repository root. Running the
+ordinary `summarize.py` on each archived trace reproduces the new summary field.
+No new interactive capture is required for this offline addition.
+
+### Projection-end to prepared-update analysis (phase 4.75)
+
+2026-10-06: `overhead.summarize_projection_preparation()` joins the explicit
+walker ID in `projection.merge` to the parent ID of `update.ready`. Only walkers
+downstream of verified timing inputs are selected. Each requires one complete
+merge span and one ready marker with valid ordered timestamps; multiple ready
+notifications are excluded rather than choosing the nearest. Walkers are
+deduplicated globally and within each stroke. The normal summary now includes
+`projection_preparation_timing`, including per-stroke medians and P95s.
+
+All nine archived phase-4.71 captures passed without exclusions: respectively
+737, 719, 767, 688, 757, 703, 756, 946 and 795 unique walkers including warm-ups.
+The comparison below uses the explicit measured stroke IDs in the baseline
+run sheet and archived `comparison.json`: median of three measured stroke
+medians per process, then median of the three process values. Entries show
+**CPU merge span / merge-end to update-ready**, in milliseconds. These are
+walker-weighted intervals within a stroke, not an input-latency partition.
+
+| Condition | CPU | CPU brush + shared buffer | GPU brush + shared buffer |
+| --- | ---: | ---: | ---: |
+| 64px Buildup | 0.010 / 0.258 | 0.010 / 1.067 | 0.010 / 0.143 |
+| 64px Wash | 0.049 / 0.202 | 0.046 / 0.948 | 0.702 / 0.074 |
+| 256px Buildup | 0.013 / 0.723 | 0.011 / 6.161 | 0.014 / 5.030 |
+| 256px Wash | 0.096 / 0.601 | 0.097 / 5.744 | 2.021 / 0.251 |
+
+For 256px Buildup, process ranges for merge-end to ready were CPU
+0.608–0.747ms, CPU brush/shared buffer 5.957–7.908ms, GPU brush/shared buffer
+4.214–5.120ms. For 256px Wash, the GPU brush merge CPU span was 1.775–2.489ms,
+while its merge-end to ready was 0.161–0.440ms. Thus Buildup and Wash do not
+justify assuming the same dominant stage. Shared batches/walkers correlate
+samples; components' medians cannot be added or subtracted from input medians.
+Merge spans measure host work, including submission/waiting when present, not
+GPU execution. The subsequent interval includes notification and canvas
+preparation/synchronization; it does not isolate a copy or queue wait.
+
+Code inspection identifies next measurement sites in
+`KisGpuCanvasUploader::upload()`: context acquisition/`commands.begin()`,
+`KisGpuTileAccess::prepare()`, shared-buffer acquisition and submit/finish.
+The context pool currently selects its last free entry without checking whether
+its prior submission has completed; `begin()` can wait for that submission.
+This is a candidate, not a demonstrated cause. Wash additionally needs its
+indirect-painting/compositor span split. No synchronization or rendering behavior
+has been changed based on the offline data alone.
+
+Validation: 45 Python tests pass, including unrelated-nearer-marker rejection,
+deduplication, per-stroke separation, ambiguous/missing events, invalid/reversed
+timestamps and empty verified input sets. No native rebuild, installation or
+new user capture was needed. Original baseline logs/summaries remain unchanged.
+
+### Native preparation stage probes (phase 4.76)
+
+2026-10-06: installed opt-in CPU scopes in `KisGpuCanvasUploader::upload()`:
+`canvas.gpu.acquire_context`, `canvas.gpu.begin`, `canvas.gpu.prepare_source`,
+`canvas.gpu.acquire_buffer`, and `canvas.gpu.submit_finish`. Added compositor
+scopes for context acquisition, existing context wait, target/layer preparation
+and submit/finish (`compositor.*`). Scopes carry the current walker flow ID and
+the existing automatic job identity; direct test calls can legitimately have
+zero flow. Multiple layer scopes per walker are expected. These are CPU spans,
+not GPU timestamps or isolated transfer costs. The submit/finish compositor
+scope also includes its existing result handling and success marker.
+
+The wrappers preserve original return values, short-circuit validity checks,
+failure cleanup and call order. No extra GPU wait or rendering branch was
+introduced. Disabled tracing does not record timestamps/events. Existing
+summary stage statistics expose these names; do not associate zero-flow spans
+with nearby inputs or add overlapping scopes as input latency.
+
+Build succeeded for `kritaui`, `KisGpuCanvasUploadTest`, `KisGpuStrokeTest`.
+Validation-enabled trace-on tests exited successfully. Their logs contain
+13,597 and 1,829 new stage events respectively, all finite nonnegative complete
+spans, with no recorder overflow. Trace-off QtTest reports: canvas 28/28,
+64/256px Buildup/Wash stroke rows 6/6. Logs/traces use the temporary prefix
+`solstice-stage-476-`. Installed `libs/image` and `libs/ui`; no app was launched
+or terminated by the agent.
+
+Next manual capture is a focused diagnostic, not a repeat of the nine-process
+baseline: launch `build-tools/paint-trace/run.cmd <krita-dev-root> brush` and use
+the same RGBA F32 document and Basic-4 Flow Opacity preset. At exactly 256px,
+draw three short Buildup strokes, then three Wash strokes, and exit normally.
+The first of each group is warm-up. Inspect the new linked scopes before
+choosing an optimization. This real-app check remains pending; automated
+success does not establish which wait dominates in the user's document.
+
+### Focused real-app stage capture (phase 4.76 follow-up)
+
+2026-10-06: user closed the diagnostic process, PID 43812. Archived trace,
+launcher log and full summary are under `%TEMP%/solstice-stage-476-real-43812/`.
+Six ended strokes match Basic-4 Flow Opacity, exact 256px, RGBA F32 2480x3508:
+Buildup warm-up 4193, measured 4959/5856; Wash warm-up 7144, measured 7904/8696.
+All 112 timed inputs passed the recorded checks; 24 inputs without dab requests
+are excluded. Recorder overflow is zero. This single-process diagnostic does
+not replace the nine-process baseline or establish a performance improvement.
+
+For each measured stroke, select the distinct downstream walker IDs of verified
+timing inputs and collect the new CPU scopes with matching explicit `args.id`.
+The table shows the two per-stroke medians in milliseconds, not summed values:
+
+| Scope | Buildup 4959 / 5856 | Wash 7904 / 8696 |
+| --- | ---: | ---: |
+| canvas.gpu.acquire_context | 0.1602 / 0.2671 | 0.0001 / 0.0002 |
+| canvas.gpu.begin | 0.0131 / 0.0145 | 0.0103 / 0.0108 |
+| canvas.gpu.prepare_source | 0.1216 / 0.1575 | 0.0830 / 0.0698 |
+| canvas.gpu.acquire_buffer | 0.1783 / 0.0003 | 0.0003 / 0.0003 |
+| canvas.gpu.submit_finish | 1.1584 / 1.4042 | 0.1455 / 0.2210 |
+| compositor.wait_context | not observed | 0.0080 / 0.0071 |
+| compositor.prepare_target | not observed | 0.4789 / 0.5127 |
+| compositor.prepare_layer | not observed | 0.1472 / 0.1307 |
+| compositor.submit_finish | not observed | 0.1165 / 0.2354 |
+
+Buildup has 119/102 matched canvas calls; Wash has 101/109 calls per listed
+stage. Measured Buildup buffer acquisition has maxima 14.7683/10.9974ms, so its
+occasional tail remains relevant despite low medians. Context begin medians do
+not support treating reuse waiting as the main cost in this capture.
+
+Next priority: split `KisGpuTileAccess::submitAndFinish()` into residency mutex
+acquisition, recording uploads, queue submission, publishing and completion;
+also inspect target preparation for Wash. Its present scope includes all these
+operations, so a long value does not prove GPU execution or mutex contention.
+Do not remove/reorder the residency lock: upload ordering and failed-state
+publication depend on it. No runtime optimization has been made yet, and no
+additional user capture is requested until narrower measurement is ready.
+
+### Tile preparation and submission substage probes (phase 4.77)
+
+2026-10-06: `KisGpuTileAccess.cpp` now records opt-in `tile_access.resolve_tiles`
+(tile lookup, COW handling and pinning) and `tile_access.stage_uploads`
+(staging allocation/reuse and CPU snapshot copies). Submission records
+`tile_submit.lock`, `record_uploads`, `queue`, `publish`, and `complete`.
+Names carry the `tile_submit.` prefix. Flow ID and existing job identity are
+retained, and the command-list pointer identifies the submission owner.
+
+The lock scope wraps construction of the existing RAII locker; the returned
+locker remains alive across the original critical section. Upload ordering,
+failed-state checks, state publication and restoration outside the lock are
+unchanged. No GPU wait is added. The spans describe host intervals, including
+waits inside their existing operations, not GPU execution. Trace recording
+itself adds overhead, including while the residency mutex is held; these probes
+are diagnostic and must not be treated as an uninstrumented performance result.
+Preparation scopes apply to all tile accesses; match enclosing canvas or
+compositor scopes with the same thread/flow to distinguish their callers.
+
+Build succeeded. With Vulkan validation, canvas tests passed 28/28 and the
+64/256px Buildup/Wash stroke rows passed 6/6, both tracing on and off. Trace-on
+captures have 16,505/2,867 new finite nonnegative spans, zero dropped events,
+and matching lock/record/queue/publish/complete counts (1,191/260 submissions).
+Temporary artifacts use `solstice-stage-477-`. Installed the rebuilt image
+library; no app was launched or stopped by the agent.
+
+Real-app follow-up is pending: use the same phase-4.76 `brush` launcher and
+256px Basic-4 Flow Opacity conditions, three Buildup then three Wash strokes,
+with the first of each group as warm-up. Prior captures lack these substage
+events. This is one diagnostic process, not another nine-process baseline.
+Do not optimize lock scope or upload publication until this distinction is known.
+
+### Real-app submission substage findings (phase 4.77 follow-up)
+
+2026-10-06, PID 11944: six 256px strokes, zero recorder overflow, 108 verified
+timing inputs; 23 inputs without recorded dab requests excluded. Buildup warm-up
+3593, measured 4395/5159; Wash warm-up 6609, measured 7413/8213. Archived raw
+trace, launch log and summary: `%TEMP%/solstice-stage-477-real-11944/`.
+
+Select distinct downstream walker IDs of verified inputs per measured stroke.
+Substages are assigned only to one enclosing canvas submit, compositor submit,
+or compositor target-prepare span with the same flow ID and thread (timestamp
+containment, not nearest-event matching). Per-stroke medians in milliseconds:
+
+| Substage | Buildup 4395 / 5159 | Wash 7413 / 8213 |
+| --- | ---: | ---: |
+| Canvas submission lock acquisition | 0.9164 / 0.5936 | 0.0062 / 0.0001 |
+| Canvas record uploads | 0.0012 / 0.0009 | 0.0006 / 0.0004 |
+| Canvas queue submit | 0.0898 / 0.0546 | 0.0326 / 0.0406 |
+| Canvas publish | 0.0003 / 0.0003 | 0.0002 / 0.0002 |
+| Canvas complete | 0.0003 / 0.0003 | 0.0001 / 0.0002 |
+| Compositor target resolve tiles | not observed | 0.1932 / 0.2039 |
+| Compositor target staging | not observed | 0.1512 / 0.1150 |
+
+Canvas submit counts are 95/97 for measured Buildup and 72/96 for measured
+Wash; target staging is conditional and appears 56/69 times. These medians
+must not be summed. The Buildup lock-acquisition interval is much longer than
+the queue-submit interval in this capture. This identifies a host lock
+acquisition bottleneck candidate, not GPU kernel execution time or the identity
+of the lock holder. Wash does not show the same typical contention.
+
+Next investigate all residency-lock holders: `pinState()` (including slot
+allocation), `unpinStates()`, `tryEvict()`/`tryEvictBatch()` (which can download
+under the lock), and concurrent `submitAndFinish()`. Existing traces cannot
+uniquely identify the competing holder. Preserve upload ordering and failure
+publication invariants; no lock removal is justified. No further manual capture
+is requested until the next change is ready; no speedup is claimed.
+
+### Residency lock-holder tracing (phase 4.78)
+
+2026-10-06: added `residency.hold.*` scopes after acquisition and before release
+at all current backend residency-lock sites: `pin_existing`, `pin_allocate`,
+`unpin`, `evict`, `evict_batch`, `fail`, plus `submit` in tile access. RAII
+destruction order preserves the original lock lifetime. `tile_submit.lock`
+now uses the backend as owner and command list as related pointer, so wait and
+hold records identify the same mutex. Other submission substage owners remain
+the command list. Existing phase-4.77 wait owners are not compatible with this
+holder join and must not be guessed by temporal proximity.
+
+Unfiltered per-tile holds overflowed the canvas regression trace (621,250
+dropped events); that initial trace is unusable. `KisPaintTrace.cpp` now omits
+`residency.hold.*` spans below 10 microseconds before taking the recorder mutex.
+The threshold is serialized as `residency_hold_min_us: 10`. Omitted short holds
+are intentional filtering, not overflow. Other event families remain unfiltered.
+Trace-on still adds clock/recording overhead; observed holds exclude unlock and
+recording gaps and cannot fully account for every wait.
+
+New `build-tools/paint-trace/residency.py` provides the summary field
+`residency_contention`. It matches process/owner and different threads,
+clips intersections with waits, and rejects owner groups with overlapping hold
+intervals beyond a 1e-6 microsecond floating-point tolerance. Results are
+observed overlap, not proof of scheduler causation. Sums count time per wait,
+not elapsed process wall time, and include warm-ups unless filtered explicitly.
+
+Validation: 50 Python tests pass, covering clipped overlap, gaps, wrong
+process/owner/thread, ambiguous holds, invalid timestamps and serialization
+roundoff. Native Vulkan-validation tests pass: canvas 28/28, stroke 6/6, with
+tracing on and off (off run before the trace-only threshold adjustment).
+Final filtered traces have zero overflow, invalid events or ambiguous groups.
+Canvas: 1,191 waits, 446 with observed hold overlap; 449.46ms summed wait,
+405.16ms overlap, of which 404.88ms belongs to other submit holders. Stroke:
+260 waits, 45 matched; 3.91ms summed wait, 3.55ms overlapping submit holders.
+These aggregate test workloads are not the user's six-stroke workload and
+do not establish real-app contention ownership.
+
+Installed rebuilt `libs/image`; logs use `solstice-stage-478-`, final trace-on
+logs use `solstice-stage-478-filtered-`. Real-app follow-up remains one `brush`
+process with the same 256px preset/document, three Buildup then three Wash
+strokes. First stroke of each group is warm-up. No lock-order or performance
+optimization has been applied before identifying the real-app holder.
+
+### Real-app residency overlap (phase 4.78 follow-up)
+
+2026-10-06, PID 44756: expected six 256px Basic-4 Flow Opacity strokes in
+RGBA F32 2480x3508, 109 verified timing inputs; 27 no-dab inputs excluded.
+No dropped events; hold threshold is 10us. Buildup warm-up 4152, measured
+4891/5618; Wash warm-up 7040, measured 7754/8487. Raw trace, launch log and
+summary are archived at `%TEMP%/solstice-stage-478-real-44756/`.
+
+Select each stroke's verified downstream walkers and their enclosing
+`canvas.gpu.submit_finish` scopes, then select contained same-thread/flow lock
+waits. Compare against all same-backend cross-thread holds, including holders
+outside that stroke's lineage. Results below are **sums over individual waits**,
+not wall-clock stroke delays or medians; concurrent waits can overlap.
+
+| Measured stroke | Canvas waits | Wait sum ms | Overlap with other submit holders ms |
+| --- | ---: | ---: | ---: |
+| Buildup 4891 | 74 | 68.0875 | 66.0468 |
+| Buildup 5618 | 88 | 91.8102 | 89.0707 |
+| Wash 7754 | 75 | 14.5011 | 13.5494 |
+| Wash 8487 | 93 | 19.7232 | 18.2418 |
+
+Thus about 97% of measured Buildup canvas lock-acquisition time overlaps other
+submission holders. Pin-existing contributes just 0.113ms in the first Buildup
+stroke; no other holder category overlaps those measured Buildup waits.
+No ambiguous owner groups, invalid intervals or excluded waits were found.
+Wash also overlaps submit holders, but has a much smaller summed wait in this
+capture. This strengthens the case for investigating concurrent submissions
+rather than slot allocation or eviction first. It does not prove a speedup
+without tracing, nor quantify physical input-to-pixel delay.
+
+One directly joined example: walker 4963 holds residency for 1.8486ms during
+canvas submission; its `tile_submit.queue` interval is 1.8474ms. The queue
+scope covers command-buffer ending and context submission, not just Vulkan
+kernel work. Other calls can be shorter. Next inspect that path and safe ways
+to reduce residency critical-section time while preserving upload generation,
+queue ordering and failure-publication invariants. Do not simply move queue
+submission outside the lock or remove locking. No further manual run is
+requested until there is a concrete next change.
+
+### End main command recording before residency acquisition (phase 4.79)
+
+2026-10-06: `KisGpuCommandList::finishMainRecording()` ends the main command
+buffer once, caches success/failure until `begin()`, and leaves the late-upload
+preamble available. `KisGpuTileAccess::submitAndFinish()` calls it before
+acquiring residency, traced as `tile_submit.finish_main`. Main commands are
+already complete at this point; generation-dependent upload decisions and
+preamble recording, queue submission, and state publication remain under the
+original residency lock. Failure skips upload recording/submission and retains
+the existing abandon/publish-zero/restore/complete path. `abandon()` does not
+end the main buffer twice, and `begin()` clears the cached state.
+
+After early finish, callers must not record more main commands. The existing
+`isRecording()` indicates an open recording/submission cycle (including the
+still-available preamble), not that the main buffer remains writable. Ordinary
+`submit()` callers still work without explicitly finishing early. This changes
+host recording-end timing, not GPU execution/submission order; preamble stays
+first in the same submission. Queue submission itself remains in the critical
+section. Improvement magnitude is unmeasured; earlier queue-scope observations
+included both command-buffer ending and context submission.
+
+Added `KisGpuEngineTest::testEarlyMainFinish`: main readback recorded and ended
+before a late preamble fill, exact output for two reuse cycles, idempotent end,
+abandon, injected submit failure, and successful reuse after failure. With Vulkan
+validation: selected engine tests 6/6; shared upload arena, failed-state refusal,
+failed-submission content preservation and older-upload ordering tests 13/13;
+canvas 28/28; 64/256 Buildup/Wash stroke tests 6/6. Trace-on canvas also passes
+28/28 and verifies 1,191 early-finish spans end before their matching lock spans,
+with zero overflow. Artifacts: `%TEMP%/solstice-stage-479-*`.
+
+Installed rebuilt GPU, image and UI libraries together (command-list layout
+changed). Real-app follow-up: same `brush` launcher, exact 256px Basic-4 Flow
+Opacity in RGBA F32, three Buildup then three Wash strokes. Compare against the
+archived phase-4.78 capture, excluding first strokes, and check Undo/Redo for
+visible regressions. No speedup is claimed until this check; no lock was removed.
+
+### Early-finish real-app result: no demonstrated improvement
+
+2026-10-06, PID 3704, phase 4.79: six expected 256px Basic-4 Flow Opacity
+RGBA F32 strokes, 117 verified timing inputs, 14 no-dab inputs excluded, zero
+overflow. Buildup warm-up 3907, measured 4687/5607; Wash warm-up 6974,
+measured 7800/8714. Archive: `%TEMP%/solstice-stage-479-real-3704/`.
+
+Each pair below is the two measured per-stroke medians in milliseconds.
+Canvas substages use the same explicit walker/thread/enclosing-submit selection
+as phase 4.78. Input timing is verified input receipt to command-swap notification.
+
+| Metric | Before Buildup | After Buildup | Before Wash | After Wash |
+| --- | ---: | ---: | ---: | ---: |
+| Canvas lock acquisition | 0.7831 / 0.9466 | 0.8996 / 0.7845 | 0.0001 / 0.0077 | 0.0129 / 0.0172 |
+| Early main finish | not split | 0.0015 / 0.0016 | not split | 0.0007 / 0.0007 |
+| Canvas queue stage | 0.0382 / 0.0343 | 0.0397 / 0.0947 | 0.0309 / 0.0343 | 0.0347 / 0.0283 |
+| Input to command swap | 30.269 / 34.326 | 35.876 / 60.148 | 34.585 / 32.662 | 48.180 / 44.333 |
+
+No speedup is demonstrated. The moved operation is very small in these samples
+and Buildup lock contention remains. End-to-end software timings are worse in
+this capture, but one process per version with two hand-drawn measured strokes
+per condition cannot isolate a regression caused by the change. Matched canvas
+call counts also differ (before Buildup 74/88, after 115/112; before Wash 75/93,
+after 110/129). Do not label this a verified optimization in README/benchmarks.
+User reported closure only; explicit Undo/Redo success was not provided.
+
+Next investigate `KisGpuContext::submit()` queue-mutex acquisition and the
+driver `vkQueueSubmit2` call, especially long competing submissions. Early main
+finalization is retained as a correctness-tested change with unproven latency
+benefit; do not remove residency ordering protection based on this result.
+No additional manual repetition requested at this analysis step.
+
+### Queue-lock and driver-call timestamps (phase 4.80)
+
+2026-10-06: optional `KisGpuSubmitTiming` output in the context/command-list
+submission API captures steady-clock nanoseconds before/after queue-mutex
+acquisition and immediately before/after `vkQueueSubmit2`. It is reset on each
+call; injected refusal leaves driver timestamps zero. Null output performs no
+clock sampling. GPU execution is not timed by these host timestamps.
+
+Tile access requests timing only when paint tracing is enabled and records
+saved `tile_submit.queue_lock`, `tile_submit.queue_prepare`, and
+`tile_submit.driver` intervals through `KisPaintTrace::externalSpan()` after
+the residency critical section and completion work. This avoids acquiring the
+trace recorder mutex inside these newly measured queue/driver intervals.
+Each event retains backend owner, command-list related pointer, flow, job and
+originating thread. Events may appear later in the JSON array than their
+timestamp; analysis must use timestamps and explicit identities, not array
+adjacency. Existing surrounding scopes still incur their normal trace overhead.
+
+New `testConcurrentSubmissionTiming` uses four worker threads, independent
+command lists/output buffers and 32 submissions each. It checks all readback
+words, 128 unique timeline values, ordered host timestamps, refusal without a
+driver call, successful untimed reuse, and no added validation errors.
+
+Vulkan-validation regression results: selected engine tests 7/7, shared arena /
+failure / old-upload ordering 13/13, canvas 28/28, stroke 6/6; trace-enabled
+canvas/stroke also 28/28 and 6/6. Python analysis remains 50/50. Trace captures
+have zero overflow and one uniquely enclosing queue scope for each of the three
+new intervals across 1,191 canvas and 258 stroke submissions.
+
+Exploratory full-test medians (queue lock / preparation / driver, milliseconds):
+canvas 0.0001 / 0.0008 / 0.0520; stroke 0.0001 / 0.0005 / 0.0445. Stroke P95
+queue-lock and driver intervals are 0.1471 and 0.2710ms. These mixed test calls
+suggest investigating driver-call tails, but are not the real-app Buildup
+measurement. No rendering/locking policy or claimed performance result changed.
+
+Artifacts use `%TEMP%/solstice-stage-480-*`. Installed GPU/image/UI libraries;
+their build/install hashes match. Next focused real-app capture remains the
+same six-stroke 256px Buildup/Wash protocol, to inspect the competing submit
+holders' queue-lock and driver intervals. Do not repeat the nine-run baseline
+until there is a demonstrated runtime improvement worth benchmarking.
+
+### Real-app driver-call overlap (phase 4.80 follow-up)
+
+2026-10-06, PID 24148: six expected 256px Basic-4 Flow Opacity strokes,
+RGBA F32 2480x3508, 165 verified timing inputs (108 after warm-up exclusion),
+52 no-dab inputs excluded, zero overflow. Buildup warm-up 4027, measured
+5252/6402; Wash warm-up 7986, measured 9250/10529. Archive:
+`%TEMP%/solstice-stage-480-real-24148/`, raw trace, launcher log and summary.
+
+Select verified walkers, contained same-thread/flow canvas-submit lock waits,
+and all directly timed queue/driver spans of other threads on the same backend.
+The overlap sums below count time per waiter; concurrent waiters can count the
+same driver interval repeatedly. They are not wall-clock stroke duration.
+
+| Stroke | Canvas waits | Wait sum ms | Other submit hold overlap ms | Other driver-call overlap ms | Other queue-lock overlap ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Buildup 5252 | 136 | 108.5455 | 104.0951 | 103.0312 | 0.0187 |
+| Buildup 6402 | 125 | 94.1548 | 90.7168 | 89.7886 | 0.0206 |
+| Wash 9250 | 142 | 14.2552 | 13.1517 | 12.2399 | 0.4865 |
+| Wash 10529 | 132 | 10.2298 | 9.2950 | 7.7846 | 1.1863 |
+
+Buildup's driver-call overlap is about 95% of summed residency acquisition
+time. Other-thread queue-information preparation overlap is only 0.2112 and
+0.1654ms for these two strokes. This directly narrows the observed long holder
+intervals to `vkQueueSubmit2`, rather than the context's queue-mutex acquisition.
+It does not explain why the driver call takes time or establish a driver bug,
+GPU execution duration, or physical input-to-pixel latency.
+
+For directly selected canvas calls, Buildup lock medians are 0.5454/0.6640ms,
+driver medians 0.0436/0.0482ms with maxima 2.467/2.400ms; queue-lock medians
+are 0.0001ms. Wash driver medians are 0.0225/0.0228ms; queue-lock medians
+are also 0.0001ms. Selected canvas call counts are larger than input counts,
+so the next candidate is coalescing compatible canvas preparation/submissions,
+using actual patch/tile coverage and preserving compression lineage, fallback,
+color conversion, and complete image-update coverage. Keep serial queue ordering
+and residency publication protection; removing those locks is not justified.
+
+Measured input-to-command-swap medians are Buildup 22.942/24.098ms and Wash
+21.101/28.408ms. Capture lengths and per-stroke update counts differ from prior
+captures; no runtime change occurred since phase 4.80 and no speedup is claimed.
+No further manual repeat requested at this analysis step. Next implementation
+should reduce demonstrably redundant submissions before rebenchmarking.
+
+### Shared canvas update builds (phase 4.81)
+
+2026-10-06. Classifying the PID 24148 submit spans by enclosing scope showed
+834 canvas, 428 compositor and 62 brush submissions, against only 169
+GUI-thread canvas consumptions (`canvas.upload`). Canvas lock waits overlapped
+other threads' canvas driver calls for 353.1ms, compositor calls for 14.1ms and
+brush calls for 2.2ms (summed per waiter, whole capture including warm-ups).
+The contention is therefore mainly between concurrent canvas uploads of
+different projection walkers. Canvas driver calls also had the longest tail
+(median 0.030ms, P95 1.09ms, maximum 4.55ms).
+
+Implementation (all in `libs/ui`, GPU canvas path only):
+
+- `canvas/KisCanvasUpdateBatcher.*`: group commit. `process()` enqueues a
+  request with its thread's paint-trace flow and returns only after a build
+  containing it has finished. A thread with no build running takes the oldest
+  pending requests (at most 32 and 1 Mpx after the first, which is always
+  taken) and builds them; others wait on a condition variable (`canvas.batch_wait`
+  scope). Builds never overlap and complete in arrival (ticket) order. A
+  same-thread re-entry from inside a build builds alone instead of deadlocking.
+- `KisCanvas2::startUpdateCanvasProjection()` uses the batcher when
+  `KisAbstractCanvasWidget::sharesProjectionUploads()` is true (OpenGL canvas,
+  GPU canvas upload enabled and supported for the projection/display pair, no
+  soft proofing or channel selection). Otherwise the original per-update path
+  runs unchanged (QPainter canvas, CPU canvas path).
+- The build creates **one update info per request**, unchanged rects, trace ids
+  and compressor semantics. It emits each request's `update.ready` with that
+  request's captured flow, `update.request_rect`, and a new informational link
+  `update.batched` (later update -> first update of the batch). The infos are
+  put into the compressor atomically (`KisCanvasUpdatesCompressor::putUpdateInfos()`)
+  before any waiting thread returns.
+- `KisOpenGLUpdateInfoBuilder::buildUpdateInfos()` collects the tiles of all
+  rects and calls `KisGpuCanvasUploader::upload()` once. On failure each info
+  takes the original CPU path (per-rect `syncToCpu`, retrieve, convert).
+  The single-rect `buildUpdateInfo()` now delegates to it.
+- `KisGpuCanvasUploader::upload()` groups patch centers into source regions,
+  merging only centers closer than one 64px GPU tile, and prepares one
+  read-only `KisGpuTileAccess` per region. A combined row-major address table
+  over the regions' tile grids (zero between regions, never read) feeds the one
+  patch-writer dispatch; all accesses go to one `submitAndFinish()`. Distant
+  updates (e.g. mirrored dabs) are not widened to a bounding rect. Region grids
+  are checked to be disjoint. A single update produces exactly the previous
+  single access and table.
+- `KisGpuCanvasUpload` GL holds nest. `KisOpenGLCanvas2::updateCanvasProjection(QVector)`
+  acquires all uploads of the taken updates once, and releases after every
+  update was applied; `recalculateCache()` holds still nest inside it. The last
+  release signals GL completion, so no update of a batch can read a buffer after
+  Vulkan may reuse it. A re-acquire after the final release is a safe assert.
+
+Ordering argument: before, a walker thread returned from `sigImageUpdated` after
+its canvas submission and compressor put; conflicting walkers start only after
+that. The batcher keeps this: a waiting thread returns only after a build that
+submitted its read and put its info. Builds are serialized and in ticket order,
+so compressor puts remain in read order. Reads are still ordered on the single
+queue before later conflicting projection writes.
+
+Tests (Vulkan validation): `KisGpuCanvasUploadTest` 38/38, including 10 new
+`testSharedUploadMatchesCpu` rows: overlapping, distant (separate accesses in one
+submission), one-pixel and outside-image rects build with one upload counter
+increment, one shared upload object, CPU-identical textures, and nested hold
+behavior; trace-enabled run also 38/38; zero validation errors. The existing GL
+import failure test now releases its own outer hold (it had relied on idempotent
+acquire). New `KisCanvasUpdateBatcherTest` 8/8 (single thread, waiters sharing a
+build, request/pixel limits, 8 threads x 300 requests without overlap, duplicate or
+early return, re-entry), five repeated runs stable. Python analysis 50/50.
+`KisGpuStrokeTest` has no canvas and does not exercise this path. Only `kritaui`
+changed; its build/install SHA256 match.
+
+Not yet measured in the real app. Expected effect: fewer canvas submissions and
+less canvas-vs-canvas residency contention in 256px Buildup; Wash had less
+contention. The GUI may receive more update infos per frame; texture upload
+volume per update is unchanged. Do not claim a speedup before a focused capture.
+Manual checks required: painting/undo/redo/mirror/zoom/LOD with the GPU canvas,
+soft proofing and channel selection (unbatched CPU path), and GL import fallback.
+
+### Real-app capture of shared canvas builds (phase 4.81 follow-up)
+
+2026-10-06. The user reported the manual checks (painting, Undo/Redo, mirror,
+zoom/rotation, soft proofing, channel selection, save/reload) without problems.
+A first capture (PID 41908) combined the manual checks with the strokes and
+overflowed the event limit (213,587 dropped). It is not used for performance.
+It confirmed batching in the app (1,808 updates, 1,304 canvas submissions,
+504 `update.batched` links) without warnings in the launcher log.
+
+Focused capture PID 43720: six 256px strokes, zero dropped events, 129 inputs
+passing recorded checks. Buildup warm-up 3056, measured 3827/4613; Wash warm-up
+6102, measured 7151/8211. Archive: `%TEMP%/solstice-stage-481-real-43720/`.
+Geometry: all 731 uploads `covered_to_swapped_commands`.
+
+Whole-capture comparison with PID 24148 (both include warm-ups):
+
+| Metric | 4.80 (24148) | 4.81 (43720) |
+| --- | ---: | ---: |
+| Canvas updates / canvas GPU submissions | 834 / 834 | 774 / 241 |
+| All residency submissions (`tile_submit.lock`) | 1,324 | 766 |
+| Summed residency lock wait ms | 459.8 | 73.0 |
+| Summed canvas submit (`canvas.gpu.submit_finish`) ms | 598.6 | 42.8 |
+| Summed `canvas.prepare` ms (includes batch waits) | 2,301.0 | 1,059.6 |
+| Summed `canvas.batch_wait` ms | - | 916.0 |
+
+Measured strokes, medians in ms:
+
+| Stroke | Merge end -> ready | Input -> first merge start | Input -> swap |
+| --- | ---: | ---: | ---: |
+| 4.80 Buildup 5252 / 6402 | 3.47 / 4.28 | 13.43 / 13.58 | 22.94 / 24.10 |
+| 4.81 Buildup 3827 / 4613 | 0.43 / 0.25 | 27.07 / 25.27 | 38.50 / 32.62 |
+| 4.80 Wash 9250 / 10529 | 0.17 / 0.23 | 12.39 / 16.56 | 21.10 / 28.41 |
+| 4.81 Wash 7151 / 8211 | 1.28 / 1.33 | 25.26 / 37.40 | 39.46 / 50.41 |
+
+The targeted post-merge interval fell for Buildup, but input-to-swap rose. The rise
+is before the projection merge: input to dab request stays about 0.1ms and dab
+render job queue delay stays about 2ms, but a requested dab waits 21-35ms (was
+10-15ms) to be taken into a brush batch. Batch cadence (median 9-15ms gaps) and
+batch-ready to paint start (0.02ms) are unchanged. The strokes of this capture
+were much shorter and faster: 102-132ms at 860-1,566 dabs/s, versus 151-216ms at
+607-1,199 dabs/s. Batches took about 16-19 dabs, so the dab queue backlogs at these
+rates (`someDabsAreStillInQueue`). The input-to-swap difference is therefore
+confounded by hand-drawn stroke speed and is not attributed to the canvas change.
+Neither a speedup nor a regression of input-to-swap is established. A fair
+comparison needs strokes of similar length and speed. The brush batch dab limit
+under fast strokes is a separate candidate for investigation.
+
+### Byte-limited GPU brush batches continue at once (phase 4.82)
+
+2026-10-06, analysis of PID 43720/24148 measured strokes. Dabs finish rendering
+within about 0.6ms of their request (render job queue delay about 2ms in both
+captures), then wait 24-35ms in 4.81 versus 9-15ms in 4.80 to enter a brush batch.
+In 4.81 most batches stopped with the next dab already rendered (5 of 7, 5 of 7,
+7 of 9, 9 of 10 batches), with 14-58 rendered dabs left behind. In 4.80, batches
+more often stopped at an unrendered dab. The time-based `dabsLimit` cannot be
+the cap: with 32 worker threads (`idealNumRects`) it would need about 200ms per dab.
+The cap is the 32 MiB GPU source byte budget of `KisBrushOp::doAsynchronousUpdate`.
+The measured preset (`b)_Basic-4_Flow_Opacity.0011.kpp`, MD5 22a33a4c...) rotates
+dabs by drawing angle (`RotationSensor` `drawingangle`). A rotated 256px dab's
+bounds reach about 362px, about 2.1 MB in RGBA F32, so about 15-16 dabs fit,
+matching the observed 16-dab caps. Near-axis strokes fit about 30 (4.80 maxima
+29-30). Drawing direction and speed both differ between the captures (inference
+from sizes; dab bytes are not traced).
+
+After a batch that left rendered dabs, upstream sets the update period to
+`m_minUpdatePeriod` (10ms). One batch is in flight at a time, so 16 dabs per
+10-15ms cannot keep up with 1,000-1,500 dabs/s.
+
+Change (plugin only):
+
+- `KisDabRenderingQueue::takeReadyDabs()` / `KisDabRenderingExecutor::takeReadyDabs()`
+  take an optional `stoppedByByteLimit` out parameter, true only when a
+  rendered dab was left because of `maxDabBytes`. Existing callers are unchanged.
+- `KisBrushOp::doAsynchronousUpdate()`: when the GPU batch was cut by the byte
+  budget and rendered dabs remain, its final job sets the update period to 0,
+  so the next `FreehandStrokeStrategy::tryDoUpdate()` (next input job, at least
+  1ms later) starts the following batch as soon as the current one finished.
+  The first follow-up after a non-limited batch still waits the period returned
+  then. The CPU path has no byte budget and is unchanged; other caps keep the
+  upstream periods. New trace link `batch.byte_limited` (batch id).
+
+Effects to expect: more, full GPU batches during fast large strokes, thus more
+dirty dispatches, projection walkers and canvas updates (the latter are batched
+since 4.81). One batch in flight and the byte budget are unchanged.
+
+Tests: `KisDabRenderingQueueTest` 12/12 + 1 trace-only skip, 13/13 with
+`KRITA_PAINT_TRACE` (byte-budget rows assert the flag equals "dabs left" and
+is never set without a budget). `KisGpuStrokeTest testStroke` 16/16 rows
+(64/256 Buildup/Wash, mirror, selection, distant, alpha lock) with validation.
+`kritadefaultpaintops.dll` installed; build/install SHA256 match. Not measured
+in the app yet. Manual check: fast diagonal and horizontal 256px strokes,
+mirror, Undo/Redo; then one focused six-stroke capture and compare dab
+request -> batch ready, batch count and `batch.byte_limited` count.
+
+Real-app follow-up (2026-10-06): the user ran a separate manual-check process
+(PID 42316, archived in `%TEMP%/solstice-stage-482-manual-42316/`; not used for
+performance), then a focused capture PID 45728: six 256px strokes, zero dropped
+events, 490 uploads covered to swapped commands. Buildup warm-up 3274, measured
+4029/5121; Wash warm-up 6386, measured 7228/8144. Archive
+`%TEMP%/solstice-stage-482-real-45728/`. Canvas: 506 updates, 193 canvas submissions.
+
+| Stroke | Duration ms | Dabs/s | Dab request -> batch ready median ms | Byte-limited / batches | Input -> swap median ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 4.80 Buildup 5252 / 6402 | 181 / 151 | 756 / 1,020 | 9.86 / 13.91 | - | 22.94 / 24.10 |
+| 4.81 Buildup 3827 / 4613 | 114 / 105 | 860 / 982 | 25.03 / 24.93 | (not traced) | 38.50 / 32.62 |
+| 4.82 Buildup 4029 / 5121 | 151 / 106 | 834 / 944 | 10.15 / 10.33 | 0/8, 1/5 | 18.94 / 22.08 |
+| 4.80 Wash 9250 / 10529 | 187 / 161 | 1,086 / 1,199 | 10.24 / 15.12 | - | 21.10 / 28.41 |
+| 4.81 Wash 7151 / 8211 | 132 / 118 | 1,270 / 1,566 | 24.89 / 36.78 | (not traced) | 39.46 / 50.41 |
+| 4.82 Wash 7228 / 8144 | 157 / 105 | 829 / 1,230 | 11.14 / 11.03 | 2/9, 4/8 | 29.14 / 28.26 |
+
+Over the whole capture, the next batch after a capped batch became ready a median
+4.79ms after the capped batch finished (P95 17.52, n=12 byte-limited batches),
+versus 8.74ms (P95 22.46, n=39) for 4.81 batches whose next dab was already
+rendered. The change works as designed. However, only 7 of 30 measured-stroke batches
+were byte-limited in 4.82 (maximum batch sizes 24-28, i.e. smaller dab bounds
+than the 4.81 strokes), so stroke direction and speed still differ. The dab
+wait is back to the 4.80 level and input-to-swap is in the 4.80 range. This is
+consistent with removing the 4.81 backlog, not proof of a speedup over 4.80. The
+canvas batching reductions of 4.81 remain (193 canvas submissions for 506 updates).
+The user reported the 4.82 manual checks (fast diagonal/horizontal strokes,
+mirror, Undo/Redo) without problems and chose to proceed to priority 3
+(GPU dab generation) on 2026-10-06.
+
+### GPU-evaluated circle dabs (phase 4.83, priority 3 step 1)
+
+2026-10-06. First step of `gpu-work-priorities.md` priority 3: RGBA32F dabs of
+the default circle auto brush are evaluated on the GPU instead of uploading
+their pixels. The CPU still generates every dab, so every existing CPU path
+(fallback blit, CPU mirroring, refusal) keeps its pixels unchanged. A later
+step can skip CPU generation for described dabs.
+
+Data flow:
+
+- `libs/image/KisProceduralCircleDab.h` (new): `centerX/Y, cosa, sina, xcoef,
+  ycoef, fadeX, fadeY, color[4], antialias`, plus a CPU reference `fadeAt()` /
+  `alphaAt()` that repeats `FastRowProcessor<KisCircleMaskGenerator>` (float,
+  same operation order). Dab alpha is `1.0f * (1 - fade)` and RGB is the paint
+  color, as `fillInverseAlphaNormedFloatMaskWithColor` writes RGBA F32.
+- `KisCircleMaskGenerator::vectorCoefficients()` exposes the vector-path
+  coefficients. `KisAutoBrush::proceduralCircleDab()` repeats the state set-up
+  of `generateMaskAndApplyMaskOrCreateDab()` (softness, then scale, center
+  `hotSpot - 0.5 + subPixel`, angle `shape.rotation + brush angle`, cos/sin
+  in double then float). It refuses non-circle generators, randomness or
+  density, and the non-vectorized path (supersampling).
+- `KisDabRenderingJob` gains `procedural` / `proceduralFlips`.
+  `executeOneJob()` describes fresh `Dab` jobs only when the GPU brush is enabled
+  (`KRITA_GPU_BRUSH`), the fill is solid, no postprocessing (texture, sharpness)
+  is needed, the brush is not an image stamp, and the dab and paint color are
+  RGBA F32. The description is accepted only if it reproduces the generated
+  pixels on the middle row and column within 1e-6 (RGB exact), so a scalar
+  applicator or other path is never described. The `KisMirrorOption` pixel
+  flip is recorded in `proceduralFlips`. `Copy` jobs share the source job's
+  description. `Postprocess` jobs have none.
+- `KisRenderedDab` carries `procedural` and `proceduralFlips`.
+  `takeReadyDabs()` copies them. Described dabs count one byte per pixel against
+  the brush batch budget (instead of 16) to keep a bound on the batch area.
+- `KisBrushOp::addMirroringJobs()`: after CPU pixel mirroring, toggles
+  `proceduralFlips` for each dab, including dabs that share an already
+  mirrored device.
+- `KisGpuBrushPainter::paintImpl()` sends described dabs on RGBA32F devices as
+  `KisGpuDabCompositor::Dab::generated` with a `Circle` block. The record
+  mirror flags are the pass flips XOR `proceduralFlips`. Axis flips commute,
+  so this equals reading the reflected pixels. RGBA16F keeps the pixel upload.
+  `generatedDabCount()` counts them, and the trace link
+  `path.brush.generated_dabs` marks submissions with generated dabs.
+- `KisGpuDabCompositor`: a generated record uploads a 64-byte `Circle` block
+  instead of pixels (`DabRecord` stays 64 bytes; `mirrorFlags` bit 4 marks it).
+  This is RGBA32F only; the planner refuses it for RGBA16F.
+  `paint_dabs.comp::generatedCircle()` evaluates it with `precise` operations
+  in the CPU order at the integer dab pixel after the existing reflection.
+  Every blend mode, selection, channel flag, opacity, flow and average opacity
+  path is unchanged.
+
+Tests (Vulkan validation, zero validation errors):
+
+- `KisGpuBrushTest` 4394/4394, with new tests:
+  - `testGeneratedCircleDabs` (normal, Alpha Darken, Erase, Multiply,
+    pixel-mirrored passes, combined mirrors). Dabs come from the real
+    `KisCircleMaskGenerator` vector applicator, with sizes 12-150 px, ratio,
+    angle, fades, softness, scale, subpixel and antialias on/off. The test
+    checks the CPU reference against every generated pixel within 1e-6. The GPU
+    receives the same dabs with **zeroed pixels** plus descriptions and must
+    match the CPU blit within 2e-5. It also checks the generated-dab count,
+    Undo/Redo.
+  - `testGeneratedCircleDabsUseCpuPixelsForHalf` (RGBA16F ignores
+    descriptions).
+- `KisGpuStrokeTest` 306/306 (all suites). Every RGBA32F untextured GPU-brush
+  stroke (Buildup, Wash, mirror, selection, alpha lock, erase, blend modes,
+  masking brush) now asserts generated dabs > 0 with unchanged 2e-5
+  layer/projection parity. CPU, projection-only, textured and RGBA16F paths
+  assert none.
+- `KisDabRenderingQueueTest` 12/12 (+1 trace-only skip), `KisGpuEngineTest`
+  10/10, `KisGpuPaintDeviceTest` 151/151, `KisGpuCanvasUploadTest` 38/38.
+
+Installed `libkritagpu`, `libkritaimage`, `libkritalibbrush`, `libkritaui` and
+`kritadefaultpaintops`; build/install SHA256 match. Not yet measured in the
+app. Expected effect: no dab pixel upload for these strokes, so the 32 MiB
+source budget is no longer what caps batch size for them. Manual checks:
+256px Buildup/Wash with
+the measured preset (rotation by drawing angle), mirror, Undo/Redo, and a
+textured preset (pixel path). Then one focused six-stroke capture comparing
+`path.brush.generated_dabs`, batch sizes, dab wait and input-to-swap.
+
+Real-app follow-up (2026-10-06): focused capture PID 38504 (six 256px strokes,
+zero dropped events, archive `%TEMP%/solstice-stage-483-real-38504/`; manual
+process 26612 overflowed and is archived separately) recorded **zero**
+`path.brush.generated_dabs`. The measured preset
+`b)_Basic-4_Flow_Opacity.0011.kpp` uses `MaskGenerator id="gauss"`, so 4.83
+correctly left it on the pixel path. 4.83 therefore had no effect on that
+preset; phase 4.84 adds the Gaussian circle.
+
+### Exact Gaussian and fused default circle dabs (phase 4.84)
+
+2026-10-06. Making the Gaussian fade match exactly showed that the CPU vector
+kernels of this build are not the source-order float math. The AVX2+FMA variant
+of `kis_brush_mask_processor_factories` is compiled with `-ffp-contract=fast`,
+and its disassembly (llvm-objdump of the `_AVX2+FMA.cpp.obj`) fuses these
+operations:
+
+- Both circles: `xr = fma(x_, cosa, -sinay_)` and `yr = fma(x_, sina, cosay_)`.
+- Default circle: `n = fma(a, a, b*b)` and `normFade = fma(fb, fb, fa*fa)`.
+- Gaussian: `dist = sqrt(fma(xr, xr, b*b))` and the anti-aliasing ramp
+  `fma(dist - start, coeff, startValue) / 255`.
+- Gaussian erf (VcExtraMath): the denominator `fma(xa, p, 1)`, the polynomial
+  as an fma chain, and `fma(-(poly*t), exp, 1)`.
+- xsimd exp: the Cephes reduction and polynomial (always fused on this arch).
+- Gaussian result: `fullFade = (erfA - erfB) * alphafactor`, clamped at 0, and 0
+  when above 254.974.
+
+`KisProceduralCircleDab` (now with `kind`: default/Gauss and the Gaussian
+constants) repeats this sequence with `std::fma`. `paint_dabs.comp` repeats it
+with GLSL `fma()` and `precise`. Vulkan guarantees correctly rounded add, subtract
+and multiply but not division or sqrt, so the shader's `exactDivide()` and
+`exactSqrt()` pick the neighbor with the smallest exact fma residual. That gives
+the SSE/AVX correctly rounded results the thresholds need. The GPU parameter
+block grew to 96 bytes.
+`KisGaussCircleMaskGenerator::vectorCoefficients()` and fade-maker getters
+expose the constants. `KisAutoBrush::proceduralCircleDab()` accepts both
+generators.
+
+The dab-job self-check now requires **exact** equality for both kinds. A CPU
+using another kernel (without FMA, or scalar) is rejected and keeps the pixel
+upload. A non-FMA variant could be added later if such CPUs matter.
+
+Tests (Vulkan validation, zero validation errors):
+
+- `KisGpuBrushTest` 4395/4395.
+  - `testGeneratedCircleDabs` now has 9 shapes. Four are Gaussian: the preset's
+    hard 256px edge, soft, asymmetric without AA, and scaled. The CPU reference
+    equals every SIMD-generated pixel exactly, and the GPU blends of zeroed-pixel
+    dabs stay within 2e-5.
+  - New `testGeneratedCircleDabsExact` paints each of 7 shapes alone at full
+    opacity on a transparent device. Every GPU alpha equals the CPU alpha bit
+    for bit, including the Gaussian thresholds.
+- `KisGpuStrokeTest` 322/322, including the 16 new `testGaussStroke` rows
+  (`id="gauss"` brush through every `testStroke` variant). They assert
+  generated dabs > 0 and 2e-5 layer/projection parity.
+- `KisDabRenderingQueueTest`, `KisGpuEngineTest`, `KisGpuPaintDeviceTest` and
+  `KisGpuCanvasUploadTest` all pass.
+
+Installed gpu/image/brush/ui/defaultpaintops; hashes match. Not yet measured in
+the app.
+
+Real-app follow-up (2026-10-06): focused capture PID 14156, six 256px Basic-4
+strokes, zero dropped events, 526 uploads covered to swapped commands; archive
+`%TEMP%/solstice-stage-484-real-14156/`. All 40 GPU brush submissions carried
+generated dabs (`path.brush.generated_dabs` 40, CPU fallback 0, byte-limited
+batches 0). No separate manual-check trace was recorded in this round.
+
+| Capture (same preset) | GPU brush submission CPU median / P95 ms | Byte-limited batches |
+| --- | ---: | ---: |
+| 4.82 PID 45728 (pixels) | 1.726 / 3.962 | 7 |
+| 4.83 PID 38504 (pixels, Gauss not yet covered) | 1.825 / 7.067 | 6 |
+| 4.84 PID 14156 (generated) | 0.429 / 1.185 | 0 |
+
+Measured strokes, medians in ms (hand-drawn; speeds 695-998 dabs/s versus
+829-1,230 in 4.82):
+
+| Stroke | Dab request -> batch ready | Input -> swap |
+| --- | ---: | ---: |
+| 4.80 Buildup 5252 / 6402 | 9.86 / 13.91 | 22.94 / 24.10 |
+| 4.83 Buildup 4374 / 5387 | 9.97 / 14.06 | 18.96 / 28.77 |
+| 4.84 Buildup 3877 / 4835 | 10.01 / 10.03 | 16.91 / 17.79 |
+| 4.80 Wash 9250 / 10529 | 10.24 / 15.12 | 21.10 / 28.41 |
+| 4.83 Wash 7777 / 8886 | 14.96 / 9.33 | 25.60 / 23.53 |
+| 4.84 Wash 7249 / 8337 | 10.08 / 10.12 | 21.51 / 25.18 |
+
+The submission cost drop is a direct effect: no dab pixel copy into the
+staging buffer and no 2 MB-per-dab source reads. Buildup input-to-swap is the
+lowest of these captures. Wash is in the earlier range. With one process per
+version and different stroke speeds, this is not a proven end-to-end speedup.
+The remaining dab wait (about 10ms) matches the brush minimum update period, not
+the GPU path. Batch sizes are no longer byte-capped. The user reported the 4.84
+manual checks (Basic-4 256px Buildup/Wash, mirror, Undo/Redo) as OK.
+
+### Skipped CPU generation of described dabs (phase 4.85)
+
+2026-10-06, priority 3 step 2 (user's choice). Described dabs no longer need
+their CPU pixels, so their CPU generation is skipped. Pixels are produced only
+when a CPU path needs them.
+
+- **Skipping.** `KisDabRenderingJobRunner::executeOneJob()` first builds the
+  description of a `Dab` job (`buildCircleDab()`). If its mask kind is verified,
+  `describeWithoutPixels()` gives the device the generator's bounds
+  (`maskWidth/maskHeight`, origin 0) and keeps an allocated, unwritten buffer,
+  so CPU reflections stay memory-safe. It marks the job `pixelsPending` and does
+  not call `generateDab()`. Trace link `dab.generation_skipped`; counter
+  `KisDabRenderingJobRunner::skippedGenerationCount()`.
+- **Verification gate.** Each kind (default, Gauss) needs 16 dabs fully
+  generated and exactly matching their description in the process
+  (`describeCircleDab()`). Any mismatch disables skipping for that kind for the
+  process. A CPU without the AVX2+FMA kernel therefore never skips.
+- **Propagation.** `pixelsPending` travels with Copy and Postprocess jobs and
+  `KisRenderedDab`. A Postprocess job renders the description into its own
+  postprocessed device and never writes the shared original. Its result is not
+  described.
+- **Materialization.** `KisRenderedDab::materialize()` uses
+  `KisProceduralCircleDab::render()`, the bit-exact CPU reference, including
+  `proceduralFlips` (the mirror option and CPU mirror jobs). `KisBrushOp`
+  materializes before every CPU use: the refused GPU batch fallback
+  (`bltFixed`), and a sequential job before CPU rectangle jobs when the GPU path
+  is unsupported for the painter (e.g. LOD).
+  `KisBrushOp::materializedDabCount()` counts it. CPU mirror jobs reflect the
+  (unwritten) buffer and toggle `proceduralFlips`; materialization later
+  overwrites the whole buffer in that orientation.
+- **Test hook.** `KisGpuBrushPainter::refusePendingBatchesForTesting(count)`
+  refuses batches that contain pending dabs, as a GPU failure would.
+
+The rendering reference uses `std::fma` (a library call in this baseline-x86
+build), so materialization is slower than the SIMD generator. It runs only on
+fallbacks.
+
+Tests (Vulkan validation, zero validation errors):
+
+- `KisGpuBrushTest` 4396/4396. `testGeneratedCircleDabsExact` checks
+  `materialize()` against the CPU generator plus `KisFixedPaintDevice::mirror()`
+  byte for byte, for all four flip combinations.
+  `testPendingDabsFallBackToMaterializedPixels` paints pending dabs after an
+  injected submit failure and matches the CPU blit (transparent RGB excepted).
+- `KisGpuStrokeTest` 338/338.
+  - Every RGBA32F untextured GPU-brush stroke asserts skipped generations
+    (23,712 in the suite).
+  - New `testRefusedPendingBatches` (all `testStroke` rows) refuses two batches
+    that contain pending dabs. It asserts materialization (1,776 dabs in total)
+    and unchanged 2e-5 layer/projection parity and Undo/Redo.
+- `KisDabRenderingQueueTest`, `KisGpuEngineTest`, `KisGpuPaintDeviceTest` and
+  `KisGpuCanvasUploadTest` all pass.
+
+Installed gpu/image/brush/ui/defaultpaintops; hashes match. Not yet measured in
+the app. Expected effect: less worker-thread CPU per dab (no mask generation and
+no 2 MB fill per 256px dab). The GPU-side cost is unchanged.
+
+Real-app follow-up (2026-10-06): the user reported the manual checks OK
+(including the materialization paths they could reach). Focused capture PID
+39228: six 256px Basic-4 strokes, zero dropped events, 516 uploads covered to
+swapped commands; archive `%TEMP%/solstice-stage-485-real-39228/`. The manual
+process 45248 overflowed and is not analyzed.
+
+- **Dabs.** 607 of the 2,103 `dab.request` events skipped CPU generation. Every
+  stroke dab after the first 13 verification dabs was skipped. The other
+  1,496 are bursts of 142-551 dabs outside the stroke inputs (around 2-4s, 9.5s
+  and 15s), which look like a separate preview renderer on an ineligible device.
+  All 34 GPU brush submissions used generated dabs, with no CPU fallback and no
+  byte-limited batch.
+- **Dab job cost.** Dab jobs within the stroke window (which includes those
+  bursts) took median 18.9 us (P95 127.6), 29.0 ms in total. In 4.84 they took
+  248.1 us (P95 585.4), 220.6 ms in total. GPU brush submission is unchanged
+  (median 0.39 ms).
+- **Latency.** Measured strokes (Buildup 4347/5247, Wash 7664/8442) had dab
+  wait medians of about 10.0-10.6 ms. Input-to-swap medians were Buildup
+  20.23/18.07 ms and Wash 22.59/23.69 ms, within the range of 4.84 (16.9/17.8,
+  21.5/25.2). This is a worker-CPU reduction, not a demonstrated latency change.
+  The dominant remaining dab wait is the brush update period (10 ms minimum).
+
+### RGBA16F generated dabs (phase 4.86)
+
+2026-10-06, user's choice ("Soft circle and 16-bit float").
+
+- **CPU side.** The F16 CPU dab is the same vector fade written by
+  `fillInverseAlphaNormedFloatMaskWithColor` as `half(1.0f * (1 - fade))`.
+  Imath/OpenEXR 2 `half(float)` rounds to nearest even, including the
+  denormal `convert()` path. The F16 paint color is used as stored.
+- **Descriptor.** `KisProceduralCircleDab::halfPixels` holds the half color as
+  exact floats. `render()` writes halves, and the new `matchesPixel()` compares
+  half bits exactly, as the dab-job self-check does.
+- **Brush and painter.** `KisAutoBrush::proceduralCircleDab(..., halfColor)`
+  and `buildCircleDab()` accept RGBA F16 dabs. `KisGpuBrushPainter` uses the
+  description when the device pixel size matches (16 for F32, 8 for F16).
+- **Shader.** The compositor accepts generated records for pixelSize 8 when
+  `Circle::halfPixels` matches. `paint_dabs.comp::roundToHalf()` repeats the
+  Imath rounding with integer operations. The TILE_F16 variants then blend the
+  value as an uploaded half dab.
+
+### Soft (curve) circle generated dabs (phase 4.87)
+
+- **CPU kernel.** The AVX2+FMA disassembly of
+  `FastRowProcessor<KisCurveCircleMaskGenerator>` shows this sequence:
+  - `xr` and `yr` are fused (as in the other kernels), then
+    `dist = fma(a, a, b*b)`.
+  - The fade maker uses the square-norm coefficients (radius 1); its ramp is
+    `fma(dist - start, coeff, startValue) / 255`.
+  - `index = cvttps2dq(dist * resolution)`, with the fraction taken from the
+    unclamped index and negative indices clamped to 0.
+  - Two table gathers of the double curve table, converted to float.
+  - `full = fma(c0, 1 - f, c1*f)`, then `max(0, full)`; the fade is
+    `1 - full`, or 0 when `full >= 1`.
+- **Accessors.** `KisCurveCircleMaskGenerator::vectorCoefficients()` and
+  `curveTable()` expose this state.
+- **Descriptor.** `KisProceduralCircleDab::SoftCircle` with `curveResolution`
+  and a shared float `curveTable`. `KisAutoBrush::Private` caches the float table
+  while the generator's (implicitly shared) table is unchanged, so a stroke's
+  dabs share one table.
+- **GPU.** `KisGpuDabCompositor::Circle` is now 112 bytes, with
+  `curveTable` (device address) and `curveResolution`. `Dab::curveTable/Size`
+  are uploaded once per distinct pointer in each batch, and every record keeps
+  that address. A first version removed the table from the offset map after
+  copying, which gave later mirrored records address 0. The combined-mirror
+  test caught this, and it is fixed with a separate copied set.
+  `paint_dabs.comp::softFade()` reads the table through a buffer reference. The
+  verification gate now tracks three kinds.
+
+Tests (Vulkan validation, zero validation errors):
+
+- `KisGpuBrushTest` 4402/4402.
+  - The generated-dab parity has 11 shapes, including the Soft default curve and
+    a custom curve with softness. It runs on RGBA32F and five new RGBA16F rows
+    (normal, Alpha Darken, Erase, pixel-mirrored and combined mirrors; F16
+    tolerance 1/1024 as for uploaded half dabs).
+  - `testGeneratedCircleDabsExact` runs for RGBA32F and RGBA16F with 10 shapes,
+    including three Soft ones. GPU alpha equals CPU alpha bit for bit, and
+    `materialize()` equals the CPU pixels in every reflection.
+- `KisGpuStrokeTest` 354/354.
+  - New `testSoftStroke` (16 rows, the test brush with `id="soft"` and a custom
+    curve). The F16 strokes (`testHalfStroke`, `testHalfBlendModes`) now assert
+    generated and skipped dabs.
+  - 41,817 skipped CPU generations in the suite; 1,776 materialized in the
+    refused-batch rows.
+- `KisDabRenderingQueueTest`, `KisGpuEngineTest`, `KisGpuPaintDeviceTest` and
+  `KisGpuCanvasUploadTest` all pass.
+
+Installed gpu/image/brush/ui/defaultpaintops; hashes match. Note: the stroke test
+loads the installed plugins, so install before running it after an API change.
+Not yet measured in the app. Manual checks: Soft brushes (default and edited
+curves, softness by pressure), RGBA 16-bit float documents with the Basic-4 and
+Soft brushes, mirror, Undo/Redo. The user reported them OK on 2026-10-06.
 
 ## Risks and open questions
 
