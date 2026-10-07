@@ -3,8 +3,13 @@
 作成日: 2026年10月5日
 
 状態: フェーズ1(基盤とDeformの試験移行)を実装済み。自動テストはLinuxの
-部分ビルドで実施し、Windows(Qt 6)でのビルド・インストールと実アプリでの
-手動確認は未実施。フェーズ0の調査結果は
+部分ビルドに加え、2026年10月8日にWindows(Qt 6.8)でも実施した
+(`KisPaintOpOptionsModelTest` 32件、`KisCurveOptionDataTest` 5件、
+`kis_paintop_test` 3件、`KisPaintOpPresetTest` 6件、すべて通過。インストール済み
+のバイナリと一致)。実アプリでの手動確認は2026年10月8日にユーザー報告で問題なし
+(下記の6項目)。その際の指摘で、Deformの「Brush size」ページの項目が上詰めに
+なっていなかった(上流から引き継いだ `wdgBrushSizeOptions.ui` に縦の伸縮余白が
+なかった)ため、下端に余白を追加した。フェーズ0の調査結果は
 `docs/agent/brush-option-shared-model-phase0.md`。
 
 ブラシエディタ(F5)が持つオプションの状態を画面から切り離し、プリセットごとの
@@ -271,7 +276,7 @@
   ブラシ先端のデータがないため失敗し、`kis_properties_configuration_test` の
   `testGetColor` も失敗した。いずれも変更箇所とは無関係な環境要因と判断した。
   `KisCurveOptionDataTest` と `kis_paintop_test` は通過した。
-- 実アプリでの手動確認(下記)が残っている。
+- 実アプリでの手動確認(下記)は2026年10月8日に完了した(問題なし)。
 
 **Windowsでの確認手順**
 
