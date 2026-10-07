@@ -133,6 +133,24 @@ stored mesh keeps preview, overlay, final rendering and bounds identical.
   the pin rotation. The radius scales with the mesh, so the reduced-detail
   preview and the full-resolution result agree; the legacy 8-64 px clamp did
   not scale.
+- **Hinge rule** (user report 2026-10-07: rotating a joint pin twisted the
+  neighbour's side and left a gap):
+  - Neighbouring pins are pins whose owned parts share a solid triangle.
+  - For a rotated pin, the four rigid points that point toward a neighbour
+    (cosine > 0.5) are left unconstrained, and initial-guess offsets in that
+    cone are translated, not rotated.
+  - The pin's rotation therefore turns only the side beyond it. In the unit
+    test, a 90-degree elbow rotation now gives a 4.5 px forearm deviation
+    (7.2 px before) and turns the forearm 90.6 degrees.
+  - Constraining those points unrotated instead tore the joint (worse).
+- **Soft joints were tried and dropped.** Lower stiffness within 1.5-3 cells of
+  a pin left the fold gap at 430-1166 px.
+- **Remaining limitation:** folding a joint far (137 degrees in
+  `testFoldedElbowGap`) still leaves a gap of 558 px in the upper arm. The
+  turned part shares the joint vertices with its neighbour, so the connected
+  mesh drags the neighbour's edge instead of overlapping it. Overlap needs a
+  hinge: a mesh cut at the joint with duplicated vertices, the parts rendered
+  separately, and a joint disc covering the outer side.
 - **Initial guess:** every vertex starts with the rigid motion of the pin
   nearest to it along the mesh. That is a multi-source Dijkstra over triangle
   edges, with empty edges costing 50x. A rotated pin therefore already turns
@@ -153,16 +171,25 @@ stored mesh keeps preview, overlay, final rendering and bounds identical.
 - `KisTransformUtils::needRect()` returns the source bounds; `changeRect()`
   returns the mapped rect united with the source rect.
 
-**Pin order.** Each part of the artwork belongs to the pin nearest to it
-along the artwork (the Dijkstra owner kept as `m_owner`); `orderAt()` uses the
-mesh vertex with the largest barycentric weight.
-- With a single order level, rendering is one pass, unchanged.
-- With several levels, `run()` and `runOnQImage()` render each level's grid
-  cells (`OrderFilterOp`) into a temporary device or image. The levels are
-  then composited bottom to top with `COMPOSITE_OVER` (QPainter source-over
+**Rendering groups and pin order.**
+- Each part of the artwork belongs to the pin nearest to it along the artwork
+  (the Dijkstra owner kept as `m_owner`). `ownerAt()` and `orderAt()` use the
+  mesh vertex with the largest barycentric weight.
+- **Only cells that touch artwork are rendered** (`touchesArtwork()`: a corner
+  or the center lies in a solid triangle). Empty space squeezed by a bend
+  rendered transparent cells over folded artwork, because the grid polygon ops
+  overwrite pixels. In the reported case (a forearm bent onto the hip), these
+  cells cut jagged white holes.
+- **Each owning pin renders into its own layer** (`stackingGroups()`). The
+  layers composite bottom to top with `COMPOSITE_OVER` (QPainter source-over
   for the preview).
-- This is needed because the grid polygon ops overwrite pixels: a
-  higher-order part's transparent pixels would otherwise erase a lower one.
+  - Group order: unowned parts, then by order, then by pin index; with equal
+    orders, later pins are on top.
+  - The first fix rendered per order level, but parts of different pins in
+    one level still erased each other with transparent edge pixels: 410
+    transparent pixels inside the torso in the test, 583 without the
+    artwork-cell filter. Per-pin groups give 0.
+- With a single group, rendering is one pass.
 - Orders do not affect the solve.
 
 Timing: a 17x14 grid solves in about 1 ms, the largest 64x64 grid in about
@@ -291,7 +318,8 @@ cmd.exe /d /s /c "call <krita-dev-root>\env.bat && <krita-dev-root>\_build\bin\t
 `KisPuppetTransformWorkerTest` (`libs/image/tests`):
 - mesh marking and serialization;
 - identity;
-- pin order stacking of an overlapping forearm (front, back, equal);
+- pin order stacking of an overlapping forearm (front, back, equal), with no
+  transparent pixels left inside the torso;
 - a rotated elbow turning a free forearm rigidly;
 - a moved pin carrying the free end;
 - scale consistency for the level-of-detail preview;

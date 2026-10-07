@@ -143,11 +143,21 @@ template<class Op>
 struct OrderFilterOp {
     Op &op;
     const KisPuppetTransformWorker &worker;
-    int order;
+    int order; ///< the owning pin of this group (stackingGroups())
+    bool filterOrder; ///< false: one pass with every group
+    std::function<QPointF(const QPointF &)> toImage; ///< empty: already image coordinates
     void operator()(const QPolygonF &srcPolygon, const QPolygonF &dstPolygon)
     {
-        if (worker.orderAt(srcPolygon.boundingRect().center()) == order)
-            op(srcPolygon, dstPolygon);
+        QPolygonF cell = srcPolygon;
+        if (toImage) {
+            for (QPointF &point : cell)
+                point = toImage(point);
+        }
+        if (!worker.touchesArtwork(cell))
+            return;
+        if (filterOrder && worker.ownerAt(cell.boundingRect().center()) != order)
+            return;
+        op(srcPolygon, dstPolygon);
     }
 };
 } // namespace
@@ -309,6 +319,7 @@ KisPuppetTransformWorker::KisPuppetTransformWorker(const Mesh &mesh,
     : m_mesh(mesh)
     , m_orders(pinOrders)
 {
+    m_hasSolid = m_mesh.isValid() && m_mesh.solid.count(true) > 0;
     if (!m_mesh.isValid())
         return;
     m_deformed.resize((m_mesh.columns + 1) * (m_mesh.rows + 1));
@@ -355,6 +366,101 @@ void KisPuppetTransformWorker::solve(const QVector<QPointF> &originalPins,
     const int n = m_deformed.size();
     const QVector<QPointF> rest = m_deformed;
 
+    // Ownership: every vertex belongs to the pin nearest to it along the
+    // artwork (geodesic over the mesh; empty space is expensive).
+    std::vector<std::vector<std::pair<int, double>>> neighbours(n);
+    for (int row = 0; row < m_mesh.rows; ++row) {
+        for (int column = 0; column < m_mesh.columns; ++column) {
+            for (int half = 0; half < 2; ++half) {
+                const std::array<int, 3> v = triangleVertices(m_mesh, column, row, half);
+                const double factor = m_mesh.triangleSolid(column, row, half) ? 1.0 : EmptyPathCost;
+                for (int k = 0; k < 3; ++k) {
+                    const int a = v[k];
+                    const int b = v[(k + 1) % 3];
+                    const double cost = factor * KisAlgebra2D::norm(rest[a] - rest[b]);
+                    neighbours[a].push_back({b, cost});
+                    neighbours[b].push_back({a, cost});
+                }
+            }
+        }
+    }
+    std::vector<double> distance(n, std::numeric_limits<double>::infinity());
+    std::vector<int> owner(n, -1);
+    using Item = std::pair<double, int>;
+    std::priority_queue<Item, std::vector<Item>, std::greater<Item>> queue;
+    for (int i = 0; i < pinCount; ++i) {
+        const Triangle corners = locate(m_mesh, originalPins[i]);
+        for (const Corner &corner : corners) {
+            const double d = KisAlgebra2D::norm(rest[corner.index] - originalPins[i]);
+            if (d < distance[corner.index]) {
+                distance[corner.index] = d;
+                owner[corner.index] = i;
+                queue.push({d, corner.index});
+            }
+        }
+    }
+    while (!queue.empty()) {
+        const Item item = queue.top();
+        queue.pop();
+        if (item.first > distance[item.second])
+            continue;
+        for (const auto &edge : neighbours[item.second]) {
+            const double d = item.first + edge.second;
+            if (d < distance[edge.first]) {
+                distance[edge.first] = d;
+                owner[edge.first] = owner[item.second];
+                queue.push({d, edge.first});
+            }
+        }
+    }
+    m_owner = QVector<int>(owner.begin(), owner.end());
+
+    // Hinges: a pin's rotation turns only the side of the pin away from its
+    // neighbouring pins (pins whose parts border its part), like a joint
+    // turning the limb beyond it. Points toward a neighbour only follow the
+    // pin's position; rotating them too twisted the neighbour's side of the
+    // joint and pushed the artwork aside, leaving a gap.
+    QVector<QVector<QPointF>> neighbourDirections(pinCount);
+    for (int row = 0; row < m_mesh.rows; ++row) {
+        for (int column = 0; column < m_mesh.columns; ++column) {
+            for (int half = 0; half < 2; ++half) {
+                if (!m_mesh.triangleSolid(column, row, half))
+                    continue;
+                const std::array<int, 3> v = triangleVertices(m_mesh, column, row, half);
+                for (int k = 0; k < 3; ++k) {
+                    const int a = owner[v[k]];
+                    const int b = owner[v[(k + 1) % 3]];
+                    if (a < 0 || b < 0 || a == b)
+                        continue;
+                    const QPointF ab = originalPins[b] - originalPins[a];
+                    const qreal length = KisAlgebra2D::norm(ab);
+                    if (length <= 0)
+                        continue;
+                    if (!neighbourDirections[a].contains(ab / length))
+                        neighbourDirections[a] << ab / length;
+                    if (!neighbourDirections[b].contains(-ab / length))
+                        neighbourDirections[b] << -ab / length;
+                }
+            }
+        }
+    }
+    // Whether @p offset from a rotated pin points toward one of its neighbours.
+    auto towardNeighbour = [&](int pin, const QPointF &offset) {
+        const qreal rotation = pin < pinRotations.size() ? pinRotations[pin] : 0.0;
+        const qreal length = KisAlgebra2D::norm(offset);
+        if (qFuzzyIsNull(rotation) || length <= 0)
+            return false;
+        for (const QPointF &direction : neighbourDirections[pin]) {
+            if ((offset.x() * direction.x() + offset.y() * direction.y()) / length > 0.5)
+                return true;
+        }
+        return false;
+    };
+    auto pinOffset = [&](int pin, const QPointF &offset) {
+        const qreal rotation = pin < pinRotations.size() ? pinRotations[pin] : 0.0;
+        return towardNeighbour(pin, offset) ? offset : rotated(offset, rotation);
+    };
+
     // Pin constraints: center and four rigidly attached neighbours.
     const qreal radius = pinRadius(m_mesh);
     const QPointF offsets[] = {QPointF(),
@@ -367,10 +473,13 @@ void KisPuppetTransformWorker::solve(const QVector<QPointF> &originalPins,
     QVector<QPointF> controlOriginal;
     QVector<QPointF> controlTransformed;
     for (int i = 0; i < pinCount; ++i) {
-        const qreal rotation = i < pinRotations.size() ? pinRotations[i] : 0.0;
         for (const QPointF &offset : offsets) {
+            // The neighbour's side of a rotated joint stays unconstrained, so
+            // it can fold under the turned part instead of being dragged.
+            if (towardNeighbour(i, offset))
+                continue;
             const QPointF original = originalPins[i] + offset;
-            const QPointF target = transformedPins[i] + rotated(offset, rotation);
+            const QPointF target = transformedPins[i] + pinOffset(i, offset);
             constraintCorners << locate(m_mesh, original);
             constraintTargets << target;
             controlOriginal << original;
@@ -426,67 +535,18 @@ void KisPuppetTransformWorker::solve(const QVector<QPointF> &originalPins,
         return;
 
     // Start every vertex with the rigid motion of the pin nearest to it along
-    // the artwork (geodesic over the mesh; empty space is expensive), so a
-    // rotated pin already turns the free part beyond it and the iterations
-    // only relax the joints. Starting from a smooth field instead needs
-    // hundreds of iterations to carry a large rotation through a narrow joint.
+    // the artwork, with the same hinge rule as the constraints, so a rotated
+    // pin already turns the free part beyond it and the iterations only relax
+    // the joints. Starting from a smooth field instead needs hundreds of
+    // iterations to carry a large rotation through a narrow joint.
     QVector<QPointF> current(n);
-    {
-        std::vector<std::vector<std::pair<int, double>>> neighbours(n);
-        for (int row = 0; row < m_mesh.rows; ++row) {
-            for (int column = 0; column < m_mesh.columns; ++column) {
-                for (int half = 0; half < 2; ++half) {
-                    const std::array<int, 3> v = triangleVertices(m_mesh, column, row, half);
-                    const double factor = m_mesh.triangleSolid(column, row, half) ? 1.0 : EmptyPathCost;
-                    for (int k = 0; k < 3; ++k) {
-                        const int a = v[k];
-                        const int b = v[(k + 1) % 3];
-                        const double cost = factor * KisAlgebra2D::norm(rest[a] - rest[b]);
-                        neighbours[a].push_back({b, cost});
-                        neighbours[b].push_back({a, cost});
-                    }
-                }
-            }
+    for (int v = 0; v < n; ++v) {
+        const int pin = owner[v];
+        if (pin < 0) {
+            current[v] = rest[v];
+            continue;
         }
-        std::vector<double> distance(n, std::numeric_limits<double>::infinity());
-        std::vector<int> owner(n, -1);
-        using Item = std::pair<double, int>;
-        std::priority_queue<Item, std::vector<Item>, std::greater<Item>> queue;
-        for (int i = 0; i < pinCount; ++i) {
-            const Triangle corners = locate(m_mesh, originalPins[i]);
-            for (const Corner &corner : corners) {
-                const double d = KisAlgebra2D::norm(rest[corner.index] - originalPins[i]);
-                if (d < distance[corner.index]) {
-                    distance[corner.index] = d;
-                    owner[corner.index] = i;
-                    queue.push({d, corner.index});
-                }
-            }
-        }
-        while (!queue.empty()) {
-            const Item item = queue.top();
-            queue.pop();
-            if (item.first > distance[item.second])
-                continue;
-            for (const auto &edge : neighbours[item.second]) {
-                const double d = item.first + edge.second;
-                if (d < distance[edge.first]) {
-                    distance[edge.first] = d;
-                    owner[edge.first] = owner[item.second];
-                    queue.push({d, edge.first});
-                }
-            }
-        }
-        m_owner = QVector<int>(owner.begin(), owner.end());
-        for (int v = 0; v < n; ++v) {
-            const int pin = owner[v];
-            if (pin < 0) {
-                current[v] = rest[v];
-                continue;
-            }
-            const qreal rotation = pin < pinRotations.size() ? pinRotations[pin] : 0.0;
-            current[v] = transformedPins[pin] + rotated(rest[v] - originalPins[pin], rotation);
-        }
+        current[v] = transformedPins[pin] + pinOffset(pin, rest[v] - originalPins[pin]);
     }
 
     for (int iteration = 0; iteration < Iterations; ++iteration) {
@@ -528,34 +588,64 @@ void KisPuppetTransformWorker::solve(const QVector<QPointF> &originalPins,
     m_deformed = current;
 }
 
-int KisPuppetTransformWorker::orderAt(const QPointF &point) const
+int KisPuppetTransformWorker::ownerAt(const QPointF &point) const
 {
     if (m_owner.isEmpty())
-        return 0;
+        return -1;
     const Triangle corners = locate(m_mesh, point);
     const Corner *nearest = &corners[0];
     for (const Corner &corner : corners) {
         if (corner.weight > nearest->weight)
             nearest = &corner;
     }
-    const int pin = m_owner[nearest->index];
+    return m_owner[nearest->index];
+}
+
+int KisPuppetTransformWorker::orderAt(const QPointF &point) const
+{
+    const int pin = ownerAt(point);
     return pin >= 0 && pin < m_orders.size() ? m_orders[pin] : 0;
 }
 
-QVector<int> KisPuppetTransformWorker::orderLevels() const
+bool KisPuppetTransformWorker::touchesArtwork(const QPolygonF &cell) const
 {
-    QVector<int> levels;
-    if (!m_owner.isEmpty()) {
-        for (int pin : m_owner) {
-            const int order = pin >= 0 && pin < m_orders.size() ? m_orders[pin] : 0;
-            if (!levels.contains(order))
-                levels << order;
-        }
+    if (!m_hasSolid)
+        return true;
+    auto solidAt = [this](const QPointF &point) {
+        int column = 0;
+        int row = 0;
+        int half = 0;
+        (void)locate(m_mesh, point, &column, &row, &half);
+        return m_mesh.triangleSolid(column, row, half);
+    };
+    for (const QPointF &corner : cell) {
+        if (solidAt(corner))
+            return true;
     }
-    if (levels.isEmpty())
-        levels << 0;
-    std::sort(levels.begin(), levels.end());
-    return levels;
+    return solidAt(cell.boundingRect().center());
+}
+
+QVector<int> KisPuppetTransformWorker::stackingGroups() const
+{
+    QVector<int> groups;
+    for (int pin : m_owner) {
+        if (!groups.contains(pin))
+            groups << pin;
+    }
+    if (groups.size() <= 1)
+        return QVector<int>{groups.isEmpty() ? -1 : groups.first()};
+    auto order = [this](int pin) {
+        return pin >= 0 && pin < m_orders.size() ? m_orders[pin] : 0;
+    };
+    std::sort(groups.begin(), groups.end(), [&](int a, int b) {
+        // Unowned parts at the bottom, then by order, then by pin index.
+        if ((a < 0) != (b < 0))
+            return a < 0;
+        if (order(a) != order(b))
+            return order(a) < order(b);
+        return a < b;
+    });
+    return groups;
 }
 
 QPointF KisPuppetTransformWorker::map(const QPointF &point) const
@@ -583,23 +673,23 @@ void KisPuppetTransformWorker::run(KisPaintDeviceSP srcDevice, KisPaintDeviceSP 
     auto mapOp = [this](const QPointF &point) {
         return map(point);
     };
-    const QVector<int> levels = orderLevels();
+    const QVector<int> levels = stackingGroups();
     if (levels.size() == 1) {
         GridIterationTools::PaintDevicePolygonOp polygonOp(srcDevice, dstDevice);
         polygonOp.setCanMergeRects(false);
-        GridIterationTools::processGrid(polygonOp, mapOp, srcBounds, 8);
+        OrderFilterOp<GridIterationTools::PaintDevicePolygonOp> filterOp{polygonOp, *this, 0, false, {}};
+        GridIterationTools::processGrid(filterOp, mapOp, srcBounds, 8);
         polygonOp.finalize();
         return;
     }
-    // Pin orders: render each stacking level separately and composite them
-    // bottom to top, so a lower part shows through the transparent pixels of
-    // a higher one (the polygon op overwrites pixels).
+    // Render each pin's part separately and composite them bottom to top
+    // (stackingGroups()), so parts never erase each other.
     for (int level : levels) {
         KisPaintDeviceSP layer = new KisPaintDevice(dstDevice->colorSpace());
         layer->setDefaultBounds(dstDevice->defaultBounds());
         GridIterationTools::PaintDevicePolygonOp polygonOp(srcDevice, layer);
         polygonOp.setCanMergeRects(false);
-        OrderFilterOp<GridIterationTools::PaintDevicePolygonOp> filterOp{polygonOp, *this, level};
+        OrderFilterOp<GridIterationTools::PaintDevicePolygonOp> filterOp{polygonOp, *this, level, true, {}};
         GridIterationTools::processGrid(filterOp, mapOp, srcBounds, 8);
         polygonOp.finalize();
         const QRect rect = layer->extent();
@@ -641,33 +731,23 @@ QImage KisPuppetTransformWorker::runOnQImage(const QImage &srcImage,
     QImage dstImage(dstBounds.toAlignedRect().size(), srcImage.format());
     dstImage.fill(0);
 
-    const QVector<int> levels = orderLevels();
+    const QVector<int> levels = stackingGroups();
+    // The preview grid is in thumbnail space; cells are tested in image space.
     if (levels.size() == 1) {
         GridIterationTools::QImagePolygonOp polygonOp(srcImage, dstImage, srcImageOffset, *newOffset);
         polygonOp.setCanMergeRects(false);
-        GridIterationTools::processGrid(polygonOp, mapOp, srcBounds, 16);
+        OrderFilterOp<GridIterationTools::QImagePolygonOp> filterOp{polygonOp, *this, 0, false, thumbToImage};
+        GridIterationTools::processGrid(filterOp, mapOp, srcBounds, 16);
         polygonOp.finalize();
         return dstImage;
     }
-    // The preview grid is in thumbnail space; orders are looked up in image space.
-    struct ThumbOrderFilterOp {
-        GridIterationTools::QImagePolygonOp &op;
-        const KisPuppetTransformWorker &worker;
-        const std::function<QPointF(const QPointF &)> &thumbToImage;
-        int order;
-        void operator()(const QPolygonF &srcPolygon, const QPolygonF &dstPolygon)
-        {
-            if (worker.orderAt(thumbToImage(srcPolygon.boundingRect().center())) == order)
-                op(srcPolygon, dstPolygon);
-        }
-    };
     QPainter gc(&dstImage);
     for (int level : levels) {
         QImage layer(dstImage.size(), dstImage.format());
         layer.fill(0);
         GridIterationTools::QImagePolygonOp polygonOp(srcImage, layer, srcImageOffset, *newOffset);
         polygonOp.setCanMergeRects(false);
-        ThumbOrderFilterOp filterOp{polygonOp, *this, thumbToImage, level};
+        OrderFilterOp<GridIterationTools::QImagePolygonOp> filterOp{polygonOp, *this, level, true, thumbToImage};
         GridIterationTools::processGrid(filterOp, mapOp, srcBounds, 16);
         polygonOp.finalize();
         gc.drawImage(QPoint(), layer);

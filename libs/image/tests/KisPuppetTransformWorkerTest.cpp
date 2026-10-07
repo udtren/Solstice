@@ -7,6 +7,7 @@
 
 #include <QElapsedTimer>
 #include <QPainter>
+#include <QScopeGuard>
 
 #include <cmath>
 
@@ -229,7 +230,10 @@ private Q_SLOTS:
                                         {TorsoPin, ShoulderPin, ElbowPin},
                                         {0.0, 0.0, M_PI / 2},
                                         {0, 0, elbowOrder});
-        QCOMPARE(worker.orderLevels().size(), elbowOrder == 0 ? 1 : 2);
+        // Torso, shoulder and elbow parts render as separate groups; equal
+        // orders put the later pin (the elbow) on top.
+        QVERIFY(worker.stackingGroups().size() >= 2);
+        QCOMPARE(worker.stackingGroups().last() == 2, elbowOrder >= 0);
         KisPaintDeviceSP dst = new KisPaintDevice(cs);
         worker.run(src, dst);
         // A point of the swung forearm that lands on the torso.
@@ -241,6 +245,59 @@ private Q_SLOTS:
         const QColor actual = color.toQColor();
         if (elbowOrder != 0)
             QCOMPARE(actual.blue() > actual.red(), armOnTop);
+        // No holes: empty space swung along with the forearm must not erase
+        // the torso (the grid polygon op overwrites pixels).
+        int holes = 0;
+        for (int y = 60; y < 240; y += 2) {
+            for (int x = 10; x < 90; x += 2) {
+                KoColor pixel(cs);
+                dst->pixel(x, y, &pixel);
+                holes += pixel.opacityU8() == 0;
+            }
+        }
+        QCOMPARE(holes, 0);
+    }
+
+    void testFoldedElbowGap()
+    {
+        // The user's report: folding the forearm back at the elbow drags the
+        // shared joint vertices and leaves a gap in the upper arm. A connected
+        // mesh cannot overlap the parts; this measures the current gap so a
+        // hinge (mesh cut at the joint) can be compared against it.
+        const auto *cs = KoColorSpaceRegistry::instance()->rgb8();
+        KisPaintDeviceSP src = new KisPaintDevice(cs);
+        const KoColor black(Qt::black, cs);
+        src->fill(QRect(0, 50, 100, 200), black);
+        src->fill(QRect(100, 100, 140, 30), black);
+        src->fill(QRect(210, 130, 30, 160), black);
+        const auto mesh = KisPuppetTransformWorker::Mesh::build(armMask(), Bounds, 0);
+        const qreal angle = 2.4; // about 137 degrees: the forearm folds back up
+        KisPuppetTransformWorker worker(mesh,
+                                        {TorsoPin, ShoulderPin, ElbowPin},
+                                        {TorsoPin, ShoulderPin, ElbowPin},
+                                        {0.0, 0.0, angle});
+        KisPaintDeviceSP dst = new KisPaintDevice(cs);
+        worker.run(src, dst);
+        // The upper arm between the pins should stay covered.
+        int gap = 0;
+        for (int y = 103; y < 128; ++y) {
+            for (int x = 104; x < 224; ++x) {
+                KoColor pixel(cs);
+                dst->pixel(x, y, &pixel);
+                gap += pixel.opacityU8() < 128;
+            }
+        }
+        // The forearm still turns with the pin.
+        const QPointF tip = worker.map(QPointF(225, 270));
+        const QPointF expected = ElbowPin + rotated(QPointF(0, 155), angle);
+        const qreal tipError = KisAlgebra2D::norm(tip - expected);
+        qInfo() << "gap pixels" << gap << "tip error px" << tipError;
+        if (qEnvironmentVariableIsSet("PUPPET_DUMP")) {
+            dst->convertToQImage(nullptr, 0, 0, 400, 320)
+                .save(QString::fromLocal8Bit(qgetenv("PUPPET_DUMP")) + QStringLiteral("/fold.png"));
+        }
+        // Current behaviour (hinge side unconstrained): 558 gap pixels.
+        QVERIFY2(gap <= 600, qPrintable(QString::number(gap)));
     }
 
     void testLargeGridSolveTime()

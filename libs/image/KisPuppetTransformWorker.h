@@ -97,8 +97,24 @@ public:
 
     /// Stacking order of the part at @p point (original coordinates).
     int orderAt(const QPointF &point) const;
-    /// Distinct orders in use, ascending; one entry renders in a single pass.
-    QVector<int> orderLevels() const;
+    /**
+     * Whether a rendering cell (original coordinates) touches artwork: a
+     * corner or its center lies in a solid triangle. Only such cells are
+     * rendered; the grid polygon ops overwrite pixels, so transparent cells
+     * of squeezed empty space would otherwise cut holes into folded artwork.
+     */
+    bool touchesArtwork(const QPolygonF &cell) const;
+    /// The pin owning the part at @p point (original coordinates), -1 if none.
+    int ownerAt(const QPointF &point) const;
+    /**
+     * Rendering groups bottom to top: the owning pins (and -1 for unowned
+     * parts), sorted by (order, pin index), so equal orders put later pins
+     * on top. Each group renders into its own layer and the layers composite
+     * with "over": the grid polygon ops overwrite pixels, so parts of
+     * different pins rendered into one buffer would cut holes into each other
+     * with their transparent edge pixels. One group renders in a single pass.
+     */
+    QVector<int> stackingGroups() const;
 
     void run(KisPaintDeviceSP srcDevice, KisPaintDeviceSP dstDevice) const;
 
@@ -123,6 +139,7 @@ private:
     QVector<QPointF> m_deformed;
     QVector<int> m_owner; ///< nearest pin per vertex along the artwork, -1 if none
     QVector<int> m_orders;
+    bool m_hasSolid = false; ///< no solid triangle: render every cell
     bool m_identity = true;
 };
 

@@ -64,8 +64,10 @@ the pins of a part and use the Order buttons:
 | ↓ | Send backward |
 | ↓↓ | Send to back |
 
-All pins start at the same order. The order is saved with the transform and
-applies to both the preview and the result.
+All pins start at the same order; among equal orders, a part of a pin placed
+later is drawn on top. The order is saved with the transform and applies to
+both the preview and the result. Only the artwork itself is drawn, so empty
+space around a bent part never cuts into the parts behind it.
 
 ## Options
 
