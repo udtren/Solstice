@@ -74,6 +74,39 @@ wrong anyway.
   this is environmental, not a regression.
 - Do not run the `libs-ui-*` suite through ctest or `kis_kra_saver_test`
   on the desktop session: they open blocking dialogs.
+- **Test programs embed the MIME database** (since 2026-10-07). Qt 6 in
+  this build has no built-in MIME database; the application embeds
+  `krita/data/mime-database/freedesktop.org.xml` at
+  `:/qt-project.org/qmime/packages`.
+  - Before, tests got empty MIME types, so resource loaders were not found
+    ("Could not create loader for symbols test.svg ''") and resource tests
+    failed.
+  - `sdk/tests/CMakeLists.txt` now compiles the resource once into the
+    OBJECT library `kritatestmimedatabase`, and adds its object to
+    `kritatestsdk` (an INTERFACE library), so every test registers it at
+    startup.
+  - An empty storage location is no longer detected as a folder: Qt 6 treats
+    `QFileInfo("")` as the current directory (`autoDetectStorageType()` in
+    `KisResourceStorage.cpp`). `TestResourceStorage` now expects the
+    designed result, an invalid memory storage.
+- **Known failing tests (2026-10-07)**, from `ctest -j 12 -E
+  "libs-ui|kis_kra_saver_test|KisGpuSaveTest"` (291 tests, 13 failed). All of
+  these also fail without the MIME change:
+  - `TestSvgParser`, `TestSvgParserCloned`, `TestSvgParserRoundTrip`: mesh
+    gradient renders differ from the reference images (5 each);
+  - `KisBrushModelTest` (initTestCase);
+  - `psd_cos_parser_test` (map and string round trips);
+  - `kis_cage_transform_worker_test` (2 image comparisons);
+  - `kis_transform_mask_test` (two rects one pixel off);
+  - `StoryboardModelTest` (7);
+  - `kis_tiff_test` (`testFiles`);
+  - `kis_jpegxl_test` (CMYK with layers, multipage).
+  - `TestFallBackColorTransformation` and `TestKisSwatchGroup` pass alone
+    but fail in the parallel run (120-150 s each).
+
+  With the MIME database, `TestSvgParserRoundTrip` went from 8 failures to 5
+  and `kis_jpegxl_test` from 3 to 2. Fontconfig warns "Cannot load default
+  config file" in some tests; this was not investigated.
 - Test executables are named after their source files
   (`kis_liquify_transform_worker_test`, `KisGpuPaintDeviceTest`). Check
   `_build/bin` when a CMake target name is not found.

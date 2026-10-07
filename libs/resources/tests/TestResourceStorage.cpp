@@ -75,7 +75,9 @@ void TestResourceStorage ::testStorage()
 
     {
         KisResourceStorage storage("");
-        QVERIFY(storage.type() == KisResourceStorage::StorageType::Unknown);
+        // Solstice: an unknown location gives an invalid memory storage
+        // (KisResourceStorage: StorageType::Unknown -> createMemoryStorage(location, false)).
+        QVERIFY(storage.type() == KisResourceStorage::StorageType::Memory);
         QVERIFY(!storage.valid());
     }
 }

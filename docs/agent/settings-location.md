@@ -501,8 +501,10 @@ by closing Solstice and starting it with `SOLSTICE_PROFILE_ROOT` and both
 | GPU engine | `KisGpuPaintDeviceTest` 251 (1 skipped: opt-in benchmark), `KisGpuProjectionTest` 199, `KisGpuEngineTest` 11, `kis_liquify_transform_worker_test` 15 |
 | UI | `QuickAccessCoreTest` 9, `KisSolsticeStyleTest` 7 |
 
-`TestResourceLocator` and `TestBundleStorage` keep their pre-existing
-missing-loader failures.
+`TestResourceLocator` and `TestBundleStorage` kept their pre-existing
+missing-loader failures at the time. They were fixed afterwards (2026-10-07):
+the test programs lacked Qt's MIME database
+(`docs/agent/wiki/pitfalls/build-format-test.md`, "Tests").
 
 **Manual, already confirmed by the user (2026-10-07):**
 

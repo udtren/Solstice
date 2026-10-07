@@ -56,6 +56,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the version uses found in `kra_converter.cpp`, `KisResourceLocator.cpp`,
   `KisResourceCacheDb.cpp` and `libkis/Krita.cpp`.
 
+## 2026-10-07 ingest: test MIME database and known failing tests
+
+- `pitfalls/build-format-test.md`:
+  - the MIME database embedded in tests, and the empty storage location
+    fix;
+  - the list of known failing tests, with a baseline comparison (each of
+    them also fails without the change).
+
 ## 2026-10-07 ingest: settings location complete
 
 - No new wiki page: the decisions and findings are in `docs/agent/settings-location.md`.

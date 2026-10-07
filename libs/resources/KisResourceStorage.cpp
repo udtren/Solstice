@@ -29,6 +29,11 @@
 
 namespace {
 KisResourceStorage::StorageType autoDetectStorageType(const QString &location) {
+    // Solstice: Qt 6 treats QFileInfo("") as the current directory, so an
+    // empty location would be detected as a folder storage.
+    if (location.isEmpty()) {
+        return KisResourceStorage::StorageType::Unknown;
+    }
     QFileInfo fi(location);
     if (fi.isDir()) {
         return KisResourceStorage::StorageType::Folder;
