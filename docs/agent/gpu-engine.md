@@ -86,8 +86,9 @@ details are in the phase records, now in the wiki history pages (see
   work contexts first and permits three pending serial submissions; details below.
   The user confirmed phase 4.53 and the CPU filter/FFT readback bundle
   (4.54-4.55). Phases 4.56-4.57 batch affine transform and layer-flip readbacks;
-  details and verification are below. Filters and transforms still execute
-  their calculations on the CPU.
+  details and verification are below. Filters and transforms then still
+  executed their calculations on the CPU; phases 4.94, 4.97 and 4.98 later
+  moved the affine passes, Liquify and the Gaussian convolution to the GPU.
   Phases
   0–3 are implemented, including real-app canvas and memory-budget checks;
   the phase 3.3 dialog checklist remains documented separately. Layer stacks of RGBA float
@@ -130,7 +131,12 @@ details are in the phase records, now in the wiki history pages (see
   `confirmSave()` in `saveDocument()`), `libs/ui/dialogs/kis_dlg_preferences.{h,cc}`
   (`KisGpuEngineSettingsWidget` in the Performance tab),
   `libs/ui/KisImportExportManager.cpp` (`mayFinishExport()` in
-  `doExportImpl()`), `plugins/impex/libkra/tests/CMakeLists.txt`.
+  `doExportImpl()`), `plugins/impex/libkra/tests/CMakeLists.txt`, and the
+  Gaussian filters (phase 4.98): `libs/image/kis_gaussian_kernel.{h,cpp}`
+  (`runsOnGpu()`, the GPU branch of `applyGaussian()`),
+  `libs/image/filter/kis_filter.{h,cc}` (`prefersSingleCall()`),
+  `libs/ui/tool/strokes/kis_filter_stroke_strategy.cpp`,
+  `plugins/filters/blur/kis_gaussian_blur_filter.{h,cpp}`.
 
 ## Decisions approved by the user
 
@@ -812,6 +818,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `KisGpuCanvasPatchWriter.*` + `shaders/canvas_patches.comp` | Phase-3.2 canvas patches: edge-extended texture blocks, display conversion (identity / matrix-shaper), F32/F16 in and out. |
 | `KisGpuGLSharedBuffer.*` (Windows) | Vulkan buffer shared with a GL pixel unpack buffer, with the Vulkan/GL semaphore cycle. |
 | `KisGpuGLInterop_p.h` (private) | GL_EXT_memory_object / GL_EXT_semaphore entry points and the device-UUID check shared by the interop classes. |
+| `KisGpuSeparableConvolutionPass.*` + `shaders/separable_convolution.comp` | Phase-4.98 separable convolution in bands: horizontal pass into a double intermediate, vertical pass with the FFT worker's write rules. |
 
 ## Source map (`libs/image`)
 
@@ -828,6 +835,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `gpu/KisGpuProjectionCompositor.*` | Runs a batch: scratch tiles, layer accesses, dispatch, write-back; per-thread work contexts. |
 | `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points. |
 | `kis_updater_context.cpp` | Tile-aligned job exclusivity when `KisGpuMergeBatch::mayCompositeOnGpu`. |
+| `gpu/KisGpuConvolutionWorker.*` | Phase-4.98 Gaussian convolution: old-data snapshot, one GPU submission into a temporary device, CPU copy into the rect. Called by `KisGaussianKernel::applyGaussian()`. |
 
 ## Source map (`libs/ui`)
 
@@ -854,6 +862,9 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   default 0). See "Feature gate and user interface".
 - Environment `KRITA_GPU_PROJECTION=1` or `0` overrides `Solstice/GpuEngine`
   (development switch; `KisGpuMergeBatch::setEnabled()` in tests).
+- With the engine on, `KRITA_GPU_TRANSFORM=0`, `KRITA_GPU_LIQUIFY=0` and
+  `KRITA_GPU_CONVOLUTION=0` keep the affine passes, Liquify and the Gaussian
+  convolution on the CPU (development switches).
 - No `.kra` changes or persisted ids: `.kra` files stay readable by the CPU
   path and upstream Krita; GPU mode stores RGBA F32/F16 layers with the
   normal Krita color space ids. Saving works through the CPU path: the tile
@@ -911,6 +922,13 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   color excepted). Preview and final render must stay identical (Transform
   Tool, Puppet Warp).
 - Tile slots are released only after all GPU work using them has completed.
+- The GPU Gaussian convolution reads a snapshot of the device's old data and
+  writes the device only through a CPU copy of its own rect. Concurrent
+  filter-stroke patches rely on this; do not make it write the device's
+  tiles from the GPU directly.
+- `KisFilter` has the Solstice virtual `prefersSingleCall()`. Changing
+  `KisFilter`'s virtual functions requires rebuilding and installing every
+  filter plugin; tests load the installed plugins.
 - GL objects of a shared image are created and destroyed with its GL context
   current; the image stays in `VK_IMAGE_LAYOUT_GENERAL`.
 
@@ -929,6 +947,9 @@ Phase 0 has no user-visible behavior. From phase 3 on:
    Preferences.
 6. Disable the setting and restart: no question, no GPU use
    (`KRITA_GPU_PROJECTION=0` likewise).
+7. Gaussian Blur, Unsharp Mask and Gaussian High Pass on RGBA32F and RGBA16F
+   layers (phase 4.98): apply time and result, with a selection, Undo/Redo,
+   the dialog preview, and a filter mask while painting below it.
 
 ## Phase history
 
@@ -941,7 +962,7 @@ cross-cutting findings to `docs/agent/wiki/` (see `wiki/index.md`).
 - [Blend modes, RGBA16F and transfers (phases 4.17-4.57)](wiki/history/gpu-phases-4.17-4.57.md): Blend-mode coverage, asynchronous submissions, RGBA16F brushes, context reuse, batched readbacks.
 - [Paint trace and latency analysis (phases 4.58-4.81)](wiki/history/gpu-phases-4.58-4.81.md): Paint pipeline trace, capture protocol, real-app stage and lock analysis, shared canvas builds.
 - [Generated dabs and brush latency (phases 4.82-4.92)](wiki/history/gpu-phases-4.82-4.92.md): GPU circle dabs, update period, Wash latency, shared pipelines, immediate canvas uploads.
-- [Filters and transforms (phases 4.93-)](wiki/history/gpu-phases-4.93-.md): CPU filter/transform baseline, GPU affine passes, GPU Liquify grid warp.
+- [Filters and transforms (phases 4.93-)](wiki/history/gpu-phases-4.93-.md): CPU filter/transform baseline, GPU affine passes, GPU Liquify grid warp, GPU Gaussian blur.
 
 Section index:
 
@@ -1029,6 +1050,7 @@ Section index:
 - [Priority 4 baseline: CPU filter and transform costs (phase 4.93)](wiki/history/gpu-phases-4.93-.md#priority-4-baseline-cpu-filter-and-transform-costs-phase-493)
 - [GPU affine transform passes (phase 4.94)](wiki/history/gpu-phases-4.93-.md#gpu-affine-transform-passes-phase-494)
 - [GPU Liquify grid warp (phase 4.97)](wiki/history/gpu-phases-4.93-.md#gpu-liquify-grid-warp-phase-497)
+- [GPU Gaussian blur family (phase 4.98)](wiki/history/gpu-phases-4.93-.md#gpu-gaussian-blur-family-phase-498)
 
 ## Risks and open questions
 

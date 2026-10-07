@@ -31,6 +31,7 @@
 #include <KisGpuLayerStackCompositor.h>
 #include <KisGpuTileFill.h>
 
+#include "gpu/KisGpuConvolutionWorker.h"
 #include "gpu/KisGpuGridWarpWorker.h"
 #include "gpu/KisGpuMergeBatch.h"
 #include "gpu/KisGpuTileAccess.h"
@@ -38,6 +39,7 @@
 #include "gpu/KisGpuTransformWorker.h"
 #include "kis_datamanager.h"
 #include "kis_filter_strategy.h"
+#include "kis_gaussian_kernel.h"
 #include "kis_liquify_transform_worker.h"
 #include "kis_paint_device.h"
 #include "kis_paint_device_writer.h"
@@ -89,6 +91,11 @@ private Q_SLOTS:
     void testGpuTransformMatchesCpu();
     void testGpuLiquifyMatchesCpu_data();
     void testGpuLiquifyMatchesCpu();
+    void testGpuGaussianMatchesCpu_data();
+    void testGpuGaussianMatchesCpu();
+    void testGpuGaussianPatchesMatchCpu();
+    void testGpuGaussianFiltersMatchCpu_data();
+    void testGpuGaussianFiltersMatchCpu();
     void testCompositeMatchesCpu();
     void testUndoRedo();
     void testCopyOnWriteIsolation();
@@ -168,6 +175,80 @@ std::vector<float> readPixels(KisPaintDeviceSP device, const QRect &rect)
     std::vector<float> pixels(size_t(rect.width()) * rect.height() * 4);
     device->readBytes(reinterpret_cast<quint8 *>(pixels.data()), rect);
     return pixels;
+}
+
+/// Pixels as floats, from RGBA32F or RGBA16F devices.
+std::vector<float> readFloats(KisPaintDeviceSP device, const QRect &rect)
+{
+    if (device->pixelSize() != 8)
+        return readPixels(device, rect);
+    std::vector<qfloat16> halves(size_t(rect.width()) * rect.height() * 4);
+    device->readBytes(reinterpret_cast<quint8 *>(halves.data()), rect);
+    std::vector<float> pixels(halves.size());
+    for (size_t i = 0; i < halves.size(); ++i)
+        pixels[i] = float(halves[i]);
+    return pixels;
+}
+
+/// fillRandom() for RGBA32F and RGBA16F devices; colors become color * scale + offset.
+void fillRandomAny(KisPaintDeviceSP device, const QRect &rect, quint32 seed, float scale = 1.0f, float offset = 0.0f)
+{
+    const KoColorSpace *f32 = rgbaFloat(false);
+    KisPaintDeviceSP floats = new KisPaintDevice(f32);
+    fillRandom(floats, rect, seed);
+    std::vector<float> pixels = readPixels(floats, rect);
+    for (size_t i = 0; i < pixels.size(); ++i)
+        if (i % 4 != 3)
+            pixels[i] = pixels[i] * scale + offset;
+    if (device->pixelSize() != 8) {
+        device->writeBytes(reinterpret_cast<const quint8 *>(pixels.data()), rect);
+        return;
+    }
+    QByteArray raw(int(pixels.size() / 4) * device->pixelSize(), Qt::Uninitialized);
+    f32->convertPixelsTo(reinterpret_cast<const quint8 *>(pixels.data()),
+                         reinterpret_cast<quint8 *>(raw.data()),
+                         device->colorSpace(),
+                         rect.width() * rect.height(),
+                         KoColorConversionTransformation::internalRenderingIntent(),
+                         KoColorConversionTransformation::internalConversionFlags());
+    device->writeBytes(reinterpret_cast<const quint8 *>(raw.constData()), rect);
+}
+
+/**
+ * GPU convolutions (phase 4.98) against the CPU FFT convolution: channels
+ * within a relative tolerance (1e-5 for F32, 1e-3 for F16, about one half
+ * ulp), colors ignored where either stored alpha is near the null threshold
+ * of the FFT worker. Returns the number of failing channels; logs the first.
+ */
+int convolutionMismatches(const std::vector<float> &expected,
+                          const std::vector<float> &actual,
+                          const QRect &rect,
+                          bool f16,
+                          double *worstRelative = nullptr)
+{
+    const double tolerance = f16 ? 1e-3 : 1e-5;
+    const float nullAlpha = f16 ? 2.0f / 1024 : 2.4e-7f;
+    int failures = 0;
+    double worst = 0.0;
+    for (size_t pixel = 0; pixel < expected.size() / 4; ++pixel) {
+        const bool alphaOnly = qMin(expected[pixel * 4 + 3], actual[pixel * 4 + 3]) < nullAlpha;
+        for (size_t c = alphaOnly ? 3 : 0; c < 4; ++c) {
+            const double e = expected[pixel * 4 + c];
+            const double a = actual[pixel * 4 + c];
+            const double relative = std::abs(a - e) / qMax(1.0, std::abs(e));
+            if (!(relative <= tolerance)) {
+                if (failures++ < 5)
+                    qInfo() << "mismatch at"
+                            << rect.topLeft() + QPoint(int(pixel) % rect.width(), int(pixel) / rect.width())
+                            << "channel" << c << "CPU" << e << "GPU" << a;
+            } else {
+                worst = qMax(worst, relative);
+            }
+        }
+    }
+    if (worstRelative)
+        *worstRelative = worst;
+    return failures;
 }
 
 /// Largest channel difference; the color of fully transparent pixels is ignored.
@@ -921,6 +1002,229 @@ void KisGpuPaintDeviceTest::testGpuLiquifyMatchesCpu()
     QVERIFY(readPixels(gpu, checkRect) == original);
     command->redo();
     QVERIFY(readPixels(gpu, checkRect) == expected);
+}
+
+void KisGpuPaintDeviceTest::testGpuGaussianMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<double>("xRadius");
+    QTest::addColumn<double>("yRadius");
+    QTest::addColumn<QString>("variant");
+    const QVector<QPair<double, double>> radii{{1, 1}, {5, 5}, {30, 30}, {100, 100}, {12, 3}, {0, 7}, {2.5, 40}};
+    const QStringList
+        variants{"offset", "partial", "ignore-border", "rgb-only", "alpha-only", "no-green", "opaque-default", "hdr"};
+    for (bool f16 : {false, true}) {
+        for (const auto &radius : radii)
+            QTest::newRow(
+                qPrintable(QString("%1-r%2x%3-plain").arg(f16 ? "f16" : "f32").arg(radius.first).arg(radius.second)))
+                << f16 << radius.first << radius.second << QStringLiteral("plain");
+        for (const QString &variant : variants)
+            QTest::newRow(qPrintable(QString("%1-r9x9-%2").arg(f16 ? "f16" : "f32", variant)))
+                << f16 << 9.0 << 9.0 << variant;
+    }
+}
+
+void KisGpuPaintDeviceTest::testGpuGaussianMatchesCpu()
+{
+    // Phase 4.98: KisGaussianKernel::applyGaussian() on the GPU against the
+    // CPU FFT convolution, with Undo/Redo and untouched pixels outside the rect.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(double, xRadius);
+    QFETCH(double, yRadius);
+    QFETCH(QString, variant);
+    if (!m_backend->context().deviceInfo().supportsFloat64)
+        QSKIP("shaderFloat64 is not supported");
+    const bool previousProjection = KisGpuMergeBatch::isEnabled();
+    KisGpuMergeBatch::setEnabled(true);
+    const auto restore = qScopeGuard([&]() {
+        KisGpuMergeBatch::setEnabled(previousProjection);
+        qunsetenv("KRITA_GPU_CONVOLUTION");
+    });
+    const auto *cs = rgbaFloat(f16);
+    const QRect bounds(-64, -64, 760, 620);
+    const QRect content(-30, -41, 610, 503);
+    const QPoint shift = variant == "offset" ? QPoint(13, -7) : QPoint();
+    const QRect applyRect = (variant == "partial" ? QRect(37, 11, 301, 257) : bounds).translated(shift);
+    const KisConvolutionBorderOp borderOp = variant == "ignore-border" ? BORDER_IGNORE : BORDER_REPEAT;
+    // Flags follow the color space's channel list: R, G, B, A for RGBA float.
+    QBitArray channelFlags(4, true);
+    if (variant == "rgb-only")
+        channelFlags.clearBit(3);
+    if (variant == "alpha-only") {
+        channelFlags.fill(false);
+        channelFlags.setBit(3);
+    }
+    if (variant == "no-green")
+        channelFlags.clearBit(1);
+
+    auto makeDevice = [&]() {
+        KisPaintDeviceSP device = new KisPaintDevice(cs);
+        device->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+        if (variant == "opaque-default") {
+            KoColor paper(cs);
+            cs->fromNormalisedChannelsValue(paper.data(), {0.95f, 0.9f, 0.85f, 1.0f});
+            device->setDefaultPixel(paper);
+        }
+        fillRandomAny(device, content, 31, variant == "hdr" ? 40.0f : 1.0f);
+        device->moveTo(shift);
+        return device;
+    };
+    const QRect checkRect = bounds.adjusted(-40, -40, 40, 40).translated(shift);
+
+    KisPaintDeviceSP cpu = makeDevice();
+    qputenv("KRITA_GPU_CONVOLUTION", "0");
+    const quint64 before = KisGpuConvolutionWorker::runCount();
+    KisGaussianKernel::applyGaussian(cpu, applyRect, xRadius, yRadius, channelFlags, nullptr, false, borderOp);
+    QCOMPARE(KisGpuConvolutionWorker::runCount(), before);
+
+    KisPaintDeviceSP gpu = makeDevice();
+    const auto original = readFloats(gpu, checkRect);
+    qputenv("KRITA_GPU_CONVOLUTION", "1");
+    KisTransaction transaction(gpu);
+    KisGaussianKernel::applyGaussian(gpu, applyRect, xRadius, yRadius, channelFlags, nullptr, false, borderOp);
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo(); // the first redo after endAndTake() only arms the command
+    QCOMPARE(KisGpuConvolutionWorker::runCount(), before + 1);
+
+    const auto expected = readFloats(cpu, checkRect);
+    const auto actual = readFloats(gpu, checkRect);
+    double worst = 0.0;
+    const int failures = convolutionMismatches(expected, actual, checkRect, f16, &worst);
+    qInfo() << "worst relative difference" << worst;
+    QCOMPARE(failures, 0);
+    // Outside the apply rect, nothing changes (bit for bit).
+    for (int y = 0; y < checkRect.height(); ++y)
+        for (int x = 0; x < checkRect.width(); ++x) {
+            if (applyRect.contains(checkRect.topLeft() + QPoint(x, y)))
+                continue;
+            const size_t i = (size_t(y) * checkRect.width() + x) * 4;
+            QVERIFY(std::memcmp(&actual[i], &original[i], 4 * sizeof(float)) == 0);
+        }
+    command->undo();
+    QVERIFY(readFloats(gpu, checkRect) == original);
+    command->redo();
+    QVERIFY(readFloats(gpu, checkRect) == actual);
+}
+
+void KisGpuPaintDeviceTest::testGpuGaussianPatchesMatchCpu()
+{
+    // A filter stroke's concurrent patches: each patch reads the old data of
+    // its neighbours under one transaction, and writes only its own rect.
+    REQUIRE_GPU();
+    if (!m_backend->context().deviceInfo().supportsFloat64)
+        QSKIP("shaderFloat64 is not supported");
+    const bool previousProjection = KisGpuMergeBatch::isEnabled();
+    KisGpuMergeBatch::setEnabled(true);
+    const auto restore = qScopeGuard([&]() {
+        KisGpuMergeBatch::setEnabled(previousProjection);
+        qunsetenv("KRITA_GPU_CONVOLUTION");
+    });
+    const auto *cs = rgbaFloat();
+    const QRect bounds(0, 0, 900, 700);
+    const QRect processRect(3, 5, 890, 690);
+    QVector<QRect> patches;
+    for (int y = processRect.top(); y <= processRect.bottom(); y += 173)
+        for (int x = processRect.left(); x <= processRect.right(); x += 211)
+            patches << (QRect(x, y, 211, 173) & processRect);
+    auto run = [&](bool gpuEnabled) {
+        qputenv("KRITA_GPU_CONVOLUTION", gpuEnabled ? "1" : "0");
+        KisPaintDeviceSP device = new KisPaintDevice(cs);
+        device->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+        fillRandomAny(device, bounds, 41);
+        KisTransaction transaction(device);
+        QThreadPool pool;
+        pool.setMaxThreadCount(6);
+        for (const QRect &patch : patches)
+            pool.start([device, patch]() {
+                KisGaussianKernel::applyGaussian(device, patch, 15, 15, QBitArray(4, true), nullptr);
+            });
+        pool.waitForDone();
+        transaction.end();
+        return readFloats(device, bounds);
+    };
+    const auto expected = run(false);
+    const quint64 before = KisGpuConvolutionWorker::runCount();
+    const auto actual = run(true);
+    // The narrow patches at the right and bottom edges are below the GPU's
+    // minimum size and stay on the CPU, mixed with GPU patches.
+    const quint64 gpuRuns = KisGpuConvolutionWorker::runCount() - before;
+    QVERIFY2(gpuRuns > 0 && gpuRuns < quint64(patches.size()), qPrintable(QString::number(gpuRuns)));
+    QCOMPARE(convolutionMismatches(expected, actual, bounds, false), 0);
+}
+
+void KisGpuPaintDeviceTest::testGpuGaussianFiltersMatchCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("filterId");
+    for (bool f16 : {false, true})
+        for (const QString id : {"gaussian blur", "unsharp", "gaussianhighpass"})
+            QTest::newRow(qPrintable(QString("%1-%2").arg(f16 ? "f16" : "f32", id))) << f16 << id;
+}
+
+void KisGpuPaintDeviceTest::testGpuGaussianFiltersMatchCpu()
+{
+    // The filters built on applyGaussian(), through KisFilter::process() with
+    // a separate destination, with and without a selection.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QString, filterId);
+    if (!m_backend->context().deviceInfo().supportsFloat64)
+        QSKIP("shaderFloat64 is not supported");
+    auto filter = KisFilterRegistry::instance()->value(filterId);
+    if (!filter)
+        QSKIP(qPrintable(QString("filter %1 is not loaded").arg(filterId)));
+    auto config = filter->defaultConfiguration(KisGlobalResourcesInterface::instance())->cloneWithResourcesSnapshot();
+    if (filterId == "gaussian blur") {
+        config->setProperty("horizRadius", 11);
+        config->setProperty("vertRadius", 7);
+    } else if (filterId == "unsharp") {
+        config->setProperty("halfSize", 6);
+    } else {
+        config->setProperty("blurAmount", 8);
+    }
+    const bool previousProjection = KisGpuMergeBatch::isEnabled();
+    KisGpuMergeBatch::setEnabled(true);
+    const auto restore = qScopeGuard([&]() {
+        KisGpuMergeBatch::setEnabled(previousProjection);
+        qunsetenv("KRITA_GPU_CONVOLUTION");
+    });
+    const auto *cs = rgbaFloat(f16);
+    const QRect bounds(0, 0, 520, 410);
+    const QRect applyRect(17, 9, 471, 377);
+    // Unsharp Mask results stay below 1: the CPU Copy composite op of the
+    // selected copy clamps colors to 1 per SIMD batch only when some pixel of
+    // the batch is not opaque, so a 1-ulp alpha difference would change the
+    // clamping of whole batches.
+    const float scale = filterId == "unsharp" ? 0.4f : 1.0f;
+    const float offset = filterId == "unsharp" ? 0.25f : 0.0f;
+    auto run = [&](bool gpuEnabled, bool withSelection) {
+        qputenv("KRITA_GPU_CONVOLUTION", gpuEnabled ? "1" : "0");
+        KisPaintDeviceSP src = new KisPaintDevice(cs), dst = new KisPaintDevice(cs);
+        src->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+        dst->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+        fillRandomAny(src, bounds, 53, scale, offset);
+        fillRandomAny(dst, bounds, 59, scale, offset);
+        KisSelectionSP selection;
+        if (withSelection) {
+            selection = new KisSelection();
+            QByteArray mask(applyRect.width() * applyRect.height(), Qt::Uninitialized);
+            for (int i = 0; i < mask.size(); ++i)
+                mask[i] = char(1 + i % 254);
+            selection->pixelSelection()->writeBytes(reinterpret_cast<const quint8 *>(mask.constData()), applyRect);
+        }
+        filter->process(src, dst, selection, applyRect, config);
+        return readFloats(dst, bounds);
+    };
+    for (bool withSelection : {false, true}) {
+        const auto expected = run(false, withSelection);
+        const quint64 before = KisGpuConvolutionWorker::runCount();
+        const auto actual = run(true, withSelection);
+        QVERIFY(KisGpuConvolutionWorker::runCount() > before);
+        double worst = 0.0;
+        QCOMPARE(convolutionMismatches(expected, actual, bounds, f16, &worst), 0);
+        qInfo() << "selection" << withSelection << "worst relative difference" << worst;
+    }
 }
 
 void KisGpuPaintDeviceTest::testGpuTransformMatchesCpu_data()
@@ -2354,10 +2658,12 @@ void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
         QString name;
         QString id;
         QVector<QPair<QString, QVariant>> properties;
+        bool gpuConvolution = false; ///< also measured with KisGpuConvolutionWorker (phase 4.98)
     };
     const QVector<FilterRow> filters{
-        {"gaussian blur r5", "gaussian blur", {{"horizRadius", 5}, {"vertRadius", 5}}},
-        {"gaussian blur r30", "gaussian blur", {{"horizRadius", 30}, {"vertRadius", 30}}},
+        {"gaussian blur r5", "gaussian blur", {{"horizRadius", 5}, {"vertRadius", 5}}, true},
+        {"gaussian blur r30", "gaussian blur", {{"horizRadius", 30}, {"vertRadius", 30}}, true},
+        {"gaussian blur r100", "gaussian blur", {{"horizRadius", 100}, {"vertRadius", 100}}, true},
         {"levels", "levels", {{"mode", "lightness"}, {"lightness", "0.08;0.92;1.4;0;1"}}},
         {"curves (all channels)",
          "perchannel",
@@ -2367,8 +2673,9 @@ void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
           {"curve3", "0,0;0.3,0.2;0.7,0.8;1,1;"},
           {"curve4", "0,0;0.3,0.2;0.7,0.8;1,1;"}}},
         {"hsv adjust s+20", "hsvadjustment", {{"s", 20}}},
-        {"unsharp mask", "unsharp", {}},
+        {"unsharp mask", "unsharp", {}, true},
     };
+    const bool previousProjection = KisGpuMergeBatch::isEnabled();
     for (const FilterRow &row : filters) {
         auto filter = KisFilterRegistry::instance()->value(row.id);
         if (!filter) {
@@ -2379,36 +2686,71 @@ void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
             filter->defaultConfiguration(KisGlobalResourcesInterface::instance())->cloneWithResourcesSnapshot();
         for (const auto &property : row.properties)
             config->setProperty(property.first, property.second);
-        std::vector<double> single, parallel;
-        for (int i = 0; i < 3; ++i) {
-            KisPaintDeviceSP device = fresh();
-            QElapsedTimer timer;
-            timer.start();
-            filter->process(device, bounds, config);
-            single.push_back(timer.nsecsElapsed() / 1e6);
-            // Disjoint bands into a separate destination, like a filter stroke's
-            // parallel patches.
-            KisPaintDeviceSP src = fresh(), dst = fresh();
-            const int band = (bounds.height() + threads - 1) / threads;
-            timer.restart();
-            // QThread workers, as Krita's own (device updates use Qt timers).
-            QThreadPool pool;
-            pool.setMaxThreadCount(threads);
-            for (int t = 0; t < threads; ++t) {
-                const QRect rect = QRect(0, t * band, bounds.width(), band) & bounds;
-                pool.start([&, rect]() {
-                    filter->process(src, dst, KisSelectionSP(), rect, config);
-                });
+        for (bool gpuConvolution : {false, true}) {
+            if (gpuConvolution && !row.gpuConvolution)
+                continue;
+            KisGpuMergeBatch::setEnabled(gpuConvolution);
+            qputenv("KRITA_GPU_CONVOLUTION", gpuConvolution ? "1" : "0");
+            const quint64 runs = KisGpuConvolutionWorker::runCount();
+            std::vector<double> single, parallel;
+            for (int i = 0; i < 3; ++i) {
+                KisPaintDeviceSP device = fresh();
+                QElapsedTimer timer;
+                timer.start();
+                filter->process(device, bounds, config);
+                single.push_back(timer.nsecsElapsed() / 1e6);
+                // Disjoint bands into a separate destination, like a filter stroke's
+                // parallel patches.
+                KisPaintDeviceSP src = fresh(), dst = fresh();
+                const int band = (bounds.height() + threads - 1) / threads;
+                timer.restart();
+                // QThread workers, as Krita's own (device updates use Qt timers).
+                QThreadPool pool;
+                pool.setMaxThreadCount(threads);
+                for (int t = 0; t < threads; ++t) {
+                    const QRect rect = QRect(0, t * band, bounds.width(), band) & bounds;
+                    pool.start([&, rect]() {
+                        filter->process(src, dst, KisSelectionSP(), rect, config);
+                    });
+                }
+                pool.waitForDone();
+                parallel.push_back(timer.nsecsElapsed() / 1e6);
             }
-            pool.waitForDone();
-            parallel.push_back(timer.nsecsElapsed() / 1e6);
+            QCOMPARE(KisGpuConvolutionWorker::runCount() > runs, gpuConvolution);
+            report(gpuConvolution ? row.name + " GPU" : row.name, median3(single), median3(parallel));
         }
-        report(row.name, median3(single), median3(parallel));
     }
+    // Phase 4.98: one applyGaussian() call on small rects, as projection
+    // updates of filter masks and adjustment layers do.
+    for (int size : {64, 128, 256, 512, 1024}) {
+        for (qreal radius : {5.0, 30.0}) {
+            double times[2] = {0.0, 0.0};
+            for (bool gpuConvolution : {false, true}) {
+                KisGpuMergeBatch::setEnabled(gpuConvolution);
+                qputenv("KRITA_GPU_CONVOLUTION", gpuConvolution ? "1" : "0");
+                std::vector<double> samples;
+                for (int i = 0; i < 9; ++i) {
+                    KisPaintDeviceSP device = fresh();
+                    const QRect rect(1000, 1500, size, size);
+                    QElapsedTimer timer;
+                    timer.start();
+                    KisGaussianKernel::applyGaussian(device, rect, radius, radius, QBitArray(4, true), nullptr);
+                    samples.push_back(timer.nsecsElapsed() / 1e6);
+                }
+                times[gpuConvolution] = median3(samples);
+            }
+            qInfo().noquote() << QString("applyGaussian %1x%1 r%2: CPU %3 ms, GPU %4 ms")
+                                     .arg(size)
+                                     .arg(radius)
+                                     .arg(times[0], 0, 'f', 2)
+                                     .arg(times[1], 0, 'f', 2);
+        }
+    }
+    qunsetenv("KRITA_GPU_CONVOLUTION");
+    KisGpuMergeBatch::setEnabled(previousProjection);
 
     // Transform Tool final renders (also its live in-stack preview), single call.
     // Phase 4.94: the affine passes on the GPU (KisGpuTransformWorker).
-    const bool previousProjection = KisGpuMergeBatch::isEnabled();
     KisGpuMergeBatch::setEnabled(true);
     for (bool gpuTransform : {false, true}) {
         qputenv("KRITA_GPU_TRANSFORM", gpuTransform ? "1" : "0");

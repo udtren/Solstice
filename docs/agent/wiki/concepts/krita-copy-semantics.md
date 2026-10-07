@@ -44,6 +44,13 @@ exactly. They were found in the Liquify GPU work (phase 4.97).
   The color left in transparent pixels therefore depends on the SIMD width,
   the row alignment and the neighbouring pixels. It is not reproducible on
   the GPU.
+- **With a selection or partial opacity** the SIMD path blends and, when
+  *some* pixel of the batch has a result alpha other than 1, clamps the
+  colors of the whole batch to 1 (`xsimd::min(dst_c, unitValue)`). HDR
+  colors (above 1) of opaque pixels are therefore clamped or not depending on
+  their neighbours. A one-ulp alpha difference in one pixel changed results
+  by up to 0.11 in phase 4.98's Unsharp Mask test; compare such paths with
+  colors below 1.
 - Consequence: `KisGpuGridWarpWorker::canRun()` requires equal device
   offsets. The Transform Tool always meets this, because its source is a
   copy of the node's device.

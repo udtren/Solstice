@@ -44,6 +44,12 @@ public:
                               bool createTransaction = false,
                               KisConvolutionBorderOp borderOp = BORDER_REPEAT);
 
+    /**
+     * Solstice GPU engine (phase 4.98): true if applyGaussian() on @p device
+     * uses the GPU for large enough rects.
+     */
+    static bool runsOnGpu(KisPaintDeviceSP device);
+
     static Eigen::Matrix<qreal, Eigen::Dynamic, Eigen::Dynamic> createLoGMatrix(qreal radius, qreal coeff, bool zeroCentered, bool includeWrappedArea);
 
     static void applyLoG(KisPaintDeviceSP device,

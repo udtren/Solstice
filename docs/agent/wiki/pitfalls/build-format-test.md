@@ -107,6 +107,15 @@ wrong anyway.
   With the MIME database, `TestSvgParserRoundTrip` went from 8 failures to 5
   and `kis_jpegxl_test` from 3 to 2. Fontconfig warns "Cannot load default
   config file" in some tests; this was not investigated.
+- **A new virtual function in a plugin base class breaks the installed
+  plugins** (2026-10-07). Tests load filter plugins from the install prefix.
+  After `KisFilter::prefersSingleCall()` was added, `kis_filter_test`,
+  `kis_filter_mask_test` and `KisGpuPaintDeviceTest` crashed with
+  0xc0000005 in old plugins until `cmake --install` of the whole build.
+- **`Select-Object -First N` stops the producer.** Piping
+  `cmake --build` into `... | Select-Object -First 30` in PowerShell ended
+  the build early once 30 lines matched. Redirect the build to a log file and
+  filter the file instead.
 - Test executables are named after their source files
   (`kis_liquify_transform_worker_test`, `KisGpuPaintDeviceTest`). Check
   `_build/bin` when a CMake target name is not found.

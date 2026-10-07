@@ -107,6 +107,15 @@ QRect KisGaussianBlurFilter::changedRect(const QRect & rect, const KisFilterConf
     return rect.adjusted( -halfWidth, -halfHeight, halfWidth, halfHeight);
 }
 
+bool KisGaussianBlurFilter::prefersSingleCall(KisPaintDeviceSP device, const KisFilterConfigurationSP config) const
+{
+    Q_UNUSED(config);
+
+    // Solstice GPU engine (phase 4.98): one GPU call over the whole rect is
+    // faster than concurrent patches, whose GPU calls are serialized.
+    return KisGaussianKernel::runsOnGpu(device);
+}
+
 bool KisGaussianBlurFilter::configurationAllowedForMask(KisFilterConfigurationSP config) const
 {
     //ENTER_FUNCTION() << config->getFloat("horizRadius", 5.0) << config->getFloat("vertRadius", 5.0);

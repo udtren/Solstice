@@ -100,6 +100,13 @@ public:
 
     virtual bool needsTransparentPixels(const KisFilterConfigurationSP config, const KoColorSpace *cs) const;
 
+    /**
+     * Solstice: true if processImpl() should get the whole rect of @p device
+     * in one call instead of concurrent patches, e.g. because it runs on the
+     * GPU, where one large call is faster. The default is false.
+     */
+    virtual bool prefersSingleCall(KisPaintDeviceSP device, const KisFilterConfigurationSP config) const;
+
     virtual bool configurationAllowedForMask(KisFilterConfigurationSP config) const;
     virtual void fixLoadedFilterConfigurationForMasks(KisFilterConfigurationSP config) const;
 

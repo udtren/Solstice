@@ -56,13 +56,15 @@ matches the task.
 
 ### Concepts
 
-- [CPU/GPU bit-identical parity](concepts/cpu-gpu-bit-parity.md): how the
-  GPU transform paths reproduce CPU results bit for bit (planning with CPU
+- [CPU/GPU bit-identical parity](concepts/cpu-gpu-bit-parity.md): which
+  parity rule applies (bit-identical transforms, tolerance for the FFT-based
+  Gaussian blur); how the GPU transform paths reproduce CPU results bit for bit (planning with CPU
   classes, `precise` doubles, correctly rounded division and square root,
   rounding to float and half, ordering, fallback), and the test pattern.
 - [Krita copy and sampling semantics](concepts/krita-copy-semantics.md):
   `copyAreaOptimized()`, `bitBlt()`'s `fastBitBlt()` path, the Copy
-  composite op clearing transparent pixels in SIMD batches,
+  composite op clearing transparent pixels and clamping HDR colors in SIMD
+  batches,
   `KisRandomSubAccessor` weights.
 - [Qt numeric and geometry semantics](concepts/qt-numeric-and-geometry.md):
   `qRound()`, `QPolygonF::containsPoint()`, `boundingRect()` /
@@ -81,13 +83,13 @@ matches the task.
 
 - [Build, format and test pitfalls](pitfalls/build-format-test.md):
   clang-format include sorting, shells, shader and struct layout mistakes,
-  test environment, installation.
+  test environment, installation (including plugins after a vtable change).
 
 ### Benchmarks
 
 - [Transform and filter costs](benchmarks/transform-and-filter-costs.md):
-  CPU baseline and GPU results for affine transforms, Liquify, Puppet Warp
-  and filters on a 2480x3508 RGBA32F layer.
+  CPU baseline and GPU results for affine transforms, Liquify, Puppet Warp,
+  Gaussian blur and other filters on a 2480x3508 RGBA32F layer.
 
 ### History
 

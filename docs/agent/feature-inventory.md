@@ -162,6 +162,17 @@ Pin selection, click action and order (same phase, user request):
 - the code-built "Click pin" combo and Order buttons in `kis_tool_transform_config_widget.*`;
 - `slotPuppetOrderChange()` in `kis_tool_transform.*`;
 - order levels (`orderAt()`, `orderLevels()`, `OrderFilterOp`) in `libs/image/KisPuppetTransformWorker.*`.
+Phase 4.98 adds the GPU Gaussian convolution (Gaussian Blur, Unsharp Mask, Gaussian High Pass):
+- new `libs/gpu/KisGpuSeparableConvolutionPass.*` and `libs/gpu/shaders/separable_convolution.comp`
+  (four shaders in `libs/gpu/CMakeLists.txt`);
+- new `libs/image/gpu/KisGpuConvolutionWorker.*` (in `libs/image/CMakeLists.txt`);
+- `runsOnGpu()` and the GPU branch of `applyGaussian()` in `libs/image/kis_gaussian_kernel.{h,cpp}`;
+- the virtual `KisFilter::prefersSingleCall()` in `libs/image/filter/kis_filter.{h,cc}`, used in
+  `libs/ui/tool/strokes/kis_filter_stroke_strategy.cpp` and overridden in
+  `plugins/filters/blur/kis_gaussian_blur_filter.{h,cpp}`;
+- tests: `KisGpuPaintDeviceTest::testGpuGaussianMatchesCpu`, `testGpuGaussianPatchesMatchCpu`,
+  `testGpuGaussianFiltersMatchCpu`, the benchmark's GPU convolution rows, and the new
+  `libs/ui/tests/KisGpuFilterStrokeTest.cpp` (in `libs/ui/tests/CMakeLists.txt`).
 Phase 4.97 adds the GPU Liquify grid warp:
 - new `libs/gpu/KisGpuGridWarpPass.*` and `libs/gpu/shaders/grid_warp.comp` (claim and resolve
   shaders in `libs/gpu/CMakeLists.txt`);

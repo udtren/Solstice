@@ -65,6 +65,10 @@ kis_gpu_add_shader(kritagpu_SHADERS transform_pass_rgba16f shaders/transform_pas
 kis_gpu_add_shader(kritagpu_SHADERS grid_warp_claim shaders/grid_warp.comp DEFINES CLAIM)
 kis_gpu_add_shader(kritagpu_SHADERS grid_warp_resolve_rgba32f shaders/grid_warp.comp)
 kis_gpu_add_shader(kritagpu_SHADERS grid_warp_resolve_rgba16f shaders/grid_warp.comp DEFINES TILE_F16)
+kis_gpu_add_shader(kritagpu_SHADERS separable_convolution_h_rgba32f shaders/separable_convolution.comp)
+kis_gpu_add_shader(kritagpu_SHADERS separable_convolution_h_rgba16f shaders/separable_convolution.comp DEFINES TILE_F16)
+kis_gpu_add_shader(kritagpu_SHADERS separable_convolution_v_rgba32f shaders/separable_convolution.comp DEFINES VERTICAL)
+kis_gpu_add_shader(kritagpu_SHADERS separable_convolution_v_rgba16f shaders/separable_convolution.comp DEFINES VERTICAL TILE_F16)
 
 set(kritagpu_LIB_SRCS
     KisGpuVulkanFunctions.cpp
@@ -80,6 +84,7 @@ set(kritagpu_LIB_SRCS
     KisGpuCanvasPatchWriter.cpp
     KisGpuTransformPass.cpp
     KisGpuGridWarpPass.cpp
+    KisGpuSeparableConvolutionPass.cpp
 )
 
 if(WIN32)

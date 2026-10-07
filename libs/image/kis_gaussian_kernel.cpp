@@ -11,7 +11,9 @@
 #include <kis_convolution_painter.h>
 #include <kis_transaction.h>
 #include <QRect>
+#include <KoUpdater.h>
 
+#include "gpu/KisGpuConvolutionWorker.h"
 
 qreal KisGaussianKernel::sigmaFromRadius(qreal radius)
 {
@@ -109,6 +111,33 @@ void KisGaussianKernel::applyGaussian(KisPaintDeviceSP device,
 {
     QPoint srcTopLeft = rect.topLeft();
 
+    // Solstice GPU engine (phase 4.98): the FFT convolution below, computed
+    // as two passes on the GPU for RGBA float devices.
+    if (runsOnGpu(device)) {
+        const Eigen::Matrix<qreal, Eigen::Dynamic, Eigen::Dynamic> h = createHorizontalMatrix(xRadius);
+        const Eigen::Matrix<qreal, Eigen::Dynamic, Eigen::Dynamic> v = createVerticalMatrix(yRadius);
+        const Eigen::Matrix<qreal, Eigen::Dynamic, Eigen::Dynamic> uni = v * h;
+        QVector<double> horizontal(int(h.cols()));
+        QVector<double> vertical(int(v.rows()));
+        for (int i = 0; i < horizontal.size(); ++i) {
+            horizontal[i] = h(0, i);
+        }
+        for (int i = 0; i < vertical.size(); ++i) {
+            vertical[i] = v(i, 0);
+        }
+        if (KisGpuConvolutionWorker::applySeparable(device,
+                                                    rect,
+                                                    horizontal,
+                                                    vertical,
+                                                    uni.sum(),
+                                                    channelFlags,
+                                                    borderOp)) {
+            if (progressUpdater) {
+                progressUpdater->setProgress(100);
+            }
+            return;
+        }
+    }
 
     if (KisConvolutionPainter::supportsFFTW()) {
         KisConvolutionPainter painter(device, KisConvolutionPainter::FFTW);
@@ -175,6 +204,11 @@ void KisGaussianKernel::applyGaussian(KisPaintDeviceSP device,
 
         painter.applyMatrix(kernelVertical, device, srcTopLeft, srcTopLeft, rect.size(), borderOp);
     }
+}
+
+bool KisGaussianKernel::runsOnGpu(KisPaintDeviceSP device)
+{
+    return KisConvolutionPainter::supportsFFTW() && KisGpuConvolutionWorker::canRun(device);
 }
 
 Eigen::Matrix<qreal, Eigen::Dynamic, Eigen::Dynamic>

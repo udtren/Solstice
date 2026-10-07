@@ -19,7 +19,8 @@ Saturation and Luminosity. Wash's Alpha Darken painting buffer, preview and
 final merge can stay on the GPU. Other RGBA16F brush blend modes continue
 through the CPU path. Dab generation remains on
 the CPU in both formats.
-Filters and transforms still run on the CPU. The engine is on by default in
+Most filters and transforms still run on the CPU; the exceptions are
+described below (Transform Tool, Liquify, Gaussian Blur). The engine is on by default in
 new profiles and in profiles that never changed the option (since 2026-10-07).
 
 Accelerated layer blend modes include Normal, Multiply, Screen, Addition /
@@ -235,7 +236,20 @@ identical to the CPU result: about 56ms instead of about 220ms for 20 strokes
 over a large part of the same layer. The preview while editing, perspective,
 warp, Puppet Warp, cage and mesh transforms still run on the CPU, as does
 Liquify when the layer's position differs from its original copy (an internal
-case the Transform Tool does not use). With mirroring and
+case the Transform Tool does not use).
+
+Gaussian Blur is computed on the GPU for RGBA 32/16-bit float layers, and so
+is the blur inside Unsharp Mask and Gaussian High Pass. The result matches
+the CPU result within rounding: in 32-bit float layers the difference is at
+most one rounding step, and in the tests 16-bit float results were identical.
+On a 2480x3508 32-bit float layer, applying Gaussian Blur took about 50ms
+(radius 5), 62ms (radius 30) and 110ms (radius 100) instead of about 150ms,
+213ms and 398ms. Unsharp Mask gains little (about 378ms instead of 408ms),
+because its sharpening step still runs on the CPU. Filter masks and filter
+layers with these filters use the GPU when they update large areas. Areas
+smaller than about 180x180 pixels, the reduced-resolution Instant Preview,
+8-bit and 16-bit integer layers, wrap-around mode, layer styles and the
+Colorize Mask stay on the CPU. With mirroring and
 blend modes such as Overlay or Dodge, where mirrored dabs overlap the stroke,
 the result can differ slightly from a CPU stroke because the dabs are grouped
 differently; the CPU brush shows the same kind of variation between strokes.
@@ -497,7 +511,9 @@ export formats write the file directly and are not covered.)
   color-component modes, still use the CPU.
   Half-precision storage and intermediate rounding are preserved after each
   dab; small rounding differences from CPU arithmetic remain possible.
-  It is still under development; filters and transforms are not accelerated.
+  It is still under development; filters and transforms are not accelerated,
+  except the Transform Tool's affine transforms, Liquify and Gaussian Blur
+  (described above).
 - Soft proofing, channel selection in the Channels docker, and some display
   color profiles (LUT-based profiles, absolute colorimetric intent) use the
   CPU for the canvas display.

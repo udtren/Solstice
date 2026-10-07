@@ -77,3 +77,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the Solstice defaults and the verification.
 - Pitfall recorded in `docs/agent/settings-location.md` (phase 5): starting `krita.exe`
   directly does not work in the development environment; use `run-krita.bat`.
+
+## 2026-10-07 ingest: GPU Gaussian blur family (phase 4.98)
+
+- `history/gpu-phases-4.93-.md`: the phase 4.98 record.
+- `concepts/cpu-gpu-bit-parity.md`: the tolerance rule for the FFT-based
+  Gaussian convolution.
+- `concepts/krita-copy-semantics.md`: the Copy op's batch-wide HDR clamping
+  with a selection.
+- `pitfalls/build-format-test.md`: installing plugins after a vtable change;
+  PowerShell `Select-Object -First` ending a build.
+- `benchmarks/transform-and-filter-costs.md`: GPU Gaussian blur rows.
+- `decisions/gpu-phase-numbering.md`: 4.98 done, next 4.99.

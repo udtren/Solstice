@@ -1,0 +1,296 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Separable convolution of a band of rows (GPU engine phase 4.98): the
+ * Gaussian blur of KisGaussianKernel::applyGaussian(), equivalent to the CPU
+ * FFT convolution (KisConvolutionWorkerFFT) within rounding.
+ *
+ *  - Horizontal pass (default): for every intermediate pixel, the weighted
+ *    sum of the source row in doubles. Source pixels come from the source
+ *    tile grid; with BORDER_REPEAT their coordinates are clamped into the
+ *    data rect, as the repeat iterators do. When alpha is convolved, color
+ *    channels are premultiplied by alpha first.
+ *  - Vertical pass (-DVERTICAL): the weighted sum of the intermediate column,
+ *    scaled by 1 / factor and written like
+ *    KisConvolutionWorkerFFT::writeResultToDevice(): clamping to the channel
+ *    range, alpha written first, colors divided by alpha (zero when the
+ *    stored alpha is below the channel epsilon or alpha <= DBL_EPSILON).
+ *    Channels that are not convolved, and pixels outside the apply rect, keep
+ *    the source pixel.
+ *
+ * Compile with -DTILE_F16 for RGBA16F tiles.
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+#ifdef TILE_F16
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#define PIXEL f16vec4
+#else
+#define PIXEL vec4
+#endif
+
+layout(local_size_x = 64, local_size_y = 1) in;
+
+layout(buffer_reference, std430, buffer_reference_align = 8) buffer TilePixels
+{
+    PIXEL px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer AddressTable
+{
+    uint64_t addr[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer WeightTable
+{
+    double value[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 32) buffer Intermediate
+{
+    dvec4 px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer Params
+{
+    double invFactor; // 1 / the 2D kernel's sum
+    int halfWidth; // horizontal taps: 2 * halfWidth + 1
+    int halfHeight; // vertical taps: 2 * halfHeight + 1
+    ivec4 applyRect; // x, y, width, height
+    ivec4 dataRect; // x, y, width, height: the clamp rect for BORDER_REPEAT
+    int repeatBorder;
+    int premultiply; // alpha is convolved
+    int bandTop; // the first output row of this band (image coordinates)
+    int bandRows; // output rows of this band
+    ivec4 convolved; // per memory channel: 1 if convolved
+    ivec2 srcGridOrigin; // image coordinates of the source grid's first tile
+    int srcGridWidth;
+    int srcGridHeight;
+    ivec2 dstGridOrigin;
+    int dstGridWidth;
+    int dstGridHeight;
+    int dstFirstTileRow; // the first destination tile row of this band
+    int dstTileRows; // destination tile rows of this band
+    int padding[2];
+    vec4 defaultPixel; // the source device's default pixel, as float
+};
+
+layout(push_constant) uniform Constants
+{
+    Params params;
+    AddressTable srcTiles;
+    AddressTable dstTiles;
+    WeightTable horizontal;
+    WeightTable vertical;
+    Intermediate intermediate;
+}
+constants;
+
+vec4 sourcePixel(int x, int y)
+{
+    const ivec2 p = ivec2(x, y) - constants.params.srcGridOrigin;
+    const ivec2 tile = p >> 6;
+    if (any(lessThan(p, ivec2(0))) || tile.x >= constants.params.srcGridWidth
+        || tile.y >= constants.params.srcGridHeight)
+        return constants.params.defaultPixel;
+    const uint64_t address = constants.srcTiles.addr[tile.y * constants.params.srcGridWidth + tile.x];
+    if (address == 0)
+        return constants.params.defaultPixel;
+    const ivec2 inTile = p & 63;
+    return vec4(TilePixels(address).px[inTile.y * 64 + inTile.x]);
+}
+
+#ifndef VERTICAL
+
+// Intermediate row r of the band holds source row bandTop - halfHeight + r.
+void main()
+{
+    const int width = constants.params.applyRect.z;
+    const int rows = constants.params.bandRows + 2 * constants.params.halfHeight;
+    const int ix = int(gl_GlobalInvocationID.x);
+    const int iy = int(gl_GlobalInvocationID.y);
+    if (ix >= width || iy >= rows)
+        return;
+    const int x = constants.params.applyRect.x + ix;
+    int y = constants.params.bandTop - constants.params.halfHeight + iy;
+    const ivec4 data = constants.params.dataRect;
+    const bool repeat = constants.params.repeatBorder != 0;
+    if (repeat)
+        y = clamp(y, data.y, data.y + data.w - 1);
+
+    const int taps = 2 * constants.params.halfWidth + 1;
+    const bool premultiply = constants.params.premultiply != 0;
+    precise dvec4 total = dvec4(0.0LF);
+    for (int k = 0; k < taps; ++k) {
+        int sx = x - constants.params.halfWidth + k;
+        if (repeat)
+            sx = clamp(sx, data.x, data.x + data.z - 1);
+        const vec4 pixel = sourcePixel(sx, y);
+        precise dvec4 value = dvec4(pixel);
+        if (premultiply) {
+            value.r = value.r * value.a;
+            value.g = value.g * value.a;
+            value.b = value.b * value.a;
+        }
+        const double weight = constants.horizontal.value[k];
+        precise dvec4 weighted = value * weight;
+        total = total + weighted;
+    }
+    constants.intermediate.px[iy * width + ix] = total;
+}
+
+#else
+
+#ifdef TILE_F16
+const double ChannelMax = 65504.0LF; // HALF_MAX
+const float ChannelEpsilon = 0.0009765625; // HALF_EPSILON
+#else
+const double ChannelMax = 3.4028234663852886e38LF; // FLT_MAX
+const float ChannelEpsilon = 1.1920928955078125e-7; // FLT_EPSILON
+#endif
+const double DoubleEpsilon = 2.220446049250313e-16LF;
+
+// double -> float, rounded to nearest even like a C++ conversion.
+float toFloat(double value)
+{
+    precise float f = float(value);
+    if (isinf(f) || isnan(f) || double(f) == value)
+        return f;
+    float best = f;
+    double bestError = abs(double(f) - value);
+    for (int i = -1; i <= 1; i += 2) {
+        uint bits = floatBitsToUint(f);
+        float candidate = uintBitsToFloat(uint(int(bits) + i));
+        double error = abs(double(candidate) - value);
+        if (error < bestError || (error == bestError && (floatBitsToUint(candidate) & 1u) == 0u)) {
+            best = candidate;
+            bestError = error;
+        }
+    }
+    return best;
+}
+
+#ifdef TILE_F16
+// Imath float -> half rounding (nearest even, denormals included).
+float roundToHalf(float value)
+{
+    uint x = floatBitsToUint(value);
+    if (value == 0.0)
+        return value;
+    uint sign = (x >> 16) & 0x8000u;
+    int e = int((x >> 23) & 0xffu) - 127 + 15;
+    uint m = x & 0x007fffffu;
+    uint h;
+    if (e <= 0) {
+        if (e < -10)
+            return uintBitsToFloat(sign << 16);
+        m |= 0x00800000u;
+        int t = 14 - e;
+        uint a = (1u << uint(t - 1)) - 1u;
+        uint b = (m >> uint(t)) & 1u;
+        h = sign | ((m + a + b) >> uint(t));
+    } else {
+        h = (sign | (uint(e) << 10)) + ((m + 0x00000fffu + ((m >> 13) & 1u)) >> 13);
+    }
+    return unpackHalf2x16(h).x;
+}
+#endif
+
+// KisConvolutionWorkerFFT::limitValue(): NaN becomes the lower bound.
+double limitValue(double value)
+{
+    if (value > ChannelMax)
+        return ChannelMax;
+    if (!(value >= -ChannelMax))
+        return -ChannelMax;
+    return value;
+}
+
+// The stored channel value: (T)v, double -> float (-> half).
+float storeChannel(double value)
+{
+    float f = toFloat(value);
+#ifdef TILE_F16
+    f = roundToHalf(f);
+#endif
+    return f;
+}
+
+vec4 convolve(int x, int y)
+{
+    const int width = constants.params.applyRect.z;
+    const int ix = x - constants.params.applyRect.x;
+    const int first = y - constants.params.bandTop; // intermediate row of tap 0
+    const int taps = 2 * constants.params.halfHeight + 1;
+    precise dvec4 total = dvec4(0.0LF);
+    for (int k = 0; k < taps; ++k) {
+        const double weight = constants.vertical.value[k];
+        precise dvec4 weighted = constants.intermediate.px[(first + k) * width + ix] * weight;
+        total = total + weighted;
+    }
+
+    vec4 result = sourcePixel(x, y);
+    const ivec4 convolved = constants.params.convolved;
+    const double invFactor = constants.params.invFactor;
+    if (constants.params.premultiply != 0) {
+        precise double alphaScaled = total.a * invFactor;
+        const double alpha = limitValue(alphaScaled);
+        result.a = storeChannel(alpha);
+        const bool alphaIsNull = result.a < ChannelEpsilon;
+        if (!alphaIsNull && alpha > DoubleEpsilon) {
+            const double alphaInv = 1.0LF / alpha;
+            for (int c = 0; c < 3; ++c) {
+                if (convolved[c] != 0) {
+                    precise double scaled = total[c] * invFactor;
+                    precise double value = scaled * alphaInv;
+                    result[c] = storeChannel(limitValue(value));
+                }
+            }
+        } else {
+            for (int c = 0; c < 3; ++c) {
+                if (convolved[c] != 0)
+                    result[c] = 0.0;
+            }
+        }
+    } else {
+        for (int c = 0; c < 4; ++c) {
+            if (convolved[c] != 0) {
+                precise double value = total[c] * invFactor;
+                result[c] = storeChannel(limitValue(value));
+            }
+        }
+    }
+    return result;
+}
+
+// One invocation per pixel of the band's destination tile rows.
+void main()
+{
+    const int gridPixelsX = constants.params.dstGridWidth * 64;
+    const int bandPixelsY = constants.params.dstTileRows * 64;
+    const int gx = int(gl_GlobalInvocationID.x);
+    const int by = int(gl_GlobalInvocationID.y);
+    if (gx >= gridPixelsX || by >= bandPixelsY)
+        return;
+    const int gy = constants.params.dstFirstTileRow * 64 + by;
+    const int x = constants.params.dstGridOrigin.x + gx;
+    const int y = constants.params.dstGridOrigin.y + gy;
+
+    const ivec4 rect = constants.params.applyRect;
+    const bool inside = x >= rect.x && x < rect.x + rect.z && y >= constants.params.bandTop
+        && y < constants.params.bandTop + constants.params.bandRows;
+    const vec4 result = inside ? convolve(x, y) : sourcePixel(x, y);
+
+    const ivec2 tile = ivec2(gx, gy) >> 6;
+    const uint64_t address = constants.dstTiles.addr[tile.y * constants.params.dstGridWidth + tile.x];
+    if (address == 0)
+        return;
+    const ivec2 inTile = ivec2(gx, gy) & 63;
+    TilePixels(address).px[inTile.y * 64 + inTile.x] = PIXEL(result);
+}
+
+#endif

@@ -246,7 +246,8 @@ void KisFilterStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
 
             QVector<KisRunnableStrokeJobData*> processJobs;
 
-            if (shared->filter()->supportsThreading()) {
+            if (shared->filter()->supportsThreading()
+                && !shared->filter()->prefersSingleCall(shared->filterDevice, shared->filterConfig())) {
                 // Split stroke into patches...
                 QSize size = KritaUtils::optimalPatchSize();
                 QVector<QRect> patches = KritaUtils::splitRectIntoPatches(shared->processRect, size);

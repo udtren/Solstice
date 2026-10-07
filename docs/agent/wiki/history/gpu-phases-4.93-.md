@@ -7,7 +7,7 @@ sources: [docs/agent/gpu-engine.md, git history]
 
 # GPU engine history: filters and transforms (phases 4.93-)
 
-CPU filter/transform baseline, GPU affine passes, GPU Liquify grid warp. Moved verbatim from `docs/agent/gpu-engine.md`; current state, decisions and
+CPU filter/transform baseline, GPU affine passes, GPU Liquify grid warp, GPU Gaussian blur. Moved verbatim from `docs/agent/gpu-engine.md`; current state, decisions and
 invariants stay there ([gpu-engine.md](../../gpu-engine.md)). Each section records what was true
 when it was written; later sections and the current document take precedence.
 
@@ -294,3 +294,157 @@ Installed gpu/image; hashes match. The user reported the manual checks OK on 202
 - a large Liquify over most of a layer: apply time;
 - 8-bit layers unchanged (CPU);
 - the preview while painting unchanged.
+
+## GPU Gaussian blur family (phase 4.98)
+
+The user chose the blur family next (task order 2, 3, 4, 6, 7, 8, 9 of
+2026-10-07) and approved the design on 2026-10-07: parity within a
+tolerance, because bit identity is impossible, with Unsharp Mask and
+Gaussian High Pass included.
+
+**How the CPU computes it.** `KisGaussianKernel::applyGaussian()` uses the
+FFT convolution when FFTW is available, as in this build
+(`KisConvolutionPainter::supportsFFTW()`):
+
+- `KisConvolutionWorkerFFT` with `createUniform2DKernel()`: the outer
+  product `v * h` of the vertical and horizontal Gaussian vectors, divided
+  by its sum (`factor`).
+- The cache holds color times alpha, and alpha, in doubles from
+  `oldRawData()`. It covers the rect plus the kernel's half sizes; the
+  padding (4 x half width, 2 x half height) keeps the circular convolution
+  from wrapping into the result.
+- Writing (`writeResultToDevice()`):
+  - alpha = sum x fftScale (offset 0), clamped to +-FLT_MAX / +-HALF_MAX,
+    NaN to the lower bound, then stored;
+  - when the stored alpha is below the type's epsilon (FLT_EPSILON,
+    HALF_EPSILON) or alpha <= DBL_EPSILON, the convolved colors become 0;
+  - otherwise color = sum x fftScale / alpha, clamped and stored.
+  - Without alpha in the channel flags, colors are convolved without
+    premultiplication. Channels that are not convolved keep their value.
+- Borders: `BORDER_REPEAT` clamps source coordinates into
+  `rect | defaultBounds()->bounds()` (repeat iterators); `BORDER_IGNORE`
+  reads the device as it is.
+- Callers: Gaussian Blur, Unsharp Mask and Gaussian High Pass (RGBA float
+  candidates); layer styles and the Colorize Mask (8-bit selections, CPU).
+- Filter strokes split the rect into `KritaUtils::optimalPatchSize()`
+  patches (512x512 by default). The patches run concurrently, in place,
+  under one transaction; each patch reads its neighbours' old data.
+
+The FFT's rounding cannot be reproduced, so the GPU computes the same
+convolution directly, in doubles.
+
+**GPU implementation.**
+
+- **`libs/gpu/shaders/separable_convolution.comp`**, through
+  **`KisGpuSeparableConvolutionPass`**. The destination tile grid is
+  processed in bands of tile rows; the intermediate buffer stays within
+  64MB per band, and the pass refuses above 1GB.
+  - Horizontal pass: premultiplied sums in doubles into a device-local
+    intermediate (the band's rows plus the half height above and below;
+    source rows clamped for `BORDER_REPEAT`).
+  - Vertical pass (`-DVERTICAL`): every pixel of the band's destination
+    tiles. Inside the rect it follows the FFT worker's write rules above;
+    elsewhere, and in channels that are not convolved, it writes the source
+    pixel. Doubles become float (and half) with the rounding of phase 4.94.
+- **`KisGpuConvolutionWorker::applySeparable()`** (`libs/image/gpu`):
+  - a snapshot of the read rect: `KisPainter::copyAreaOptimizedOldData()`
+    into a clone (whole tiles are shared), as the CPU reads `oldRawData()`;
+  - one submission: the snapshot `ReadOnly`, a temporary device
+    `WriteOnly` over the rect;
+  - a batched download of the result, then `KisPainter::copyAreaOptimized()`
+    into the rect (the fast path: same offsets and color space).
+  - Calls on disjoint rects of one device may therefore run concurrently,
+    like a filter stroke's patches.
+  - Below 32,768 source pixels (the rect plus the margins, about 180x180)
+    the CPU is used: a GPU call costs about 1.7ms (see the benchmark).
+- **`KisGaussianKernel::applyGaussian()`** tries it first (`runsOnGpu()`:
+  FFTW and `KisGpuConvolutionWorker::canRun()`); on false the FFT runs.
+- **`KisFilter::prefersSingleCall()`**, a new virtual (default false), makes
+  `KisFilterStrokeStrategy` call `processImpl()` once over the process rect.
+  `KisGaussianBlurFilter` returns `KisGaussianKernel::runsOnGpu(device)`.
+  - Concurrent patches serialize their GPU calls: 114-200ms for 32 bands
+    against 50-110ms for one call.
+  - Unsharp Mask and Gaussian High Pass keep the patches, because their CPU
+    steps (sharpening, grain extract) need the threads.
+  - The new virtual changes `KisFilter`'s vtable: every filter plugin must
+    be rebuilt and installed with `kritaimage`.
+- **Scope** (`canRun()`):
+  - RGBA32F/F16 with RGBA channel order, at least one convolved channel;
+  - LOD 0: the Instant Preview at a lower level of detail stays on the CPU;
+  - no wrap-around, `shaderFloat64`, the GPU engine on;
+  - `KRITA_GPU_CONVOLUTION=0` disables it.
+- **Debug.** `KRITA_GPU_CONVOLUTION_DEBUG=1` prints stage times; trace scope
+  `filter.gpu_convolution`.
+
+**Tests** (Vulkan validation):
+
+- New `KisGpuPaintDeviceTest::testGpuGaussianMatchesCpu`, 30 rows:
+  - F32 and F16;
+  - radii 1, 5, 30, 100, 12x3, 0x7 and 2.5x40;
+  - an offset device, a partial rect, `BORDER_IGNORE`, RGB only, alpha only,
+    without green, an opaque default pixel, HDR colors (x40);
+  - tolerance: relative 1e-5 (F32) or 1e-3 (F16, about one half ulp);
+    colors are skipped where either alpha is near the null threshold;
+  - pixels outside the rect are bit-identical; Undo/Redo.
+  - Worst relative difference: F32 6e-8 (one rounding step), F16 identical.
+- New `testGpuGaussianPatchesMatchCpu`: concurrent patches under one
+  transaction; the narrow edge patches stay on the CPU (size threshold), so
+  GPU and CPU patches mix.
+- New `testGpuGaussianFiltersMatchCpu`, 6 rows: the three filters through
+  `KisFilter::process()`, with and without a selection.
+- New `libs/ui/tests/KisGpuFilterStrokeTest`, 6 rows: the three filters
+  through `KisFilterStrokeStrategy` on an image, with Undo/Redo. Gaussian
+  Blur makes one GPU call; the others one per patch.
+- `KisGpuPaintDeviceTest` 288 (1 skipped: the opt-in benchmark),
+  `KisGpuProjectionTest` 199, `KisGpuEngineTest` 11,
+  `kis_convolution_painter_test` 20, `kis_filter_test` 8,
+  `kis_filter_mask_test` 5, `kis_adjustment_layer_test` 6,
+  `kis_lazy_brush_test` 13, `kis_async_merger_test` 12.
+- `kis_all_filter_test` (an upstream broken test, not registered in ctest)
+  fails on 8-bit reference images of many filters. The GPU path does not
+  run for 8-bit images.
+
+**Found while testing.**
+
+- Unsharp Mask with a selection first differed in F32 by up to 0.11 at a few
+  pixels. The selected copy uses `KoOptimizedCompositeOpCopy128`, whose SIMD
+  path clamps colors to 1 for a whole batch only when some pixel of the
+  batch is not opaque. A one-ulp alpha difference therefore changes the
+  clamping of HDR colors in neighbouring pixels. The test keeps Unsharp
+  Mask results below 1 (see
+  [Krita copy and sampling semantics](../concepts/krita-copy-semantics.md)).
+- The first run after adding the virtual crashed `kis_filter_test` and other
+  filter tests with 0xc0000005: tests load the installed filter plugins,
+  which still had the old vtable. A full install fixed it.
+
+**Benchmark** (2480x3508 RGBA32F, `benchmarkFiltersAndTransforms`, medians
+of three processes, the range of the process results in parentheses):
+
+| Filter | CPU single call | CPU 32 bands | GPU single call | GPU 32 bands |
+| --- | ---: | ---: | ---: | ---: |
+| Gaussian blur r5 | 1015 (1012-1023) | 150 (149-152) | 50.0 (46.1-54.1) | 114 (113-115) |
+| Gaussian blur r30 | 1085 (1079-1099) | 213 (210-214) | 62.0 (59.2-64.5) | 124 (124-126) |
+| Gaussian blur r100 | 1759 (1745-1769) | 398 (394-400) | 110 (108-110) | 200 (200-215) |
+| Unsharp mask | 6345 (6321-6399) | 408 (406-421) | 5011 (4965-5011) | 378 (372-379) |
+
+- The Filter dialog's apply corresponds to "CPU 32 bands" (patches) before
+  and "GPU single call" now for Gaussian Blur: 150-398ms -> 50-110ms.
+- Unsharp Mask gains little: its sharpening step on the CPU dominates.
+
+One `applyGaussian()` call on a small square (median of 9 per process,
+medians of three processes; before the size threshold, the GPU took
+1.7-1.9ms for the 64 and 128 rows):
+
+| Square | r5 CPU | r5 GPU | r30 CPU | r30 GPU |
+| --- | ---: | ---: | ---: | ---: |
+| 64 | 0.41 | CPU | 1.21 | CPU |
+| 128 | 1.03 | CPU | 2.95 | 1.91 |
+| 256 | 4.89 | 1.92 | 10.82 | 2.15 |
+| 512 | 35.5 | 2.94 | 33.1 | 3.46 |
+| 1024 | 147 | 7.04 | 122 | 8.99 |
+
+Installed with `cmake --install` (every filter plugin, because of the new
+virtual). The user reported the manual checks OK on 2026-10-07: Gaussian
+Blur, Unsharp Mask and Gaussian High Pass on RGBA32F and RGBA16F layers
+(apply time, result, selection, Undo/Redo, preview, filter mask), 8-bit
+unchanged.

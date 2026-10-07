@@ -3,7 +3,7 @@ type: benchmark
 updated: 2026-10-07
 sources:
   - libs/image/tests/KisGpuPaintDeviceTest.cpp (benchmarkFiltersAndTransforms, opt-in KRITA_GPU_BENCHMARK_FILTERS=1)
-  - ../history/gpu-phases-4.93-.md (phases 4.93, 4.94, 4.97)
+  - ../history/gpu-phases-4.93-.md (phases 4.93, 4.94, 4.97, 4.98)
 related:
   - ../concepts/cpu-gpu-bit-parity.md
 ---
@@ -116,8 +116,28 @@ Notes:
 - Compared with October 4, the projection, canvas and mirror medians are
   within a few percent; no change is claimed from that difference.
 
+## GPU Gaussian blur (phase 4.98, 2026-10-07)
+
+Build: phase 4.98 working tree on `ac896b0427`, RelWithDebInfo; same machine
+and driver. Three processes of `benchmarkFiltersAndTransforms` with
+`KRITA_GPU_VALIDATION=0`; medians, with the range of process results.
+
+| Filter (2480x3508 RGBA32F) | CPU single call | CPU 32 bands | GPU single call | GPU 32 bands |
+| --- | ---: | ---: | ---: | ---: |
+| Gaussian blur r5 | 1015 (1012-1023) | 150 (149-152) | 50.0 (46.1-54.1) | 114 (113-115) |
+| Gaussian blur r30 | 1085 (1079-1099) | 213 (210-214) | 62.0 (59.2-64.5) | 124 (124-126) |
+| Gaussian blur r100 | 1759 (1745-1769) | 398 (394-400) | 110 (108-110) | 200 (200-215) |
+| Unsharp mask | 6345 (6321-6399) | 408 (406-421) | 5011 (4965-5011) | 378 (372-379) |
+
+- The Filter dialog's Gaussian Blur ran as patches (about "CPU 32 bands")
+  and now runs as one GPU call (`KisFilter::prefersSingleCall()`).
+- Concurrent GPU calls serialize, so "GPU 32 bands" is slower than one call.
+- One `applyGaussian()` call on small squares, with the size threshold
+  (32,768 source pixels) in place, is in the history page. Without the
+  threshold the GPU took 1.7-1.9ms for 64x64 and 128x128 (CPU 0.4-3.0ms).
+
 ## Staleness
 
 Re-measure after changes to `KisGpuTileAccess` transfers, the transform
-workers or the filter strokes. Add a row with a new date rather than
+workers, the convolution worker or the filter strokes. Add a row with a new date rather than
 overwriting old ones.

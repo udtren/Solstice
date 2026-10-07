@@ -5,7 +5,8 @@ sources:
   - libs/gpu/shaders/transform_pass.comp (phase 4.94, commit 3828911e98)
   - libs/gpu/shaders/grid_warp.comp (phase 4.97, commit 29912c4daf)
   - libs/image/gpu/KisGpuTransformWorker.*, libs/image/gpu/KisGpuGridWarpWorker.*
-  - libs/image/tests/KisGpuPaintDeviceTest.cpp (testGpuTransformMatchesCpu, testGpuLiquifyMatchesCpu)
+  - libs/image/tests/KisGpuPaintDeviceTest.cpp (testGpuTransformMatchesCpu, testGpuLiquifyMatchesCpu, testGpuGaussianMatchesCpu)
+  - libs/gpu/shaders/separable_convolution.comp (phase 4.98, tolerance-based)
 related:
   - krita-copy-semantics.md
   - qt-numeric-and-geometry.md
@@ -24,6 +25,14 @@ related:
   raw bytes, including the color of transparent pixels, plus `exactBounds()`
   and Undo/Redo. Treat any new transform worker the same way unless the user
   decides otherwise.
+- **The Gaussian convolution** (phase 4.98) cannot be bit-identical: the CPU
+  convolves with FFTW, whose rounding the GPU cannot reproduce. The user
+  approved a tolerance: relative 1e-5 for F32 and 1e-3 for F16 (about one
+  half ulp), alpha only where an alpha is near the FFT worker's null
+  threshold. The GPU sums directly in doubles and follows the CPU's write
+  rules (clamping, alpha handling, double -> float -> half rounding), so the
+  measured difference is at most one rounding step. Pixels outside the rect
+  must still be bit-identical.
 
 ## Techniques that made bit parity work
 

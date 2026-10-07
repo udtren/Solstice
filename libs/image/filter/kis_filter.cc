@@ -135,6 +135,14 @@ bool KisFilter::needsTransparentPixels(const KisFilterConfigurationSP config, co
     return false;
 }
 
+bool KisFilter::prefersSingleCall(KisPaintDeviceSP device, const KisFilterConfigurationSP config) const
+{
+    Q_UNUSED(device);
+    Q_UNUSED(config);
+
+    return false;
+}
+
 bool KisFilter::configurationAllowedForMask(KisFilterConfigurationSP config) const
 {
     Q_UNUSED(config);

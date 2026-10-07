@@ -113,7 +113,8 @@ and layer flips now batch their GPU readbacks.
 The brush prototype requires `KRITA_GPU_BRUSH=1` in addition to enabling the
 GPU engine. Dab generation, texture generation, masking, filter calculations
 and most transform calculations still run on the CPU; the Transform Tool's
-affine transforms and Liquify are applied on the GPU for float layers. Large mirrored brushes with
+affine transforms, Liquify and Gaussian Blur (also inside Unsharp Mask and
+Gaussian High Pass) are applied on the GPU for float layers. Large mirrored brushes with
 Alpha Lock can still catch up after pen release; further tuning of that case
 is deferred. This is an ongoing rewrite, not a fully GPU-based painting pipeline.
 
@@ -137,14 +138,18 @@ Blackwell (driver 596.86), using local development builds:
 | Four mirror passes, 32 dabs of 256 x 256 pixels | 47.7 ms | 2.06 ms |
 | Transform Tool apply, scale + rotate (bicubic), 2480 x 3508 RGBA32F | 470 ms | 64.1 ms |
 | Liquify apply, 20 strokes, 2480 x 3508 RGBA32F | 225 ms | 57.8 ms |
+| Gaussian Blur apply, radius 30, 2480 x 3508 RGBA32F | 213 ms | 62.0 ms |
 
-The transform results are identical to the CPU results, pixel for pixel.
+The transform results are identical to the CPU results, pixel for pixel. The
+Gaussian Blur results match the CPU results within one rounding step.
 
 Each value is the median of three fresh-process results, with GPU completion
 included and Vulkan validation disabled. Projection and canvas results use
 five-sample medians per process; mirror results use five-update averages after
 warming all three brush staging slots; transform results are medians of three
-calls with a CPU-resident source layer. Projection excludes full CPU readback
+calls with a CPU-resident source layer. The Gaussian Blur CPU value splits the
+layer into 32 parallel bands, like the Filter dialog's patches; the GPU value
+is one call. Projection excludes full CPU readback
 (46-49 ms). Canvas preparation starts with GPU-resident projection pixels and
 excludes projection work and final OpenGL texture copies. Mirror measurements
 include reflection and uploads, compare against serial CPU painting, and

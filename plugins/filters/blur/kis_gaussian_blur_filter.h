@@ -34,6 +34,8 @@ public:
     QRect neededRect(const QRect & rect, const KisFilterConfigurationSP _config, int lod) const override;
     QRect changedRect(const QRect & rect, const KisFilterConfigurationSP _config, int lod) const override;
 
+    bool prefersSingleCall(KisPaintDeviceSP device, const KisFilterConfigurationSP config) const override;
+
     bool configurationAllowedForMask(KisFilterConfigurationSP config) const override;
     void fixLoadedFilterConfigurationForMasks(KisFilterConfigurationSP config) const override;
 };

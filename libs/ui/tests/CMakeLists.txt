@@ -214,6 +214,8 @@ target_link_libraries(KisBrushStrokePreviewTest kritamypaintop_static)
 if(HAVE_KRITA_GPU_ENGINE AND WIN32)
     kis_add_tests(KisCanvasUpdateBatcherTest.cpp
         LINK_LIBRARIES kritaui kritatestsdk)
+    kis_add_tests(KisGpuFilterStrokeTest.cpp
+        LINK_LIBRARIES kritaui kritatestsdk)
     kis_add_tests(KisGpuCanvasUploadTest.cpp
         LINK_LIBRARIES kritaui kritatestsdk Qt${QT_MAJOR_VERSION}::OpenGL)
     if (QT_MAJOR_VERSION EQUAL 6)
