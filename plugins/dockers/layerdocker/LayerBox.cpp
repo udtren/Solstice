@@ -92,6 +92,7 @@
 #include "NodeView.h"
 #include "SyncButtonAndAction.h"
 #include "KisMenuStyleDontCloseOnAlt.h"
+#include "KisSolsticeStyle.h"
 
 class LayerBoxStyle : public QProxyStyle
 {
@@ -207,7 +208,7 @@ LayerBox::LayerBox()
             this,
             &LayerBox::slotColorVisibilityChanged);
 
-    QStyle *newStyle = QStyleFactory::create(m_wdgLayerBox->listLayers->style()->objectName());
+    QStyle *newStyle = KisSolsticeStyle::createStyle(m_wdgLayerBox->listLayers->style()->objectName());
     // proxy style steals the ownership of the style and deletes it later
     LayerBoxStyle *proxyStyle = new LayerBoxStyle(newStyle);
 

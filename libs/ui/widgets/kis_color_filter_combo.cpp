@@ -11,6 +11,7 @@
 #include <QtCore/qmath.h>
 #include <QApplication>
 #include <QProxyStyle>
+#include <KisSolsticeStyle.h>
 #include <QStyleOption>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
@@ -196,7 +197,7 @@ KisColorFilterCombo::KisColorFilterCombo(QWidget *parent, bool filterMode, bool 
     QStandardItemModel *newModel = new QStandardItemModel(this);
     setModel(newModel);
 
-    QStyle* newStyle = QStyleFactory::create(style()->objectName());
+    QStyle* newStyle = KisSolsticeStyle::createStyle(style()->objectName());
     // proxy style steals the ownership of the style and deletes it later
     PopupComboBoxStyle *proxyStyle = new PopupComboBoxStyle(newStyle);
 

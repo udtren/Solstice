@@ -10,7 +10,9 @@
   ツールバーの外観を切り替える実装をインストールした。ユーザーが確認し、問題なし。
 - フェーズ3: ユーザー指示で着手。Fusionを基にした `Solstice` スタイルを
   「設定 → スタイル」に追加し、インストールした。ユーザーが確認し、問題なし。
-- 次の判断: フェーズ4（残った独自部品・QML・アイコンの個別調整）に進むかどうか。
+- フェーズ4: ユーザー指示で着手。第1弾（スピンボックス、局所プロキシスタイルの
+  Solstice化）を実装・インストールした。ユーザーが確認し、問題なし。
+  残り（設定ダイアログの寸法、QML画面、アイコン）は未着手。
 
 SolsticeのQt Widgetsを維持し、配色、ドッカー見出し、ドキュメントタブ、
 ツールバーから段階的に見た目を整える。描画作業の情報密度と既存操作を保ち、
@@ -246,8 +248,9 @@ Fusionを選べば元に戻る。
   寸法がFusionと同じなので同じ補正が正しい。
 - 局所的なプロキシスタイル（レイヤー一覧の `LayerBoxStyle`、タグメニューの
   `KisMenuStyleDontCloseOnAlt`、最近使ったファイルのメニュー、色フィルターの
-  コンボボックス）は `QStyleFactory::create(objectName)` で複製するため、
-  これらはFusionのまま描画される（制限として記録）。
+  コンボボックス、ストーリーボード）は、フェーズ3では
+  `QStyleFactory::create(objectName)` で複製していたためFusionのままだった。
+  フェーズ4で `KisSolsticeStyle::createStyle()` に置き換えた。
 - 新しい設定項目は追加していない。
 
 テスト: `libs/widgetutils/tests/KisSolsticeStyleTest.cpp`。スタイル名、Fusionとの
@@ -259,6 +262,27 @@ Fusionを選べば元に戻る。
 確認事項（ユーザー）: スタイルの往復切替、テーマの切替、ボタン・入力欄・
 チェック・ラジオ・メニュー・スクロールバー・タブの各状態、ツールボックスの
 選択中ツール、ブラシエディターと設定ダイアログ、Quick Access等の独自UI。
+
+### フェーズ4の実装（第1弾）
+
+優先度: 使用箇所の多さと、フェーズ3の制限として残った箇所から選んだ。
+
+| 対象 | 変更 | 実装箇所 |
+| --- | --- | --- |
+| スピンボックス（`CC_SpinBox`） | 入力欄と同じ角丸の枠（ホバー・フォーカスも同じ）。上下ボタンは枠の内側で平らにし、区切り線を入れ、ホバー12%・押下24%。矢印（プラス／マイナス表示も）はFusionの描画。押せない方向は無効色。寸法はFusionのまま | `KisSolsticeStyle::drawComplexControl()` |
+| スライダー付きスピンボックス（`KisSliderSpinBox` 等） | 枠とボタンは `CC_SpinBox` で描かれるため上記と同じ外観になる。スライダーの塗りは従来どおり部品自身が描く | 変更なし |
+| 局所プロキシスタイル5か所 | アプリのスタイルがSolsticeで、複製する名前が "fusion" のときはSolsticeスタイルを返す `KisSolsticeStyle::createStyle()` を使う。それ以外は従来どおり `QStyleFactory::create()` | `KisMenuStyleDontCloseOnAlt.cpp`、`krecentfilesaction.cpp`、`kis_color_filter_combo.cpp`、`LayerBox.cpp`、`StoryboardView.cpp`（各1行と include） |
+
+局所スタイルは部品の作成時に複製するため、スタイルを切り替えた後に既に
+作られている部品（レイヤー一覧等）は再起動まで前のスタイルのままになる。
+これはFusion以外への切替でも従来から同じ。
+
+テスト: `KisSolsticeStyleTest` に `createStyle()` の判定（アプリがFusionなら
+Fusion、Solsticeなら "fusion" に対してSolstice、他の名前は工場の既定）を追加。
+スピンボックスの寸法一致は既存の比較に含まれる。6件合格。
+
+フェーズ4の残り（未着手）: 設定ダイアログの文字・アイコンの大きさ、
+テキストツール等のQML画面、アイコンの線幅と大きさの統一。
 
 ### フェーズ2の具体的な変更
 

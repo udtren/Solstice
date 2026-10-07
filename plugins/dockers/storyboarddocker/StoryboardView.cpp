@@ -9,6 +9,7 @@
 #include <QPaintEvent>
 #include <QMenu>
 #include <QProxyStyle>
+#include <KisSolsticeStyle.h>
 #include <QStyleFactory>
 
 #include "StoryboardView.h"
@@ -83,7 +84,7 @@ StoryboardView::StoryboardView(QWidget *parent)
     setDropIndicatorShown(true);
     setDragDropMode(QAbstractItemView::InternalMove);
 
-    QStyle *newStyle = QStyleFactory::create(this->style()->objectName());
+    QStyle *newStyle = KisSolsticeStyle::createStyle(this->style()->objectName());
     // proxy style steals the ownership of the style and deletes it later
     StoryboardStyle *proxyStyle = new StoryboardStyle(newStyle);
     proxyStyle->setParent(this);

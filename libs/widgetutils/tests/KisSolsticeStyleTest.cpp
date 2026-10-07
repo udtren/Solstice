@@ -5,6 +5,7 @@
 
 #include <simpletest.h>
 
+#include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGridLayout>
@@ -107,6 +108,23 @@ private Q_SLOTS:
         KisSolsticeStyle style;
         // Widget-local proxy styles clone the application style by name.
         QCOMPARE(style.objectName(), QStringLiteral("fusion"));
+    }
+
+    void testCreateStyleFollowsApplication()
+    {
+        // Widget-local proxy styles clone the application style by name.
+        QStyle *previous = QApplication::style();
+        const QString previousName = previous->objectName();
+        QApplication::setStyle(QStringLiteral("fusion"));
+        QScopedPointer<QStyle> plain(KisSolsticeStyle::createStyle(QStringLiteral("fusion")));
+        QVERIFY(plain);
+        QVERIFY(!qobject_cast<KisSolsticeStyle *>(plain.data()));
+        QApplication::setStyle(new KisSolsticeStyle());
+        QScopedPointer<QStyle> solstice(KisSolsticeStyle::createStyle(QStringLiteral("fusion")));
+        QVERIFY(qobject_cast<KisSolsticeStyle *>(solstice.data()));
+        QScopedPointer<QStyle> windows(KisSolsticeStyle::createStyle(QStringLiteral("windows")));
+        QVERIFY(!qobject_cast<KisSolsticeStyle *>(windows.data()));
+        QApplication::setStyle(previousName);
     }
 
     void testSizesMatchFusion()

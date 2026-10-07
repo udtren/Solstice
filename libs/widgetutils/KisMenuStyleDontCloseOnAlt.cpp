@@ -4,11 +4,12 @@
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 #include "KisMenuStyleDontCloseOnAlt.h"
+#include "KisSolsticeStyle.h"
 
 #include <QStyleFactory>
 
 KisMenuStyleDontCloseOnAlt::KisMenuStyleDontCloseOnAlt(QStyle *baseStyle)
-    : QProxyStyle(QStyleFactory::create(baseStyle->objectName()))
+    : QProxyStyle(KisSolsticeStyle::createStyle(baseStyle->objectName()))
 {
 }
 

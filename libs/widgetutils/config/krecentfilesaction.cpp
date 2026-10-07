@@ -23,6 +23,7 @@
 #include <QMenu>
 #include <QScreen>
 #include <QProxyStyle>
+#include <KisSolsticeStyle.h>
 #include <QStandardItemModel>
 #include <QStyleFactory>
 #include <QActionGroup>
@@ -108,7 +109,7 @@ void KRecentFilesActionPrivate::init()
         // work well with QProxyStyle, may result in small icons.
         baseStyleName = QStringLiteral("fusion");
     }
-    QStyle *baseStyle = QStyleFactory::create(baseStyleName);
+    QStyle *baseStyle = KisSolsticeStyle::createStyle(baseStyleName);
     QStyle *newStyle = new KRecentFilesIconProxyStyle(baseStyle);
     newStyle->setParent(q->menu());
     q->menu()->setStyle(newStyle);

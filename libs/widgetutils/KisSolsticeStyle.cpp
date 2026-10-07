@@ -5,6 +5,8 @@
 
 #include "KisSolsticeStyle.h"
 
+#include <QAbstractSpinBox>
+#include <QApplication>
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyleFactory>
@@ -63,6 +65,15 @@ QString KisSolsticeStyle::styleKey()
 bool KisSolsticeStyle::isStyleKey(const QString &key)
 {
     return key.compare(styleKey(), Qt::CaseInsensitive) == 0;
+}
+
+QStyle *KisSolsticeStyle::createStyle(const QString &name)
+{
+    if (qobject_cast<KisSolsticeStyle *>(QApplication::style())
+        && name.compare(QStringLiteral("fusion"), Qt::CaseInsensitive) == 0) {
+        return new KisSolsticeStyle();
+    }
+    return QStyleFactory::create(name);
 }
 
 void KisSolsticeStyle::drawPrimitive(PrimitiveElement element,
@@ -261,6 +272,79 @@ void KisSolsticeStyle::drawComplexControl(ComplexControl control,
                                           QPainter *painter,
                                           const QWidget *widget) const
 {
+    if (control == CC_SpinBox) {
+        if (const QStyleOptionSpinBox *spin = qstyleoption_cast<const QStyleOptionSpinBox *>(option)) {
+            // A rounded field like a line edit; flat step buttons inside it,
+            // separated by a line, with Fusion's arrows (or plus and minus).
+            const QPalette &palette = spin->palette;
+            const bool enabled = spin->state & State_Enabled;
+            const QColor base = palette.color(QPalette::Base);
+            const QColor text = palette.color(QPalette::Text);
+            const QColor highlight = palette.color(QPalette::Highlight);
+            const QRectF field = outlineRect(spin->rect);
+            if (spin->frame) {
+                const QColor outline = enabled && (spin->state & State_HasFocus) ? highlight
+                    : enabled && (spin->state & State_MouseOver)                 ? mix(text, base, 0.32)
+                                                                                 : mix(text, base, 0.20);
+                drawRoundedPanel(painter, field, base, outline);
+            } else {
+                painter->fillRect(spin->rect, base);
+            }
+            if (spin->buttonSymbols == QAbstractSpinBox::NoButtons) {
+                return;
+            }
+            const QRect up = subControlRect(control, spin, SC_SpinBoxUp, widget);
+            const QRect down = subControlRect(control, spin, SC_SpinBoxDown, widget);
+            const QRect buttons = up.united(down);
+            if (!buttons.isValid()) {
+                return;
+            }
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing, true);
+            QPainterPath clip;
+            clip.addRoundedRect(field.adjusted(1, 1, -1, -1), Radius - 1.0, Radius - 1.0);
+            painter->setClipPath(clip);
+            painter->fillRect(buttons, mix(text, base, 0.05));
+            const struct {
+                QRect rect;
+                SubControl part;
+                QAbstractSpinBox::StepEnabledFlag step;
+                PrimitiveElement arrow;
+                PrimitiveElement sign;
+            } steps[] = {{up, SC_SpinBoxUp, QAbstractSpinBox::StepUpEnabled, PE_IndicatorArrowUp, PE_IndicatorSpinPlus},
+                         {down,
+                          SC_SpinBoxDown,
+                          QAbstractSpinBox::StepDownEnabled,
+                          PE_IndicatorArrowDown,
+                          PE_IndicatorSpinMinus}};
+            for (const auto &step : steps) {
+                const bool stepEnabled = enabled && (spin->stepEnabled & step.step);
+                const bool active = stepEnabled && (spin->activeSubControls & step.part);
+                if (active) {
+                    const qreal amount = (spin->state & State_Sunken) ? 0.24 : 0.12;
+                    painter->fillRect(step.rect, mix(text, base, amount));
+                }
+            }
+            painter->setClipping(false);
+            const QColor line = mix(text, base, 0.16);
+            const bool rightToLeft = spin->direction == Qt::RightToLeft;
+            painter->fillRect(
+                QRect(rightToLeft ? buttons.right() : buttons.left() - 1, buttons.top() + 1, 1, buttons.height() - 2),
+                line);
+            painter->restore();
+            for (const auto &step : steps) {
+                QStyleOption arrow(*spin);
+                arrow.rect = step.rect;
+                if (!(enabled && (spin->stepEnabled & step.step))) {
+                    arrow.state &= ~State_Enabled;
+                    arrow.palette.setCurrentColorGroup(QPalette::Disabled);
+                }
+                const bool plusMinus = spin->buttonSymbols == QAbstractSpinBox::PlusMinus;
+                proxy()->drawPrimitive(plusMinus ? step.sign : step.arrow, &arrow, painter, widget);
+            }
+            return;
+        }
+    }
     if (control == CC_ScrollBar) {
         if (const QStyleOptionSlider *bar = qstyleoption_cast<const QStyleOptionSlider *>(option)) {
             // A flat track with a rounded handle; Fusion's arrows on top.

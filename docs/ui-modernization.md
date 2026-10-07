@@ -44,8 +44,9 @@ the theme's colors, on top of the Fusion style:
   the selection color.
 - Check boxes and radio buttons are filled with the selection color when
   checked.
-- Input fields get a rounded frame that turns to the selection color when
-  focused.
+- Input fields and spin boxes (including the slider spin boxes) get a
+  rounded frame that turns to the selection color when focused; the step
+  buttons are flat inside the frame.
 - Menus show the highlighted item as a rounded block.
 - Scroll bars have a flat track and a rounded handle.
 - Tabs in dialogs and docker groups are flat, with a line under the current
@@ -59,9 +60,11 @@ Fusion** to return to the original look.
 - The Solstice interface option changes only the main window's docker
   titles, document tabs and toolbars; the Solstice style changes the common
   controls.
-- With the Solstice style, a few lists and menus keep the Fusion look: the
-  layer list, tag menus, the recent files menu and the color label filter.
-  Spin boxes and their input fields also keep the Fusion look.
+- After switching styles, a few lists and menus that were already open (for
+  example the layer list) keep the previous style until Solstice is
+  restarted.
+- Text tool panels and other QML-based panels are not affected by the
+  Solstice style.
 - The Settings dialog still uses larger text and icons than the main window.
 - The color of the area around the canvas comes from **Configure Solstice →
   Display → Canvas Border Color**, not from the theme.
