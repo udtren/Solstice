@@ -33,7 +33,8 @@ Krita edition, and development no longer tracks upstream Krita.
   Solstice widget style.
 - **[Brush Presets](docs/brush-stroke-preview.md)**: cached stroke previews in
   a grid that adapts to the docker's width, with multi-select engine and bundle
-  filters alongside tags and search.
+  filters alongside tags and search, and optional grouping by engine or
+  bundle.
 
 ![Brush Presets with stroke previews and the multi-select engine filter](docs/images/brush-presets.png)
 

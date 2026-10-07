@@ -42,6 +42,8 @@ preset files and in the code, but this docker no longer displays it.
   control rows in narrow docks). Other chooser instances retain their existing
   responsive behavior. The regression test uses the actual popup wrapper and
   docker initialization order, then resizes and toggles the preview mode.
+- Grouping by engine or bundle (2026-10-07) is described in
+  [`brush-preset-grouping.md`](brush-preset-grouping.md).
 - `KisPresetDockerFilters` adds two per-instance checkable dropdown menus:
   engines use stored `paintopid` metadata and registry display names; bundles
   use storage IDs/locations and display names, plus an explicit non-bundle

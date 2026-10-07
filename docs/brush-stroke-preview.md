@@ -33,6 +33,23 @@ independently of the toolbar brush popup and the Brush Editor's preset list. Tho
 continue to show the original preset icons. The F5 live preview keeps its
 existing appearance and live brush-setting behavior.
 
+## Grouping
+
+The **grouping** dropdown in the docker's filter bar shows the presets in
+groups, each under a header:
+
+- **No Grouping** (default): one grid, as before.
+- **Group by Engine**: one group per brush engine, in name order.
+- **Group by Bundle**: one group per bundle, in name order, with presets that
+  are not in a bundle last under **Not in a bundle**. A preset that belongs to
+  several bundles is shown once, under the bundle whose name comes first.
+
+Within a group the presets keep their usual order. The tag, search, engine
+and bundle filters still apply, and groups without visible presets are not
+shown. The choice is remembered.
+
+## Generating previews
+
 On first use, visible previews appear progressively. Generated images are
 cached locally and reused after restarting Solstice. Scrolling and hiding
 the docker stop work on previews that are no longer needed. Painting takes

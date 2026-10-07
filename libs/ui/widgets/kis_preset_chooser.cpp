@@ -302,7 +302,7 @@ void KisPresetChooser::enableDockerFilters()
         return;
     m_dockerFilters = true;
     m_chooser->setResponsiveness(false);
-    m_chooser->setBottomBarWidget(new KisPresetDockerFilters(m_chooser->tagFilterModel()));
+    m_chooser->setBottomBarWidget(new KisPresetDockerFilters(m_chooser->tagFilterModel(), m_chooser->itemView()));
     updateViewSettings();
 }
 

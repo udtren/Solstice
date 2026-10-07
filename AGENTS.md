@@ -85,6 +85,8 @@ Read these before adding or updating any feature:
   `docs/agent/gpu-work-priorities.md`
 - Brush Stroke Preview:
   `docs/agent/brush-stroke-preview.md`
+- Brush preset grouping:
+  `docs/agent/brush-preset-grouping.md`
 - Solstice visual branding checklist:
   `docs/agent/solstice-visual-branding-todo.md`
 - Brush option shared model (phase 1 implemented for Deform, manual check pending):

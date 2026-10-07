@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "../../../plugins/paintops/mypaint/MyPaintPaintOpFactory.h"
+#include "KisPresetDockerFilters.h"
 #include <KisDocument.h>
 #include <KisGlobalResourcesInterface.h>
 #include <KisPart.h>
@@ -15,6 +16,7 @@
 #include <KoCanvasResourceProvider.h>
 #include <KoCompositeOpRegistry.h>
 #include <KoResourceBundle.h>
+#include <QComboBox>
 #include <QDateTime>
 #include <QDir>
 #include <QElapsedTimer>
@@ -33,6 +35,7 @@
 #include <brushengine/kis_paintop_settings.h>
 #include <kis_canvas_resource_provider.h>
 #include <kis_simple_stroke_strategy.h>
+#include <numeric>
 #include <simpletest.h>
 #include <testui.h>
 #include <widgets/KisBrushStrokePreviewCache.h>
@@ -335,6 +338,76 @@ private Q_SLOTS:
         docker.resize(1100, 400);
         QTRY_VERIFY(check());
         QTRY_COMPARE(columns(), wideColumns);
+        docker.hide();
+        QTRY_VERIFY_WITH_TIMEOUT(!KisBrushStrokePreviewCache::instance()->isBusy(), 15000);
+    }
+    void testDockerGrouping()
+    {
+        // Grouping by engine or bundle stacks each group under a header in
+        // one contiguous block; no grouping restores the plain grid.
+        KisPaintOpPresetsChooserPopup docker;
+        auto *chooser = docker.findChild<KisPresetChooser *>();
+        QVERIFY(chooser);
+        docker.enableStrokePreviewSetting();
+        docker.resize(900, 700);
+        docker.show();
+        auto *items = chooser->itemChooser();
+        auto *view = items->itemView();
+        auto *filters = static_cast<KisPresetDockerFilters *>(items->findChild<QWidget *>("PresetDockerFilters"));
+        auto *grouping = items->findChild<QComboBox *>("PresetGrouping");
+        QVERIFY(filters && grouping);
+        QVERIFY(grouping->isVisible());
+        const int rows = view->model()->rowCount();
+        QVERIFY(rows >= 2);
+        auto checkGroups = [&]() {
+            QVector<int> order(rows);
+            std::iota(order.begin(), order.end(), 0);
+            auto rect = [&](int row) {
+                return view->visualRect(view->model()->index(row, 0));
+            };
+            std::sort(order.begin(), order.end(), [&](int a, int b) {
+                const QRect ra = rect(a);
+                const QRect rb = rect(b);
+                return ra.top() != rb.top() ? ra.top() < rb.top() : ra.left() < rb.left();
+            });
+            QStringList seen;
+            int previousBottom = std::numeric_limits<int>::min();
+            for (int i = 0; i < rows; ++i) {
+                const QString group = filters->groupOf(view->model()->index(order[i], 0)).second;
+                if (seen.isEmpty() || seen.last() != group) {
+                    if (seen.contains(group))
+                        return false; // a group split into two blocks
+                    // A new group starts on a new line below a header gap.
+                    if (!seen.isEmpty() && rect(order[i]).top() <= previousBottom)
+                        return false;
+                    seen << group;
+                }
+                previousBottom = qMax(previousBottom, rect(order[i]).bottom());
+                for (int j = 0; j < i; ++j) {
+                    if (rect(order[i]).intersects(rect(order[j])))
+                        return false;
+                }
+            }
+            return true;
+        };
+        const int initial = grouping->currentIndex();
+        grouping->setCurrentIndex(KisPresetDockerFilters::GroupByEngine);
+        QTRY_VERIFY(checkGroups());
+        const QString output = qEnvironmentVariable("SOLSTICE_PREVIEW_LAYOUT_IMAGE");
+        if (!output.isEmpty()) {
+            QTest::qWait(300); // let the bottom bar settle
+            QVERIFY(docker.grab().save(output + ".grouped-engine.png"));
+        }
+        docker.resize(420, 700);
+        QTRY_VERIFY(checkGroups());
+        grouping->setCurrentIndex(KisPresetDockerFilters::GroupByBundle);
+        QTRY_VERIFY(checkGroups());
+        if (!output.isEmpty())
+            QVERIFY(docker.grab().save(output + ".grouped-bundle.png"));
+        grouping->setCurrentIndex(KisPresetDockerFilters::NoGrouping);
+        QTRY_VERIFY(view->visualRect(view->model()->index(1, 0)).top()
+                    == view->visualRect(view->model()->index(0, 0)).top());
+        grouping->setCurrentIndex(initial);
         docker.hide();
         QTRY_VERIFY_WITH_TIMEOUT(!KisBrushStrokePreviewCache::instance()->isBusy(), 15000);
     }

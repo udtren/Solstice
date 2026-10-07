@@ -11,6 +11,12 @@
 #include <QScrollBar>
 #include <QHelpEvent>
 
+#include <QHash>
+#include <QPaintEvent>
+#include <QPainter>
+
+#include <algorithm>
+
 #include "KisIconToolTip.h"
 
 
@@ -26,6 +32,10 @@ struct  Q_DECL_HIDDEN KisResourceItemListView::Private
     QString prev_scrollbar_style;
 
     QSize requestedItemSize = QSize(56, 56);
+
+    // Solstice grouping: header rects in contents coordinates.
+    GroupFunction groupOf;
+    QVector<QPair<QRect, QString>> groupHeaders;
 };
 
 KisResourceItemListView::KisResourceItemListView(QWidget *parent)
@@ -213,6 +223,101 @@ bool KisResourceItemListView::viewportEvent(QEvent *event)
     }
 
     return QListView::viewportEvent(event);
+}
+
+void KisResourceItemListView::setGrouping(const GroupFunction &groupOf)
+{
+    m_d->groupOf = groupOf;
+    m_d->groupHeaders.clear();
+    scheduleDelayedItemsLayout();
+    viewport()->update();
+}
+
+void KisResourceItemListView::doItemsLayout()
+{
+    QListView::doItemsLayout();
+    m_d->groupHeaders.clear();
+    if (!m_d->groupOf || m_d->viewMode != ListViewMode::IconGrid || viewMode() != IconMode || !model()
+        || !gridSize().isValid()) {
+        return;
+    }
+
+    struct Group {
+        QString sortKey;
+        QString label;
+        QVector<int> rows;
+    };
+    QVector<Group> groups;
+    QHash<QString, int> groupIndex;
+    const int rowCount = model()->rowCount(rootIndex());
+    for (int row = 0; row < rowCount; ++row) {
+        if (isRowHidden(row)) {
+            continue;
+        }
+        const QPair<QString, QString> group = m_d->groupOf(model()->index(row, modelColumn(), rootIndex()));
+        const QString id = group.first + QLatin1Char('\n') + group.second;
+        auto it = groupIndex.constFind(id);
+        if (it == groupIndex.constEnd()) {
+            it = groupIndex.insert(id, groups.size());
+            groups.append({group.first, group.second, {}});
+        }
+        groups[it.value()].rows.append(row);
+    }
+    if (groups.isEmpty()) {
+        return;
+    }
+    // The ungrouped layout's first cell gives the item offset inside a cell;
+    // the groups then stack under their headers with the same columns.
+    const QPoint origin =
+        rectForIndex(model()->index(groups.first().rows.first(), modelColumn(), rootIndex())).topLeft();
+    std::stable_sort(groups.begin(), groups.end(), [](const Group &a, const Group &b) {
+        return QString::localeAwareCompare(a.sortKey, b.sortKey) < 0;
+    });
+
+    const QSize cell = gridSize();
+    const int width = viewport()->width();
+    const int columns = qMax(1, width / cell.width());
+    const int headerHeight = fontMetrics().height() + 10;
+    int y = 0;
+    for (const Group &group : groups) {
+        m_d->groupHeaders.append({QRect(0, y, width, headerHeight), group.label});
+        y += headerHeight;
+        for (int i = 0; i < group.rows.size(); ++i) {
+            const QPoint position(origin.x() + (i % columns) * cell.width(),
+                                  origin.y() + y + (i / columns) * cell.height());
+            setPositionForIndex(position, model()->index(group.rows[i], modelColumn(), rootIndex()));
+        }
+        y += ((group.rows.size() + columns - 1) / columns) * cell.height() + 4;
+    }
+    updateGeometries();
+    viewport()->update();
+}
+
+void KisResourceItemListView::paintEvent(QPaintEvent *event)
+{
+    QListView::paintEvent(event);
+    if (m_d->groupHeaders.isEmpty()) {
+        return;
+    }
+    QPainter painter(viewport());
+    QFont font = painter.font();
+    font.setBold(true);
+    painter.setFont(font);
+    const QColor text = palette().color(QPalette::Text);
+    QColor line = text;
+    line.setAlphaF(0.25);
+    for (const auto &header : m_d->groupHeaders) {
+        const QRect rect = header.first.translated(-horizontalOffset(), -verticalOffset());
+        if (!rect.intersects(event->rect())) {
+            continue;
+        }
+        const QRect textRect = rect.adjusted(6, 0, -6, -3);
+        painter.setPen(text);
+        painter.drawText(textRect,
+                         Qt::AlignLeft | Qt::AlignBottom,
+                         painter.fontMetrics().elidedText(header.second, Qt::ElideRight, textRect.width()));
+        painter.fillRect(QRect(rect.left() + 6, rect.bottom(), rect.width() - 12, 1), line);
+    }
 }
 
 void KisResourceItemListView::resizeEvent(QResizeEvent *event)

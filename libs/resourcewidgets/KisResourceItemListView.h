@@ -15,6 +15,7 @@
 #include "kritaresourcewidgets_export.h"
 #include "ResourceListViewModes.h"
 
+#include <functional>
 
 class KRITARESOURCEWIDGETS_EXPORT KisResourceItemListView : public QListView
 {
@@ -49,6 +50,17 @@ public:
     void setFixedToolTipThumbnailSize(const QSize &size);
     void setToolTipShouldRenderCheckers(bool value);
 
+    /// (sort key, header label) of the group an index belongs to.
+    using GroupFunction = std::function<QPair<QString, QString>(const QModelIndex &)>;
+    /**
+     * Solstice (docs/agent/brush-preset-grouping.md): shows the icon grid in
+     * groups, each under a header line. Groups are ordered by sort key; the
+     * model order is kept within a group. An empty function turns grouping
+     * off. Only the IconGrid mode groups.
+     */
+    void setGrouping(const GroupFunction &groupOf);
+    void doItemsLayout() override;
+
 public Q_SLOTS:
     void slotScrollerStateChange(QScroller::State state){ KisKineticScroller::updateCursor(this, state); }
 
@@ -70,6 +82,7 @@ protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
 
     bool viewportEvent(QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     void resizeEvent(QResizeEvent *event) override;

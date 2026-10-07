@@ -1,9 +1,11 @@
 /* SPDX-FileCopyrightText: 2026 Solstice contributors
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #include "KisPresetDockerFilters.h"
+#include <KisResourceItemListView.h>
 #include <KisResourceModel.h>
 #include <KisStorageModel.h>
 #include <KisTagFilterResourceProxyModel.h>
+#include <QComboBox>
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -11,6 +13,7 @@
 #include <QMouseEvent>
 #include <QToolButton>
 #include <algorithm>
+#include <kis_config.h>
 #include <kis_paintop_factory.h>
 #include <kis_paintop_registry.h>
 #include <klocalizedstring.h>
@@ -48,10 +51,13 @@ protected:
 };
 } // namespace
 
-KisPresetDockerFilters::KisPresetDockerFilters(KisTagFilterResourceProxyModel *model, QWidget *parent)
+KisPresetDockerFilters::KisPresetDockerFilters(KisTagFilterResourceProxyModel *model,
+                                               KisResourceItemListView *view,
+                                               QWidget *parent)
     : QWidget(parent)
     , m_model(model)
     , m_resources(new KisResourceModel(ResourceType::PaintOpPresets, this))
+    , m_view(view)
 {
     setObjectName("PresetDockerFilters");
     auto *layout = new QHBoxLayout(this);
@@ -73,6 +79,19 @@ KisPresetDockerFilters::KisPresetDockerFilters(KisTagFilterResourceProxyModel *m
     m_bundles = makeButton("PresetBundleFilter", false);
     m_engines->setToolTip(i18n("Show presets from the checked brush engines."));
     m_bundles->setToolTip(i18n("Show presets stored in the checked bundles. This does not enable or disable bundles."));
+    m_grouping = new QComboBox(this);
+    m_grouping->setObjectName("PresetGrouping");
+    m_grouping->addItem(i18n("No Grouping"), NoGrouping);
+    m_grouping->addItem(i18n("Group by Engine"), GroupByEngine);
+    m_grouping->addItem(i18n("Group by Bundle"), GroupByBundle);
+    m_grouping->setToolTip(i18n("Show the presets in groups by brush engine or by bundle."));
+    m_grouping->setCurrentIndex(qBound(0, KisConfig(true).readEntry<int>("Solstice/BrushPresetGrouping", 0), 2));
+    m_grouping->setVisible(m_view);
+    layout->addWidget(m_grouping);
+    connect(m_grouping, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+        KisConfig(false).writeEntry<int>("Solstice/BrushPresetGrouping", index);
+        applyGrouping();
+    });
     m_refresh.setSingleShot(true);
     m_refresh.setInterval(0);
     connect(&m_refresh, &QTimer::timeout, this, &KisPresetDockerFilters::refresh);
@@ -138,6 +157,65 @@ void KisPresetDockerFilters::refresh()
         }
     }
     apply();
+    m_groupCache.clear();
+    applyGrouping();
+}
+
+KisPresetDockerFilters::~KisPresetDockerFilters()
+{
+    // The view may outlive this bar; its grouping function refers to it.
+    if (m_view)
+        m_view->setGrouping({});
+}
+
+QPair<QString, QString> KisPresetDockerFilters::groupOf(const QModelIndex &index) const
+{
+    const QVariant idValue = index.data(Qt::UserRole + KisAbstractResourceModel::Id);
+    const int id = idValue.isValid() ? idValue.toInt() : -1;
+    if (id >= 0) {
+        auto it = m_groupCache.constFind(id);
+        if (it != m_groupCache.constEnd())
+            return it.value();
+    }
+    // Sort keys put named groups first ("1") and the catch-all group last ("2").
+    QPair<QString, QString> group;
+    if (m_grouping->currentData().toInt() == GroupByEngine) {
+        const QString engine =
+            index.data(Qt::UserRole + KisAbstractResourceModel::MetaData).toMap().value("paintopid").toString();
+        const QString name = m_engineNames.value(engine);
+        group = engine.isEmpty() || name.isEmpty() ? qMakePair(QString("2"), i18n("Unknown engine"))
+                                                   : qMakePair("1" + name, name);
+    } else {
+        // A preset in several bundles is shown once, under the bundle whose
+        // name sorts first.
+        QString bundle;
+        for (int storage : KisTagFilterResourceProxyModel::activeStorageIdsForIndex(index)) {
+            const QString location = m_storageKeys.value(storage);
+            if (location.isEmpty())
+                continue;
+            const QString name = m_bundleNames.value(location, location);
+            if (bundle.isEmpty() || QString::localeAwareCompare(name, bundle) < 0)
+                bundle = name;
+        }
+        group = bundle.isEmpty() ? qMakePair(QString("2"), i18n("Not in a bundle")) : qMakePair("1" + bundle, bundle);
+    }
+    if (id >= 0)
+        m_groupCache.insert(id, group);
+    return group;
+}
+
+void KisPresetDockerFilters::applyGrouping()
+{
+    if (!m_view)
+        return;
+    m_groupCache.clear();
+    if (m_grouping->currentData().toInt() == NoGrouping) {
+        m_view->setGrouping({});
+    } else {
+        m_view->setGrouping([this](const QModelIndex &index) {
+            return groupOf(index);
+        });
+    }
 }
 
 void KisPresetDockerFilters::populate(QMenu *menu, bool engines)
