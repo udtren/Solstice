@@ -32,9 +32,6 @@
 #include "KisRollingMeanAccumulatorWrapper.h"
 #include "KisRollingSumAccumulatorWrapper.h"
 
-#ifdef Q_OS_ANDROID
-#include <KisAndroidFileProxy.h>
-#endif
 
 #include "kis_debug.h"
 
@@ -405,13 +402,7 @@ void KisPlaybackEngineMLT::setupProducer(boost::optional<QFileInfo> file)
     if (file.has_value()) {
         QSharedPointer<Mlt::Producer> producer(
 
-#ifdef Q_OS_ANDROID
-            new Mlt::Producer(*m_d->profile,
-                              "krita_play_chunk",
-                              KisAndroidFileProxy::getFileFromContentUri(file->absoluteFilePath()).toUtf8().data()));
-#else
         new Mlt::Producer(*m_d->profile, "krita_play_chunk", file->absoluteFilePath().toUtf8().data()));
-#endif
         if (producer->is_valid()) {
             m_d->canvasProducers[activeCanvas()] = producer;
         } else {

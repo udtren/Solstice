@@ -15,7 +15,7 @@ namespace {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 inline bool shouldUseLock()
 {
-# if defined(Q_OS_MACOS) || defined(Q_OS_ANDROID)
+#if defined(Q_OS_MACOS)
     /**
      * On OSX openGL different (shared) contexts have different execution queues.
      * It means that the textures uploading and their painting can be easily reordered.

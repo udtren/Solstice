@@ -109,12 +109,6 @@
 #include <KisStorageFilterProxyModel.h>
 #include <KisPlaybackEngine.h>
 
-#ifdef Q_OS_ANDROID
-#include "KisAndroidDonations.h"
-#include "dialogs/KisDonationManagementDialog.h"
-#include <QtAndroid>
-#include <KisAndroidUtils.h>
-#endif
 
 #include <KisScopedPerformanceLogger.h>
 #include <KisUsageLogger.h>
@@ -178,9 +172,6 @@
 
 #include "KisGpuEngineUi.h"
 
-#if defined(Q_OS_ANDROID) && KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-#include <KisAndroidScaling.h>
-#endif
 
 class ToolDockerFactory : public KoDockFactoryBase
 {
@@ -255,9 +246,6 @@ public:
 
     bool firstTime {true};
     bool windowSizeDirty {false};
-#ifdef Q_OS_ANDROID
-    bool flashWindowHackInProgress {false};
-#endif
 
     KisAction *showDocumentInfo {nullptr};
     KisAction *saveAction {nullptr};
@@ -285,16 +273,8 @@ public:
     bool dockHeightsLocked{false};
     KisAction *resetConfigurations {nullptr};
     KisAction *toggleDockerTitleBars {nullptr};
-#ifdef Q_OS_ANDROID
-    KisAction *showDonationManagementDialog {nullptr};
-    KisAction *manageSubscriptions {nullptr};
-#if KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-    KisAction *changeInterfaceScale {nullptr};
-#endif
-#else
     KisAction *toggleDetachCanvas {nullptr};
     KisAction *newWindow {nullptr};
-#endif
     KisAction *fullScreenMode {nullptr};
     KisAction *showSessionManager {nullptr};
     KisAction *commandBarAction {nullptr};
@@ -409,12 +389,6 @@ KisMainWindow::KisMainWindow(QUuid uuid)
     setStandardToolBarMenuEnabled(true);
     setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::North);
     setDockNestingEnabled(true);
-#ifdef Q_OS_ANDROID
-    // On Android, the animations for docks and menus are not only slow, but
-    // also can cause crashes in some circumstances. Turning them off feels
-    // better and avoids those.
-    setAnimated(false);
-#endif
 
     qApp->setStartDragDistance(25);     // 25 px is a distance that works well for Tablet and Mouse events
 
@@ -487,12 +461,6 @@ KisMainWindow::KisMainWindow(QUuid uuid)
 #endif
 
     Q_FOREACH (QString styleName, QStyleFactory::keys()) {
-#ifdef Q_OS_ANDROID
-        // disable the style for android platform
-        if (styleName.toLower().contains("android")) {
-            continue;
-        }
-#endif
         if (qgetenv("KRITA_NO_STYLE_OVERRIDE").isEmpty()) {
             if (!allowableStyles.contains(styleName.toLower())) {
                 continue;
@@ -691,34 +659,6 @@ KisMainWindow::KisMainWindow(QUuid uuid)
 
     this->winId(); // Ensures the native window has been created.
 
-#ifdef Q_OS_ANDROID
-    // HACK: This prevents the mainWindow from going beyond the screen with no
-    // way to bring it back. Apparently the size doesn't matter here as long as
-    // it remains fixed?
-    setFixedSize(KisApplication::primaryScreen()->availableGeometry().size());
-
-    QScreen *s = QGuiApplication::primaryScreen();
-    s->setOrientationUpdateMask(Qt::LandscapeOrientation|Qt::InvertedLandscapeOrientation|Qt::PortraitOrientation|Qt::InvertedPortraitOrientation);
-    connect(s, SIGNAL(orientationChanged(Qt::ScreenOrientation)), this, SLOT(orientationChanged()));
-
-#if KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-    // When the screen's UI scale changes, we have to hide and show it to get
-    // its contents to update, otherwise it fails to re-render altogether.
-    KisAndroidScaling *androidScaling = KisAndroidScaling::instance();
-    if (androidScaling) {
-        connect(androidScaling,
-                &KisAndroidScaling::sigInterfaceScaleChanged,
-                this,
-                &KisMainWindow::slotFlashWindowHack,
-                Qt::QueuedConnection);
-    }
-#endif
-
-    // When Krita starts, Java side sends an event to set applicationState() to active. But, before
-    // the event could reach KisApplication's platform integration, it is cleared by KisOpenGLModeProber::probeFormat.
-    // So, we send it manually when MainWindow shows up.
-    QAndroidJniObject::callStaticMethod<void>("org/qtproject/qt5/android/QtNative", "setApplicationState", "(I)V", Qt::ApplicationActive);
-#endif
 
     setAcceptDrops(true);
     QTabBar *tabBar = d->findTabBarHACK();
@@ -1154,11 +1094,6 @@ bool KisMainWindow::canvasDetached() const
 
 void KisMainWindow::setCanvasDetached(bool detach)
 {
-#ifdef Q_OS_ANDROID
-    if (detach) {
-        QMessageBox::warning(this, i18nc("@title:window", "Solstice"), "Detach Canvas is unsupported on Android");
-    }
-#else
     if (detach == canvasDetached()) return;
 
     QWidget *outgoingWidget = centralWidget() ? takeCentralWidget() : nullptr;
@@ -1174,7 +1109,6 @@ void KisMainWindow::setCanvasDetached(bool detach)
         d->canvasWindow->hide();
     }
     d->toggleDetachCanvas->setChecked(detach);
-#endif
 }
 
 QWidget * KisMainWindow::canvasWindow() const
@@ -1313,20 +1247,6 @@ KisView* KisMainWindow::addViewAndNotifyLoadingCompleted(KisDocument *document,
 
     Q_EMIT guiLoadingFinished();
 
-#ifdef Q_OS_ANDROID
-    // HACK: When opening documents on Android, the main window sometimes fails
-    // to update until the application is shunted to the background and brought
-    // back or the menu bar is fiddled with. Flickering the window fixes this.
-    // Having a docker that uses QML somehow also fixes this, so this hack is
-    // gone again in 5.3 with the introduction of the text properties docker.
-    // UNHACK: But not on Xiaomi devices! There flickering the window makes it
-    // sorta exit fullscreen, adding black bars at the top and bottom. Just
-    // opening a document seems to work fine on these devices though, it delays
-    // for a moment then displays fine, so just skip this there I guess.
-    if (!KisAndroidUtils::looksLikeXiaomiDevice()) {
-        slotFlashWindowHack();
-    }
-#endif
 
     return view;
 }
@@ -1803,15 +1723,6 @@ void KisMainWindow::showEvent(QShowEvent *event)
     if (!event->spontaneous()) {
         setMainWindowLayoutForCurrentMainWidget(d->widgetStack->currentIndex(), false);
     }
-#ifdef Q_OS_ANDROID
-    // The user can conceivably purchase a product from the splash screen while
-    // Krita is still loading. In that case, the "pending" flag will be set. The
-    // dialog in question will clear the flag.
-    KisAndroidDonations *androidDonations = KisAndroidDonations::instance();
-    if (androidDonations && androidDonations->isShowDonationManagementDialogPending()) {
-        QTimer::singleShot(0, this, &KisMainWindow::slotShowDonationManagementDialog);
-    }
-#endif
     return KXmlGuiWindow::showEvent(event);
 }
 
@@ -2004,12 +1915,6 @@ void KisMainWindow::slotFileSave()
 
 void KisMainWindow::slotChangeInterfaceScale()
 {
-#if defined(Q_OS_ANDROID) && KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-    KisAndroidScaling *androidScaling = KisAndroidScaling::instance();
-    if (androidScaling) {
-        androidScaling->showDialog();
-    }
-#endif
 }
 
 void KisMainWindow::slotFileSaveAs()
@@ -2177,52 +2082,6 @@ void KisMainWindow::slotShowSessionManager() {
     KisPart::instance()->showSessionManager();
 }
 
-#ifdef Q_OS_ANDROID
-void KisMainWindow::slotShowDonationManagementDialog()
-{
-    // Don't show the donation management dialog on top of another dialog
-    // that may have triggered a donation flow, such as the bundle manager.
-    QWidget *win = qApp->activeWindow();
-    if (win && !qobject_cast<KisMainWindow *>(win) && (win->isModal() || win->windowModality() != Qt::NonModal)) {
-        return;
-    }
-
-    // We don't use `exec` here because the purchase stuff runs in Android's
-    // event loop, so it's legitimately possible that we get hit by another
-    // request to show the donation management dialog while it's already up
-    // and it's more convenient for the dialog to handle the deduplication.
-    QString objectName = QStringLiteral("kisdonationmanagementdialog");
-    KisDonationManagementDialog *dlg = findChild<KisDonationManagementDialog *>(objectName, Qt::FindDirectChildrenOnly);
-    if (dlg) {
-        dlg->reshow();
-    } else {
-        dlg = new KisDonationManagementDialog(this);
-
-        QAction *action = actionCollection()->action("manage_supporter_bundles");
-        if (action) {
-            connect(dlg, &KisDonationManagementDialog::sigShowSupporterBundles, action, &QAction::trigger);
-        }
-
-        dlg->setAttribute(Qt::WA_DeleteOnClose);
-        dlg->setObjectName(objectName);
-        dlg->show();
-    }
-}
-
-void KisMainWindow::slotFlashWindowHack()
-{
-    if (!d->flashWindowHackInProgress) {
-        d->flashWindowHackInProgress = true;
-        QTimer::singleShot(0, this, [this] {
-            hide();
-            QTimer::singleShot(0, this, [this] {
-                show();
-                d->flashWindowHackInProgress = false;
-            });
-        });
-    }
-}
-#endif
 
 KoCanvasResourceProvider *KisMainWindow::resourceManager() const
 {
@@ -2527,7 +2386,6 @@ void KisMainWindow::importAnimation()
 void KisMainWindow::importVideoAnimation()
 {
     // Importing video requires ffmpeg, which is not available on Android.
-#ifndef Q_OS_ANDROID
     KisDocument *document;
     KisDlgImportVideoAnimation dlg(this, activeView());
 
@@ -2610,7 +2468,6 @@ void KisMainWindow::importVideoAnimation()
         document->image()->waitForDone();
 
     }
-#endif
 }
 
 void KisMainWindow::renderAnimation()
@@ -2712,14 +2569,6 @@ void KisMainWindow::slotToolbarToggled(bool toggle)
 
 void KisMainWindow::viewFullscreen(bool fullScreen)
 {
-#ifdef Q_OS_ANDROID
-    // Full-screening on Android applies to the entire application, not this
-    // window in particular. Qt tries to paper over that matter, but it causes
-    // some pretty horrid flickering when the main window gets hidden. We just
-    // talk to the Android interface directly to get around that.
-    KisAndroidUtils::setFullScreen(fullScreen);
-    d->fullScreenMode->setChecked(fullScreen);
-#else
     KisConfig cfg(false);
     cfg.setFullscreenMode(fullScreen);
 
@@ -2729,7 +2578,6 @@ void KisMainWindow::viewFullscreen(bool fullScreen)
         setWindowState(windowState() & ~Qt::WindowFullScreen);   // reset
     }
     d->fullScreenMode->setChecked(isFullScreen());
-#endif
 }
 
 QDockWidget* KisMainWindow::createDockWidget(KoDockFactoryBase* factory)
@@ -3093,9 +2941,7 @@ void KisMainWindow::updateWindowMenu()
     QMenu *menu = d->windowMenu->menu();
     menu->clear();
 
-#ifndef Q_OS_ANDROID
     menu->addAction(d->newWindow);
-#endif
     menu->addAction(d->documentMenu);
 
     QMenu *docMenu = d->documentMenu->menu();
@@ -3348,15 +3194,6 @@ KisView* KisMainWindow::newView(QObject *document, QMdiSubWindow *subWindow)
 
 void KisMainWindow::newWindow()
 {
-#ifdef Q_OS_ANDROID
-    // Check if current mainwindow exists, just to be sure.
-    if (KisPart::instance()->currentMainwindow()) {
-        QMessageBox::warning(this,
-                             i18nc("@title:window", "Solstice"),
-                             "Creating a New Main Window is unsupported on Android");
-        return;
-    }
-#endif
     KisMainWindow *mainWindow = KisPart::instance()->createMainWindow();
     mainWindow->initializeGeometry();
     mainWindow->show();
@@ -3474,10 +3311,8 @@ void KisMainWindow::createActions()
     connect(d->importAnimation, SIGNAL(triggered()), this, SLOT(importAnimation()));
 
     // Importing video requires ffmpeg, which is not available on Android.
-#ifndef Q_OS_ANDROID
     d->importVideoAnimation = actionManager->createAction("file_import_video_animation");
     connect(d->importVideoAnimation, SIGNAL(triggered()), this, SLOT(importVideoAnimation()));
-#endif
 
     d->renderAnimation = actionManager->createAction("render_animation");
     d->renderAnimation->setActivationFlags(KisAction::IMAGE_HAS_ANIMATION);
@@ -3523,11 +3358,9 @@ void KisMainWindow::createActions()
     d->resetConfigurations  = actionManager->createAction("reset_configurations");
     connect(d->resetConfigurations, SIGNAL(triggered()), this, SLOT(slotResetConfigurations()));
 
-#ifndef Q_OS_ANDROID
     d->toggleDetachCanvas = actionManager->createAction("view_detached_canvas");
     d->toggleDetachCanvas->setChecked(false);
     connect(d->toggleDetachCanvas, SIGNAL(toggled(bool)), SLOT(setCanvasDetached(bool)));
-#endif
     setCanvasDetached(false);
 
     d->toggleDockerTitleBars = actionManager->createAction("view_toggledockertitlebars");
@@ -3551,37 +3384,8 @@ void KisMainWindow::createActions()
     d->mdiPreviousWindow = actionManager->createAction("windows_previous");
     connect(d->mdiPreviousWindow, SIGNAL(triggered()), d->mdiArea, SLOT(activatePreviousSubWindow()));
 
-#ifdef Q_OS_ANDROID
-    d->showDonationManagementDialog = actionManager->createAction("manage_donations");
-    connect(d->showDonationManagementDialog,
-            &QAction::triggered,
-            this,
-            &KisMainWindow::slotShowDonationManagementDialog);
-
-    KisAndroidDonations *androidDonations = KisAndroidDonations::instance();
-    if (androidDonations) {
-        d->manageSubscriptions = actionManager->createAction("manage_subscriptions");
-        connect(d->manageSubscriptions,
-                &QAction::triggered,
-                androidDonations,
-                &KisAndroidDonations::slotManageSubscriptions);
-        connect(androidDonations,
-                &KisAndroidDonations::sigShowDonationManagementDialogRequested,
-                this,
-                &KisMainWindow::slotShowDonationManagementDialog,
-                Qt::QueuedConnection);
-    }
-#if KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-    KisAndroidScaling *androidScaling = KisAndroidScaling::instance();
-    if (androidScaling && androidScaling->isSupported()) {
-        d->changeInterfaceScale = actionManager->createAction("change_interface_scale");
-        connect(d->changeInterfaceScale, &QAction::triggered, this, &KisMainWindow::slotChangeInterfaceScale);
-    }
-#endif
-#else
     d->newWindow = actionManager->createAction("view_newwindow");
     connect(d->newWindow, SIGNAL(triggered(bool)), this, SLOT(newWindow()));
-#endif
 
     d->close = actionManager->createStandardAction(KStandardAction::Close, this, SLOT(closeCurrentWindow()));
 
@@ -3658,12 +3462,7 @@ void KisMainWindow::initializeGeometry()
         move(x,y);
         setGeometry(geometry().x(), geometry().y(), w, h);
     }
-#ifdef Q_OS_ANDROID
-    // We handle full-screening differently on Android, see viewFullScreen.
-    bool fullScreen = KisAndroidUtils::isInFullScreen();
-#else
     bool fullScreen = isFullScreen();
-#endif
     d->fullScreenMode->setChecked(fullScreen);
 }
 

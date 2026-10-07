@@ -18,8 +18,6 @@ class QWidget;
 class KisApplicationArguments;
 class KisAutoSaveRecoveryDialog;
 class KisExtendedModifiersMapperPluginInterface;
-class KisAndroidDonations;
-class KisAndroidScaling;
 
 #include <KisImportExportManager.h>
 
@@ -97,10 +95,6 @@ public:
 
     KisExtendedModifiersMapperPluginInterface* extendedModifiersPluginInterface();
 
-#ifdef Q_OS_ANDROID
-    KisAndroidDonations *androidDonations();
-    KisAndroidScaling *androidScaling();
-#endif
 
 public Q_SLOTS:
 

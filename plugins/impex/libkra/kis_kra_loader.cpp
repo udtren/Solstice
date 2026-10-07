@@ -1129,11 +1129,7 @@ KisNodeSP KisKraLoader::loadFileLayer(const QDomElement& element, KisImageSP ima
     QFileInfo info(documentPath);
     QString basePath = info.absolutePath();
 
-#ifndef Q_OS_ANDROID
     QString fullPath = QDir(basePath).filePath(QDir::cleanPath(filename));
-#else
-    QString fullPath = filename;
-#endif
     if (!QFileInfo(fullPath).exists()) {
         KisCursorOverrideHijacker cursorHijacker;
 

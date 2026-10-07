@@ -44,9 +44,6 @@ private:
     QPoint m_pressLocalPos;
     QPoint m_pressGlobalPos;
     QPointer<QWidget> m_target;
-#ifdef Q_OS_ANDROID
-    int m_longPressTimeout;
-#endif
     bool m_handlingEvent = false;
 };
 

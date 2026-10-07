@@ -104,9 +104,10 @@ Global policy (branch, documentation, Android removal) is in `AGENTS.md`.
 ## Platform scope
 
 - Desktop only. Do not add `Q_OS_ANDROID` / `ANDROID` branches, Android
-  sources, or packaging. When editing a block that already contains Android
-  conditionals, it is acceptable to leave them unless the task is Android
-  removal.
+  sources, or packaging. Since 2026-10-08 the source tree has no Android
+  conditionals left (outside vendored third-party code under
+  `plugins/visionml/thirdparty/`, which stays untouched). Comments that
+  explain code by mentioning Android were kept.
 - Windows is the primary development platform. Windows-only code
   (`RegisterHotKey`, native event filters) must be guarded with `Q_OS_WIN` /
   `WIN32` and must not break Linux/macOS builds.

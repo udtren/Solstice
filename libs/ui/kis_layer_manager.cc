@@ -378,12 +378,7 @@ void KisLayerManager::layerProperties()
         dlg->setAttribute(Qt::WA_DeleteOnClose);
 
         const Qt::WindowFlags flags = dlg->windowFlags();
-#ifdef Q_OS_ANDROID
-        // a Qt::Tool window seems incapable of receiving keyboard focus
-        dlg->setWindowFlags(flags | Qt::Dialog);
-#else
         dlg->setWindowFlags(flags | Qt::Tool | Qt::Dialog);
-#endif
         connect(dlg, SIGNAL(destroyed()), this, SLOT(layerPropertiesDialogClosed()));
         m_layerPropertiesDialogActive = true;
 

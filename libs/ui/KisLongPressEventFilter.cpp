@@ -17,9 +17,6 @@
 #include <QScroller>
 #include <QStyleHints>
 #include <QTimer>
-#ifdef Q_OS_ANDROID
-#include <QtAndroid>
-#endif
 
 KisLongPressEventFilter::KisLongPressEventFilter(QObject *parent)
     : QObject(parent)
@@ -28,10 +25,6 @@ KisLongPressEventFilter::KisLongPressEventFilter(QObject *parent)
     m_timer->setTimerType(Qt::CoarseTimer);
     m_timer->setSingleShot(true);
     connect(m_timer, &QTimer::timeout, this, &KisLongPressEventFilter::triggerLongPress);
-#ifdef Q_OS_ANDROID
-    m_longPressTimeout =
-        QAndroidJniObject::callStaticMethod<jint>("org/krita/android/MainActivity", "getLongPressTimeout", "()I");
-#endif
 }
 
 bool KisLongPressEventFilter::eventFilter(QObject *watched, QEvent *event)
@@ -83,11 +76,7 @@ bool KisLongPressEventFilter::handleMousePress(QWidget *target, const QMouseEven
         int kineticScrollDelay = getKineticScrollDelay(target);
         if (kineticScrollDelay == 0 || isWithinDistance(QCursor::pos())) {
             m_target = target;
-#ifdef Q_OS_ANDROID
-            int longPressInterval = m_longPressTimeout;
-#else
             int longPressInterval = sh->mousePressAndHoldInterval();
-#endif
             if (longPressInterval < MINIMUM_DELAY) {
                 longPressInterval = MINIMUM_DELAY;
             }

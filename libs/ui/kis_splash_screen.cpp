@@ -277,9 +277,6 @@ KisSplashScreen::Source KisSplashScreen::getImageSource()
     // scaled down to a dinky size. Instead of overengineering this into an
     // Enterprise Splash Screen Solution where we choose the image based on
     // screen size or something, we'll just use a HD JPEG instead. It's fine.
-#ifdef Q_OS_ANDROID
-    QString resourcePath = QStringLiteral(":/splash/hd.jpg");
-#else
     QString resourcePath = QStringLiteral(":/splash/0.png");
     // TODO: Re-add the holiday splash...
 #if 0
@@ -289,7 +286,6 @@ KisSplashScreen::Source KisSplashScreen::getImageSource()
         resourcePath = QStringLiteral(":/splash/1.png");
         artistCredit = QStringLiteral("???")};
     }
-#endif
 #endif
     if (!artistCredit.isEmpty()) {
         artistCredit = i18nc("splash image credit", "Artwork by: %1", artistCredit);

@@ -606,7 +606,6 @@ bool KisInputManager::eventFilterImpl(QEvent * event)
         retval = !wasScrolled;
         break;
     }
-#ifndef Q_OS_ANDROID
     case QEvent::Enter:
         d->debugEvent<QEvent, false>(event);
         //Make sure the input actions know we are active.
@@ -632,7 +631,6 @@ bool KisInputManager::eventFilterImpl(QEvent * event)
 
         d->matcher.leaveEvent();
         break;
-#endif
     case QEvent::FocusIn:
         d->debugEvent<QEvent, false>(event);
         KisAbstractInputAction::setInputManager(this);
@@ -719,7 +717,7 @@ bool KisInputManager::eventFilterImpl(QEvent * event)
         break;
     }
     case QEvent::TabletRelease: {
-#if defined(Q_OS_MAC) || defined(Q_OS_ANDROID)
+#if defined(Q_OS_MAC)
         d->allowMouseEvents();
 #endif
         d->stopBlockingTouch();
@@ -875,11 +873,7 @@ bool KisInputManager::eventFilterImpl(QEvent * event)
         // uses the game boost mode that is supposed to disable gestures. So we
         // handle those inputs even when they are cancelled, if the user wants
         // to use it for a system gesture, they can disable the Krita shortcut.
-#ifdef Q_OS_ANDROID
-        bool ignoreCancel = d->lastPointCount > 2;
-#else
         bool ignoreCancel = false;
-#endif
 
         d->cancelTouchHoldTimer();
         if (ignoreCancel) {

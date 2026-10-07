@@ -153,9 +153,6 @@ void KoFileDialog::createFileDialog()
     KConfigGroup group = KSharedConfig::openConfig()->group("File Dialogs");
 
     bool dontUseNative = true;
-#ifdef Q_OS_ANDROID
-    dontUseNative = false;
-#endif
 #ifdef Q_OS_UNIX
     if (qgetenv("XDG_CURRENT_DESKTOP") == "KDE") {
         dontUseNative = false;
@@ -214,7 +211,6 @@ void KoFileDialog::createFileDialog()
         }
     }
 
-#ifndef Q_OS_ANDROID
     d->fileDialog->setNameFilters(d->filterList);
 
     if (!d->proposedFileName.isEmpty()) {
@@ -231,7 +227,6 @@ void KoFileDialog::createFileDialog()
     else if (!d->defaultFilter.isEmpty()) {
         d->fileDialog->selectNameFilter(d->defaultFilter);
     }
-#endif
 
     if (d->type == ImportDirectory ||
             d->type == ImportFile || d->type == ImportFiles ||
@@ -263,37 +258,6 @@ QString KoFileDialog::filename()
     QString url;
     createFileDialog();
 
-#ifdef Q_OS_ANDROID
-    if (d->type == SaveFile) {
-        QString extension = ".kra";
-        QInputDialog mimeSelector;
-        mimeSelector.setLabelText(i18n("Save As:"));
-        mimeSelector.setComboBoxItems(d->filterList);
-        mimeSelector.setOkButtonText(KStandardGuiItem::ok().text());
-        mimeSelector.setCancelButtonText(KStandardGuiItem::cancel().text());
-        // combobox as they stand, are very hard to scroll on a touch device
-        mimeSelector.setOption(QInputDialog::UseListViewForComboBoxItems);
-
-        if (mimeSelector.exec() == QDialog::Accepted) {
-            const QString selectedFilter = mimeSelector.textValue();
-            int start = selectedFilter.indexOf("*.") + 1;
-            int end = selectedFilter.indexOf(" ", start);
-            int n = end - start;
-            extension = selectedFilter.mid(start, n);
-            if (!extension.startsWith(".")) {
-                extension = "." + extension;
-            }
-            d->fileDialog->selectNameFilter(selectedFilter);
-
-            const QString proposedFileBaseName = QFileInfo(d->proposedFileName).baseName();
-            // HACK: discovered by looking into the code
-            d->fileDialog->setWindowTitle(proposedFileBaseName.isEmpty() ? QString("Untitled" + extension)
-                                                                         : proposedFileBaseName + extension);
-        } else {
-            return url;
-        }
-    }
-#endif
 
     bool retryNeeded;
     do {
@@ -308,7 +272,6 @@ QString KoFileDialog::filename()
         // The Android native file selector does not know to add the .kra
         // extension (MIME type not registered), so just skip the whole file
         // suffix check for Android.
-#ifndef Q_OS_ANDROID
         const QString suffix = QFileInfo(url).suffix();
         bool isValidSuffix = true;
         if (KisMimeDatabase::mimeTypeForSuffix(suffix).isEmpty()) {
@@ -358,11 +321,10 @@ QString KoFileDialog::filename()
             retryNeeded = true;
 
 // We can only write to the Uri that was returned, we don't have permission to change the Uri.
-#if !(defined(Q_OS_MACOS) || defined(Q_OS_ANDROID))
+#if !defined(Q_OS_MACOS)
             url = url + extension;
 #endif
         }
-#endif
     } while (retryNeeded);
 
     if (!url.isEmpty()) {
@@ -594,7 +556,6 @@ void KoFileDialog::onFilterSelected(const QString &filter)
 
     // Setting default suffix for Android is broken as of Qt 5.12.0, returning the file
     // with extension added but no write permissions granted.
-#ifndef Q_OS_ANDROID
     QFileDialog::FileMode mode = d->fileDialog->fileMode();
     if (mode != QFileDialog::Directory && !d->fileDialog->testOption(QFileDialog::ShowDirsOnly)) {
         // we do not need suffixes for directories
@@ -607,5 +568,4 @@ void KoFileDialog::onFilterSelected(const QString &filter)
             d->fileDialog->setDefaultSuffix("");
         }
     }
-#endif
 }

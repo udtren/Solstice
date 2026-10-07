@@ -49,9 +49,6 @@ KoJsonTrader::KoJsonTrader()
         searchDirs << d;
 #endif
 
-#ifdef Q_OS_ANDROID
-        appDir.cdUp();
-#endif
         searchDirs << appDir;
 
         Q_FOREACH (const QDir& dir, searchDirs) {
@@ -73,19 +70,6 @@ KoJsonTrader::KoJsonTrader()
 #endif
                     QDir libDir(info.absoluteFilePath());
 
-#ifdef Q_OS_ANDROID
-#if defined(Q_PROCESSOR_ARM_64)
-                    libDir.cd("arm64-v8a");
-#elif defined(Q_PROCESSOR_ARM)
-                    libDir.cd("armeabi-v7a");
-#elif defined(Q_PROCESSOR_X86_64)
-                    libDir.cd("x86_64");
-#elif defined(Q_PROCESSOR_x86)
-                    libDir.cd("x86");
-#endif
-                    m_pluginPath = libDir.absolutePath();
-                    break;
-#else
                     // on many systems this will be the actual lib dir (and krita subdir contains plugins)
                     if (libDir.cd("kritaplugins")) {
                         m_pluginPath = libDir.absolutePath();
@@ -106,7 +90,6 @@ KoJsonTrader::KoJsonTrader()
                     if (!m_pluginPath.isEmpty()) {
                         break;
                     }
-#endif
                 }
             }
 
@@ -142,10 +125,7 @@ void KoJsonTrader::initializePluginLoaderCache()
     QDirIterator dirIter(m_pluginPath, QDirIterator::Subdirectories);
     while (dirIter.hasNext()) {
         dirIter.next();
-#ifdef Q_OS_ANDROID
-        // files starting with lib_krita are plugins, it is needed because of the loading rules in NDK
-        if (dirIter.fileInfo().isFile() && dirIter.fileName().startsWith("lib_krita")) {
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
         if (dirIter.fileInfo().isFile() && dirIter.fileName().startsWith("krita") && !dirIter.fileName().endsWith(".pdb") && !dirIter.fileName().endsWith(".lib")) {
 #else
         if (dirIter.fileInfo().isFile() && dirIter.fileName().startsWith("krita") && !dirIter.fileName().endsWith(".debug")) {

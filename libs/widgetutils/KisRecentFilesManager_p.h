@@ -39,11 +39,7 @@ void KisRecentFilesManager::loadEntries(const KConfigGroup &_config)
     for (int i = 0; i < m_d->m_maxItems; ++i) {
         const QString key = QString("File%1").arg(i+1);
         QString value;
-#ifdef Q_OS_ANDROID
-        value = cg.readEntry(key, QString());
-#else
         value = cg.readPathEntry(key, QString());
-#endif
         if (value.isEmpty()) {
             continue;
         }
@@ -105,13 +101,8 @@ void KisRecentFilesManager::saveEntries(const KConfigGroup &_cg)
     for (int i = 0; i < m_d->m_entries.count(); ++i) {
         const QString key = QString("File%1").arg(i+1);
         QString value;
-#ifdef Q_OS_ANDROID
-        value = m_d->m_entries[i].m_url.toDisplayString();
-        cg.writeEntry(key, value);
-#else
         value = m_d->m_entries[i].m_url.toDisplayString(QUrl::PreferLocalFile);
         cg.writePathEntry(key, value);
-#endif
         const QString nameKey = QString("Name%1").arg(i+1);
         const QString nameValue = m_d->m_entries[i].m_displayName;
         cg.writeEntry(nameKey, nameValue);

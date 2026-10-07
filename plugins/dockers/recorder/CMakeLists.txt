@@ -23,10 +23,8 @@ set(KRITA_RECORDERDOCKER_UIS
     recorder_snapshots_manager.ui
 )
 
-if(NOT ANDROID)
-    list(APPEND KRITA_RECORDERDOCKER_SOURCES recorder_profile_settings.cpp)
-    list(APPEND KRITA_RECORDERDOCKER_UIS recorder_profile_settings.ui)
-endif()
+list(APPEND KRITA_RECORDERDOCKER_SOURCES recorder_profile_settings.cpp)
+list(APPEND KRITA_RECORDERDOCKER_UIS recorder_profile_settings.ui)
 
 ki18n_wrap_ui(KRITA_RECORDERDOCKER_SOURCES ${KRITA_RECORDERDOCKER_UIS})
 

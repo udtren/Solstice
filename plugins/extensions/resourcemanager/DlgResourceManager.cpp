@@ -56,11 +56,6 @@ DlgResourceManager::DlgResourceManager(KisActionManager *actionMgr, QWidget *par
 
     m_tagsController.reset(new KisWdgTagSelectionControllerOneResource(m_ui->wdgResourcesTags, true));
 
-#ifdef Q_OS_ANDROID
-    // TODO(sh_zam): Opening a directory can cause a crash. A ContentProvider is needed for this.
-    m_ui->btnOpenResourceFolder->setEnabled(false);
-    m_ui->btnOpenResourceFolder->setVisible(false);
-#endif
 
     // make sure the panel is properly cleared. -Amy
     slotResourcesSelectionChanged({});

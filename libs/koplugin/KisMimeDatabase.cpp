@@ -13,12 +13,6 @@
 #include <klocalizedstring.h>
 
 QList<KisMimeDatabase::KisMimeType> KisMimeDatabase::s_mimeDatabase;
-#ifdef Q_OS_ANDROID
-static QString sanitizeSuffix(const QString &suffix)
-{
-    return suffix.split(QLatin1Char(' ')).first();
-}
-#endif
 QString KisMimeDatabase::mimeTypeForFile(const QString &file, bool checkExistingFiles)
 {
     fillMimeData();
@@ -26,15 +20,6 @@ QString KisMimeDatabase::mimeTypeForFile(const QString &file, bool checkExisting
     QFileInfo fi(file);
     QString suffix = fi.suffix().toLower();
 
-#ifdef Q_OS_ANDROID
-    // HACK: on Android we can save as .kra with no extension or as something like:
-    // "untitled.kra (1)", (1) being added by the SAF because we can't overwrite the duplicate.
-    // So, we need to be able to remove that number and get extension. If there is no extension,
-    // perhaps try "kra"
-    suffix = sanitizeSuffix(suffix);
-    if (suffix.isEmpty())
-        suffix = "kra";
-#endif
 
     Q_FOREACH(const KisMimeDatabase::KisMimeType &mimeType, s_mimeDatabase) {
         if (mimeType.suffixes.contains(suffix)) {
@@ -53,13 +38,7 @@ QString KisMimeDatabase::mimeTypeForFile(const QString &file, bool checkExisting
         }
     }
 
-#ifdef Q_OS_ANDROID
-    QString basename = fi.baseName();
-    // HACK: because we use sanitized suffix
-    mime = db.mimeTypeForFile(basename + "." + suffix);
-#else
     mime = db.mimeTypeForFile(file);
-#endif
     if (mime.name() != "application/octet-stream") {
         dbgPlugins << "mimeTypeForFile(). QMimeDatabase returned" << mime.name() << "for" << file;
         return mime.name();

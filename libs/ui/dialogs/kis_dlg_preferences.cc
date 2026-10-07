@@ -585,9 +585,6 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
 
     KConfigGroup group = KSharedConfig::openConfig()->group("File Dialogs");
     bool dontUseNative = true;
-#ifdef Q_OS_ANDROID
-    dontUseNative = false;
-#endif
 #ifdef Q_OS_UNIX
     if (qgetenv("XDG_CURRENT_DESKTOP") == "KDE") {
         dontUseNative = false;
@@ -637,122 +634,7 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
         grpRestartMessage->style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(QSize(32, 32)));
     grpRestartMessage->setText(i18n("You will need to Restart Solstice for the changes to take an effect."));
 
-    grpAndroidWarningMessage->setVisible(false);
-    grpAndroidWarningMessage->setPixmap(
-        grpAndroidWarningMessage->style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(QSize(32, 32)));
-    grpAndroidWarningMessage->setText(
-        i18n("Saving at a Location picked from the File Picker may slow down the startup!"));
-
-#ifdef Q_OS_ANDROID
-    m_urlResourceFolder->setVisible(false);
-
-    m_resourceFolderSelector->setVisible(true);
-    m_resourceFolderSelector->installEventFilter(new UnscrollableComboBox(this));
-
-    const QList<QPair<QString, QString>> writableLocations = []() {
-        QList<QPair<QString, QString>> writableLocationsAndText;
-        // filters out the duplicates
-        const QList<QString> locations = []() {
-            QStringList filteredLocations;
-            const QStringList locations = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation);
-            Q_FOREACH(const QString &location, locations) {
-                if (!filteredLocations.contains(location)) {
-                    filteredLocations.append(location);
-                }
-            }
-            return filteredLocations;
-        }();
-
-        bool isFirst = true;
-
-        Q_FOREACH (QString location, locations) {
-            QString text;
-            QFileInfo fileLocation(location);
-            // The first one that we get from is the "Default"
-            if (isFirst) {
-                text = i18n("Default");
-                isFirst = false;
-            } else if (location.startsWith("/data")) {
-                text = i18n("Internal Storage");
-            } else {
-                text = i18n("SD-Card");
-            }
-            if (fileLocation.isWritable()) {
-                writableLocationsAndText.append({text, location});
-            }
-        }
-        return writableLocationsAndText;
-    }();
-
-    for (auto it = writableLocations.constBegin(); it != writableLocations.constEnd(); ++it) {
-        m_resourceFolderSelector->addItem(it->first + " - " + it->second);
-        // we need it to extract out the path
-        m_resourceFolderSelector->setItemData(m_resourceFolderSelector->count() - 1, it->second, Qt::UserRole);
-    }
-
-    // if the user has selected a custom location, we add it to the list as well.
-    if (resourceLocation.startsWith("content://")) {
-        m_resourceFolderSelector->addItem(resourceLocation);
-        int index = m_resourceFolderSelector->count() - 1;
-        m_resourceFolderSelector->setItemData(index, resourceLocation, Qt::UserRole);
-        m_resourceFolderSelector->setCurrentIndex(index);
-        grpAndroidWarningMessage->setVisible(true);
-    } else {
-        // find the index of the current resource location in the writableLocation, so we can set our view to that
-        auto iterator = std::find_if(writableLocations.constBegin(),
-                                     writableLocations.constEnd(),
-                                     [&resourceLocation](QPair<QString, QString> location) {
-                                         return location.second == resourceLocation;
-                                     });
-
-        if (iterator != writableLocations.constEnd()) {
-            int index = writableLocations.indexOf(*iterator);
-            KIS_SAFE_ASSERT_RECOVER_NOOP(index < m_resourceFolderSelector->count());
-            m_resourceFolderSelector->setCurrentIndex(index);
-        }
-    }
-
-    // this should be the last item we add.
-    m_resourceFolderSelector->addItem(i18n("Choose Manually"));
-
-    connect(m_resourceFolderSelector, qOverload<int>(&QComboBox::activated), [this](int index) {
-        const int previousIndex = m_resourceFolderSelector->currentIndex();
-
-        // if it is the last item in the last item, then open file picker and set the name returned as the filename
-        if (m_resourceFolderSelector->count() - 1 == index) {
-            KoFileDialog dialog(this, KoFileDialog::OpenDirectory, "Select Directory");
-            const QString selectedDirectory = dialog.filename();
-
-            if (!selectedDirectory.isEmpty()) {
-                // if the index above "Choose Manually" is a content Uri, then we just modify it, and then set that as
-                // the index.
-                if (m_resourceFolderSelector->itemData(index - 1, Qt::DisplayRole)
-                        .value<QString>()
-                        .startsWith("content://")) {
-                    m_resourceFolderSelector->setItemText(index - 1, selectedDirectory);
-                    m_resourceFolderSelector->setItemData(index - 1, selectedDirectory, Qt::UserRole);
-                    m_resourceFolderSelector->setCurrentIndex(index - 1);
-                } else {
-                    // There isn't any content Uri in the ComboBox list, so just insert one, and set that as the index.
-                    m_resourceFolderSelector->insertItem(index, selectedDirectory);
-                    m_resourceFolderSelector->setItemData(index, selectedDirectory, Qt::UserRole);
-                    m_resourceFolderSelector->setCurrentIndex(index);
-                }
-                // since we have selected the custom location, make the warning visible.
-                grpAndroidWarningMessage->setVisible(true);
-            } else {
-                m_resourceFolderSelector->setCurrentIndex(previousIndex);
-            }
-        }
-
-        // hide-unhide based on the selection of user.
-        grpAndroidWarningMessage->setVisible(
-            m_resourceFolderSelector->currentData(Qt::UserRole).value<QString>().startsWith("content://"));
-    });
-
-#else
     m_resourceFolderSelector->setVisible(false);
-#endif
 
     grpWindowsAppData->setVisible(false);
 #ifdef Q_OS_WIN
@@ -863,7 +745,7 @@ void GeneralTab::setDefault()
     m_showEraserOutlinePainting->setChecked(cfg.showEraserOutlineWhilePainting(true));
     m_changeEraserBrushOutline->setChecked(!cfg.forceAlwaysFullSizedEraserOutline(true));
 
-#if defined Q_OS_ANDROID || defined Q_OS_MACOS || defined Q_OS_WIN
+#if defined Q_OS_MACOS || defined Q_OS_WIN
     m_chkNativeFileDialog->setChecked(true);
 #else
     m_chkNativeFileDialog->setChecked(false);
@@ -1681,14 +1563,7 @@ void TabletSettingsTab::setDefault()
         m_page->grpTabletApi->setVisible(false);
 #endif
 
-#if KRITA_QT_HAS_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_PAGE_UP_DOWN
-    m_page->chkUsePageUpDownMouseButtonEmulationWorkaround->setChecked(
-        cfg.usePageUpDownMouseButtonEmulationWorkaround(true));
-#endif
 
-#if KRITA_QT_HAS_ANDROID_IGNORE_HISTORIC_TABLET_EVENTS
-    m_page->chkUseIgnoreHistoricTabletEventsWorkaround->setChecked(cfg.useIgnoreHistoricTabletEventsWorkaround(true));
-#endif
 
     m_page->chkUseTimestampsForBrushSpeed->setChecked(false);
     m_page->intMaxAllowedBrushSpeed->setValue(30);
@@ -1740,18 +1615,9 @@ TabletSettingsTab::TabletSettingsTab(QWidget* parent, const char* name): QWidget
 #endif
     m_page->chkUseTimestampsForBrushSpeed->setChecked(cfg.readEntry("useTimestampsForBrushSpeed", false));
 
-#if KRITA_QT_HAS_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_PAGE_UP_DOWN
-    m_page->chkUsePageUpDownMouseButtonEmulationWorkaround->setChecked(
-        cfg.usePageUpDownMouseButtonEmulationWorkaround());
-#else
     m_page->chkUsePageUpDownMouseButtonEmulationWorkaround->hide();
-#endif
 
-#if KRITA_QT_HAS_ANDROID_IGNORE_HISTORIC_TABLET_EVENTS
-    m_page->chkUseIgnoreHistoricTabletEventsWorkaround->setChecked(cfg.useIgnoreHistoricTabletEventsWorkaround());
-#else
     m_page->chkUseIgnoreHistoricTabletEventsWorkaround->hide();
-#endif
 
     m_page->intMaxAllowedBrushSpeed->setRange(1, 100);
     m_page->intMaxAllowedBrushSpeed->setValue(cfg.readEntry("maxAllowedSpeedValue", 30));
@@ -3069,11 +2935,7 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
         cfg.setAdaptivePlaybackRange(m_general->adaptivePlaybackRange());
         cfg.setAutoZoomTimelineToPlaybackRange(m_general->autoZoomTimelineToPlaybackRange());
 
-#ifdef Q_OS_ANDROID
-        QFileInfo fi(m_general->m_resourceFolderSelector->currentData(Qt::UserRole).value<QString>());
-#else
         QFileInfo fi(m_general->m_urlResourceFolder->fileName());
-#endif
         if (fi.isWritable()) {
             cfg.writeEntry(KisResourceLocator::resourceLocationKey, fi.filePath());
         }
@@ -3132,15 +2994,7 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
 #endif
         cfg.writeEntry<bool>("useTimestampsForBrushSpeed", m_tabletSettings->m_page->chkUseTimestampsForBrushSpeed->isChecked());
 
-#if KRITA_QT_HAS_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_PAGE_UP_DOWN
-        cfg.setUsePageUpDownMouseButtonEmulationWorkaround(
-            m_tabletSettings->m_page->chkUsePageUpDownMouseButtonEmulationWorkaround->isChecked());
-#endif
 
-#if KRITA_QT_HAS_ANDROID_IGNORE_HISTORIC_TABLET_EVENTS
-        cfg.setUseIgnoreHistoricTabletEventsWorkaround(
-            m_tabletSettings->m_page->chkUseIgnoreHistoricTabletEventsWorkaround->isChecked());
-#endif
 
         cfg.writeEntry<int>("maxAllowedSpeedValue", m_tabletSettings->m_page->intMaxAllowedBrushSpeed->value());
         cfg.writeEntry<int>("speedValueSmoothing", m_tabletSettings->m_page->intBrushSpeedSmoothing->value());

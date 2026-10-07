@@ -20,9 +20,6 @@
 #include "osx.h"
 #endif
 
-#ifdef Q_OS_ANDROID
-#include "KisAndroidDonations.h"
-#endif
 
 #include <QDir>
 #include <QFile>
@@ -140,9 +137,6 @@
 
 #endif /* KRITA_USE_SURFACE_COLOR_MANAGEMENT_API */
 
-#if defined(Q_OS_ANDROID) && KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-#include <KisAndroidScaling.h>
-#endif
 
 namespace
 {
@@ -202,12 +196,6 @@ public:
     QVector<QByteArray> earlyRemoteArguments;
     QVector<QString> earlyFileOpenEvents;
     QScopedPointer<KisExtendedModifiersMapperPluginInterface> extendedModifiersPluginInterface;
-#ifdef Q_OS_ANDROID
-    KisAndroidDonations *androidDonations{nullptr};
-#if KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-    KisAndroidScaling *androidScaling{nullptr};
-#endif
-#endif
 };
 
 class KisApplication::ResetStarting
@@ -235,12 +223,6 @@ KisApplication::KisApplication(const QString &key, int &argc, char **argv)
     : QtSingleApplication(key, argc, argv)
     , d(new Private)
 {
-#ifdef Q_OS_ANDROID
-    // The hardware renderer backend on Android doesn't support proper stacking,
-    // causing windows with QtQuick widgets to always stack behind everything
-    // else, including our own dialog decorations.
-    qputenv("QT_QUICK_BACKEND", "software");
-#endif
 #ifdef Q_OS_MACOS
     setMouseCoalescingEnabled(false);
 #endif
@@ -526,12 +508,7 @@ bool KisApplication::registerResources()
 
     reg->registerFixup(10, new KisBrushTypeMetaDataFixup());
 
-#ifndef Q_OS_ANDROID
     QString databaseLocation = KoResourcePaths::getAppDataLocation();
-#else
-    // Sqlite doesn't support content URIs (obviously). So, we make database location unconfigurable on android.
-    QString databaseLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-#endif
 
     if (!KisResourceCacheDb::initialize(databaseLocation)) {
         QMessageBox::critical(qApp->activeWindow(),
@@ -574,9 +551,6 @@ void KisApplication::loadPlugins()
 bool KisApplication::start(const KisApplicationArguments &args)
 {
     KisScopedPerformanceLogger perfLog(QStringLiteral("KisApplication::start"));
-#ifdef Q_OS_ANDROID
-    KisAndroidDonations::showDonationDialog(true);
-#endif
 
     KisConfig cfg(false);
 
@@ -605,9 +579,6 @@ bool KisApplication::start(const KisApplicationArguments &args)
     processEvents();
     initializeGlobals(args);
 
-#if defined(Q_OS_ANDROID) && KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-    d->androidScaling = new KisAndroidScaling(cfg, this);
-#endif
 
     const bool doNewImage = args.doNewImage();
     const bool doTemplate = args.doTemplate();
@@ -620,14 +591,12 @@ bool KisApplication::start(const KisApplicationArguments &args)
     // only show the mainWindow when no command-line mode option is passed
     bool showmainWindow = (!exportAs && !exportSequence); // would be !batchRun;
 
-#ifndef Q_OS_ANDROID
     const bool showSplashScreen = !d->batchRun && qEnvironmentVariableIsEmpty("NOSPLASH");
     if (showSplashScreen && d->splashScreen) {
         d->splashScreen->show();
         d->splashScreen->repaint();
         processEvents();
     }
-#endif
 
     KConfigGroup group(KSharedConfig::openConfig(), "theme");
 #ifndef Q_OS_HAIKU
@@ -722,9 +691,6 @@ bool KisApplication::start(const KisApplicationArguments &args)
     }
 
     setSplashScreenLoadingText(QString()); // done loading, so clear out label
-#ifdef Q_OS_ANDROID
-    KisAndroidDonations::setLoaded(true);
-#endif
     processEvents();
 
     // configure the unit manager
@@ -743,16 +709,6 @@ bool KisApplication::start(const KisApplicationArguments &args)
     // Xiaomi workaround: their stylus inexplicably inputs page up and down keys
     // when pressing stylus buttons. This flag causes the Android platform
     // integration to turn those into right and middle clicks instead.
-#if KRITA_QT_HAS_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_PAGE_UP_DOWN
-    auto setPageUpDownMouseButtonEmulationWorkaround = [](bool enabled) {
-        QCoreApplication::setKritaAttribute(KRITA_QATTRIBUTE_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_PAGE_UP_DOWN, enabled);
-    };
-    connect(cfgNotifier,
-            &KisConfigNotifier::sigUsePageUpDownMouseButtonEmulationWorkaroundChanged,
-            this,
-            setPageUpDownMouseButtonEmulationWorkaround);
-    setPageUpDownMouseButtonEmulationWorkaround(cfg.usePageUpDownMouseButtonEmulationWorkaround());
-#endif
 
     // OnePlus workaround: their stylus inexplicably inputs the F21 key when
     // pressing the stylus button. This flag causes the Android platform
@@ -760,24 +716,11 @@ bool KisApplication::start(const KisApplicationArguments &args)
     // unconditional because a setting requires translation-relevant text
     // changes, but later versions of Krita let you toggle it like the Xiaomi
     // workarounds above.
-#if KRITA_QT_HAS_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_HIGH_FUNCTION_KEYS
-    QCoreApplication::setKritaAttribute(KRITA_QATTRIBUTE_ANDROID_EMULATE_MOUSE_BUTTONS_FOR_HIGH_FUNCTION_KEYS, true);
-#endif
 
     // Xiaomi workaround: historic tablet motion events are garbage, they just
     // connect the actual points that the tablet sampled with a straight line
     // and no pressure emulation, leading to jagged curves that don't get
     // smoothed out. This flag disables reading those historic events.
-#if KRITA_QT_HAS_ANDROID_IGNORE_HISTORIC_TABLET_EVENTS
-    auto setIgnoreHistoricTabletEventsWorkaround = [](bool enabled) {
-        QCoreApplication::setKritaAttribute(KRITA_QATTRIBUTE_ANDROID_IGNORE_HISTORIC_TABLET_EVENTS, enabled);
-    };
-    connect(cfgNotifier,
-            &KisConfigNotifier::sigUseIgnoreHistoricTabletEventsWorkaroundChanged,
-            this,
-            setIgnoreHistoricTabletEventsWorkaround);
-    setIgnoreHistoricTabletEventsWorkaround(cfg.useIgnoreHistoricTabletEventsWorkaround());
-#endif
 
     // Create a new image, if needed
     if (doNewImage) {
@@ -975,16 +918,10 @@ void KisApplication::setSplashScreenLoadingText(const QString &textToLoad)
         d->splashScreen->setLoadingText(textToLoad);
         d->splashScreen->repaint();
     }
-#ifdef Q_OS_ANDROID
-    KisAndroidDonations::setLoadingText(textToLoad);
-#endif
 }
 
 void KisApplication::hideSplashScreen()
 {
-#ifdef Q_OS_ANDROID
-    KisAndroidDonations::setLoaded(true);
-#endif
     if (d->splashScreen) {
         // hide the splashscreen to see the dialog
         d->splashScreen->hide();
@@ -1433,25 +1370,3 @@ KisExtendedModifiersMapperPluginInterface *KisApplication::extendedModifiersPlug
 {
     return d->extendedModifiersPluginInterface.data();
 }
-
-#ifdef Q_OS_ANDROID
-KisAndroidDonations *KisApplication::androidDonations()
-{
-    if (!d->androidDonations) {
-        d->androidDonations = new KisAndroidDonations(this);
-        d->androidDonations->syncState();
-    }
-    return d->androidDonations;
-}
-
-KisAndroidScaling *KisApplication::androidScaling()
-{
-#if KRITA_QT_HAS_ANDROID_QPLATFORMSCREEN_DENSITY_ADJUSTMENT
-    // Should get initialized during startup and not accessed before.
-    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(d->androidScaling, nullptr);
-    return d->androidScaling;
-#else
-    return nullptr;
-#endif
-}
-#endif

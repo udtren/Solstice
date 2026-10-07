@@ -61,11 +61,6 @@
 #include "input/KisQtWidgetsTweaker.h"
 #include "kis_splash_screen.h"
 
-#ifdef Q_OS_ANDROID
-#include <KisAndroidCrashHandler.h>
-#include <KisAndroidUtils.h>
-#include <QtAndroid>
-#endif
 
 #if defined Q_OS_WIN
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -351,53 +346,7 @@ bool finishSolsticeImport()
 }
 } // namespace
 
-#ifdef Q_OS_ANDROID
-extern "C" JNIEXPORT void
-    JNICALL Java_org_krita_android_JNIWrappers_saveState(JNIEnv * /*env*/, jobject /*obj*/, jint /*n*/)
-{
-    if (!KisPart::exists())
-        return;
-
-    KisPart *kisPart = KisPart::instance();
-    QList<QPointer<KisDocument>> list = kisPart->documents();
-    for (QPointer<KisDocument> &doc : list) {
-        doc->autoSaveOnPause();
-    }
-
-    const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    QSettings kritarc(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
-    kritarc.setValue("canvasState", "OPENGL_SUCCESS");
-}
-
-extern "C" JNIEXPORT jboolean JNICALL Java_org_krita_android_JNIWrappers_hasMainWindowLoaded(JNIEnv * /*env*/,
-                                                                                             jobject /*obj*/,
-                                                                                             jint /*n*/)
-{
-    if (!KisPart::exists()) {
-        return false;
-    }
-
-    KisMainWindow *mainWindow = KisPart::instance()->currentMainwindow();
-    return (bool)mainWindow;
-}
-
-extern "C" JNIEXPORT void JNICALL Java_org_krita_android_JNIWrappers_openFileFromIntent(JNIEnv * /*env*/,
-                                                                                        jobject /*obj*/,
-                                                                                        jstring str)
-{
-    QAndroidJniObject jUri(str);
-    if (jUri.isValid()) {
-        QString uri = jUri.toString();
-        QMetaObject::invokeMethod(KisApplication::instance(),
-                                  "fileOpenRequested",
-                                  Qt::QueuedConnection,
-                                  Q_ARG(QString, uri));
-    }
-}
-
-#define MAIN_EXPORT __attribute__((visibility("default")))
-#define MAIN_FN main
-#elif defined Q_OS_WIN
+#if defined Q_OS_WIN
 #define MAIN_EXPORT __declspec(dllexport)
 #define MAIN_FN krita_main
 #else
@@ -407,9 +356,6 @@ extern "C" JNIEXPORT void JNICALL Java_org_krita_android_JNIWrappers_openFileFro
 
 extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 {
-#ifdef Q_OS_ANDROID
-    KisAndroidUtils::performInitialSetup();
-#endif
 
 #ifdef Q_OS_WIN
     // Fix QCommandLineParser help output with UTF-8 codepage:
@@ -481,23 +427,6 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
     // with QT_SCALE_FACTOR_ROUNDING_POLICY.
 #endif
 
-#ifdef Q_OS_ANDROID
-    const QString write_permission = "android.permission.WRITE_EXTERNAL_STORAGE";
-    const QStringList permissions = {write_permission};
-    const QtAndroid::PermissionResultMap resultHash = QtAndroid::requestPermissionsSync(QStringList(permissions));
-
-    if (resultHash[write_permission] == QtAndroid::PermissionResult::Denied) {
-        // TODO: show a dialog and graciously exit
-        dbgKrita << "Permission denied by the user";
-    } else {
-        dbgKrita << "Permission granted";
-    }
-
-    KisAndroidCrashHandler::handler_init();
-
-    qputenv("FONTCONFIG_PATH", QFile::encodeName(KoResourcePaths::getApplicationRoot()) + "/share/etc/fonts/");
-    qputenv("XDG_CACHE_HOME", QFile::encodeName(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)));
-#endif
 
 /**
  * MLT installation notes.
@@ -515,7 +444,7 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
  * look for plugins, profiles and presets. Otherwise MLT will look for
  * plugins from the **build environment** location.
  */
-#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#if defined(Q_OS_LINUX)
     // APPIMAGE SOUND ADDITIONS
     // MLT needs a few environment variables set to properly function in an appimage context.
     // The following code should be configured to **only** run when we detect that Krita is being
@@ -582,11 +511,7 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 
     // KFI18N is broken on Android. See kswitchlanguagedialog_p.cpp for details.
     // If/when removing this, also remove the matching logic from there!
-#ifdef Q_OS_ANDROID
-    static constexpr bool ALLOW_FALLBACK_LANGUAGES = false;
-#else
     static constexpr bool ALLOW_FALLBACK_LANGUAGES = true;
-#endif
 
     QString root;
     QString language;
@@ -735,7 +660,7 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
         KisUsageLogger::initialize();
     }
 
-#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#if defined(Q_OS_LINUX)
     {
         QByteArray originalXdgDataDirs = qgetenv("XDG_DATA_DIRS");
         if (originalXdgDataDirs.isEmpty()) {
@@ -791,21 +716,6 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
         // And if there isn't one, check the one set by the system.
         QLocale locale = QLocale::system();
 
-#ifdef Q_OS_ANDROID
-        // QLocale::uiLanguages() fails on Android, so if the fallback locale is being
-        // used we, try to fetch the device's default locale.
-        if (locale.name() == QLocale::c().name()) {
-            QAndroidJniObject localeJniObj =
-                QAndroidJniObject::callStaticObjectMethod("java/util/Locale", "getDefault", "()Ljava/util/Locale;");
-
-            if (localeJniObj.isValid()) {
-                QAndroidJniObject tag = localeJniObj.callObjectMethod("toLanguageTag", "()Ljava/lang/String;");
-                if (tag.isValid()) {
-                    locale = QLocale(tag.toString());
-                }
-            }
-        }
-#endif
         if (locale.name() != QStringLiteral("en")) {
             QStringList uiLanguages = locale.uiLanguages();
             for (QString &uiLanguage : uiLanguages) {
@@ -898,9 +808,6 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
             KisApplication::setLayoutDirection(Qt::LeftToRight);
         }
     }
-#ifdef Q_OS_ANDROID
-    KisApplication::setAttribute(Qt::AA_DontUseNativeMenuBar);
-#endif
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0) || defined Q_OS_WIN || defined Q_OS_MACOS
     /**
@@ -968,22 +875,6 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 
 #if defined HAVE_KCRASH
     KCrash::initialize();
-#endif
-#if defined Q_OS_ANDROID
-    // because we need qApp
-    qputenv("MLT_REPOSITORY", QFile::encodeName(qApp->applicationDirPath()));
-
-    QString loc;
-    if (QStandardPaths::standardLocations(QStandardPaths::HomeLocation).size() > 1) {
-        loc = QStandardPaths::standardLocations(QStandardPaths::HomeLocation)[1];
-    } else {
-        loc = QStandardPaths::standardLocations(QStandardPaths::HomeLocation)[0];
-    }
-    qputenv("MLT_DATA", QFile::encodeName(loc + "/share/mlt-7/"));
-    qputenv("MLT_ROOT_DIR", QFile::encodeName(loc));
-    qputenv("MLT_PROFILES_PATH", QFile::encodeName(loc + "/share/mlt-7/profiles/"));
-    qputenv("MLT_PRESETS_PATH", QFile::encodeName(loc + "/share/mlt-7/presets/"));
-    qputenv("MLT_PLUGIN_FILTER_STRING", "lib_mltplugin_");
 #endif
     KisApplicationArguments args(app);
 
@@ -1230,9 +1121,6 @@ void installEcmTranslations(KisApplication &app)
         Q_FOREACH (const auto &catalog, ecmCatalogs) {
             QString subPath = QStringLiteral("locale/") % localeDirName % QStringLiteral("/LC_MESSAGES/") % catalog
                 % QStringLiteral(".qm");
-#if defined(Q_OS_ANDROID)
-            const QString fullPath = QStringLiteral("assets:/") + subPath;
-#else
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             const QString root = QLibraryInfo::location(QLibraryInfo::PrefixPath);
 #else
@@ -1255,7 +1143,6 @@ void installEcmTranslations(KisApplication &app)
                 // And, failing all, use the deps install folder
                 fullPath = root + "/share/" + subPath;
             }
-#endif
             if (!QFile::exists(fullPath)) {
                 continue;
             }

@@ -5,10 +5,6 @@ import subprocess
 import multiprocessing
 import shutil
 
-if 'ANDROID_HOME' in os.environ or 'KDECI_ANDROID_ABI' in os.environ:
-    print ('## Skip building GMic plugin for Android...')
-    sys.exit(0)
-
 skipBuild3rdpartyPlugins = os.environ.get('KRITACI_SKIP_BUILD_3RDPARTY_PLUGINS', 'False')
 if skipBuild3rdpartyPlugins.lower() in ['true', '1', 't', 'y', 'yes']:
     print ('## Skip building GMic plugin (KRITACI_SKIP_BUILD_3RDPARTY_PLUGINS is set)...')

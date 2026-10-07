@@ -135,12 +135,7 @@ public:
     };
 
     inline bool actionsSuppressed() const {
-#ifndef Q_OS_ANDROID
         return suppressAllActions || !cursorEntered;
-#else
-        // when S-pen is not pointing the canvas, actions on canvas are disabled, till it points back to canvas.
-        return false;
-#endif
     }
 
     inline bool actionsSuppressedIgnoreFocus() const {

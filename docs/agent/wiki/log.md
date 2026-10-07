@@ -105,3 +105,8 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 - `history/gpu-phases-4.93-.md`: phase 4.96 reverted and reapplied; the
   Accurate preview never built the mesh (fixed, `docs/agent/puppet-warp.md`).
+
+## 2026-10-08 ingest: Android leftovers removed
+
+- `pitfalls/build-format-test.md`: resolving preprocessor conditionals with a
+  script, and editing `.ui` files that the user's tool regenerates.

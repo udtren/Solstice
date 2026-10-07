@@ -17,7 +17,7 @@ verification rules are in `docs/agent/development-workflow.md`.
 | `benchmarks/` | Upstream performance benchmarks. | Rarely. |
 | `cmake/modules/` | CMake helpers (`KritaAddBrokenUnitTest.cmake` defines `kis_add_test(s)`). | Rarely. |
 | `3rdparty*`, `plugins/visionml/thirdparty/` | Vendored or dependency sources. | Only for deliberate dependency updates. Never reformat. |
-| `packaging/` | Platform packaging. Android packaging is being removed. | Packaging/branding work only. |
+| `packaging/` | Platform packaging (desktop only; Android packaging removed). | Packaging/branding work only. |
 | `po/` | Translations (generated upstream). | Never edit by hand. |
 | `pch/` | Precompiled headers selected by `kis_add_library`. | Never for feature work. |
 | `winquirks/` | MSVC compatibility headers. | Never for feature work. |

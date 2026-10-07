@@ -42,10 +42,6 @@ public:
     void notifyColorThemeChanged(const QString &filename);
     void notifyLongPressChanged(bool enabled);
 
-#ifdef Q_OS_ANDROID
-    void notifyUsePageUpDownMouseButtonEmulationWorkaroundChanged(bool enabled);
-    void notifyUseIgnoreHistoricTabletEventsWorkaroundChanged(bool enabled);
-#endif
 
 Q_SIGNALS:
     /**
@@ -59,10 +55,6 @@ Q_SIGNALS:
     void sigColorSamplerPreviewStyleChanged();
     void signalColorThemeChanged(const QString &filename);
     void sigLongPressChanged(bool enabled);
-#ifdef Q_OS_ANDROID
-    void sigUsePageUpDownMouseButtonEmulationWorkaroundChanged(bool enabled);
-    void sigUseIgnoreHistoricTabletEventsWorkaroundChanged(bool enabled);
-#endif
 
 private:
     KisConfigNotifier(const KisConfigNotifier&);

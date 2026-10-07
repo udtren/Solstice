@@ -143,11 +143,6 @@ QString getInstallationPrefix() {
     return bundlePath;
 #elif defined(Q_OS_HAIKU)
 	return qApp->applicationDirPath() + "/";
-#elif defined(Q_OS_ANDROID)
-    // qApp->applicationDirPath() isn't writable and android system won't allow
-    // any files other than libraries
-    // NOTE the subscript [1]. It points to the internal location.
-    return QStandardPaths::standardLocations(QStandardPaths::AppDataLocation)[1] + "/";
 #else
     return qApp->applicationDirPath() + "/../";
 #endif
@@ -705,13 +700,11 @@ QString KoResourcePaths::saveLocationInternal(const QString &type, const QString
         useStandardLocation = true;
     }
 
-#ifndef Q_OS_ANDROID
     // on Android almost all config locations we save to are app specific,
     // and don't end with "krita".
     if (!path.endsWith("krita") && useStandardLocation) {
         path += "/krita";
     }
-#endif
 
     if (!aliases.isEmpty()) {
         path += '/' + aliases.first();

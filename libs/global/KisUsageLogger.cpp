@@ -32,12 +32,6 @@
 #include <versionhelpers.h>
 #endif
 
-#ifdef Q_OS_ANDROID
-#include <KisAndroidExitInfo.h>
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-#include <QtAndroidExtras/QtAndroid>
-#endif
-#endif
 
 #ifdef Q_OS_MACOS
 #include "KisMacosEntitlements.h"
@@ -152,14 +146,7 @@ QString KisUsageLogger::basicSystemInfo()
     systemInfo.append("\n  Product Type: ").append(QSysInfo::productType());
     systemInfo.append("\n  Product Version: ").append(QSysInfo::productVersion());
 
-#ifdef Q_OS_ANDROID
-    QString manufacturer =
-        QAndroidJniObject::getStaticObjectField("android/os/Build", "MANUFACTURER", "Ljava/lang/String;").toString();
-    const QString model =
-        QAndroidJniObject::getStaticObjectField("android/os/Build", "MODEL", "Ljava/lang/String;").toString();
-    manufacturer[0] = manufacturer[0].toUpper();
-    systemInfo.append("\n  Product Model: ").append(manufacturer + " " + model);
-#elif defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX)
     systemInfo.append("\n  Desktop: ").append(qgetenv("XDG_CURRENT_DESKTOP"));
 
     systemInfo.append("\n  Appimage build: ").append(qEnvironmentVariableIsSet("APPIMAGE") ? "Yes" : "No");
@@ -289,12 +276,6 @@ void KisUsageLogger::writeHeader()
         .arg(qApp->style()->objectName(),
              QStyleFactory::keys().join(", ")));
 
-#ifdef Q_OS_ANDROID
-    KisAndroidExitInfo androidExitInfo = KisAndroidExitInfo::getLast();
-    if (androidExitInfo.isValid()) {
-        log(QStringLiteral("Last exit: %1").arg(androidExitInfo.buildLogString()));
-    }
-#endif
 }
 
 QString KisUsageLogger::screenInformation()

@@ -5,7 +5,6 @@ platforms:
     - name: FreeBSD
     - name: Windows
     - name: macOS
-    - name: Android
 deprecated: false
 release: true
 public_lib: true

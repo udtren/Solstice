@@ -78,9 +78,6 @@
 #include "kis_debug.h"
 #include <commands/KoKeepShapesSelectedCommand.h>
 
-#ifdef Q_OS_ANDROID
-#include <QMenuBar>
-#endif
 
 
 using SvgInlineSizeHelper::InlineSizeInfo;
@@ -320,11 +317,6 @@ void SvgTextTool::showEditor()
     }
     if (!m_editor->isVisible()) {
         m_editor->setInitialShape(shape);
-#ifdef Q_OS_ANDROID
-        // for window manager
-        m_editor->setWindowFlags(Qt::Dialog);
-        m_editor->menuBar()->setNativeMenuBar(false);
-#endif
         m_editor->show();
     }
 }

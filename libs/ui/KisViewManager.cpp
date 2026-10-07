@@ -979,20 +979,7 @@ void KisViewManager::slotDocumentSaved()
 
 QString KisViewManager::canonicalPath()
 {
-#ifdef Q_OS_ANDROID
-    QString path = QFileInfo(document()->localFilePath()).canonicalPath();
-    // if the path is based on a document tree then a directory would be returned. So check if it exists and more
-    // importantly check if we have permissions
-    if (QDir(path).exists()) {
-        return path;
-    } else {
-        KoFileDialog dialog(nullptr, KoFileDialog::ImportDirectory, "OpenDirectory");
-        dialog.setDirectoryUrl(QUrl(document()->localFilePath()));
-        return dialog.filename();
-    }
-#else
     return QFileInfo(document()->localFilePath()).canonicalPath();
-#endif
 }
 
 void KisViewManager::slotSaveIncremental()
@@ -1234,30 +1221,6 @@ void KisViewManager::switchCanvasOnly(bool toggled)
         return;
     }
 
-#ifdef Q_OS_ANDROID
-    // On Android, expanded tool bars will crash when canvas-only mode is
-    // toggled. To avoid this, we go looking for expanded toolbars and close
-    // them instead of switching the mode and hitting a crash. Note that this
-    // only works properly because we turn off main window animations on
-    // Android, since that means clicking the extension button will instantly
-    // hide the menu. With animations, the user could still trigger a crash if
-    // they tried switching the mode while the extension animation is running.
-    QList<QToolBar *> toolBars = main->findChildren<QToolBar *>();
-    bool wasToolBarPopupOpen = false;
-    for (QToolBar *toolBar : toolBars) {
-        for (QToolButton *button : toolBar->findChildren<QToolButton *>(QStringLiteral("qt_toolbar_ext_button"))) {
-            if (button->isChecked()) {
-                wasToolBarPopupOpen = true;
-                button->click();
-            }
-        }
-    }
-
-    if(wasToolBarPopupOpen) {
-        updateCanvasOnlyActionState();
-        return;
-    }
-#endif
 
     cfg.writeEntry("CanvasOnlyActive", toggled);
     d->inCanvasOnlyMode = toggled;
@@ -1381,9 +1344,7 @@ void KisViewManager::switchCanvasOnly(bool toggled)
 
     if (options.hideToolbarFullscreen) {
         // We already went searching for these on Android above.
-#ifndef Q_OS_ANDROID
         QList<QToolBar*> toolBars = main->findChildren<QToolBar*>();
-#endif
         Q_FOREACH (QToolBar* toolbar, toolBars) {
             if (!toggled) {
                 if (toolbar->dynamicPropertyNames().contains("wasvisible")) {

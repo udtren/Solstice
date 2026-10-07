@@ -173,11 +173,7 @@ QString KisFileLayer::path() const
         return m_filename;
     }
     else {
-#ifndef Q_OS_ANDROID
         return QDir(m_basePath).filePath(QDir::cleanPath(m_filename));
-#else
-        return m_filename;
-#endif
     }
 }
 

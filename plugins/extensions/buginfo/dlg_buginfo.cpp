@@ -28,9 +28,6 @@
 
 #include <KisPortingUtils.h>
 
-#ifdef Q_OS_ANDROID
-#include <QtAndroid>
-#endif
 
 DlgBugInfo::DlgBugInfo(QWidget *parent, KoDialog::ButtonCodes customButtons)
     : KoDialog(parent)
@@ -128,14 +125,6 @@ QString DlgBugInfo::basicSystemInformationReplacementText()
     info.append("\n  Pretty Productname: ").append(QSysInfo::prettyProductName());
     info.append("\n  Product Type: ").append(QSysInfo::productType());
     info.append("\n  Product Version: ").append(QSysInfo::productVersion());
-#ifdef Q_OS_ANDROID
-    QString manufacturer =
-        QAndroidJniObject::getStaticObjectField("android/os/Build", "MANUFACTURER", "Ljava/lang/String;").toString();
-    const QString model =
-        QAndroidJniObject::getStaticObjectField("android/os/Build", "MODEL", "Ljava/lang/String;").toString();
-    manufacturer[0] = manufacturer[0].toUpper();
-    info.append("\n  Product Model: ").append(manufacturer + " " + model);
-#endif
     info.append("\n\n");
 
     // OpenGL information

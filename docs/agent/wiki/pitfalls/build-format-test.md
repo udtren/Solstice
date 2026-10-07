@@ -112,6 +112,18 @@ wrong anyway.
   After `KisFilter::prefersSingleCall()` was added, `kis_filter_test`,
   `kis_filter_mask_test` and `KisGpuPaintDeviceTest` crashed with
   0xc0000005 in old plugins until `cmake --install` of the whole build.
+- **Removing a platform's conditionals: resolve them, do not hand-edit.**
+  The Android cleanup (2026-10-08) resolved 267 `Q_OS_ANDROID` lines in 71
+  files with a small unifdef-like script that treats the macro as undefined
+  and simplifies mixed expressions (`defined(Q_OS_LINUX) &&
+  !defined(Q_OS_ANDROID)` -> `defined(Q_OS_LINUX)`). Check afterwards for
+  blank lines left at the end of files (`git diff --check`), and that no new
+  unused-variable warnings appear.
+- **`.ui` edits regenerate tracked `*_ui.py` files.** The user's editor runs
+  pyuic6 when a `.ui` file changes, including the tracked
+  `libs/ui/forms/*_ui.py`. A broken intermediate `.ui` produced a broken
+  `.py`; validate `.ui` XML (`xml.dom.minidom.parse`) before saving, and
+  commit the regenerated files with their `.ui`.
 - **Git Bash `sed -i` rewrites CRLF files with LF.** Running `sed -i` on a
   CRLF source file converted the whole file, so `git diff` showed every
   line. Edit CRLF files with the edit helper (or Python in binary mode) and

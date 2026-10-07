@@ -16,9 +16,6 @@
 
 #include <kis_debug.h>
 
-#ifdef Q_OS_ANDROID
-#include <KisAndroidUtils.h>
-#endif
 
 
 struct KisAsyncAnimationFramesSavingRenderer::Private
@@ -121,9 +118,6 @@ void KisAsyncAnimationFramesSavingRenderer::frameCompletedCallback(int frame, co
 
                 bool copyOk;
                 QString copyErrorMessage;
-#ifdef Q_OS_ANDROID
-                copyOk = KisAndroidUtils::copyFile(filename, identicalFrameName, &copyErrorMessage);
-#else
                 QFile sourceFile(filename);
                 if (sourceFile.copy(identicalFrameName)) {
                     copyOk = true;
@@ -131,7 +125,6 @@ void KisAsyncAnimationFramesSavingRenderer::frameCompletedCallback(int frame, co
                     copyOk = false;
                     copyErrorMessage = sourceFile.errorString();
                 }
-#endif
                 if (!copyOk) {
                     warnFile.nospace() << "Failed to copy frame '" << filename << "' to '" << identicalFrameName
                                        << "': " << copyErrorMessage;

@@ -780,18 +780,12 @@ bool KisDocument::exportDocumentImpl(const KritaUtils::ExportFileJob &job, KisPr
 
     QFileInfo filePathInfo(job.filePath);
     bool fileExists = filePathInfo.exists();
-#ifdef Q_OS_ANDROID
-    if (fileExists) {
-        fileExists = filePathInfo.size() > 0;
-    }
-#else
     if (fileExists && !filePathInfo.isWritable()) {
         slotCompleteSavingDocument(job, ImportExportCodes::NoAccessToWrite,
                                    i18n("%1 cannot be written to. Please save under a different name.", job.filePath),
                                    "");
         return false;
     }
-#endif
 
     KisConfig cfg(true);
     if (cfg.backupFile() && fileExists) {
@@ -806,11 +800,6 @@ bool KisDocument::exportDocumentImpl(const KritaUtils::ExportFileJob &job, KisPr
             backupDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
             break;
         default:
-#ifdef Q_OS_ANDROID
-            // We deal with URIs, there may or may not be a "directory"
-            backupDir = KisAutoSaveRecoveryDialog::autoSaveLocation();
-            QDir().mkpath(backupDir);
-#endif
 
 #ifdef Q_OS_MACOS
             KisMacosSecurityBookmarkManager *bookmarkmngr = KisMacosSecurityBookmarkManager::instance();
@@ -1104,14 +1093,8 @@ void KisDocument::Private::updateDocumentMetadataOnSaving(const QString &filePat
     q->setMimeType(mimeType);
     q->updateEditingTime(true);
 
-#ifdef Q_OS_ANDROID
-    // See the comment titled "ANDROID NOTES" in this file for an explanation of
-    // what this is about. (This is not that comment.)
-    q->setReadWrite(true);
-#else
     QFileInfo fi(filePath);
     q->setReadWrite(fi.isWritable());
-#endif
 
     if (!modifiedWhileSaving) {
         /**
@@ -1905,13 +1888,6 @@ QString KisDocument::generateAutoSaveFileName(const QString & path) const
     QFileInfo fi(path);
     QString dir = fi.absolutePath();
 
-#ifdef Q_OS_ANDROID
-    // URIs may or may not have a directory backing them, so we save to our default autosave location
-    if (path.startsWith("content://")) {
-        dir = KisAutoSaveRecoveryDialog::autoSaveLocation();
-        QDir().mkpath(dir);
-    }
-#endif
 
     QString filename = fi.fileName();
 
@@ -2014,14 +1990,8 @@ bool KisDocument::openPath(const QString &_path, OpenFlags flags)
                 KisPart::instance()->addRecentURLToAllMainWindows(QUrl::fromLocalFile(_path));
             }
 
-#ifdef Q_OS_ANDROID
-            // See the comment titled "ANDROID NOTES" in this file for an
-            // explanation of what this is about. (This is not that comment.)
-            setReadWrite(true);
-#else
             QFileInfo fi(_path);
             setReadWrite(fi.isWritable());
-#endif
         }
 
         setRecovered(false);
@@ -2105,26 +2075,6 @@ bool KisDocument::openFile()
     undoStack()->clear();
 
     return true;
-}
-
-void KisDocument::autoSaveOnPause()
-{
-    if (!d->modified || !d->modifiedAfterAutosave)
-        return;
-
-    const QString autoSaveFileName = generateAutoSaveFileName(localFilePath());
-
-    bool started = exportDocumentSync(autoSaveFileName, nativeFormatMimeType());
-
-    if (started)
-    {
-        d->modifiedAfterAutosave = false;
-        dbgAndroid << "autoSaveOnPause successful";
-    }
-    else
-    {
-        qWarning() << "Could not auto-save when paused";
-    }
 }
 
 // shared between openFile and koMainWindow's "create new empty document" code

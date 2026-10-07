@@ -33,11 +33,7 @@
 // disable the ability to set a fallback language. Other operating systems
 // don't seem to have this problem. If/when removing this, also remove the
 // matching check in main.cc!
-#ifdef Q_OS_ANDROID
-static constexpr bool ALLOW_FALLBACK_LANGUAGES = false;
-#else
 static constexpr bool ALLOW_FALLBACK_LANGUAGES = true;
-#endif
 
 // Believe it or not we can't use KConfig from here
 // (we need KConfig during QCoreApplication ctor which is too early for it)

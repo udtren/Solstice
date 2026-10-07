@@ -400,7 +400,7 @@ void KisColorSelectorBase::lazyCreatePopup()
         // the WM from showing another taskbar entry,
         // but will require that we handle window activation manually
         m_popup->setWindowFlags(Qt::FramelessWindowHint |
-#if defined(Q_OS_MACOS) || defined(Q_OS_ANDROID)
+#if defined(Q_OS_MACOS)
                                 Qt::Popup |
 #else
                                 Qt::Window |

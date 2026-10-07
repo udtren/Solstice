@@ -18,7 +18,7 @@ public:
 
     Private()
     {
-#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#if defined(Q_OS_LINUX)
         dummyFocusRecoveryWidget.reset(new QWidget);
         dummyFocusRecoveryWidget->setObjectName("dummyFocusRecoveryWidget");
 #endif
@@ -40,7 +40,7 @@ KisGrabKeyboardFocusRecoveryWorkaround* KisGrabKeyboardFocusRecoveryWorkaround::
 
 void KisGrabKeyboardFocusRecoveryWorkaround::recoverFocus()
 {
-#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#if defined(Q_OS_LINUX)
     // Get the top-most window
     QWidget *activeWindow = qApp->activeWindow();
     QWidget *mainWindow = activeWindow;

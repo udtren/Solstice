@@ -14,16 +14,12 @@
 #include <QSize>
 #include "recorder_format.h"
 
-#ifdef Q_OS_ANDROID
-#include <QVariantMap>
-#else
 struct RecorderProfile
 {
     QString name;
     QString extension;
     QString arguments;
 };
-#endif
 
 struct RecorderExportSettings {
 
@@ -38,17 +34,12 @@ struct RecorderExportSettings {
     int firstFrameSec = 2;
     int lastFrameSec = 5;
     QSize size;
-#ifdef Q_OS_ANDROID
-    QString selectedFormat;
-    QVariantMap formatPreferences;
-#else
     int profileIndex = 0;
     QString ffmpegPath;
     QString videoDirectory;
     QString h264Encoder;
     QList<RecorderProfile> profiles;
     QList<RecorderProfile> defaultProfiles;
-#endif
 
 
     // The following are additional settings, which will not be serialized in
@@ -57,11 +48,7 @@ struct RecorderExportSettings {
     RecorderFormat format;
     QSize imageSize;
 
-#ifdef Q_OS_ANDROID
-    QStringList inputFilePaths;
-#else
     QString videoFileName;
-#endif
     QString videoFilePath;
     int framesCount = 0;
 

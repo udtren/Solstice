@@ -8,8 +8,7 @@ import shutil
 import glob
 
 supportedPlatforms = ['linux', 'windows', 'macos-universal',
-    'linux-qt5', 'windows-qt5', 'macos-universal-qt5',
-    'android-x86_64', 'android-arm64-v8a', 'android-armeabi-v7a']
+    'linux-qt5', 'windows-qt5', 'macos-universal-qt5']
 
 # Capture our command line parameters
 parser = argparse.ArgumentParser(description='A script for building Krita Windows package on CI')
@@ -43,9 +42,6 @@ elif arguments.platform.startswith('linux'):
 elif arguments.platform.startswith('macos-universal'):
     print('## WARNING: check the pattern for artifacts on macOS!')
     patterns = ['*.dmg']
-    pass
-elif arguments.platform.startswith('android'):
-    patterns = ['*.apk', '*.aab']
     pass
 
 patterns.extend(['*.md5', '*.sha256'])

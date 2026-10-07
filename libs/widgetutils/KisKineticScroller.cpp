@@ -11,12 +11,8 @@
 #include <QAbstractItemView>
 #include <QEvent>
 #include <QScrollBar>
-#ifdef Q_OS_ANDROID
-#include <QtAndroid>
-#else
 #include <QApplication>
 #include <QStyleHints>
-#endif
 
 #include <ksharedconfig.h>
 #include <kconfiggroup.h>
@@ -107,12 +103,7 @@ QScroller* KisKineticScroller::createPreconfiguredScroller(QAbstractScrollArea *
 
         // If the mouse press event delay is too large, it also ends up delaying
         // long-presses. Cap the value there for consistency.
-#ifdef Q_OS_ANDROID
-        int maxDelayMs =
-            QAndroidJniObject::callStaticMethod<jint>("org/krita/android/MainActivity", "getLongPressTimeout", "()I");
-#else
         int maxDelayMs = qApp->styleHints()->mousePressAndHoldInterval();
-#endif
         float maxDelay = float(maxDelayMs) / 1000.0f;
         if (mousePressEventDelay > maxDelay) {
             mousePressEventDelay = maxDelay;
@@ -142,12 +133,7 @@ QScroller* KisKineticScroller::createPreconfiguredScroller(QAbstractScrollArea *
 
 QScroller::ScrollerGestureType KisKineticScroller::getConfiguredGestureType() {
     KConfigGroup config = KSharedConfig::openConfig()->group("");
-#ifdef Q_OS_ANDROID
-    // Use a different default. Shouldn't we use KisConfig::kineticScrollingGesture?
-    int gesture = config.readEntry("KineticScrollingGesture", 1);
-#else
     int gesture = config.readEntry("KineticScrollingGesture", 0);
-#endif
 
     switch (gesture) {
     case 0: {

@@ -11,16 +11,12 @@
 
 #include <KisFileUtils.h>
 
-#ifdef Q_OS_ANDROID
-#include <QJsonDocument>
-#endif
 
 KisAnimationRenderingOptions::KisAnimationRenderingOptions()
 {
 
 }
 
-#ifndef Q_OS_ANDROID
 QString KisAnimationRenderingOptions::resolveAbsoluteDocumentFilePath(const QString &documentPath) const
 {
     return
@@ -54,17 +50,9 @@ QString KisAnimationRenderingOptions::resolveAbsoluteFramesDirectory() const
 {
     return resolveAbsoluteFramesDirectory(lastDocumentPath);
 }
-#endif
 
 KisAnimationRenderingOptions::RenderMode KisAnimationRenderingOptions::renderMode() const
 {
-#ifdef Q_OS_ANDROID
-    if (shouldEncodeVideo) {
-        return RENDER_VIDEO_ONLY;
-    } else {
-        return RENDER_FRAMES_ONLY;
-    }
-#else
     if (shouldDeleteSequence) {
         KIS_SAFE_ASSERT_RECOVER_NOOP(shouldEncodeVideo);
         return RENDER_VIDEO_ONLY;
@@ -74,7 +62,6 @@ KisAnimationRenderingOptions::RenderMode KisAnimationRenderingOptions::renderMod
     } else {
         return RENDER_FRAMES_AND_VIDEO;
     }
-#endif
 }
 
 KisPropertiesConfigurationSP KisAnimationRenderingOptions::toProperties() const
@@ -90,9 +77,7 @@ KisPropertiesConfigurationSP KisAnimationRenderingOptions::toProperties() const
     config->setProperty("frame_mimetype", frameMimeType);
 
     config->setProperty("encode_video", shouldEncodeVideo);
-#ifndef Q_OS_ANDROID
     config->setProperty("delete_sequence", shouldDeleteSequence);
-#endif
     config->setProperty("only_unique_frames", wantsOnlyUniqueFrameSequence);
 
     config->setProperty("framerate", frameRate);
@@ -101,14 +86,9 @@ KisPropertiesConfigurationSP KisAnimationRenderingOptions::toProperties() const
     config->setProperty("include_audio", includeAudio);
     config->setProperty("filename", videoFileName);
 
-#ifdef Q_OS_ANDROID
-    config->setProperty("video_format_key", videoFormatKey);
-    config->setProperty("video_format_preferences_json", videoFormatPreferencesJson);
-#else
     config->setProperty("video_mimetype", videoMimeType);
     config->setProperty("ffmpeg_path", ffmpegPath);
     config->setProperty("custom_ffmpeg_options", customFFMpegOptions);
-#endif
 
     config->setPrefixedProperties("frame_export/", frameExportConfig);
 
@@ -125,15 +105,9 @@ void KisAnimationRenderingOptions::fromProperties(KisPropertiesConfigurationSP c
     sequenceStart = config->getPropertyLazy("sequence_start", 0);
     frameMimeType = config->getPropertyLazy("frame_mimetype", frameMimeType);
 
-#ifdef Q_OS_ANDROID
-    bool encodeVideoDefault = true;
-#else
     bool encodeVideoDefault = false;
-#endif
     shouldEncodeVideo = config->getPropertyLazy("encode_video", encodeVideoDefault);
-#ifndef Q_OS_ANDROID
     shouldDeleteSequence = config->getPropertyLazy("delete_sequence", false);
-#endif
     wantsOnlyUniqueFrameSequence = config->getPropertyLazy("only_unique_frames", false);
 
     frameRate = config->getPropertyLazy("framerate", 25);
@@ -142,14 +116,9 @@ void KisAnimationRenderingOptions::fromProperties(KisPropertiesConfigurationSP c
     includeAudio = config->getPropertyLazy("include_audio", true);
     videoFileName = config->getPropertyLazy("filename", "");
 
-#ifdef Q_OS_ANDROID
-    videoFormatKey = config->getPropertyLazy("video_format_key", QString());
-    videoFormatPreferencesJson = config->getPropertyLazy("video_format_preferences_json", QString());
-#else
     videoMimeType = config->getPropertyLazy("video_mimetype", videoMimeType);
     ffmpegPath = config->getPropertyLazy("ffmpeg_path", "");
     customFFMpegOptions = config->getPropertyLazy("custom_ffmpeg_options", "");
-#endif
 
     frameExportConfig = new KisPropertiesConfiguration();
     config->getPrefixedProperties("frame_export/", frameExportConfig);

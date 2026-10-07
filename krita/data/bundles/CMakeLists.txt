@@ -5,12 +5,10 @@ set (krita_BUNDLE_FILES
      RGBA_brushes.bundle
 )
 
-if (NOT ANDROID)
-    set (krita_BUNDLE_FILES
-         ${krita_BUNDLE_FILES}
-         Krita_3_Default_Resources.bundle
-         )
-endif()
+set (krita_BUNDLE_FILES
+     ${krita_BUNDLE_FILES}
+     Krita_3_Default_Resources.bundle
+     )
 
 install( FILES
     ${krita_BUNDLE_FILES}

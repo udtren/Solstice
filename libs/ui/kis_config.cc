@@ -49,9 +49,6 @@
 #  include <QtGui/qpa/qplatformintegration.h>
 #endif
 
-#ifdef Q_OS_ANDROID
-#include <KisAndroidUtils.h>
-#endif
 
 KisConfig::KisConfig(bool readOnly)
     : m_cfg( KSharedConfig::openConfig()->group(""))
@@ -1560,17 +1557,6 @@ void KisConfig::setPaintopPopupDetached(bool detached) const
 QString KisConfig::pressureTabletCurve(bool defaultValue) const
 {
     QString fallback = DEFAULT_CURVE_STRING;
-#ifdef Q_OS_ANDROID
-    // Xiaomi styluses need superhuman strength to reach full input pressure.
-    // We use a much steeper default pressure curve for them by default that
-    // effectively caps out at 70% pressure to make it at least bearable. A
-    // note for a possible future: Apple styluses have an even greater range,
-    // so if we somehow end up on iPads, we'll probably need to make those cap
-    // out at 50% pressure at most something like: "0,0;0.5,1.0;"
-    if (KisAndroidUtils::looksLikeXiaomiDevice()) {
-        fallback = QStringLiteral("0,0;0.7,1;");
-    }
-#endif
     return (defaultValue ? fallback : m_cfg.readEntry("tabletPressureCurve", fallback));
 }
 
@@ -1627,81 +1613,6 @@ void KisConfig::setUseRightMiddleTabletButtonWorkaround(bool value)
     m_cfg.writeEntry("useRightMiddleTabletButtonWorkaround", value);
 }
 
-#ifdef Q_OS_ANDROID
-bool KisConfig::usePageUpDownMouseButtonEmulationWorkaround(bool defaultValue) const
-{
-    bool fallback = KisAndroidUtils::looksLikeXiaomiDevice();
-    if (defaultValue) {
-        return fallback;
-    } else {
-        return m_cfg.readEntry("usePageUpDownMouseButtonEmulationWorkaround", fallback);
-    }
-}
-
-void KisConfig::setUsePageUpDownMouseButtonEmulationWorkaround(bool value)
-{
-    m_cfg.writeEntry("usePageUpDownMouseButtonEmulationWorkaround", value);
-    KisConfigNotifier::instance()->notifyUsePageUpDownMouseButtonEmulationWorkaroundChanged(value);
-}
-
-bool KisConfig::useIgnoreHistoricTabletEventsWorkaround(bool defaultValue) const
-{
-    bool fallback = KisAndroidUtils::looksLikeXiaomiDevice();
-    if (defaultValue) {
-        return fallback;
-    } else {
-        return m_cfg.readEntry("useIgnoreHistoricTabletEventsWorkaround", fallback);
-    }
-}
-
-void KisConfig::setUseIgnoreHistoricTabletEventsWorkaround(bool value)
-{
-    m_cfg.writeEntry("useIgnoreHistoricTabletEventsWorkaround", value);
-    KisConfigNotifier::instance()->notifyUseIgnoreHistoricTabletEventsWorkaroundChanged(value);
-}
-
-qreal KisConfig::androidScalingLastInitialScale(bool defaultValue) const
-{
-    if (defaultValue) {
-        return 0.0;
-    } else {
-        return m_cfg.readEntry("androidScalingLastInitialScale", 0.0);
-    }
-}
-
-void KisConfig::setAndroidScalingLastInitialScale(qreal value)
-{
-    m_cfg.writeEntry("androidScalingLastInitialScale", value);
-}
-
-qreal KisConfig::androidScalingTargetScale(bool defaultValue) const
-{
-    if (defaultValue) {
-        return 0.0;
-    } else {
-        return m_cfg.readEntry("androidScalingTargetScale", 0.0);
-    }
-}
-
-void KisConfig::setAndroidScalingTargetScale(qreal value)
-{
-    m_cfg.writeEntry("androidScalingTargetScale", value);
-}
-
-bool KisConfig::androidScalingAskOnStartup(bool defaultValue) const
-{
-    if (defaultValue) {
-        return true;
-    } else {
-        return m_cfg.readEntry("androidScalingAskOnStartup", true);
-    }
-}
-
-void KisConfig::setAndroidScalingAskOnStartup(bool value)
-{
-    m_cfg.writeEntry("androidScalingAskOnStartup", value);
-}
-#endif
 
 qreal KisConfig::vastScrolling(bool defaultValue) const
 {
@@ -2400,11 +2311,7 @@ void KisConfig::setKineticScrollingEnabled(bool value)
 
 int KisConfig::kineticScrollingGesture(bool defaultValue) const
 {
-#ifdef Q_OS_ANDROID
-    int defaultGesture = 1; // LeftMouseButtonGesture
-#else
     int defaultGesture = 2; // MiddleMouseButtonGesture
-#endif
 
     return (defaultValue ? defaultGesture : m_cfg.readEntry("KineticScrollingGesture", defaultGesture));
 }
@@ -2926,11 +2833,7 @@ void  KisConfig::setAssistantsDrawMode(AssistantsDrawMode value)
 
 bool KisConfig::longPressEnabled(bool defaultValue) const
 {
-#ifdef Q_OS_ANDROID
-    bool defaultEnabled = true;
-#else
     bool defaultEnabled = false;
-#endif
     if (defaultValue) {
         return defaultEnabled;
     } else {

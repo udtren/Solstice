@@ -276,12 +276,6 @@ QString KisAutoSaveRecoveryDialog::autoSaveLocation()
 #if defined(Q_OS_WIN)
     // On Windows, use the temp location (https://bugs.kde.org/show_bug.cgi?id=314921)
     return QDir::tempPath();
-#elif defined(Q_OS_ANDROID)
-    QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation).append("/krita-backup");
-    if (!QDir(path).exists()) {
-        QDir().mkpath(path);
-    }
-    return path;
 #else
     // On Linux, use a temp file in $HOME then. Mark it with the pid so two instances don't overwrite each other's
     // autosave file
