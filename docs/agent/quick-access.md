@@ -159,6 +159,11 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   is dynamic. Rectangular static hue rendering is in
   `KisVisualRectangleSelectorShape`. The foreground/background controls use
   overlapping 28 px swatches inside a 48 × 44 px top-left container.
+- The hue strip and the square fill all of the docker's spare height; the
+  H/S/V/R/G/B rows below keep a fixed height (user request 2026-10-07).
+  `KisVisualColorSelector` limits the square to 1.5 times its width by
+  default, leaving the rest of a tall selector empty, so the widget calls
+  `setStretchLimit(100.0)` (Solstice addition to `libs/widgets`).
 - Quick Adjust color history updates only from actual foreground-color use or
   painting and resets once per Krita process, not on every selector change.
 - Temporary Brushes are hold actions: save the current preset and size on

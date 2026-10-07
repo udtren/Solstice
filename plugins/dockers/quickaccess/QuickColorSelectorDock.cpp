@@ -46,6 +46,9 @@ QuickColorSelectorWidget::QuickColorSelectorWidget(QWidget *parent)
     m_selector = new KisVisualColorSelector(this);
     m_selector->setMinimumSize(210, 210);
     m_selector->setMinimumSliderWidth(16);
+    // Fill the docker's height: the hue strip and the square take all spare
+    // height, the channel rows below keep their natural (fixed) height.
+    m_selector->setStretchLimit(100.0);
     m_selector->setSliderPosition(Qt::LeftEdge);
     m_selector->setRenderMode(KisVisualColorSelector::StaticBackground);
     layout->addWidget(m_selector, 1);

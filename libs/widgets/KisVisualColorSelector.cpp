@@ -150,6 +150,15 @@ KoColor KisVisualColorSelector::getCurrentColor() const
     return KoColor();
 }
 
+void KisVisualColorSelector::setStretchLimit(qreal limit)
+{
+    const qreal newLimit = qMax(1.0, limit);
+    if (!qFuzzyCompare(newLimit, m_d->stretchLimit)) {
+        m_d->stretchLimit = newLimit;
+        KisVisualColorSelector::resizeEvent(0);
+    }
+}
+
 void KisVisualColorSelector::setMinimumSliderWidth(int width)
 {
     int newWidth = qMax(5, width);

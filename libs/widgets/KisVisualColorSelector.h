@@ -71,6 +71,12 @@ public:
     void setAcceptTabletEvents(bool on);
     KoColor getCurrentColor() const override;
     void setMinimumSliderWidth(int width);
+    /**
+     * @brief Set how far the slider + square layout stretches: the square is at
+     * most @p limit times as long as its shorter side (default 1.5). Space
+     * beyond that stays empty.
+     */
+    void setStretchLimit(qreal limit);
     const KoColorDisplayRendererInterface* displayRenderer() const;
     RenderMode renderMode() const;
     void setRenderMode(RenderMode mode);
