@@ -19,6 +19,7 @@
 #include <QByteArray>
 #include <QDate>
 #include <QDir>
+#include <QFile>
 #include <QImageReader>
 #include <QLibraryInfo>
 #include <QLocale>
@@ -38,10 +39,12 @@
 #include "KritaVersionWrapper.h"
 #include <KisApplication.h>
 #include <KisMainWindow.h>
+#include <KisSolsticePaths.h>
 #include <KisSupportedArchitectures.h>
 #include <KisUsageLogger.h>
 #include <KoConfig.h>
 #include <KoResourcePaths.h>
+#include <kconfig.h>
 #include <kis_config.h>
 #include <kis_debug.h>
 #include <kis_image_config.h>
@@ -121,9 +124,8 @@ void tryInitDrMingw()
         return;
     }
 
-    // Set the log file path to %LocalAppData%\kritacrash.log
-    const QString logFile = QDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation))
-                                .absoluteFilePath("kritacrash.log");
+    // Set the crash log path (docs/agent/settings-location.md)
+    const QString logFile = KisSolsticePaths::crashLogPath();
     const QByteArray logFilePath = QDir::toNativeSeparators(logFile).toLocal8Bit();
     myExcHndlSetLogFileNameA(logFilePath.data());
 }
@@ -252,8 +254,9 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
     // Workaround a bug in QNetworkManager
     qputenv("QT_BEARER_POLL_TIMEOUT", QByteArray::number(-1));
 
-    // A per-user unique string, without /, because QLocalServer cannot use names with a / in it
-    QString key = "Krita5" + QStandardPaths::writableLocation(QStandardPaths::HomeLocation).replace("/", "_");
+    // A per-user unique string, without /, because QLocalServer cannot use names with a / in it.
+    // Solstice: its own key, so that a running Krita does not receive Solstice's files.
+    QString key = "Solstice" + QStandardPaths::writableLocation(QStandardPaths::HomeLocation).replace("/", "_");
     key = key.replace(":", "_").replace("\\", "_");
 
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
@@ -366,7 +369,12 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
     }
 #endif
 
-    const QDir configPath(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
+    // Solstice: the profile folders (docs/agent/settings-location.md). The main
+    // configuration is first opened by static startup functions of the
+    // temporary application below, so its name is set here.
+    const QDir configPath(KisSolsticePaths::configDir());
+    KConfig::setMainConfigName(KisSolsticePaths::mainConfigName());
+    qputenv("SOLSTICE_CONFIG_DIR", QFile::encodeName(QDir::toNativeSeparators(KisSolsticePaths::configDir())));
     QSettings kritarc(configPath.absoluteFilePath("kritadisplayrc"), QSettings::IniFormat);
 
     // KFI18N is broken on Android. See kswitchlanguagedialog_p.cpp for details.

@@ -35,6 +35,7 @@
 #include <WidgetUtilsDebug.h>
 
 #include <KisPortingUtils.h>
+#include <KisSolsticePaths.h>
 
 Q_DECLARE_METATYPE(QList<QKeySequence>)
 
@@ -114,8 +115,15 @@ QString KisKXMLGUIFactory::readConfigFile(const QString &filename, const QString
     if (!QDir::isRelativePath(filename)) {
         xml_file = filename;
     } else {
-        // KF >= 5.1 (KisKXMLGUI_INSTALL_DIR)
-        xml_file = QStandardPaths::locate(QStandardPaths::AppDataLocation, QStringLiteral("kxmlgui5/") + componentName + QLatin1Char('/') + filename);
+        // Solstice: the local file first (KisSolsticePaths::xmlguiDataDir())
+        xml_file = KisSolsticePaths::xmlguiDataDir() + QStringLiteral("/kxmlgui5/") + componentName + QLatin1Char('/')
+            + filename;
+        if (!QFile::exists(xml_file)) {
+            // KF >= 5.1 (KisKXMLGUI_INSTALL_DIR)
+            xml_file =
+                QStandardPaths::locate(QStandardPaths::AppDataLocation,
+                                       QStringLiteral("kxmlgui5/") + componentName + QLatin1Char('/') + filename);
+        }
         if (!QFile::exists(xml_file)) {
             // KF >= 5.4 (resource file)
             xml_file = QStringLiteral(":/kxmlgui5/") + componentName + QLatin1Char('/') + filename;
@@ -158,8 +166,8 @@ bool KisKXMLGUIFactory::saveConfigFile(const QDomDocument &doc,
     QString xml_file(filename);
 
     if (QDir::isRelativePath(xml_file))
-        xml_file = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
-            QStringLiteral("/kxmlgui5/") + componentName + QLatin1Char('/') + filename;
+        xml_file = KisSolsticePaths::xmlguiDataDir() + QStringLiteral("/kxmlgui5/") + componentName + QLatin1Char('/')
+            + filename;
 
     QFileInfo fileInfo(xml_file);
     QDir().mkpath(fileInfo.absolutePath());

@@ -21,6 +21,7 @@
 #include <QStandardPaths>
 #include <QDebug>
 
+#include <KisSolsticePaths.h>
 #include <klocalizedstring.h>
 
 #include <assert.h>
@@ -163,8 +164,9 @@ QString KisKXMLGUIClient::localXMLFile() const
         return QString();
     }
 
-    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QStringLiteral("/kxmlgui5/") +
-           componentName() + QLatin1Char('/') + d->m_xmlFile;
+    // Solstice: local files live in KisSolsticePaths::xmlguiDataDir().
+    return KisSolsticePaths::xmlguiDataDir() + QStringLiteral("/kxmlgui5/") + componentName() + QLatin1Char('/')
+        + d->m_xmlFile;
 }
 
 void KisKXMLGUIClient::reloadXML()
@@ -222,8 +224,14 @@ void KisKXMLGUIClient::setXMLFile(const QString &_file, bool merge, bool setXMLD
     } else {
         const QString filter = componentName() + QLatin1Char('/') + _file;
 
-        // files on filesystem
+        // files on filesystem; Solstice: the local file first, from
+        // KisSolsticePaths::xmlguiDataDir(), which need not be in AppDataLocation
+        const QString localFile = KisSolsticePaths::xmlguiDataDir() + QStringLiteral("/kxmlgui5/") + filter;
+        if (QFile::exists(localFile)) {
+            allFiles << localFile;
+        }
         allFiles << QStandardPaths::locateAll(QStandardPaths::AppDataLocation, QStringLiteral("kxmlgui5/") + filter); // KF >= 5.1
+        allFiles.removeDuplicates();
 
         // KF >= 5.4 (resource file)
         const QString qrcFile(QStringLiteral(":/kxmlgui5/") + filter);

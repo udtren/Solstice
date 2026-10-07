@@ -11,3 +11,10 @@ kis_add_tests(KisSignalAutoConnectionTest.cpp
     LINK_LIBRARIES kritaglobal kritatestsdk
     )
 
+kis_add_test(
+    KisSolsticePathsTest.cpp
+    KisSolsticePathsTest.qrc
+    TEST_NAME KisSolsticePathsTest
+    LINK_LIBRARIES kritaglobal kritatestsdk
+    )
+

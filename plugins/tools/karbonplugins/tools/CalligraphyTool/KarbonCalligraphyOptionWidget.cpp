@@ -5,6 +5,7 @@
 */
 
 #include "KarbonCalligraphyOptionWidget.h"
+#include <KisSolsticePaths.h>
 
 #include <KoIcon.h>
 
@@ -177,7 +178,7 @@ void KarbonCalligraphyOptionWidget::loadProfile(const QString &name)
         return;
     }
     // write the new profile in the config file
-    KConfig config(RCFILENAME);
+    KConfig config(KisSolsticePaths::kconfigName(RCFILENAME));
     KConfigGroup generalGroup(&config, "General");
     generalGroup.writeEntry("profile", name);
     config.sync();
@@ -353,7 +354,7 @@ void KarbonCalligraphyOptionWidget::createConnections()
 void KarbonCalligraphyOptionWidget::addDefaultProfiles()
 {
     // check if the profiles where already added
-    KConfig config(RCFILENAME);
+    KConfig config(KisSolsticePaths::kconfigName(RCFILENAME));
     KConfigGroup generalGroup(&config, "General");
 
     if (generalGroup.readEntry("defaultProfilesAdded", false)) {
@@ -394,7 +395,7 @@ void KarbonCalligraphyOptionWidget::addDefaultProfiles()
 
 void KarbonCalligraphyOptionWidget::loadProfiles()
 {
-    KConfig config(RCFILENAME);
+    KConfig config(KisSolsticePaths::kconfigName(RCFILENAME));
 
     // load profiles as long as they are present
     int i = 0;
@@ -436,7 +437,7 @@ void KarbonCalligraphyOptionWidget::loadProfiles()
 
 void KarbonCalligraphyOptionWidget::loadCurrentProfile()
 {
-    KConfig config(RCFILENAME);
+    KConfig config(KisSolsticePaths::kconfigName(RCFILENAME));
     KConfigGroup generalGroup(&config, "General");
     QString currentProfile = generalGroup.readEntry("profile", QString());
     // find the index needed by the comboBox
@@ -501,7 +502,7 @@ void KarbonCalligraphyOptionWidget::saveProfile(const QString &name)
         }
     }
 
-    KConfig config(RCFILENAME);
+    KConfig config(KisSolsticePaths::kconfigName(RCFILENAME));
     QString str = "Profile" + QString::number(profile->index);
     KConfigGroup profileGroup(&config, str);
 
@@ -533,7 +534,7 @@ void KarbonCalligraphyOptionWidget::removeProfile(const QString &name)
     }
 
     // remove the file from the config file
-    KConfig config(RCFILENAME);
+    KConfig config(KisSolsticePaths::kconfigName(RCFILENAME));
     int deletedIndex = m_profiles[name]->index;
     QString deletedGroup = "Profile" + QString::number(deletedIndex);
     config.deleteGroup(deletedGroup);

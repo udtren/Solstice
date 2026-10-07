@@ -5,6 +5,7 @@
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+#include <KisSolsticePaths.h>
 #include <tuple>
 
 #include <boost/optional.hpp>
@@ -461,15 +462,13 @@ KisOpenGL::OpenGLRenderers KisOpenGL::getSupportedOpenGLRenderers()
 
 KisOpenGL::OpenGLRenderer KisOpenGL::getUserPreferredOpenGLRendererConfig()
 {
-    const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    QSettings kritarc(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
+    QSettings kritarc(KisSolsticePaths::configFilePath(QStringLiteral("kritadisplayrc")), QSettings::IniFormat);
     return convertConfigToOpenGLRenderer(kritarc.value("OpenGLRenderer", "auto").toString());
 }
 
 void KisOpenGL::setUserPreferredOpenGLRendererConfig(KisOpenGL::OpenGLRenderer renderer)
 {
-    const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    QSettings kritarc(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
+    QSettings kritarc(KisSolsticePaths::configFilePath(QStringLiteral("kritadisplayrc")), QSettings::IniFormat);
     kritarc.setValue("OpenGLRenderer", KisOpenGL::convertOpenGLRendererToConfig(renderer));
 }
 

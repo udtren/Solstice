@@ -5,6 +5,7 @@
  */
 
 #include "DlgKritaLog.h"
+#include <KisSolsticePaths.h>
 #include <QStandardPaths>
 
 DlgKritaLog::DlgKritaLog(QWidget *parent)
@@ -15,7 +16,7 @@ DlgKritaLog::DlgKritaLog(QWidget *parent)
 
 QString DlgKritaLog::originalFileName()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/krita.log";
+    return KisSolsticePaths::logFilePath(QStringLiteral("krita.log"));
 }
 
 QString DlgKritaLog::captionText()

@@ -3,6 +3,7 @@ SPDX-FileCopyrightText: 2017 Eliakin Costa <eliakim170@gmail.com>
 
 SPDX-License-Identifier: GPL-2.0-or-later
 """
+import os
 try:
     from PyQt6.QtCore import QSettings, QStandardPaths
 except:
@@ -25,7 +26,10 @@ class ScripterExtension(Extension):
         action.triggered.connect(self.initialize)
 
     def initialize(self):
-        configPath = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.GenericConfigLocation)
+        # Solstice: the profile's configuration folder, set by krita/main.cc
+        # (docs/agent/settings-location.md).
+        configPath = os.environ.get("SOLSTICE_CONFIG_DIR") or QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.GenericConfigLocation)
         self.settings = QSettings(configPath + '/krita-scripterrc', QSettings.Format.IniFormat)
         self.uicontroller = uicontroller.UIController()
         self.documentcontroller = documentcontroller.DocumentController()

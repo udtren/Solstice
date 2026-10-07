@@ -9,6 +9,7 @@
 
 #include "kis_dlg_preferences.h"
 #include "KisGpuEngineUi.h" // Solstice GPU engine
+#include <KisSolsticePaths.h>
 
 #include <config-hdr.h>
 #include <opengl/kis_opengl.h>
@@ -391,8 +392,7 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
             QSignalBlocker blocker(slider);
             slider->setValue(qRound(value / 5.0));
         });
-        const QString displayConfigPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-        QSettings displayrc(displayConfigPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
+        QSettings displayrc(KisSolsticePaths::configFilePath(QStringLiteral("kritadisplayrc")), QSettings::IniFormat);
         m_spnInterfaceScale->setValue(qBound(75, displayrc.value("SolsticeInterfaceScale", 100).toInt(), 200));
         slider->setValue(m_spnInterfaceScale->value() / 5);
         scaleRow->setToolTip(
@@ -437,8 +437,7 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
 
     m_chkCanvasMessages->setChecked(cfg.showCanvasMessages());
 
-    const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    QSettings kritarc(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
+    QSettings kritarc(KisSolsticePaths::configFilePath(QStringLiteral("kritadisplayrc")), QSettings::IniFormat);
     m_chkHiDPI->setChecked(kritarc.value("EnableHiDPI", true).toBool());
 #if defined(Q_OS_WIN) && defined(HAVE_HIGH_DPI_SCALE_FACTOR_ROUNDING_POLICY)
     m_chkHiDPIFractionalScaling->setChecked(kritarc.value("EnableHiDPIFractionalScaling", false).toBool());
@@ -627,7 +626,7 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
         m_urlResourceFolder->setFileName(resourceLocation);
     }
     else {
-        m_urlResourceFolder->setFileName(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+        m_urlResourceFolder->setFileName(KisSolsticePaths::defaultResourceDir());
     }
     QValidator *writableValidator = new WritableLocationValidator(m_urlResourceFolder);
     m_urlResourceFolder->setValidator(writableValidator);
@@ -3030,8 +3029,7 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
         cfg.setUseZip64(m_general->useZip64());
         cfg.setPasteFormat(m_general->m_pasteFormatGroup.checkedId());
 
-        const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-        QSettings kritarc(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
+        QSettings kritarc(KisSolsticePaths::configFilePath(QStringLiteral("kritadisplayrc")), QSettings::IniFormat);
         kritarc.setValue("EnableHiDPI", m_general->m_chkHiDPI->isChecked());
 #if defined(Q_OS_WIN) && defined(HAVE_HIGH_DPI_SCALE_FACTOR_ROUNDING_POLICY)
         kritarc.setValue("EnableHiDPIFractionalScaling", m_general->m_chkHiDPIFractionalScaling->isChecked());

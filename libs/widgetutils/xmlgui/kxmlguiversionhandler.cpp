@@ -7,6 +7,7 @@
 */
 
 #include "kxmlguiversionhandler_p.h"
+#include <KisSolsticePaths.h>
 
 #include "kxmlguifactory.h"
 
@@ -294,7 +295,7 @@ KXmlGuiVersionHandler::KXmlGuiVersionHandler(const QStringList &files)
         if (best != allDocuments.begin()) {
             QList<DocStruct>::iterator local = allDocuments.begin();
 
-            if ((*local).file.startsWith(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation))) {
+            if ((*local).file.startsWith(KisSolsticePaths::xmlguiDataDir())) {
                 // load the local document and extract the action properties
                 QDomDocument localDocument;
                 localDocument.setContent((*local).data);

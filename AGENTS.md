@@ -96,6 +96,8 @@ Read these before adding or updating any feature:
   `docs/agent/overview-live-update.md`
 - Versioning (Solstice version vs. Krita compatibility version):
   `docs/agent/versioning.md`
+- Settings location (`%APPDATA%\Solstice`; phase 1 of 5 done):
+  `docs/agent/settings-location.md`
 - GPU Engine (branch `krita-sol-gpu`): `docs/agent/gpu-engine.md`
 - GPU Engine work order (priority 1 measurement work in progress):
   `docs/agent/gpu-work-priorities.md`

@@ -5,6 +5,7 @@
  */
 
 #include "DlgSysInfo.h"
+#include <KisSolsticePaths.h>
 #include <QStandardPaths>
 
 DlgSysInfo::DlgSysInfo(QWidget *parent)
@@ -15,7 +16,7 @@ DlgSysInfo::DlgSysInfo(QWidget *parent)
 
 QString DlgSysInfo::originalFileName()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/krita-sysinfo.log";
+    return KisSolsticePaths::logFilePath(QStringLiteral("krita-sysinfo.log"));
 }
 
 QString DlgSysInfo::captionText()

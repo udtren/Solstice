@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 #include "KoResourcePaths.h"
+#include <KisSolsticePaths.h>
 
 #include <QGlobalStatic>
 #include <QString>
@@ -226,7 +227,7 @@ QString KoResourcePaths::getAppDataLocation()
     QString path;
 
     KConfigGroup cfg(KSharedConfig::openConfig(), "");
-    path = cfg.readEntry(KisResourceLocator::resourceLocationKey, QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+    path = cfg.readEntry(KisResourceLocator::resourceLocationKey, KisSolsticePaths::defaultResourceDir());
 
     QFileInfo fi(path);
 
@@ -236,11 +237,10 @@ QString KoResourcePaths::getAppDataLocation()
     // moved to a Linux system.
     QRegularExpression windowsPathPattern("^[A-Za-z]:/");
     if (windowsPathPattern.match(path).hasMatch()) {
-        warnResources << "WARNING: KoResourcePaths::getAppDataLocation(): path appears to be a Windows path! Resetting to default..."
-            << path
-            << "->"
-            << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-        path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        warnResources << "WARNING: KoResourcePaths::getAppDataLocation(): path appears to be a Windows path! Resetting "
+                         "to default..."
+                      << path << "->" << KisSolsticePaths::defaultResourceDir();
+        path = KisSolsticePaths::defaultResourceDir();
         fi.setFile(path);
         cfg.writeEntry(KisResourceLocator::resourceLocationKey, path);
     }
@@ -249,11 +249,10 @@ QString KoResourcePaths::getAppDataLocation()
     // file from Linux installation is moved to a Windows system.
     QRegularExpression windowsPathPattern("^/[^/]");
     if (windowsPathPattern.match(path).hasMatch()) {
-        warnResources << "WARNING: KoResourcePaths::getAppDataLocation(): path appears to be a Unix path! Resetting to default..."
-            << path
-            << "->"
-            << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-        path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        warnResources
+            << "WARNING: KoResourcePaths::getAppDataLocation(): path appears to be a Unix path! Resetting to default..."
+            << path << "->" << KisSolsticePaths::defaultResourceDir();
+        path = KisSolsticePaths::defaultResourceDir();
         fi.setFile(path);
         cfg.writeEntry(KisResourceLocator::resourceLocationKey, path);
     }
@@ -272,12 +271,12 @@ QString KoResourcePaths::getAppDataLocation()
 
     // Check whether an existing location is writable
     if (fi.exists() && !fi.isWritable()) {
-        path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        path = KisSolsticePaths::defaultResourceDir();
     }
     else if (!fi.exists()) {
         // Check whether a non-existing location can be created
         if (!QDir().mkpath(path)) {
-            path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+            path = KisSolsticePaths::defaultResourceDir();
         }
         QDir().rmpath(path);
     }
@@ -690,6 +689,10 @@ QString KoResourcePaths::saveLocationInternal(const QString &type, const QString
     if (location == QStandardPaths::AppDataLocation) {
         KConfigGroup cfg(KSharedConfig::openConfig(), "");
         path = cfg.readEntry(KisResourceLocator::resourceLocationKey, "");
+        // Solstice: the profile's default resource folder (docs/agent/settings-location.md)
+        if (path.isEmpty()) {
+            path = KisSolsticePaths::defaultResourceDir();
+        }
     }
 
     if (path.isEmpty()) {

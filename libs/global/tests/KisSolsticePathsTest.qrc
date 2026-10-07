@@ -1,0 +1,6 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/solstice-paths-test">
+        <file alias="defaultsrc">data/solstice-paths-test/defaultsrc</file>
+    </qresource>
+</RCC>

@@ -45,6 +45,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   - the installed Qt 6.8 `qnumeric.h`;
   - this session's build and test experience.
 
+## 2026-10-07 ingest: settings location phase 1
+
+- `pitfalls/build-format-test.md`: KConfig main config names and the early
+  first open. Source: KConfig 6.7.0 `kconfig.cpp`, `KisSolsticePathsTest`.
+
 ## 2026-10-07 ingest: Solstice versioning
 
 - New page `decisions/versioning.md`. Source: `docs/agent/versioning.md` and

@@ -8,6 +8,7 @@
 #include <KisResourceModel.h>
 #include <KisResourceModelProvider.h>
 #include <KisResourceStorage.h>
+#include <KisSolsticePaths.h>
 #include <KoResourceLoadResult.h>
 #include <QApplication>
 #include <QCache>
@@ -66,9 +67,8 @@ KisBrushStrokePreviewCache::Request KisBrushStrokePreviewCache::Request::fromInd
 }
 KisBrushStrokePreviewCache *KisBrushStrokePreviewCache::instance()
 {
-    static auto *cache = new KisBrushStrokePreviewCache(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)
-                                                            + "/brush-stroke-previews/v1",
-                                                        qApp);
+    static auto *cache =
+        new KisBrushStrokePreviewCache(KisSolsticePaths::cacheDir() + "/brush-stroke-previews/v1", qApp);
     return cache;
 }
 KisBrushStrokePreviewCache::KisBrushStrokePreviewCache(const QString &directory, QObject *parent)

@@ -7,6 +7,7 @@
 */
 
 #include "kedittoolbar.h"
+#include <KisSolsticePaths.h>
 #include "kedittoolbar_p.h"
 
 #include "config-xmlgui.h"
@@ -706,8 +707,8 @@ void KisKEditToolBarPrivate::defaultClicked()
         if (slash) {
             m_file = m_file.mid(slash);
         }
-        const QString xml_file = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
-            QStringLiteral("/kxmlgui5/") + QCoreApplication::instance()->applicationName() + QLatin1Char('/') + m_file;
+        const QString xml_file = KisSolsticePaths::xmlguiDataDir() + QStringLiteral("/kxmlgui5/")
+            + QCoreApplication::instance()->applicationName() + QLatin1Char('/') + m_file;
 
         if (QFile::exists(xml_file))
             if (!QFile::remove(xml_file)) {

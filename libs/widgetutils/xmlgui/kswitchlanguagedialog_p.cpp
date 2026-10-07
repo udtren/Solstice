@@ -7,6 +7,7 @@
  */
 
 #include <QApplication>
+#include <KisSolsticePaths.h>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QLayout>
@@ -45,7 +46,8 @@ typedef QSharedPointer<QSettings> QSettingsPtr;
 
 static QSettingsPtr localeOverridesSettings()
 {
-    const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+    // Solstice: the profile's configuration folder (docs/agent/settings-location.md)
+    const QString configPath = KisSolsticePaths::configDir();
     const QDir configDir(configPath);
     if (!configDir.exists()) {
         configDir.mkpath(QStringLiteral("."));

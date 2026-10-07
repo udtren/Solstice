@@ -6,6 +6,7 @@
 
 #include "KisDlgCustomTabletResolution.h"
 #include "ui_KisDlgCustomTabletResolution.h"
+#include <KisSolsticePaths.h>
 
 #include <QSettings>
 #include "kis_debug.h"
@@ -76,8 +77,7 @@ KisDlgCustomTabletResolution::KisDlgCustomTabletResolution(QWidget *parent) :
 
 void KisDlgCustomTabletResolution::accept()
 {
-    const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    QSettings cfg(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
+    QSettings cfg(KisSolsticePaths::configFilePath(QStringLiteral("kritadisplayrc")), QSettings::IniFormat);
 
     if (ui->radioMapAsWintab->isChecked()) {
         cfg.setValue("wintabResolutionMode", "wintab");
@@ -119,8 +119,7 @@ QRect KisDlgCustomTabletResolution::calcNativeScreenRect()
 
 KisDlgCustomTabletResolution::Mode KisDlgCustomTabletResolution::getTabletMode(QRect *customRect)
 {
-    const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    QSettings cfg(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
+    QSettings cfg(KisSolsticePaths::configFilePath(QStringLiteral("kritadisplayrc")), QSettings::IniFormat);
 
     const QString mode = cfg.value("wintabResolutionMode", QString("wintab")).toString();
     Mode modeValue = USE_WINTAB;

@@ -47,6 +47,16 @@ wrong anyway.
   passed by address (`GL_EXT_buffer_reference`), in the same order as the
   C++ struct.
 
+## KConfig paths
+
+- `KConfig::setMainConfigName()` must not be absolute: KConfig 6.7 appends
+  the main config name to `GenericConfigLocation`, and looks up defaults at
+  `":/kconfig/" + name`. Relative names with `..` work, and the defaults path
+  is cleaned by Qt (`docs/agent/settings-location.md`).
+- The main config is first opened inside the temporary `QCoreApplication` in
+  `krita/main.cc`, by a static startup function (`KisAnimAutoKey`). Anything
+  that changes it must run before that point.
+
 ## C++ access
 
 - `KisPaintDevice::fastBitBltPossible()` is protected. Compare `x()`, `y()`
