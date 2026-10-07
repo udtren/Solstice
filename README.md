@@ -38,7 +38,7 @@ Krita edition, and development no longer tracks upstream Krita.
   filters alongside tags and search, and optional grouping by engine or
   bundle.
 
-![Brush Presets grouped by bundle, with the Engines filter open](docs/images/brush-presets.png)
+<img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="480">
 
 The Brush Presets docker grouped by bundle, with the Engines filter open. See
 the [Brush Presets guide](docs/brush-stroke-preview.md) for preview behavior,
