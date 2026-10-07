@@ -1,7 +1,7 @@
 # Paint trace baseline run sheet
 
 This is the controlled comparison following GPU phases 4.69-4.71. See
-[the protocol](gpu-engine.md#controlled-capture-protocol) for measurement boundaries
+[the protocol](wiki/history/gpu-phases-4.58-4.81.md#controlled-capture-protocol) for measurement boundaries
 and limitations. Earlier four-stroke feasibility captures are excluded.
 
 ## Frozen build

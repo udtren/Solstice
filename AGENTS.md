@@ -54,10 +54,22 @@ as an upstream synchronization source.
   regression checks, and improvement plans.
 - Do not duplicate feature-specific technical instructions in `AGENTS.md`.
   Keep this file as the global policy and index to the technical documents.
+- Keep cross-cutting knowledge in the agent wiki, `docs/agent/wiki/`:
+  concepts, decisions with their reasons, pitfalls, benchmarks, saved answers
+  and archived phase records. Its `index.md` defines the page types,
+  frontmatter and the ingest/query/lint workflows. Read it before starting
+  work. After each committed task, add what the work taught, and append to
+  `wiki/log.md`. Wiki pages link to feature documents instead of copying them;
+  the feature document wins in a conflict.
 - When behavior or architecture changes, update both the relevant user document
   and agent document in the same change. Keep README links valid.
 
 ## Agent technical document index
+
+### Agent wiki
+
+`docs/agent/wiki/index.md`: cross-cutting concepts, decisions, pitfalls,
+benchmarks, and the GPU engine phase history.
 
 ### General development guides
 

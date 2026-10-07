@@ -157,14 +157,14 @@ Each value is the median of five-sample medians from three fresh processes.
 They include brush generation, final merging and completed projection, but
 exclude tablet input and screen presentation. These are different workloads,
 not an F16-versus-F32 comparison. See the
-[measurement details](docs/agent/gpu-engine.md#projection-context-reuse-phase-453).
+[measurement details](docs/agent/wiki/history/gpu-phases-4.17-4.57.md#projection-context-reuse-phase-453).
 
 **Complete short strokes can still be slower on the GPU.** Work-buffer reuse
 removed an avoidable wait, but its before/after timing ranges overlap and do
 not establish a substantial stroke speedup. GPU brush painting remains opt-in.
 
 See the [current benchmark results and limitations](docs/gpu-engine.md#current-benchmarks)
-and [reproduction notes](docs/agent/gpu-engine.md#current-build-benchmark-baseline-phase-442).
+and [reproduction notes](docs/agent/wiki/history/gpu-phases-4.17-4.57.md#current-build-benchmark-baseline-phase-442).
 A nine-process manual comparison now reports Qt input-to-command-swap timing:
 no clear GPU advantage at 64px, and lower CPU summary medians at 256px in the
 tested scene. It is not physical pen-to-screen latency or a multilayer-compositing benchmark.

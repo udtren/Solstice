@@ -2,7 +2,7 @@
 
 更新: 2026年10月6日。現在の到達点はフェーズ4.81（キャンバス更新の送信集約）の
 実装・自動テスト・インストール完了。手動確認はユーザー報告で問題なし。
-実機採取PID 43720の解析済み（`gpu-engine.md` の phase 4.81 follow-up）。
+実機採取PID 43720の解析済み（`wiki/history/gpu-phases-4.58-4.81.md` の phase 4.81 follow-up）。
 続いてフェーズ4.82（GPUブラシのバイト上限バッチの即時継続）を実装・テスト・
 インストール済み。4.82の実機採取PID 45728を解析済み（手動確認用の別プロセス42316も保存）。
 ダブ待ちは4.80と同程度に戻り、入力→表示も4.80の範囲。高速化とは断定しない。
@@ -20,7 +20,7 @@ PID 24148のsubmitを呼び出し元で分類すると、キャンバス834回�
 ドライバー呼び出しは、ほぼ別スレッドのキャンバス送信（353.1ms）だった。
 
 フェーズ4.81で、同時に届いたキャンバス更新を1回のGPU送信にまとめる実装を追加
-（詳細は `gpu-engine.md` の「Shared canvas update builds (phase 4.81)」）。
+（詳細は `wiki/history/gpu-phases-4.58-4.81.md` の「Shared canvas update builds (phase 4.81)」）。
 ロックは外していない。次は下記「次の作業」の手動確認と集中採取。
 
 ## リポジトリ・操作上の条件
@@ -47,7 +47,8 @@ PID 24148のsubmitを呼び出し元で分類すると、キャンバス834回�
 ## 読む資料
 
 作業順序の正本は [gpu-work-priorities.md](gpu-work-priorities.md)。
-詳細な実装・検証記録は [gpu-engine.md](gpu-engine.md)、特にフェーズ4.72〜4.80。
+詳細な実装・検証記録は [gpu-engine.md](gpu-engine.md) と、フェーズ4.72〜4.80の
+[wiki/history/gpu-phases-4.58-4.81.md](wiki/history/gpu-phases-4.58-4.81.md)。
 ユーザー向け説明は [../gpu-engine.md](../gpu-engine.md)。
 基準採取の明示的なウォームアップ／測定IDは
 [paint-trace-baseline-runs.md](paint-trace-baseline-runs.md)。
@@ -182,7 +183,7 @@ READMEやベンチマークで「高速化達成」と扱わない。
 次の作業:
 1. 4.82の手動確認はユーザー報告で問題なし（速い斜め・水平、ミラー、Undo/Redo）。
 2. ユーザー指示で順位3（GPUでのダブ生成、単純な円形ダブから）に着手した。
-   フェーズ4.83（第1段階）を実装・テスト・インストール済み。詳細は `gpu-engine.md` の
+   フェーズ4.83（第1段階）を実装・テスト・インストール済み。詳細は `wiki/history/gpu-phases-4.82-4.92.md` の
    「GPU-evaluated circle dabs (phase 4.83, priority 3 step 1)」。
    - 対象: RGBA32F・デフォルト円形・ベクトル経路・テクスチャ/シャープネスなし・単色。
    - CPU生成は残し、GPUは画素の代わりに円の記述（64バイト）を受け取る。
@@ -192,22 +193,22 @@ READMEやベンチマークで「高速化達成」と扱わない。
    - その後の候補: CPU生成の省略（フォールバック時のみ生成）、Gauss/Soft、RGBA16F。
 3. 4.83の実機採取PID 38504では生成0件（測定プリセットがGauss）。フェーズ4.84でGaussを追加し、
    CPUのAVX2+FMAカーネル（-ffp-contract=fastで融合）をビット単位で再現した。
-   詳細は `gpu-engine.md` の「Exact Gaussian and fused default circle dabs (phase 4.84)」。
+   詳細は `wiki/history/gpu-phases-4.82-4.92.md` の「Exact Gaussian and fused default circle dabs (phase 4.84)」。
    - 実機PID 14156: 生成ダブ使用40/40、ブラシ送信CPU時間 中央値1.83→0.43ms。
      入力→表示はBuildupで改善傾向、Washは同程度（手描きのため断定しない）。
    - 4.84の手動確認はユーザー報告で問題なし。
 4. ユーザー指示でフェーズ4.85（CPU生成の省略）を実装・テスト・インストール済み。
-   詳細は `gpu-engine.md` の「Skipped CPU generation of described dabs (phase 4.85)」。
+   詳細は `wiki/history/gpu-phases-4.82-4.92.md` の「Skipped CPU generation of described dabs (phase 4.85)」。
    - 種別ごとに16ダブ検証後に省略。CPU利用時は `KisRenderedDab::materialize()` で生成。
    - 手動確認OK。実機PID 39228: ストローク中のダブは検証13個以外すべて省略、
      ダブ生成ジョブ中央値248→19µs。入力→表示は4.84と同程度。
    - 残る候補: ブラシ最小更新周期（10ms）の見直し、非FMA CPU用の変種、
      プレビュー描画（非対象デバイス）の扱い。
 5. ユーザー指示でフェーズ4.86（RGBA16F）と4.87（Soft曲線マスク）を実装・テスト・インストール済み。
-   詳細は `gpu-engine.md` の該当節。手動確認（Softブラシ、16bit float文書、ミラー、Undo/Redo）はユーザー報告で問題なし。
+   詳細は `wiki/history/gpu-phases-4.82-4.92.md` の該当節。手動確認（Softブラシ、16bit float文書、ミラー、Undo/Redo）はユーザー報告で問題なし。
 6. 4.79〜4.87はコミット `60040d6ac5`（未Push）。ユーザー指示でフェーズ4.88（GPU経路の
    ブラシ更新周期を-1に短縮）を実装・テスト・インストール済み、未コミット。
-   詳細は `gpu-engine.md` の「GPU brush update period (phase 4.88)」。
+   詳細は `wiki/history/gpu-phases-4.82-4.92.md` の「GPU brush update period (phase 4.88)」。
    手動確認OK。実機PID 45620: ダブ待ち中央値 約10ms→0.3〜0.8ms、
    入力→表示中央値 18〜24ms→7〜13ms（4.85のPID 39228比）。コミット `cb86388460`。
 7. フェーズ4.89（Wash遅延の分解）: バッチ終了後の更新再試行と、合成内部のトレース区間を実装・
@@ -216,7 +217,7 @@ READMEやベンチマークで「高速化達成」と扱わない。
    Wash合成の最大要因はCPUでの元画像複写（1.08ms）で、次の候補はそのGPU化。
    コミット `0eaab86e83`。
 8. フェーズ4.90（Washの元画像複写のGPU化）を実装・テスト・インストール済み。未コミット。
-   詳細は `gpu-engine.md` の「GPU base copy in the Wash preview (phase 4.90)」。
+   詳細は `wiki/history/gpu-phases-4.82-4.92.md` の「GPU base copy in the Wash preview (phase 4.90)」。
    実機PID 55584では背景レイヤー（初期ピクセルが不透明）のため使われていなかった。
    初期ピクセルが同じであればその色で埋めるよう修正済み、修正後は未計測。
    最初のWashストロークの突出（約36ms）は原因未確定。

@@ -302,7 +302,7 @@ GPU projection-and-brush times fell from 8.28, 11.74, 13.87 and 19.91 ms
 respectively (about 9-16%). Each version used three fresh processes, with
 before/after order alternated. These results measure the combined changes;
 they do not assign a separate speedup to each optimization. See the
-[comparison and regression checks](agent/gpu-engine.md#ordinary-stroke-tile-costs-phases-443-445).
+[comparison and regression checks](agent/wiki/history/gpu-phases-4.17-4.57.md#ordinary-stroke-tile-costs-phases-443-445).
 
 A subsequent work-buffer reuse change removes an avoidable wait between
 consecutive projection submissions. In the same-session comparison, complete
@@ -310,14 +310,14 @@ GPU projection-and-brush times changed from 10.75 to 10.61 ms for 64px Wash,
 10.74 to 10.55 ms for 256px Buildup, and 13.66 to 13.79 ms for a mirrored,
 selected F16 Soft Light Wash stroke. Process ranges overlap, so these results
 do not establish a substantial drawing speedup. See the
-[context-reuse checks and measurements](agent/gpu-engine.md#projection-context-reuse-phase-453).
+[context-reuse checks and measurements](agent/wiki/history/gpu-phases-4.17-4.57.md#projection-context-reuse-phase-453).
 
 The CPU is faster for these short strokes. GPU brush painting remains opt-in;
 these measurements do not claim a general drawing-latency improvement or a
 fix for the deferred large mirrored Alpha Lock case. All measured paths
 passed their CPU image comparisons. The canvas benchmark also compares the
 actual OpenGL textures after timing. See the
-[reproduction notes](agent/gpu-engine.md#current-build-benchmark-baseline-phase-442)
+[reproduction notes](agent/wiki/history/gpu-phases-4.17-4.57.md#current-build-benchmark-baseline-phase-442)
 for exact tests and measurement boundaries.
 
 The new RGBA16F Normal/Erase Buildup path was measured separately on the same
@@ -335,7 +335,7 @@ stroke fixture. These are five-sample medians from three fresh processes
 The Erase operation ignores Alpha Lock, as on the CPU. Process-to-process
 variation was larger for the combined selection/mirror rows; these results
 do not predict tablet latency or large-brush behavior.
-See the [F16 Buildup measurement details](agent/gpu-engine.md#rgba16f-normalerase-dabs-phase-446).
+See the [F16 Buildup measurement details](agent/wiki/history/gpu-phases-4.17-4.57.md#rgba16f-normalerase-dabs-phase-446).
 
 The F16 Wash extension was measured with the same 128px fixture, five samples
 per path in each of three fresh processes, validation off. Median across
@@ -350,7 +350,7 @@ processes, including final merging and GPU completion:
 
 These measurements exclude input and canvas display and do not resolve the
 deferred large-brush mirrored Alpha Lock case.
-See the [F16 Wash test and measurement details](agent/gpu-engine.md#rgba16f-alpha-darken-and-wash-phases-447-448).
+See the [F16 Wash test and measurement details](agent/wiki/history/gpu-phases-4.17-4.57.md#rgba16f-alpha-darken-and-wash-phases-447-448).
 
 Representative F16 blend-brush cases were also measured with a 128px
 brush, soft selection and both mirrors (all channels enabled), using the
@@ -365,8 +365,8 @@ same five-sample/three-process protocol:
 
 These include completed GPU work but exclude input and canvas display;
 other modes and workloads can behave differently. See the
-[basic blend-brush measurements](agent/gpu-engine.md#rgba16f-basic-blend-brushes-phases-449-450)
-and [extended major-mode measurements](agent/gpu-engine.md#rgba16f-extended-major-blend-brushes-phases-451-452).
+[basic blend-brush measurements](agent/wiki/history/gpu-phases-4.17-4.57.md#rgba16f-basic-blend-brushes-phases-449-450)
+and [extended major-mode measurements](agent/wiki/history/gpu-phases-4.17-4.57.md#rgba16f-extended-major-blend-brushes-phases-451-452).
 
 ## Turning it on
 

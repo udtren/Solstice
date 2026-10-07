@@ -125,7 +125,8 @@ exact Undo/Redo. Transform math and the final default-pixel purge are retained.
 separate flip/rotation transactions and intermediate Undo/Redo states.
 The Transform Tool Undo investigation is closed; temporary tool diagnostics
 were removed without changing its established history behavior. See
-`docs/agent/gpu-engine.md` for the real-app findings.
+`docs/agent/wiki/history/gpu-phases-4.17-4.57.md` ("Closed Transform Tool Undo investigation")
+for the real-app findings.
 
 GPU phase 4.58 adds the opt-in `libs/image/KisPaintTrace.*` CPU timeline and
 `KisPaintTraceTest`, plus capture/summary helpers under `build-tools/paint-trace/`.
@@ -327,7 +328,7 @@ walker identities across split/merge/recalculate/execute. `kis_canvas2.cpp`
 records the direct projection-to-prepared-update link. Flow scope and queue
 tests cover those boundaries; the summary still makes no pixel-latency claim.
 It records raw spans/events, not validated per-input presentation latency;
-see the measurement scope and remaining work in `docs/agent/gpu-engine.md`.
+see the measurement scope and remaining work in `docs/agent/wiki/history/gpu-phases-4.58-4.81.md`.
 
 Brush Stroke Preview adds `KisBrushStrokePreviewRenderer.*` and
 `KisBrushStrokePreviewCache.*` under `libs/ui/widgets/`, sharing the F5
