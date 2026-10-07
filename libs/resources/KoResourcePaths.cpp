@@ -695,6 +695,11 @@ QString KoResourcePaths::saveLocationInternal(const QString &type, const QString
         }
     }
 
+    // Solstice: caches go to the profile's cache folder (docs/agent/settings-location.md)
+    if (location == QStandardPaths::CacheLocation) {
+        path = KisSolsticePaths::cacheDir();
+    }
+
     if (path.isEmpty()) {
         path = QStandardPaths::writableLocation(location);
         useStandardLocation = true;

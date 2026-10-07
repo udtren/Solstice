@@ -20,6 +20,7 @@
 #include <QDate>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QImageReader>
 #include <QLibraryInfo>
 #include <QLocale>
@@ -110,7 +111,15 @@ inline T cast_to_function(U v) noexcept
 
 void tryInitDrMingw()
 {
-    const QString pathStr = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("exchndl.dll");
+    // Solstice: called before any application object exists (so that early
+    // crashes are logged too), so the folder comes from the module path.
+    wchar_t modulePath[MAX_PATH];
+    const DWORD length = GetModuleFileNameW(nullptr, modulePath, MAX_PATH);
+    if (length == 0 || length >= MAX_PATH) {
+        return;
+    }
+    const QString exeDir = QFileInfo(QString::fromWCharArray(modulePath, int(length))).absolutePath();
+    const QString pathStr = QDir(exeDir).absoluteFilePath("exchndl.dll");
 
     QLibrary hMod(pathStr);
     if (!hMod.load()) {
@@ -128,6 +137,7 @@ void tryInitDrMingw()
 
     // Set the crash log path (docs/agent/settings-location.md)
     const QString logFile = KisSolsticePaths::crashLogPath();
+    QDir().mkpath(QFileInfo(logFile).absolutePath());
     const QByteArray logFilePath = QDir::toNativeSeparators(logFile).toLocal8Bit();
     myExcHndlSetLogFileNameA(logFilePath.data());
 }
@@ -558,6 +568,16 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
     const QDir configPath(KisSolsticePaths::configDir());
     KConfig::setMainConfigName(KisSolsticePaths::mainConfigName());
     qputenv("SOLSTICE_CONFIG_DIR", QFile::encodeName(QDir::toNativeSeparators(KisSolsticePaths::configDir())));
+    // Qt's QML disk cache would otherwise go to %LOCALAPPDATA%\krita\cache.
+    if (!qEnvironmentVariableIsSet("QML_DISK_CACHE_PATH")) {
+        qputenv(
+            "QML_DISK_CACHE_PATH",
+            QFile::encodeName(QDir::toNativeSeparators(KisSolsticePaths::cacheDir() + QStringLiteral("/qmlcache"))));
+    }
+#if !defined HAVE_KCRASH && defined USE_DRMINGW
+    // The crash log goes to the profile's logs folder from the start.
+    tryInitDrMingw();
+#endif
     QSettings kritarc(configPath.absoluteFilePath("kritadisplayrc"), QSettings::IniFormat);
 
     // KFI18N is broken on Android. See kswitchlanguagedialog_p.cpp for details.
@@ -949,8 +969,6 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 
 #if defined HAVE_KCRASH
     KCrash::initialize();
-#elif defined USE_DRMINGW
-    tryInitDrMingw();
 #endif
 #if defined Q_OS_ANDROID
     // because we need qApp

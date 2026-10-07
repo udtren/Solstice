@@ -8,7 +8,8 @@ Solstice keeps all its own files in one folder, separate from Krita:
   logs\        usage log, system information, crash log
   resources\   brushes, bundles, workspaces, templates, the resource database,
                Quick Access, Rest Note, Asset Library and Vision ML data
-  cache\       brush stroke previews (can be deleted at any time)
+  cache\       brush stroke previews and Qt's interface cache (can be deleted
+               at any time while Solstice is closed)
 ```
 
 `%APPDATA%` is usually `C:\Users\<you>\AppData\Roaming`. Paste
@@ -54,7 +55,7 @@ file only.
   - Python's own packages.
 - Krita's files in `%LOCALAPPDATA%` and `%APPDATA%\krita` stay as they are.
   Delete them yourself if you no longer use Krita.
-- Some files still go to `%LOCALAPPDATA%\krita`, such as the interface cache
-  of Qt. They will move in a later version.
+- Earlier Solstice versions also used `%LOCALAPPDATA%\krita\cache`. Solstice
+  no longer uses it; you can delete it.
 
 Technical notes: [`agent/settings-location.md`](agent/settings-location.md).

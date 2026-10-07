@@ -2,8 +2,8 @@
 
 User guide: [`../settings-folder.md`](../settings-folder.md).
 
-Status (2026-10-07): **phases 1-2 implemented** (path service; Solstice
-profile and Krita import); phases 3-5 pending. Phases follow the order the
+Status (2026-10-07): **phases 1-3 implemented** (path service; Solstice
+profile and Krita import; remaining Local files); phases 4-5 pending. Phases follow the order the
 user approved.
 
 User decisions (2026-10-07):
@@ -377,6 +377,40 @@ To start over during testing, close Solstice and delete
 `%APPDATA%\Solstice`. For trials without touching it, set
 `SOLSTICE_PROFILE_ROOT` (and the legacy overrides, pointing at copies).
 
+### Phase 3 result (2026-10-07)
+
+A scan after the first session with the phase 2 build found nothing new in
+`%LOCALAPPDATA%` except `Temp`; `%APPDATA%\krita` was unchanged. Phase 3
+covers what that session did not exercise:
+
+- **QML disk cache.** Qt 6.8's `Qt6Qml.dll` reads `QML_DISK_CACHE_PATH`.
+  `krita/main.cc` sets it to `cache\qmlcache` before any application object
+  exists, unless the variable is already set. Before this, the cache was
+  `%LOCALAPPDATA%\krita\cache\qmlcache`.
+- **Crash log.** `tryInitDrMingw()` used
+  `QCoreApplication::applicationDirPath()`, and was only called after
+  `KisApplication`, `KAboutData` and the argument parsing. It now takes the
+  folder from `GetModuleFileNameW()` and runs right after the profile is
+  prepared (it creates `logs\` itself). Crashes during the rest of startup
+  are logged to `logs\kritacrash.log` too.
+- **`cache` resource type.** `KoResourcePaths::saveLocationInternal()` maps
+  `CacheLocation` to `KisSolsticePaths::cacheDir()`. No caller uses it today;
+  this keeps future ones out of `%LOCALAPPDATA%`.
+
+Left in `%LOCALAPPDATA%`, by design (see "Not redirected"):
+
+- `Temp`: autosaves of untitled documents, swap, single-instance lock;
+- `fontconfig\cache`;
+- Krita's own files.
+
+`%LOCALAPPDATA%\krita\cache` (brush stroke previews and the QML cache of
+earlier Solstice builds) is no longer used and can be deleted by the user.
+
+Manual check passed (2026-10-07, user): after using the Text Properties
+docker (QML), `cache\qmlcache` held 43 files; since the install only `Temp`
+changed in `%LOCALAPPDATA%`, and `%LOCALAPPDATA%\krita` and `%APPDATA%\krita`
+were unchanged.
+
 ### First start and import (design, phase 2)
 
 The import decision has to come before any configuration is read.
@@ -419,11 +453,7 @@ The log notes it.
 
 ### Remaining files (phase 3)
 
-- Move `cacheDir()` (brush stroke previews).
-- Test the QML cache override.
-- Set the DrMingw log path earlier, so early crashes are logged too.
-- Confirm by a file-system scan after a session that nothing new appears in
-  `%LOCALAPPDATA%` except the items under "Not redirected".
+Implemented; see "Phase 3 result".
 
 ### Defaults and bundles (phase 4)
 
