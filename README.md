@@ -1,5 +1,7 @@
 # Solstice
 
+![Solstice main window with the Brush Presets docker grouped by bundle, the Quick Access Palette and HueSVC](docs/images/solstice-main-window.webp)
+
 **Solstice is an open-source, GPU-focused digital painting application derived
 from the Krita 6 codebase.**
 
@@ -36,10 +38,11 @@ Krita edition, and development no longer tracks upstream Krita.
   filters alongside tags and search, and optional grouping by engine or
   bundle.
 
-![Brush Presets with stroke previews and the multi-select engine filter](docs/images/brush-presets.png)
+![Brush Presets grouped by bundle, with the Engines filter open](docs/images/brush-presets.png)
 
-The Brush Presets docker with the Engines filter open. See the
-[Brush Presets guide](docs/brush-stroke-preview.md) for preview behavior and filters.
+The Brush Presets docker grouped by bundle, with the Engines filter open. See
+the [Brush Presets guide](docs/brush-stroke-preview.md) for preview behavior,
+filters and grouping.
 
 ## Development and downloads
 

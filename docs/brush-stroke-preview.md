@@ -5,7 +5,7 @@ its name underneath. Previews use a fixed light color on a dark background,
 so they remain readable in light and dark themes. Smudge, deform and filter
 brushes use gray stripes to show their effect.
 
-![Brush Presets with stroke previews and the multi-select engine filter](images/brush-presets.png)
+![Brush Presets grouped by bundle, with the Engines filter open](images/brush-presets.png)
 
 The number of columns follows the docker's width, with additional presets
 wrapping onto subsequent rows. Tags, search and display controls stay below
@@ -32,6 +32,9 @@ menu has one setting, **Preview Size**, which changes the stroke cells
 independently of the toolbar brush popup and the Brush Editor's preset list. Those lists
 continue to show the original preset icons. The F5 live preview keeps its
 existing appearance and live brush-setting behavior.
+
+The [Quick Access](quick-access.md) palette and its Resources dialog also show
+stroke previews, from the same cache: generated previews appear there at once.
 
 ## Grouping
 
