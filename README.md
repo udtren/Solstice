@@ -30,9 +30,9 @@ Krita edition, and development no longer tracks upstream Krita.
   and rotatable pins in the Transform Tool.
 - **[Docker locks](docs/docker-locks.md)**: lock the widths and heights of
   docked dockers and keep them from floating.
-- **[Solstice interface](docs/ui-modernization.md)**: an optional Solstice Dark
-  theme, refined docker titles, document tabs and toolbars, and a flat
-  Solstice widget style.
+- **[Solstice interface](docs/ui-modernization.md)**: the bundled Cantarell UI
+  font, an optional Solstice Dark theme, refined docker titles, document tabs
+  and toolbars, and a flat Solstice widget style.
 - **[Brush Presets](docs/brush-stroke-preview.md)**: cached stroke previews in
   a grid that adapts to the docker's width, with multi-select engine and bundle
   filters alongside tags and search, and optional grouping by engine or

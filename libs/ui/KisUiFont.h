@@ -26,6 +26,13 @@ KRITAUI_EXPORT QFont normalFont();
  */
 KRITAUI_EXPORT QFont dockFont();
 
+/**
+ * Solstice: registers the UI fonts embedded in the application (Cantarell,
+ * krita/data/fonts) with the font database. Call before normalFont() is
+ * first used; without them the UI keeps the system font.
+ */
+KRITAUI_EXPORT void registerBundledFonts();
+
 } // namespace KisUiFont
 
 #endif // KIS_UI_FONT_H

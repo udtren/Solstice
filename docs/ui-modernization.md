@@ -5,6 +5,20 @@ docker headers, document tabs and toolbars, without moving any controls or
 changing how they work. Every change is optional, and the original look stays
 the default.
 
+## UI font
+
+Solstice uses **Cantarell**, bundled with the application, as its default
+interface font, at the size of the system's interface font. Text that
+Cantarell has no characters for, such as Japanese, is shown in the system's
+fonts.
+
+To use another font, open **Settings → Configure Solstice → General →
+Window**, enable the custom font and choose it; Cantarell is listed there as
+well. A custom font chosen earlier stays in use until it is turned off.
+
+Cantarell is licensed under the SIL Open Font License 1.1; the license is
+installed as `share/krita/fonts/Cantarell-OFL.txt`.
+
 ## Solstice Dark theme
 
 **Settings → Themes → Solstice Dark** selects a dark color theme with neutral

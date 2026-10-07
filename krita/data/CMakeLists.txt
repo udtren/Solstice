@@ -23,3 +23,6 @@ endif()
 
 # Both layouts are unsupported on mobile because they detach/create a new window.
 add_subdirectory( windowlayouts )
+
+# Solstice: bundled UI font license (the fonts are embedded through fonts.qrc).
+add_subdirectory( fonts )

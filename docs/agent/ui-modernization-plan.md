@@ -285,6 +285,26 @@ Fusion、Solsticeなら "fusion" に対してSolstice、他の名前は工場の
 フェーズ4の残り（未着手）: 設定ダイアログの文字・アイコンの大きさ、
 テキストツール等のQML画面、アイコンの線幅と大きさの統一。
 
+### UIフォント（Cantarell、2026年10月7日、ユーザー指示）
+
+既定のUIフォントを同梱のCantarell（Regular／Bold／Italic／BoldItalic）にした。
+
+| 部分 | 内容 |
+| --- | --- |
+| ファイル | `krita/data/fonts/`：TTF 4つ、`OFL.txt`（著作権表示とライセンス全文）、`fonts.qrc`、各TTFの `.license`（SPDX: OFL-1.1）。ライセンス本文は `LICENSES/OFL-1.1.txt` にもある |
+| 埋め込み | `fonts.qrc`（プレフィックス `/solstice/fonts`）を `krita/CMakeLists.txt` の `krita_QRCS` に追加。Windowsでは `krita.dll` に入る |
+| 登録 | `KisUiFont::registerBundledFonts()` が `QFontDatabase::addApplicationFont()` で登録する。`krita/main.cc` が `KisApplication::setFont()` の直前に呼ぶ |
+| 既定値 | `KisUiFont::normalFont()` は、カスタムフォント（`use_custom_system_font`）が無効なとき、システムのUIフォントのサイズでファミリーをCantarellにする（登録できた場合のみ） |
+| ライセンスの配布 | `krita/data/fonts/CMakeLists.txt` が `OFL.txt` を `share/krita/fonts/Cantarell-OFL.txt` にインストールする |
+
+ライセンス: SIL Open Font License 1.1。ソフトウェアへの同梱・再配布は可。
+著作権表示とライセンスを添える。Reserved Font Nameの指定はない。フォント
+単体の販売と、改変版をOFL以外で配布することは不可。フォントは改変しない。
+
+制限: 日本語などCantarellに無い文字はOSのフォントで表示される。カスタム
+フォントが有効な設定（ユーザーの環境はSegoe UI）では、既定値は使われない。
+テキストツールのフォント一覧（キャンバス上の文字）は変更していない。
+
 ### フェーズ2の具体的な変更
 
 ドッカー見出しでは、背景・文字・ロック／分離／閉じるボタンの配置を整理する。

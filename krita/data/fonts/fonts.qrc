@@ -1,0 +1,14 @@
+<!--
+  SPDX-FileCopyrightText: none
+  SPDX-License-Identifier: CC0-1.0
+-->
+<!-- Solstice: bundled UI font (Cantarell, SIL Open Font License 1.1, see OFL.txt). -->
+<RCC>
+    <qresource prefix="/solstice/fonts">
+        <file>Cantarell-Regular.ttf</file>
+        <file>Cantarell-Bold.ttf</file>
+        <file>Cantarell-Italic.ttf</file>
+        <file>Cantarell-BoldItalic.ttf</file>
+        <file>OFL.txt</file>
+    </qresource>
+</RCC>

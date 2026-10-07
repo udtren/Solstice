@@ -17,6 +17,7 @@
 #include <boost/optional.hpp>
 
 #include <QtGlobal>
+#include <QFile>
 #include <QFontDatabase>
 
 #if defined(Q_OS_WIN) && QT_VERSION < 0x060000
@@ -78,6 +79,18 @@ boost::optional<QFont> userCfgUiFont()
     }
 }
 
+void registerBundledFonts()
+{
+    for (const QString &file : {QStringLiteral(":/solstice/fonts/Cantarell-Regular.ttf"),
+                                QStringLiteral(":/solstice/fonts/Cantarell-Bold.ttf"),
+                                QStringLiteral(":/solstice/fonts/Cantarell-Italic.ttf"),
+                                QStringLiteral(":/solstice/fonts/Cantarell-BoldItalic.ttf")}) {
+        if (QFile::exists(file)) {
+            QFontDatabase::addApplicationFont(file);
+        }
+    }
+}
+
 QFont normalFont()
 {
     QFont font;
@@ -85,6 +98,12 @@ QFont normalFont()
         font = *userFont;
     } else {
         font = systemDefaultUiFont();
+        // Solstice: the bundled Cantarell is the default UI font, at the
+        // system font's size. Text it has no glyphs for (Japanese, ...)
+        // falls back to the system fonts.
+        if (QFontDatabase::families().contains(QStringLiteral("Cantarell"))) {
+            font.setFamily(QStringLiteral("Cantarell"));
+        }
     }
 #ifdef Q_OS_WIN
     // XXX: Forces Qt to use full hinting for UI text, otherwise the default

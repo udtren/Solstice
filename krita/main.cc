@@ -858,6 +858,8 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 
     KisConfig(true).logImportantSettings();
 
+    // Solstice: the bundled UI font (Cantarell) is the default.
+    KisUiFont::registerBundledFonts();
     KisApplication::setFont(KisUiFont::normalFont());
 
     if (!app.start(args)) {
