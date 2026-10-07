@@ -150,7 +150,7 @@ KisTemplateCreateDia::KisTemplateCreateDia(const QString &templatesResourcePath,
     d->m_defaultTemplate = new QCheckBox( i18n("Use the new template as default"), mainwidget );
     d->m_defaultTemplate->setChecked( true );
     d->m_defaultTemplate->setVisible( false );
-    d->m_defaultTemplate->setToolTip(i18n("Use the new template every time Krita starts"));
+    d->m_defaultTemplate->setToolTip(i18n("Use the new template every time Solstice starts"));
     rightbox->addWidget( d->m_defaultTemplate );
 
     enableButtonOk(false);
@@ -280,13 +280,15 @@ void KisTemplateCreateDia::slotOk() {
     if (!group->add(t)) {
         KisTemplate *existingTemplate=group->find(d->m_name->text());
         if (existingTemplate && !existingTemplate->isHidden()) {
-            if (QMessageBox::warning(this,
-                                     i18nc("@title:window", "Krita"),
-                                     i18n("Do you really want to overwrite the existing '%1' template?", existingTemplate->name()),
-                                     QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes) {
+            if (QMessageBox::warning(
+                    this,
+                    i18nc("@title:window", "Solstice"),
+                    i18n("Do you really want to overwrite the existing '%1' template?", existingTemplate->name()),
+                    QMessageBox::Yes | QMessageBox::No,
+                    QMessageBox::Yes)
+                == QMessageBox::Yes) {
                 group->add(t, true);
-            }
-            else {
+            } else {
                 delete t;
                 return;
             }
@@ -387,7 +389,7 @@ void KisTemplateCreateDia::slotSelect() {
     }
     QImage image(fn);
     if (image.isNull()) {
-        QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("%1 is not a valid image file!", fn));
+        QMessageBox::warning(this, i18nc("@title:window", "Solstice"), i18n("%1 is not a valid image file!", fn));
     }
     d->m_customFile = fn;
     d->m_customPixmap = QPixmap();

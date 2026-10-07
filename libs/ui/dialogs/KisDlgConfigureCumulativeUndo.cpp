@@ -50,11 +50,10 @@ KisDlgConfigureCumulativeUndo::KisDlgConfigureCumulativeUndo(const KisCumulative
     vboxLayout->addLayout(form);
 
     QDoubleSpinBox *dblMergeTimeout = new KisDoubleParseSpinBox(page);
-    dblMergeTimeout->setToolTip(
-        i18nc("@info:tooltip",
-              "The amount of time during which the strokes will "
-              "be kept unmerged. When a stroke becomes old enough, "
-              "Krita will try to merge it"));
+    dblMergeTimeout->setToolTip(i18nc("@info:tooltip",
+                                      "The amount of time during which the strokes will "
+                                      "be kept unmerged. When a stroke becomes old enough, "
+                                      "Solstice will try to merge it"));
     dblMergeTimeout->setRange(3, 600);
     dblMergeTimeout->setSuffix(i18nc("suffix for \"seconds\"", " sec"));
     form->addRow(i18n("Wait before merging strokes:"), dblMergeTimeout);
@@ -62,10 +61,9 @@ KisDlgConfigureCumulativeUndo::KisDlgConfigureCumulativeUndo(const KisCumulative
     connectControl(dblMergeTimeout, &m_d->model, "mergeTimeout");
 
     QSpinBox *intExcludeFromMerge = new KisIntParseSpinBox();
-    intExcludeFromMerge->setToolTip(
-        i18nc("@info:tooltip",
-              "The number of last strokes that Krita will not merge "
-              "(even if they are old enough)"));
+    intExcludeFromMerge->setToolTip(i18nc("@info:tooltip",
+                                          "The number of last strokes that Solstice will not merge "
+                                          "(even if they are old enough)"));
     intExcludeFromMerge->setRange(1, undoLimit > 0 ? undoLimit : 1000);
     form->addRow(i18n("Exclude last strokes from merge:"), intExcludeFromMerge);
 
@@ -97,18 +95,17 @@ KisDlgConfigureCumulativeUndo::KisDlgConfigureCumulativeUndo(const KisCumulative
 
     vboxLayout->addItem(new QSpacerItem(20, 20));
 
-    QLabel *help = new QLabel(
-        i18n("Cumulative Undo allows Krita to merge undo actions "
-             "and make undo history cleaner. Krita will still keep "
-             "a few latest actions unmerged according to "
-             "\"Wait before merging strokes\" and \"Exclude last strokes from merge\" "
-             "options. Whenever an action gets outdated using "
-             "the time limit and this action is not excluded using "
-             "\"Exclude last strokes from merge\", Krita will try "
-             " to merge this action into a group. The groups are "
-             "formed using \"Max group strokes delay\" and "
-             "\"Max group duration\" options."),
-        page);
+    QLabel *help = new QLabel(i18n("Cumulative Undo allows Solstice to merge undo actions "
+                                   "and make undo history cleaner. Solstice will still keep "
+                                   "a few latest actions unmerged according to "
+                                   "\"Wait before merging strokes\" and \"Exclude last strokes from merge\" "
+                                   "options. Whenever an action gets outdated using "
+                                   "the time limit and this action is not excluded using "
+                                   "\"Exclude last strokes from merge\", Solstice will try "
+                                   " to merge this action into a group. The groups are "
+                                   "formed using \"Max group strokes delay\" and "
+                                   "\"Max group duration\" options."),
+                              page);
     help->setWordWrap(true);
     help->setAlignment(Qt::AlignJustify);
     vboxLayout->addWidget(help);

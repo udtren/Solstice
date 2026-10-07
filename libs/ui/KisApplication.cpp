@@ -915,8 +915,10 @@ bool KisApplication::start(const KisApplicationArguments &args)
                 i18nc("@title:window", "Solstice:Warning"),
                 i18n("Cannot add the file layer: no document is open.\n\n"
                      "You can create a new document using the --new-image option, or you can open an existing file.\n\n"
-                     "If you instead want to add the file layer to a document in an already running instance of Krita, "
-                     "check the \"Allow only one instance of Krita\" checkbox in the settings (Settings -> General -> "
+                     "If you instead want to add the file layer to a document in an already running instance of "
+                     "Solstice, "
+                     "check the \"Allow only one instance of Solstice\" checkbox in the settings (Settings -> General "
+                     "-> "
                      "Window)."));
         } else {
             QMessageBox::warning(qApp->activeWindow(),

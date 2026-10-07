@@ -160,7 +160,10 @@ void KisLevelsConfigWidget::setConfiguration(const KisPropertiesConfigurationSP 
             KIS_SAFE_ASSERT_RECOVER_RETURN(defaultFilterConfig);
 
             if (filterConfig->levelsCurves().size() > m_virtualChannels.size()) {
-                QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("The current configuration was created for a different colorspace and cannot be used.\nThe channels will be reset."));
+                QMessageBox::warning(this,
+                                     i18nc("@title:window", "Solstice"),
+                                     i18n("The current configuration was created for a different colorspace and cannot "
+                                          "be used.\nThe channels will be reset."));
                 warnKrita << "WARNING: trying to load levels info with invalid number of channels!";
                 warnKrita << "WARNING:   expected:" << m_virtualChannels.size();
                 warnKrita << "WARNING:        got:" << filterConfig->levelsCurves().size();

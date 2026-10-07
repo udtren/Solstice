@@ -118,7 +118,7 @@ QString KisGpuEngineUi::failureMessage(quint64 lostTiles)
 {
     return i18n(
         "The GPU engine could not read back %1 tile(s) of image data from the graphics card and has been "
-        "stopped. Krita continues without it.\n\n"
+        "stopped. Solstice continues without it.\n\n"
         "The most recent changes in those areas are lost: they show older content. Check your open "
         "documents before saving them, and save to a new file if in doubt.",
         lostTiles);
@@ -273,9 +273,9 @@ KisGpuEngineSettingsWidget::KisGpuEngineSettingsWidget(QWidget *parent)
     } else {
         status = i18n("Not used in this session.");
     }
-    status += QLatin1Char(' ') + i18n("Changes take effect after restarting Krita.");
+    status += QLatin1Char(' ') + i18n("Changes take effect after restarting Solstice.");
 #else
-    status = i18n("Not available: this build of Krita has no Vulkan support.");
+    status = i18n("Not available: this build of Solstice has no Vulkan support.");
     m_enabled->setEnabled(false);
     m_convertPolicy->setEnabled(false);
 #endif

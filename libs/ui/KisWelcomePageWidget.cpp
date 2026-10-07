@@ -184,8 +184,13 @@ KisWelcomePageWidget::KisWelcomePageWidget(QWidget *parent)
     // News widget...
     QMenu *newsOptionsMenu = new QMenu(this);
     newsOptionsMenu->setToolTipsVisible(true);
+#ifdef ENABLE_UPDATERS
     ShowNewsAction *showNewsAction =
         new ShowNewsAction(i18n("Enable news and check for new releases"), newsOptionsMenu);
+#else
+    // Solstice: no release checks (ENABLE_UPDATERS is off); the news are upstream Krita's.
+    ShowNewsAction *showNewsAction = new ShowNewsAction(i18n("Enable upstream Krita news"), newsOptionsMenu);
+#endif
     newsOptionsMenu->addAction(showNewsAction);
     showNewsAction->setToolTip(
         i18n("Show upstream Krita news: this needs internet to retrieve information from the krita.org website"));

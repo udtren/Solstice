@@ -682,7 +682,7 @@ struct KisWelcomeAssetLibraryWidget::Private {
     {
         if (mainWindow && mainWindow->viewManager() && mainWindow->viewManager()->image())
             return true;
-        QMessageBox::warning(q, title, i18n("No active Krita document."));
+        QMessageBox::warning(q, title, i18n("No active document."));
         return false;
     }
 

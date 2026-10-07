@@ -1037,7 +1037,7 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
             if (cfg.readEntry("WarnedAboutUnsupportedWindows", false)) {
                 QMessageBox::information(
                     nullptr,
-                    i18nc("@title:window", "Krita: Warning"),
+                    i18nc("@title:window", "Solstice: Warning"),
                     i18n("You are running an unsupported version of Windows: %1.\n"
                          "This is not recommended. Do not report any bugs.\n"
                          "Please update to a supported version of Windows: Windows 7, 8, 8.1 or 10.",

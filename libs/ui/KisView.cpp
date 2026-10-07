@@ -678,12 +678,9 @@ void KisView::dropEvent(QDropEvent *event)
                                 KisImportExportErrorCode(
                                     ImportExportCodes::FileFormatNotSupported)
                                     .errorMessage();
-                            QMessageBox::warning(
-                                this,
-                                i18nc("@title:window", "Krita"),
-                                i18n("Could not open %2.\nReason: %1.",
-                                     msg,
-                                     url.toDisplayString()));
+                            QMessageBox::warning(this,
+                                                 i18nc("@title:window", "Solstice"),
+                                                 i18n("Could not open %2.\nReason: %1.", msg, url.toDisplayString()));
                             continue;
                         }
 
@@ -1166,10 +1163,12 @@ bool KisView::queryClose()
         if (name.isEmpty())
             name = i18n("Untitled");
 
-        int res = QMessageBox::warning(this,
-                                       i18nc("@title:window", "Krita"),
-                                       i18n("<p>The document <b>'%1'</b> has been modified.</p><p>Do you want to save it?</p>", name),
-                                       QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes);
+        int res = QMessageBox::warning(
+            this,
+            i18nc("@title:window", "Solstice"),
+            i18n("<p>The document <b>'%1'</b> has been modified.</p><p>Do you want to save it?</p>", name),
+            QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
+            QMessageBox::Yes);
 
         switch (res) {
         case QMessageBox::Yes : {

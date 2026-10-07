@@ -635,7 +635,7 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
 
     grpRestartMessage->setPixmap(
         grpRestartMessage->style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(QSize(32, 32)));
-    grpRestartMessage->setText(i18n("You will need to Restart Krita for the changes to take an effect."));
+    grpRestartMessage->setText(i18n("You will need to Restart Solstice for the changes to take an effect."));
 
     grpAndroidWarningMessage->setVisible(false);
     grpAndroidWarningMessage->setPixmap(
@@ -1221,7 +1221,7 @@ void GeneralTab::getBackgroundImage()
 
     QImage image(fn);
     if (image.isNull()) {
-        QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("%1 is not a valid image file!", fn));
+        QMessageBox::warning(this, i18nc("@title:window", "Solstice"), i18n("%1 is not a valid image file!", fn));
     }
     else {
         m_backgroundimage->setText(fn);
@@ -1408,7 +1408,7 @@ ColorSettingsTab::ColorSettingsTab(QWidget *parent, const char *name)
                  "a separate native surface for the canvas. It might cause "
                  "performance issues on some systems.</p>"
                  ""
-                 "<p>If color management is disabled, Krita will render "
+                 "<p>If color management is disabled, Solstice will render "
                  "the canvas into the surface of the main window, which "
                  "is considered sRGB. It will cause two limitations:"
                  ""
@@ -1417,7 +1417,7 @@ ColorSettingsTab::ColorSettingsTab(QWidget *parent, const char *name)
                  "    <li>color proofing mode will be limited to \"use global display settings\", "
                  "        i.e. paper white proofing will become impossible</li>"
                  "</ol>"
-                "</p>"));
+                 "</p>"));
 
         monitorProfileGrid->addRow(m_chkEnableCanvasColorSpaceManagement);
 
@@ -2585,7 +2585,7 @@ KisDlgPreferences::KisDlgPreferences(QWidget* parent, const char* name)
     : KPageDialog(parent)
 {
     Q_UNUSED(name);
-    setWindowTitle(i18n("Configure Krita"));
+    setWindowTitle(i18n("Configure Solstice"));
     setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::RestoreDefaults);
 
     // Solstice interface: a compact sidebar (icon and name in one row)

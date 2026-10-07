@@ -1596,11 +1596,10 @@ void KisCanvas2::slotSurfaceFormatChanged(const KisDisplayConfig &config)
     if (m_d->multiSurfaceState->isCanvasOpenGL) {
         if (config.isHDR &&
             m_d->canvasWidget->currentBitDepthMode() < KisOpenGLCanvas2::BitDepthMode::Depth10Bit) {
-
             const QString warningMessage = i18n(
                 "WARNING: HDR mode was activated on surface working in 8-bit mode!\n"
-                "Please activate 10-bit mode in Krita's Preferences dialog and restart "
-                "Krita to avoid color banding!");
+                "Please activate 10-bit mode in Solstice's Preferences dialog and restart "
+                "Solstice to avoid color banding!");
 
             m_d->view->showFloatingMessage(warningMessage, koIcon("warning"), 7000, KisFloatingMessage::High);
             warnOpenGL.noquote() << QString(warningMessage).replace('\n', ' ');

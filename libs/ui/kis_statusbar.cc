@@ -321,10 +321,9 @@ void KisStatusBar::updateMemoryStatus()
         }
 
         shouldUseWarningIcon = true;
-        QString suffix =
-                i18nc("tooltip on statusbar memory reporting button",
-                      "\n\nWARNING:\tOut of memory! Swapping has been started.\n"
-                      "\t\tPlease configure more RAM for Krita in Settings dialog");
+        QString suffix = i18nc("tooltip on statusbar memory reporting button",
+                               "\n\nWARNING:\tOut of memory! Swapping has been started.\n"
+                               "\t\tPlease configure more RAM for Solstice in Settings dialog");
         longStats += suffix;
 
 

@@ -349,7 +349,7 @@ class comics_project_manager_docker(DockWidget):
         self.path_to_config = selectedFile
         if os.path.exists(self.path_to_config) is True:
             if os.access(self.path_to_config, os.W_OK) is False:
-                QMessageBox.warning(None, i18n("Config cannot be used"), i18n("Krita doesn't have write access to this folder, so new files cannot be made. Please configure the folder access or move the project to a folder that can be written to."), QMessageBox.StandardButton.Ok)
+                QMessageBox.warning(None, i18n("Config cannot be used"), i18n("Solstice doesn't have write access to this folder, so new files cannot be made. Please configure the folder access or move the project to a folder that can be written to."), QMessageBox.StandardButton.Ok)
                 return
             configFile = open(self.path_to_config, "r", newline="", encoding="utf-16")
             self.setupDictionary = json.load(configFile)

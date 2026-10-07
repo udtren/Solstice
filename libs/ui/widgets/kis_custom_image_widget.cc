@@ -285,16 +285,15 @@ KisDocument* KisCustomImageWidget::createNewImage()
             profile->name().contains("scRGB") ||
             profile->info().contains("linear") ||
             profile->info().contains("scRGB")) {
-
-            int result =
-                QMessageBox::warning(this,
-                                     i18nc("@title:window", "Krita"),
-                                     i18n("Linear gamma RGB color spaces are not supposed to be used "
-                                          "in 8-bit integer modes. It is suggested to use 16-bit integer "
-                                          "or any floating point colorspace for linear profiles.\n\n"
-                                          "Press \"Ok\" to create a 8-bit integer linear RGB color space "
-                                          "or \"Cancel\" to return to the settings dialog."),
-                                     QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel);
+            int result = QMessageBox::warning(this,
+                                              i18nc("@title:window", "Solstice"),
+                                              i18n("Linear gamma RGB color spaces are not supposed to be used "
+                                                   "in 8-bit integer modes. It is suggested to use 16-bit integer "
+                                                   "or any floating point colorspace for linear profiles.\n\n"
+                                                   "Press \"Ok\" to create a 8-bit integer linear RGB color space "
+                                                   "or \"Cancel\" to return to the settings dialog."),
+                                              QMessageBox::Ok | QMessageBox::Cancel,
+                                              QMessageBox::Cancel);
 
             if (result == QMessageBox::Cancel) {
                 dbgKrita << "Model RGB8" << "NOT SUPPORTED";
@@ -430,8 +429,9 @@ void KisCustomImageWidget::saveAsPredefined()
     QFile f(saveLocation + '/' + fileName.replace(' ', '_').replace('(', '_').replace(')', '_').replace(':', '_') + ".predefinedimage");
 
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        QMessageBox::warning(this, i18nc("@title:window", "Krita"),
-            i18n("Could not save %1.\nReason: %2.", f.fileName(), f.errorString()));
+        QMessageBox::warning(this,
+                             i18nc("@title:window", "Solstice"),
+                             i18n("Could not save %1.\nReason: %2.", f.fileName(), f.errorString()));
         return;
     }
     KisPropertiesConfigurationSP predefined = new KisPropertiesConfiguration();

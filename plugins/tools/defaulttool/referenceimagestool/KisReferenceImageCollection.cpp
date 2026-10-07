@@ -90,13 +90,11 @@ bool KisReferenceImageCollection::load(QIODevice *io)
     }
 
     if (!failures.isEmpty()) {
-        QMessageBox::warning(
-                0,
-                i18nc("@title:window", "Krita"),
-                i18n("The following reference images could not be loaded:\n%1", failures.join('\n')),
-                QMessageBox::Ok, QMessageBox::Ok
-        );
-
+        QMessageBox::warning(0,
+                             i18nc("@title:window", "Solstice"),
+                             i18n("The following reference images could not be loaded:\n%1", failures.join('\n')),
+                             QMessageBox::Ok,
+                             QMessageBox::Ok);
     }
 
     return true;

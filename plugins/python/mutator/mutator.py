@@ -167,7 +167,7 @@ class MutatorDocker(DockWidget):
         mutationSettings.setLayout(QVBoxLayout())
 
         sizeMutSlider = SliderSpinBox().widget() # Size
-        sizeMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Krita's global brush size."))
+        sizeMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Solstice's global brush size."))
         sizeMutSlider.setRange(0,100)
         sizeMutSlider.setPrefix(i18n("Size Mutation: "))
         sizeMutSlider.setSuffix("%")
@@ -176,7 +176,7 @@ class MutatorDocker(DockWidget):
         mutationSettings.layout().addWidget(sizeMutSlider)
 
         rotationMutSlider = SliderSpinBox().widget() # Rotation
-        rotationMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Krita's global brush rotation."))
+        rotationMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Solstice's global brush rotation."))
         rotationMutSlider.setRange(0, 100)
         rotationMutSlider.setPrefix(i18n("Rotation Mutation: "))
         rotationMutSlider.setSuffix("%")
@@ -185,7 +185,7 @@ class MutatorDocker(DockWidget):
         mutationSettings.layout().addWidget(rotationMutSlider)
         
         opacityMutSlider = SliderSpinBox().widget() # Opacity
-        opacityMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Krita's global brush opacity."))
+        opacityMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Solstice's global brush opacity."))
         opacityMutSlider.setRange(0, 100)
         opacityMutSlider.setPrefix(i18n("Opacity Mutation: "))
         opacityMutSlider.setSuffix("%")
@@ -194,7 +194,7 @@ class MutatorDocker(DockWidget):
         mutationSettings.layout().addWidget(opacityMutSlider)
         
         flowMutSlider = SliderSpinBox().widget() # Flow
-        flowMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Krita's global brush flow."))
+        flowMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Solstice's global brush flow."))
         flowMutSlider.setRange(0, 100)
         flowMutSlider.setPrefix(i18n("Flow Mutation: "))
         flowMutSlider.setSuffix("%")
@@ -203,7 +203,7 @@ class MutatorDocker(DockWidget):
         mutationSettings.layout().addWidget(flowMutSlider)
         
         hueMutSlider = SliderSpinBox().widget() # FGC Hue
-        hueMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Krita's global foreground color hue."))
+        hueMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Solstice's global foreground color hue."))
         hueMutSlider.setRange(0, 100)
         hueMutSlider.setPrefix(i18n("Hue Mutation: "))
         hueMutSlider.setSuffix("%")
@@ -212,7 +212,7 @@ class MutatorDocker(DockWidget):
         mutationSettings.layout().addWidget(hueMutSlider)
         
         saturationMutSlider = SliderSpinBox().widget() # FGC Saturation
-        saturationMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Krita's global foreground color saturation."))
+        saturationMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Solstice's global foreground color saturation."))
         saturationMutSlider.setRange(0, 100)
         saturationMutSlider.setPrefix(i18n("Saturation Mutation: "))
         saturationMutSlider.setSuffix("%")
@@ -221,7 +221,7 @@ class MutatorDocker(DockWidget):
         mutationSettings.layout().addWidget(saturationMutSlider)
         
         valueMutSlider = SliderSpinBox().widget() # FGC Value
-        valueMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Krita's global foreground color value."))
+        valueMutSlider.setToolTip(i18n("Controls the degree to which mutation affects Solstice's global foreground color value."))
         valueMutSlider.setRange(0, 100)
         valueMutSlider.setPrefix(i18n("Value Mutation: "))
         valueMutSlider.setSuffix("%")

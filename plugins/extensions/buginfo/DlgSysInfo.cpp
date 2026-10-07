@@ -21,7 +21,8 @@ QString DlgSysInfo::originalFileName()
 
 QString DlgSysInfo::captionText()
 {
-    return i18nc("Caption of the dialog with system information for bug reports", "Krita System Information: please paste this information to the bug report");
+    return i18nc("Caption of the dialog with system information for bug reports",
+                 "Solstice System Information: please paste this information to the bug report");
 }
 
 QString DlgSysInfo::replacementWarningText()

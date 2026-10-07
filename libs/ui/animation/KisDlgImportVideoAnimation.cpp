@@ -61,7 +61,9 @@ KisDlgImportVideoAnimation::KisDlgImportVideoAnimation(KisMainWindow *mainWindow
     } else {
         enableButtonOk(false);
         m_ui.tabGeneral->setEnabled(false);
-        QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("FFMpeg not found! Please add a path to FFMpeg in the \"Advanced\" tab"));
+        QMessageBox::warning(this,
+                             i18nc("@title:window", "Solstice"),
+                             i18n("FFMpeg not found! Please add a path to FFMpeg in the \"Advanced\" tab"));
     }
 
     QJsonObject ffprobeInfo = KisFFMpegWrapper::findFFProbe(ffprobeFileInfo.absoluteFilePath());
@@ -169,7 +171,9 @@ RenderedFrames KisDlgImportVideoAnimation::renderFrames(const QDir& directory)
     QList<int> &frameTimeList = frames.renderedFrameTargetTimes;
 
     if ( !directory.mkpath(".") ) {
-        QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("Failed to create a work directory, make sure you have write permission"));
+        QMessageBox::warning(this,
+                             i18nc("@title:window", "Solstice"),
+                             i18n("Failed to create a work directory, make sure you have write permission"));
         return frames;
     }
 
@@ -179,12 +183,15 @@ RenderedFrames KisDlgImportVideoAnimation::renderFrames(const QDir& directory)
     const float nDuplicateSensitivity = m_ui.sensitivitySpinbox->value() / m_ui.sensitivitySpinbox->maximum();
 
     if (exportDuration / fps > 100.0) {
-        if (QMessageBox::warning(this, i18nc("Title for a messagebox", "Krita"),
-                             i18n("Warning: you are trying to import more than 100 frames into Krita.\n\n"
-                                  "This means you might be overloading your system.\n"
-                                  "If you want to edit a clip larger than 100 frames, consider using a real video editor, like Kdenlive (https://kdenlive.org)."),
+        if (QMessageBox::warning(this,
+                                 i18nc("Title for a messagebox", "Solstice"),
+                                 i18n("Warning: you are trying to import more than 100 frames into Solstice.\n\n"
+                                      "This means you might be overloading your system.\n"
+                                      "If you want to edit a clip larger than 100 frames, consider using a real video "
+                                      "editor, like Kdenlive (https://kdenlive.org)."),
                                  QMessageBox::Ok | QMessageBox::Cancel,
-                                 QMessageBox::Cancel) == QMessageBox::Cancel) {
+                                 QMessageBox::Cancel)
+            == QMessageBox::Cancel) {
             return frames;
         }
     }
@@ -286,7 +293,7 @@ RenderedFrames KisDlgImportVideoAnimation::renderFrames(const QDir& directory)
     }
 
     if ( frameFileList.isEmpty() ) {
-         QMessageBox::critical(this, i18nc("@title:window", "Krita"), i18n("Failed to export frames from video"));
+        QMessageBox::critical(this, i18nc("@title:window", "Solstice"), i18n("Failed to export frames from video"));
     }
 
     return frames;
@@ -516,9 +523,10 @@ void KisDlgImportVideoAnimation::slotImportDurationChanged(qreal time)
     } else if (m_videoInfo.colorTransfer == TRC_ITU_R_BT_2100_0_HLG
                || m_videoInfo.colorTransfer == TRC_SMPTE_ST_428_1) {
         warnings.append(text_frames);
-        QString text_trc =  i18nc("part of warning in video importer."
-                                  , "Krita does not support the video transfer curve (%1), it will be loaded as linear."
-                                  , KoColorProfile::getTransferCharacteristicName(m_videoInfo.colorTransfer));
+        QString text_trc =
+            i18nc("part of warning in video importer.",
+                  "Solstice does not support the video transfer curve (%1), it will be loaded as linear.",
+                  KoColorProfile::getTransferCharacteristicName(m_videoInfo.colorTransfer));
         warnings.append(text_trc);
     }
 
@@ -564,7 +572,7 @@ void KisDlgImportVideoAnimation::slotFFProbeFile()
             m_ui.cmbFFProbeLocation->setCurrentText(filenames[0]);
             return;
         }
-        QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("FFProbe is invalid!"));
+        QMessageBox::warning(this, i18nc("@title:window", "Solstice"), i18n("FFProbe is invalid!"));
     }
 
 }
@@ -585,14 +593,14 @@ void KisDlgImportVideoAnimation::slotFFMpegFile()
                 m_ui.cmbFFMpegLocation->addItem(filenames[0],ffmpegInfo);
                 m_ui.cmbFFMpegLocation->setCurrentText(filenames[0]);
             } else {
-                QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("FFMpeg is invalid!"));
+                QMessageBox::warning(this, i18nc("@title:window", "Solstice"), i18n("FFMpeg is invalid!"));
             }
             m_ui.tabGeneral->setEnabled(true);
             return;
         }
 
         m_ui.tabGeneral->setEnabled(false);
-        QMessageBox::critical(this, i18nc("@title:window", "Krita"), i18n("No FFMpeg found!"));
+        QMessageBox::critical(this, i18nc("@title:window", "Solstice"), i18n("No FFMpeg found!"));
     }
 
 }
@@ -658,8 +666,10 @@ KisBasicVideoInfo KisDlgImportVideoAnimation::loadVideoInfo(const QString &input
     KisFFMpegWrapper *ffprobe = new KisFFMpegWrapper(this);
     QJsonObject ffprobeJsonObj;
 
-    std::function<void(void)> warnFFmpegFormatSupport = [this](){
-        QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("Your FFMpeg version does not support this format"));
+    std::function<void(void)> warnFFmpegFormatSupport = [this]() {
+        QMessageBox::warning(this,
+                             i18nc("@title:window", "Solstice"),
+                             i18n("Your FFMpeg version does not support this format"));
     };
 
     if (ffprobeInfo["enabled"].toBool()) {
@@ -699,7 +709,7 @@ KisBasicVideoInfo KisDlgImportVideoAnimation::loadVideoInfo(const QString &input
         }
 
         if ( videoInfoData.stream == -1 ) {
-            QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("No video stream could be found!"));
+            QMessageBox::warning(this, i18nc("@title:window", "Solstice"), i18n("No video stream could be found!"));
             return {};
         }
 
@@ -769,7 +779,9 @@ KisBasicVideoInfo KisDlgImportVideoAnimation::loadVideoInfo(const QString &input
             dbgFile << "ffmpeg probe2" << ffmpegJsonObj;
 
             if ( ffprobeJsonObj["error"].toInt() != FFProbeErrorCodes::NONE ) {
-                QMessageBox::warning(this, i18nc("@title:window", "Krita"), i18n("Failed to load video information"));
+                QMessageBox::warning(this,
+                                     i18nc("@title:window", "Solstice"),
+                                     i18n("Failed to load video information"));
                 return {};
             }
 

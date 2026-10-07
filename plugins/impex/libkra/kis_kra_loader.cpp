@@ -1016,13 +1016,13 @@ KisNodeSP KisKraLoader::loadNode(const QDomElement& element, KisImageSP image)
         if (m_d->kritaVersion < QVersionNumber(5, 2) &&
             colorSpace->colorModelId() == CMYKAColorModelID &&
             subtractiveBlendingModesInCmyk().contains(compositeOpName)) {
-
-            m_d->warningMessages <<
-                i18n("Layer \"%1\" has blending mode \"%2\" that has changed its "
-                    "behavior for CMYK color in Krita 5.2. Please check the "
-                    "result and consider enabling legacy \"Additive\" algorithm in "
-                    "Settings->Configure Krita->General->Tools->CMYK blending mode",
-                    name, KoCompositeOpRegistry::instance().getKoID(compositeOpName).name());
+            m_d->warningMessages << i18n(
+                "Layer \"%1\" has blending mode \"%2\" that has changed its "
+                "behavior for CMYK color in Krita 5.2. Please check the "
+                "result and consider enabling legacy \"Additive\" algorithm in "
+                "Settings->Configure Solstice->General->Tools->CMYK blending mode",
+                name,
+                KoCompositeOpRegistry::instance().getKoID(compositeOpName).name());
         }
     }
 

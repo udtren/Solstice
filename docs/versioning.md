@@ -24,3 +24,9 @@ compatibility depends on it:
 - `.kra` files record it, so Krita and Solstice open the files as usual;
 - the resource folder and Python scripts see it, so bundled resources and
   existing plugins keep working.
+
+## Updates
+
+Solstice does not check for new versions yet. Krita's update check is
+turned off, because it would announce Krita releases. The welcome page news
+option shows upstream Krita news only.

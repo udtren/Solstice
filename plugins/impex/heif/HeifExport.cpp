@@ -572,8 +572,10 @@ void KisWdgOptionsHeif::setConfiguration(const KisPropertiesConfigurationSP cfg)
             conversionOptionName << "ApplyHLG";
             
             conversionOptionsList << i18nc("Color space option plus transfer function name", "Keep colorants, encode SMPTE ST 428");
-            toolTipList << i18nc("@tooltip", "The image will be linearized first, and then encoded with SMPTE ST 428."
-                                            " Krita always opens images like these as linear floating point, this option is there to reverse that");
+            toolTipList << i18nc("@tooltip",
+                                 "The image will be linearized first, and then encoded with SMPTE ST 428."
+                                 " Solstice always opens images like these as linear floating point, this option is "
+                                 "there to reverse that");
             conversionOptionName << "ApplySMPTE428";
         }
 

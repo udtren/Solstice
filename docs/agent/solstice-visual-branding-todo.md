@@ -94,6 +94,62 @@ gray placeholders do not complete them.
 - [ ] Check Linux launcher, task switcher, and desktop-file icon rendering.
 - [ ] Check macOS Dock, Finder, About panel, and application bundle rendering.
 
+## Application name in interface strings (2026-10-07)
+
+User-visible strings that call the running application "Krita" now say
+"Solstice". This covers 199 strings in 88 files:
+
+- `i18n()`/`i18nc()` calls;
+- `.ui` `<string>` values;
+- `.action` text, tool tips and "What's This";
+- Python plugin `i18n()` calls.
+
+Examples are message box titles (`i18nc("@title:window", "Krita")`, "Krita:
+Warning", "Krita - Edit Text"), "restart Krita", "Krita will not use more
+memory...", "Show Krita log for bug reports", the bug-information captions,
+the command-line option help and the Preferences window title.
+
+The scratchpad scripts `kritastrings.py` (inventory) and `rebrand.py`
+(replacement with a keep-list) did the work. They are not in the
+repository; rerun an inventory with a similar script after larger merges.
+
+**Kept on purpose:**
+
+- file-format names (the MIME descriptions "Krita Brush Preset", "Krita
+  Archival Image Format" and others; "a Krita file", "Not a valid Krita file",
+  "Krita Palette (KPL)", "Krita files" in the comics manager);
+- references to Krita versions ("Krita 4.2+", "before Krita 4.3", "Krita 4.x",
+  "this version of Krita (%1)" with the compatibility version);
+- "Upstream Krita" links, news and handbook entries;
+- the About and License texts;
+- the copyright credit in `KAboutData`;
+- Elle Stone's quoted profile notes;
+- the Krita Script Starter and Krita scripting school texts (the Python API is
+  Krita's);
+- the database explorer's stored "Krita version";
+- translator contexts only;
+- Qt Designer plugins;
+- Microsoft Store, AppImage and X11 messages, which do not apply to the
+  Windows desktop build.
+
+**Translations.** Changing an English source string detaches its existing
+translation, so these strings show in English in other languages until they
+are translated again. This is accepted: new profiles default to English, and
+the Solstice-specific strings are untranslated anyway.
+
+## Update checks (2026-10-07)
+
+`ENABLE_UPDATERS` (top-level `CMakeLists.txt`) defaults to **OFF**:
+
+- `KisManualUpdater` compares with Krita's release feed on krita.org, which
+  would offer Solstice users Krita releases;
+- the welcome page creates no updater and keeps its version notice hidden;
+- its news option reads "Enable upstream Krita news".
+
+Existing build trees keep their cached value: reconfigure with
+`-DENABLE_UPDATERS=OFF`. An update check against Solstice's GitHub releases
+can replace it once releases exist.
+
 ## Splash and About artwork
 
 - [ ] Create new Solstice splash artwork with an explicit redistribution license.

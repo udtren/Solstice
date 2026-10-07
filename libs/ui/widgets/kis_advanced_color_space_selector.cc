@@ -404,14 +404,20 @@ void KisAdvancedColorSpaceSelector::fillDescription()
                                                                     "model is the most extensive of all color models, and is recommended as a model for painting,"
                                                                     "that you can later convert to other spaces. RGB is also the recommended colorspace for HDR editing.")+"</p>");
     } else if (currentModelStr == "CMYKA") {
-        d->colorSpaceSelector->textProfileDescription->append("<p>"+i18nc("If the selected model is CMYK",
-                                                                    "<b><a href=\"https://en.wikipedia.org/wiki/CMYK_color_model\">CMYK (Cyan, Magenta, Yellow, Key)</a></b>, "
-                                                                    "is the model used by printers and other ink-based media.<br/>"
-                                                                    "CMYK is a subtractive model, meaning that adding colors together will turn them darker. Because of CMYK "
-                                                                    "profiles being very specific per printer, it is recommended to work in RGB space, and then later convert "
-                                                                    "to a CMYK profile, preferably one delivered by your printer. <br/>"
-                                                                    "CMYK is <b>not</b> recommended for painting."
-                                                                    "Unfortunately, Krita cannot retrieve colorants or the TRC for this space.")+"</p>");
+        d->colorSpaceSelector->textProfileDescription->append(
+            "<p>"
+            + i18nc("If the selected model is CMYK",
+                    "<b><a href=\"https://en.wikipedia.org/wiki/CMYK_color_model\">CMYK (Cyan, Magenta, Yellow, "
+                    "Key)</a></b>, "
+                    "is the model used by printers and other ink-based media.<br/>"
+                    "CMYK is a subtractive model, meaning that adding colors together will turn them darker. Because "
+                    "of CMYK "
+                    "profiles being very specific per printer, it is recommended to work in RGB space, and then later "
+                    "convert "
+                    "to a CMYK profile, preferably one delivered by your printer. <br/>"
+                    "CMYK is <b>not</b> recommended for painting."
+                    "Unfortunately, Solstice cannot retrieve colorants or the TRC for this space.")
+            + "</p>");
     } else if (currentModelStr == "XYZA") {
         d->colorSpaceSelector->textProfileDescription->append("<p>"+i18nc("If the selected model is XYZ",
                                                                     "<b><a href=\"https://en.wikipedia.org/wiki/CIE_1931_color_space\">CIE XYZ</a></b>"
@@ -420,23 +426,31 @@ void KisAdvancedColorSpaceSelector::fillDescription()
                                                                     "makes them brighter. XYZ is <b>not</b> recommended for painting, but can be useful to encode in. The Tone Response "
                                                                     "Curve is assumed to be linear.")+"</p>");
     } else if (currentModelStr == "GRAYA") {
-        d->colorSpaceSelector->textProfileDescription->append("<p>"+i18nc("If the selected model is Grayscale",
-                                                                    "<b><a href=\"https://en.wikipedia.org/wiki/Grayscale\">Grayscale</a></b> only allows for "
-                                                                    "gray values and transparent values. Grayscale images use half "
-                                                                    "the memory and disk space compared to an RGB image of the same bit-depth.<br/>"
-                                                                    "Grayscale is useful for inking and grayscale images. In "
-                                                                    "Krita, you can mix Grayscale and RGB layers in the same image.")+"</p>");
+        d->colorSpaceSelector->textProfileDescription->append(
+            "<p>"
+            + i18nc("If the selected model is Grayscale",
+                    "<b><a href=\"https://en.wikipedia.org/wiki/Grayscale\">Grayscale</a></b> only allows for "
+                    "gray values and transparent values. Grayscale images use half "
+                    "the memory and disk space compared to an RGB image of the same bit-depth.<br/>"
+                    "Grayscale is useful for inking and grayscale images. In "
+                    "Solstice, you can mix Grayscale and RGB layers in the same image.")
+            + "</p>");
     } else if (currentModelStr == "LABA") {
-        d->colorSpaceSelector->textProfileDescription->append("<p>"+i18nc("If the selected model is LAB",
-                                                                    "<b><a href=\"https://en.wikipedia.org/wiki/Lab_color_space\">L*a*b</a></b>. <b>L</b> stands for Lightness, "
-                                                                    "the <b>a</b> and <b>b</b> components represent color channels.<br/>"
-                                                                    "L*a*b is a special model for color correction. It is based on human perception, meaning that it "
-                                                                    "tries to encode the difference in lightness, red-green balance and yellow-blue balance. "
-                                                                    "This makes it useful for color correction, but the vast majority of color maths in the blending "
-                                                                    "modes do <b>not</b> work as expected here.<br/>"
-                                                                    "Similarly, Krita does not support HDR in LAB, meaning that HDR images converted to LAB lose color "
-                                                                    "information. This colorspace is <b>not</b> recommended for painting, nor for export, "
-                                                                    "but best as a space to do post-processing in. The TRC is assumed to be the L* TRC.")+"</p>");
+        d->colorSpaceSelector->textProfileDescription->append(
+            "<p>"
+            + i18nc(
+                "If the selected model is LAB",
+                "<b><a href=\"https://en.wikipedia.org/wiki/Lab_color_space\">L*a*b</a></b>. <b>L</b> stands for "
+                "Lightness, "
+                "the <b>a</b> and <b>b</b> components represent color channels.<br/>"
+                "L*a*b is a special model for color correction. It is based on human perception, meaning that it "
+                "tries to encode the difference in lightness, red-green balance and yellow-blue balance. "
+                "This makes it useful for color correction, but the vast majority of color maths in the blending "
+                "modes do <b>not</b> work as expected here.<br/>"
+                "Similarly, Solstice does not support HDR in LAB, meaning that HDR images converted to LAB lose color "
+                "information. This colorspace is <b>not</b> recommended for painting, nor for export, "
+                "but best as a space to do post-processing in. The TRC is assumed to be the L* TRC.")
+            + "</p>");
     } else if (currentModelStr == "YCbCrA") {
         d->colorSpaceSelector->textProfileDescription->append("<p>"+i18nc("If the selected model is YCbCr",
                                                                     "<b><a href=\"https://en.wikipedia.org/wiki/YCbCr\">YCbCr (Luma, Blue Chroma, Red Chroma)</a></b>, is a "
@@ -482,13 +496,22 @@ void KisAdvancedColorSpaceSelector::fillDescription()
                                                                     "carefully, or otherwise use 8 bit if your computer slows down.")+"</p>");
     }
     else if (currentDepthStr == "F64") {
-        d->colorSpaceSelector->textProfileDescription->append("<p>"+i18nc("When the selected Bitdepth is 64bit float, but this isn't actually available in Krita at the moment.",\
-                                                                    "<b>64 bit float point</b>: 64 bit float is as precise as it gets in current technology, and this depth is used "
-                                                                    "most of the time for images that are generated or used as an input for software. It being floating point "
-                                                                    "is an absolute requirement for Scene Referred (HDR) images. This does take eight times as much space on "
-                                                                    "the RAM and hard-drive than any given 8 bit image of the same properties, and for some devices it takes "
-                                                                    "much more processing power. We recommend watching the RAM usage of the file carefully, or otherwise use "
-                                                                    "8 bit if your computer slows down.")+"</p>");
+        d->colorSpaceSelector->textProfileDescription->append(
+            "<p>"
+            + i18nc("When the selected Bitdepth is 64bit float, but this isn't actually available in Solstice at the "
+                    "moment.",
+                    "<b>64 bit float point</b>: 64 bit float is as precise as it gets in current technology, and this "
+                    "depth is used "
+                    "most of the time for images that are generated or used as an input for software. It being "
+                    "floating point "
+                    "is an absolute requirement for Scene Referred (HDR) images. This does take eight times as much "
+                    "space on "
+                    "the RAM and hard-drive than any given 8 bit image of the same properties, and for some devices it "
+                    "takes "
+                    "much more processing power. We recommend watching the RAM usage of the file carefully, or "
+                    "otherwise use "
+                    "8 bit if your computer slows down.")
+            + "</p>");
     }
     if (profileList.isEmpty()==false) {
         QString possibleConversionIntents = "<p>"+i18n("The following conversion intents are possible: ")+"<ul>";

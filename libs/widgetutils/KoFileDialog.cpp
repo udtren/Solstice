@@ -349,9 +349,12 @@ QString KoFileDialog::filename()
                     extension = selectedFilter.mid(start, end - start);
                 }
             }
-            QMessageBox::warning(d->parent, d->caption,
-                i18n("The selected file name does not have a file extension that Krita understands.\n"
-                     "Make sure the file name ends in '.%1' for example.", extension));
+            QMessageBox::warning(
+                d->parent,
+                d->caption,
+                i18n("The selected file name does not have a file extension that Solstice understands.\n"
+                     "Make sure the file name ends in '.%1' for example.",
+                     extension));
             retryNeeded = true;
 
 // We can only write to the Uri that was returned, we don't have permission to change the Uri.

@@ -69,10 +69,11 @@ KoOpenTypeFeatureInfoFactory::KoOpenTypeFeatureInfoFactory()
                       i18nc("@title", "Localized Forms"),
                       i18nc("@tooltip", "This replaces glyphs with language specific versions."),
                       {KoOpenTypeFeatureInfo::GSUB1}));
-    initialMap.append(KoOpenTypeFeatureInfo(QByteArray("opbd"),
-                      i18nc("@title", "Optical Bounds"),
-                      i18nc("@tooltip", "Adjusts glyphs so they align by their optical bounds. Doesn't do anything in Krita."),
-                      {KoOpenTypeFeatureInfo::GPOS1}));
+    initialMap.append(KoOpenTypeFeatureInfo(
+        QByteArray("opbd"),
+        i18nc("@title", "Optical Bounds"),
+        i18nc("@tooltip", "Adjusts glyphs so they align by their optical bounds. Doesn't do anything in Solstice."),
+        {KoOpenTypeFeatureInfo::GPOS1}));
     initialMap.append(KoOpenTypeFeatureInfo(QByteArray("ornm"),
                       i18nc("@title", "Ornaments"),
                       i18nc("@tooltip", "Replaces glyphs with ornaments for decorative purposes."),
@@ -123,10 +124,11 @@ KoOpenTypeFeatureInfoFactory::KoOpenTypeFeatureInfoFactory()
                       i18nc("@title", "Required Variation Alternates"),
                       i18nc("@tooltip", "Replaces glyphs in a variable font with ones suited for the current variation."),
                       {KoOpenTypeFeatureInfo::GSUB1}));
-    initialMap.append(KoOpenTypeFeatureInfo(QByteArray("size"),
-                      i18nc("@title", "Optical size"),
-                      i18nc("@tooltip", "Indicates how much the font is suitable for its current size. Does nothing in Krita."),
-                      {KoOpenTypeFeatureInfo::GPOS1}));
+    initialMap.append(KoOpenTypeFeatureInfo(
+        QByteArray("size"),
+        i18nc("@title", "Optical size"),
+        i18nc("@tooltip", "Indicates how much the font is suitable for its current size. Does nothing in Solstice."),
+        {KoOpenTypeFeatureInfo::GPOS1}));
     initialMap.append(KoOpenTypeFeatureInfo(QByteArray("vkrn"),
                       i18nc("@title", "Vertical Kerning"),
                       i18nc("@tooltip", "This controls vertical kerning on the font."),

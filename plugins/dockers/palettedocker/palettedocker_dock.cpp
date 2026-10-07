@@ -394,7 +394,8 @@ void PaletteDockerDock::slotUpdateLblPaletteName()
         }
         m_actSavePalette.data()->setEnabled(isGlobal);
         if (isGlobal) {
-            m_actSavePalette.data()->setToolTip(i18nc("@tooltip", "Save palette explicitly, will also happen automatically on exiting Krita."));
+            m_actSavePalette.data()->setToolTip(
+                i18nc("@tooltip", "Save palette explicitly, will also happen automatically on exiting Solstice."));
         }
         else {
             m_actSavePalette.data()->setToolTip(i18nc("@tooltip", "Saving for document palettes is done by saving the document."));

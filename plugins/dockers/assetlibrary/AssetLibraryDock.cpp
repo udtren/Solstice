@@ -600,7 +600,7 @@ void AssetLibraryDock::openAsset(const QString &path)
 void AssetLibraryDock::insertAsLayer(const QString &path)
 {
     if (!m_viewManager || !m_viewManager->image()) {
-        QMessageBox::warning(this, i18n("Insert as New Layer"), i18n("No active Krita document."));
+        QMessageBox::warning(this, i18n("Insert as New Layer"), i18n("No active document."));
         return;
     }
     new KisImportCatcher(path,
@@ -613,7 +613,7 @@ void AssetLibraryDock::insertAsLayer(const QString &path)
 void AssetLibraryDock::insertAsFileLayer(const QString &path)
 {
     if (!m_viewManager || !m_viewManager->image()) {
-        QMessageBox::warning(this, i18n("Insert as New File Layer"), i18n("No active Krita document."));
+        QMessageBox::warning(this, i18n("Insert as New File Layer"), i18n("No active document."));
         return;
     }
     const QFileInfo info(path);

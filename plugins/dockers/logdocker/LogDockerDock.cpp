@@ -108,8 +108,9 @@ void LogDockerDock::saveLog()
             f.write(txtLogViewer->document()->toPlainText().toUtf8());
             f.close();
         } else {
-            QMessageBox::warning(this, i18nc("@title:window", "Krita"),
-                i18n("Could not save %1.\nReason: %2.", f.fileName(), f.errorString()));
+            QMessageBox::warning(this,
+                                 i18nc("@title:window", "Solstice"),
+                                 i18n("Could not save %1.\nReason: %2.", f.fileName(), f.errorString()));
         }
     }
 }
