@@ -477,7 +477,11 @@ All other modes run on the CPU.
   the GPU (3D LUT or matrix+TRC shader); OCIO stays in the fragment shader.
 - LOD/mipmaps are produced by a GPU downsample pass.
 - Requirement: desktop OpenGL on the same GPU. ANGLE (D3D11) is not supported
-  in GPU mode.
+  in GPU mode. Since 2026-10-07 the Windows "Auto" renderer prefers desktop
+  OpenGL when `KisGpuMergeBatch::isEnabled()`
+  (`KisOpenGL::selectSurfaceConfig()`, `preferredAutoRenderer`; ranked after
+  the driver blacklist). `krita/main.cc` falls back to "auto" instead of the
+  upstream "angle" when no renderer is set.
 
 ### Threading and submission
 
@@ -1028,7 +1032,9 @@ Section index:
 
 ## Risks and open questions
 
-- Interop requires desktop OpenGL; users on ANGLE must switch renderer.
+- Interop requires desktop OpenGL. With the engine on, "Auto" picks it on
+  Windows unless the driver is blacklisted; an explicit ANGLE choice still
+  disables interop.
 - Memory management now bounds and evicts tile pools, including a path to
   disk swap. Canvas transfer buffers have a separate cap. GPU-resident tiles
   still retain CPU snapshots, other temporary allocations and GL textures

@@ -466,8 +466,11 @@ Inconsistencies found and left for later:
 
 - Quick Access settings dialog size: the fallback is 340x480 when read and
   550x650 on legacy import (`QuickAccessDock.cpp:1713-1714` vs `406-407`).
-- `OpenGLRenderer`: the fallback is `angle` in `main.cc` on Windows but
-  `auto` in `kis_opengl.cpp` and `kis_config.cc`.
+- `OpenGLRenderer`: the fallback was `angle` in `main.cc` on Windows but
+  `auto` in `kis_opengl.cpp` and `kis_config.cc`. This is resolved
+  (2026-10-07): it is `auto` everywhere, and on Windows "Auto" prefers desktop
+  OpenGL when the GPU engine is on, so the new default (engine on) gets GL
+  interop (`docs/agent/gpu-engine.md`).
 
 Tests:
 

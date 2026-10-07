@@ -5,6 +5,7 @@
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+#include "gpu/KisGpuMergeBatch.h"
 #include <KisSolsticePaths.h>
 #include <tuple>
 
@@ -1021,10 +1022,15 @@ KisOpenGL::RendererConfig KisOpenGL::selectSurfaceConfig(KisOpenGL::OpenGLRender
     const OpenGLRenderer defaultRenderer = getRendererFromProbeResult(*info);
 
     /**
-     * On Windows we always prefer Angle, not what Qt suggests us
+     * On Windows we prefer Angle, not what Qt suggests us.
+     *
+     * Solstice: except with the GPU engine, whose canvas updates need desktop
+     * OpenGL interop (docs/agent/gpu-engine.md, phase 3.2); with Angle they
+     * fall back to CPU downloads. This is the "Auto" preference, ranked after
+     * the driver blacklist, so blacklisted desktop drivers still get Angle.
      */
 #ifdef Q_OS_WIN
-    const OpenGLRenderer preferredAutoRenderer = RendererOpenGLES;
+    const OpenGLRenderer preferredAutoRenderer = KisGpuMergeBatch::isEnabled() ? RendererDesktopGL : RendererOpenGLES;
 #else
     const OpenGLRenderer preferredAutoRenderer = defaultRenderer;
 #endif

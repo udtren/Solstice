@@ -425,10 +425,13 @@ export formats write the file directly and are not covered.)
 
 - An NVIDIA Blackwell GPU (GeForce RTX 50 series or RTX PRO Blackwell) with a
   current driver. Other GPUs are not supported.
-- Windows. The canvas must use desktop OpenGL (**Settings → Configure
-  Solstice → Display → Preferred Renderer: OpenGL**), not ANGLE/Direct3D;
-  otherwise compositing still runs on the GPU but the canvas display does
+- Windows. The canvas must use desktop OpenGL, not ANGLE/Direct3D;
+  otherwise compositing still runs on the GPU, but the canvas display does
   not.
+  - With the GPU engine on, the default renderer (**Settings → Configure
+    Solstice → Display → Preferred Renderer: Auto**) picks desktop OpenGL,
+    unless the driver is known to be unreliable.
+  - A renderer you chose explicitly is kept.
 
 ## Limitations
 

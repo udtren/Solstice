@@ -654,11 +654,10 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 
         logUsage = kritarc.value("LogUsage", true).toBool();
 
-#ifdef Q_OS_WIN
-        const QString preferredRendererString = kritarc.value("OpenGLRenderer", "angle").toString();
-#else
+        // Solstice: "auto" on Windows too, as Preferences and the system
+        // information show. KisOpenGL::selectSurfaceConfig() turns it into
+        // Angle, or desktop OpenGL with the GPU engine.
         const QString preferredRendererString = kritarc.value("OpenGLRenderer", "auto").toString();
-#endif
         preferredRenderer = KisOpenGL::convertConfigToOpenGLRenderer(preferredRendererString);
 
         const KisConfig::CanvasSurfaceBitDepthMode bitDepthMode = KisConfig::canvasSurfaceBitDepthMode(&kritarc);
