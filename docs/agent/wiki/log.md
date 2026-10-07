@@ -110,3 +110,21 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 - `pitfalls/build-format-test.md`: resolving preprocessor conditionals with a
   script, and editing `.ui` files that the user's tool regenerates.
+
+## 2026-10-08 lint: first pass
+
+- Every page is listed in the index. Frontmatter: all pages have `type`,
+  `updated`/`status` and `sources`; history pages have no `related`, which
+  the index now states as the rule for archives.
+- References (scripted, `git ls-files` and `git grep -w`): 93 paths and
+  relative links, and the class/function names in the non-history pages, all
+  exist. Two non-symbols were flagged and are fine (`Q_OS_ANDROID` named as
+  removed, the `VK_LAYER_PATH` environment variable).
+- Contradictions fixed:
+  - `docs/agent/gpu-engine.md` said `Solstice/GpuEngine` defaults to false;
+    the embedded default kritarc sets true since 2026-10-07 (the code
+    fallback stays false).
+  - `decisions/xmlgui-unchanged.md`: the user's local `krita5.xmlgui` now
+    lives in the Solstice profile (`%APPDATA%\Solstice`).
+  - `pitfalls/build-format-test.md`: `updated` date.
+- Benchmarks: all dated 2026-10-07 (current builds); nothing stale.

@@ -1,6 +1,6 @@
 ---
 type: pitfall
-updated: 2026-10-07
+updated: 2026-10-08
 sources:
   - docs/agent/coding-rules.md ("Formatting and diffs")
   - docs/agent/development-workflow.md (build, test, install)

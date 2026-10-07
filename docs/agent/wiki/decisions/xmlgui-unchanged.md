@@ -1,6 +1,6 @@
 ---
 type: decision
-updated: 2026-10-07
+updated: 2026-10-08
 sources:
   - docs/agent/docker-locks.md ("krita5.xmlgui is deliberately unchanged")
   - docs/agent/extension-points.md (menu placement options)
@@ -14,7 +14,9 @@ related: []
 `.xmlgui` installed to `kritaplugins`, or a menu built in code.
 
 **Why.** The user keeps a locally customized `krita5.xmlgui` in their
-configuration. KXMLGUI prefers the local copy until the shipped file's
+configuration (since the settings location change, the profile under
+`%APPDATA%\Solstice`; `docs/agent/settings-location.md`). KXMLGUI prefers
+the local copy until the shipped file's
 `version` attribute increases. Shipping a change therefore requires a version
 bump, and that bump can discard the user's customizations. Recorded with the
 docker locks feature (2026-10).

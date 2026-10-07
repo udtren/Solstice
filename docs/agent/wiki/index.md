@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-07
+updated: 2026-10-08
 ---
 
 # Agent wiki
@@ -32,7 +32,9 @@ matches the task.
   - `queries/`: saved answers to questions that are likely to come up again.
 - **Frontmatter** on every page: `type`, `updated` (YYYY-MM-DD), `sources`
   (commits, `path:line` or symbols, documents, external URLs) and `related`
-  (other wiki pages). History pages carry `status` instead of `updated`.
+  (other wiki pages). History pages carry `status` instead of `updated`,
+  and no `related` (they are archives; the section index in
+  `docs/agent/gpu-engine.md` links them).
 - **Names:** lowercase-hyphenated file names; one topic per page; update a
   page instead of adding a near-duplicate.
 - **Evidence:** name the symbol or file a claim depends on, so a lint pass can

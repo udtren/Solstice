@@ -858,7 +858,9 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 
 ## Configuration and compatibility
 
-- kritarc (default group): `Solstice/GpuEngine` (bool, default false) and
+- kritarc (default group): `Solstice/GpuEngine` (bool; the embedded default
+  `krita/data/kritarc` sets true since 2026-10-07, the code fallback is
+  false) and
   `Solstice/GpuEngineConvertDocuments` (int: 0 Ask, 1 Convert, 2 Keep;
   default 0). See "Feature gate and user interface".
 - Environment `KRITA_GPU_PROJECTION=1` or `0` overrides `Solstice/GpuEngine`
