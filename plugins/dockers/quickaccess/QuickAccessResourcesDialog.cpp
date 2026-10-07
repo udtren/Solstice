@@ -6,6 +6,8 @@
 #include "QuickAccessResourcesDialog.h"
 
 #include <KisMainWindow.h>
+#include <KisResourceItemChooser.h>
+#include <KisResourceItemListView.h>
 #include <KisResourceModel.h>
 #include <KisResourceServerProvider.h>
 #include <KisViewManager.h>
@@ -13,6 +15,7 @@
 #include <kactioncollection.h>
 #include <kis_canvas2.h>
 #include <klocalizedstring.h>
+#include <widgets/kis_preset_chooser.h>
 
 #include <QAction>
 #include <QColorDialog>
@@ -23,8 +26,8 @@
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QItemSelectionModel>
 #include <QLineEdit>
-#include <QListWidget>
 #include <QPushButton>
 #include <QSet>
 #include <QSpinBox>
@@ -85,7 +88,7 @@ QuickAccessResourcesDialog::QuickAccessResourcesDialog(KisCanvas2 *canvas,
     m_tabs = new QTabWidget(this);
     m_actions = new QTableWidget(m_tabs);
     m_dockers = new QTableWidget(m_tabs);
-    m_brushes = new QListWidget(m_tabs);
+    m_brushes = new KisPresetChooser(m_tabs);
 
     for (QTableWidget *table : {m_actions, m_dockers}) {
         table->setColumnCount(ColumnCount);
@@ -110,13 +113,15 @@ QuickAccessResourcesDialog::QuickAccessResourcesDialog(KisCanvas2 *canvas,
         }
     }
 
-    m_brushes->setViewMode(QListView::IconMode);
-    m_brushes->setIconSize(QSize(64, 64));
-    m_brushes->setGridSize(QSize(94, 96));
-    m_brushes->setResizeMode(QListView::Adjust);
-    m_brushes->setMovement(QListView::Static);
-    m_brushes->setWordWrap(false);
-    m_brushes->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    // Brushes as in the Brush Presets docker: stroke previews with tags,
+    // search, engine and bundle filters and grouping. Several presets can be
+    // selected and added at once.
+    m_brushes->showTaggingBar(true);
+    m_brushes->enableDockerFilters();
+    m_brushes->setStrokePreviewMode(true);
+    KisResourceItemListView *brushView = m_brushes->itemChooser()->itemView();
+    brushView->setStrictSelectionMode(false);
+    brushView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     m_tabs->addTab(m_actions, i18nc("@title:tab", "Actions"));
     m_tabs->addTab(m_dockers, i18nc("@title:tab", "Dockers"));
@@ -140,8 +145,10 @@ QuickAccessResourcesDialog::QuickAccessResourcesDialog(KisCanvas2 *canvas,
     connect(addBrushes, &QPushButton::clicked, this, &QuickAccessResourcesDialog::addSelectedBrushes);
     connect(m_tabs, &QTabWidget::currentChanged, addBrushes, [this, addBrushes] {
         addBrushes->setVisible(m_tabs->currentIndex() == BrushesPage);
+        // The brush chooser has its own search field.
+        m_search->setVisible(m_tabs->currentIndex() != BrushesPage);
     });
-    connect(m_brushes, &QListWidget::itemDoubleClicked, this, [this] {
+    connect(brushView, &QAbstractItemView::doubleClicked, this, [this] {
         addSelectedBrushes();
     });
     connect(buttons, &QDialogButtonBox::accepted, this, [this] {
@@ -152,24 +159,7 @@ QuickAccessResourcesDialog::QuickAccessResourcesDialog(KisCanvas2 *canvas,
 
     populateActions();
     populateDockers();
-    populateBrushes();
     addBrushes->hide();
-}
-
-void QuickAccessResourcesDialog::populateBrushes()
-{
-    auto *model = KisResourceServerProvider::instance()->paintOpPresetServer()->resourceModel();
-    QSet<QString> names;
-    for (int row = 0; row < model->rowCount(); ++row) {
-        const KoResourceSP resource = model->resourceForIndex(model->index(row, KisAbstractResourceModel::Name));
-        if (!resource || names.contains(resource->name()))
-            continue;
-        names.insert(resource->name());
-        auto *item = new QListWidgetItem(QIcon(QPixmap::fromImage(resource->image())), resource->name(), m_brushes);
-        item->setData(IdentifierRole, resource->name());
-        item->setToolTip(resource->name());
-    }
-    m_brushes->sortItems(Qt::AscendingOrder);
 }
 
 void QuickAccessResourcesDialog::populateActions()
@@ -289,13 +279,8 @@ void QuickAccessResourcesDialog::populateTableRow(QTableWidget *table,
 void QuickAccessResourcesDialog::filterItems(const QString &text)
 {
     const QString query = text.trimmed();
-    if (m_tabs->currentIndex() == BrushesPage) {
-        for (int row = 0; row < m_brushes->count(); ++row) {
-            QListWidgetItem *item = m_brushes->item(row);
-            item->setHidden(!query.isEmpty() && !item->text().contains(query, Qt::CaseInsensitive));
-        }
+    if (m_tabs->currentIndex() == BrushesPage)
         return;
-    }
     QTableWidget *table = m_tabs->currentIndex() == ActionsPage ? m_actions : m_dockers;
     for (int row = 0; row < table->rowCount(); ++row) {
         const QTableWidgetItem *item = table->item(row, NameColumn);
@@ -309,8 +294,16 @@ void QuickAccessResourcesDialog::addSelectedBrushes()
 {
     if (m_tabs->currentIndex() != BrushesPage)
         return;
-    for (QListWidgetItem *item : m_brushes->selectedItems()) {
-        const QString name = item->data(IdentifierRole).toString();
+    KisResourceItemListView *view = m_brushes->itemChooser()->itemView();
+    QModelIndexList selected = view->selectionModel()->selectedIndexes();
+    // In the order shown.
+    std::sort(selected.begin(), selected.end(), [view](const QModelIndex &a, const QModelIndex &b) {
+        const QRect ra = view->visualRect(a);
+        const QRect rb = view->visualRect(b);
+        return ra.top() != rb.top() ? ra.top() < rb.top() : ra.left() < rb.left();
+    });
+    for (const QModelIndex &index : std::as_const(selected)) {
+        const QString name = index.data(Qt::UserRole + KisAbstractResourceModel::Name).toString();
         if (!name.isEmpty())
             Q_EMIT brushRequested(name);
     }

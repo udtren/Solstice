@@ -4,6 +4,7 @@
  */
 
 #include "QuickAccessGridEditDialog.h"
+#include "QuickAccessStrokePreviews.h"
 
 #include "QuickAccessLayoutEngine.h"
 
@@ -193,6 +194,28 @@ public:
         setCursor(Qt::SizeAllCursor);
         setMouseTracking(isResizable());
         configureAppearance(document);
+    }
+
+    bool isStrokePreview() const
+    {
+        return m_item.type == QuickAccess::ItemType::Brush
+            && m_item.payload.value(QStringLiteral("display")).toString() == QStringLiteral("stroke");
+    }
+
+    QSize strokePreviewSize() const
+    {
+        return QSize(m_item.columnSpan * CellSize + qMax(0, m_item.columnSpan - 1) * CellSpacing - 6, CellSize - 6);
+    }
+
+    /// Shows the stroke preview (an empty preview area until it is available).
+    void updateStrokePreview()
+    {
+        if (!isStrokePreview() || !m_dialog->m_strokePreviews)
+            return;
+        const QString name = m_item.payload.value(QStringLiteral("brush_name")).toString();
+        setIcon(QIcon(m_dialog->m_strokePreviews->pixmap(m_dialog->m_strokePreviews->ready(name) ? name : QString(),
+                                                         strokePreviewSize(),
+                                                         devicePixelRatioF())));
     }
 
     QString itemId() const
@@ -418,7 +441,12 @@ private:
         if (!configuredFontSize.isEmpty())
             fontSize = qBound(6, configuredFontSize.toInt(), 96);
 
-        if (m_item.type == QuickAccess::ItemType::Brush) {
+        if (isStrokePreview()) {
+            // As in the palette: the stroke preview over the item's cells.
+            setText(QString());
+            setIconSize(strokePreviewSize());
+            updateStrokePreview();
+        } else if (m_item.type == QuickAccess::ItemType::Brush) {
             const QString name = m_item.payload.value(QStringLiteral("brush_name")).toString();
             const auto resources =
                 KisResourceServerProvider::instance()->paintOpPresetServer()->resourceModel()->resourcesForName(name);
@@ -430,7 +458,8 @@ private:
             setIcon(QIcon(icon));
             setText(QString());
         }
-        setIconSize(QSize(CellSize - 6, CellSize - 6));
+        if (!isStrokePreview())
+            setIconSize(QSize(CellSize - 6, CellSize - 6));
 
         const bool selected = m_dialog->isSelected(m_tabIndex, m_item.id);
         const QColor effectiveBorder = selected ? QColor(QStringLiteral("#4fc3f7")) : border;
@@ -596,7 +625,27 @@ private:
 QuickAccessGridEditDialog::QuickAccessGridEditDialog(const QuickAccess::Document &document, QWidget *parent)
     : QDialog(parent)
     , m_document(document)
+    , m_strokePreviews(new QuickAccessStrokePreviews(this))
 {
+    QStringList strokeBrushes;
+    for (const QuickAccess::Tab &tab : std::as_const(m_document.tabs)) {
+        for (const QuickAccess::Grid &grid : tab.grids) {
+            for (const QuickAccess::Item &item : grid.items) {
+                if (item.type == QuickAccess::ItemType::Brush
+                    && item.payload.value(QStringLiteral("display")).toString() == QStringLiteral("stroke"))
+                    strokeBrushes << item.payload.value(QStringLiteral("brush_name")).toString();
+            }
+        }
+    }
+    m_strokePreviews->setNames(strokeBrushes);
+    connect(m_strokePreviews, &QuickAccessStrokePreviews::changed, this, [this]() {
+        for (QuickAccessGridCanvas *canvas : std::as_const(m_canvases)) {
+            for (QObject *child : canvas->children()) {
+                if (auto *button = dynamic_cast<QuickAccessGridItemButton *>(child))
+                    button->updateStrokePreview();
+            }
+        }
+    });
     setWindowTitle(i18nc("@title:window", "Grid Edit"));
     resize(850, 620);
     auto *layout = new QVBoxLayout(this);

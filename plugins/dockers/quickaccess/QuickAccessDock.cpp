@@ -4,6 +4,7 @@
  */
 
 #include "QuickAccessDock.h"
+#include "QuickAccessStrokePreviews.h"
 
 #include "QuickAccessGesture.h"
 #include "QuickAccessGridEditDialog.h"
@@ -33,6 +34,7 @@
 #include <QApplication>
 #include <QColor>
 #include <QColorDialog>
+#include <QComboBox>
 #include <QCursor>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -52,6 +54,7 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPushButton>
+#include <QRubberBand>
 #include <QScrollArea>
 #include <QShortcut>
 #include <QSizePolicy>
@@ -59,6 +62,7 @@
 #include <QStyleOptionButton>
 #include <QStylePainter>
 #include <QTabWidget>
+#include <QTimer>
 #include <QToolButton>
 #include <QUuid>
 #include <QVBoxLayout>
@@ -68,6 +72,50 @@
 namespace
 {
 constexpr int DefaultIconSize = 42;
+
+/// Brush item display: "stroke" (stroke preview) or "icon" (preset icon).
+/// Items saved before the option existed have no value and keep the icon.
+const QString BrushDisplayKey = QStringLiteral("display");
+const QString BrushDisplayStroke = QStringLiteral("stroke");
+const QString BrushDisplayIcon = QStringLiteral("icon");
+
+bool showsStrokePreview(const QuickAccess::Item &item)
+{
+    return item.type == QuickAccess::ItemType::Brush
+        && item.payload.value(BrushDisplayKey).toString() == BrushDisplayStroke;
+}
+
+/**
+ * Stroke preview brushes take two cells. A profile saved while they were
+ * still one cell wide loads with overlaps; each such brush is resized again,
+ * which pushes only the overlapping items aside. Returns whether anything
+ * changed.
+ */
+bool repairBrushSpans(QuickAccess::Document *document)
+{
+    bool changed = false;
+    for (QuickAccess::Tab &tab : document->tabs) {
+        for (QuickAccess::Grid &grid : tab.grids) {
+            const QuickAccess::LayoutEngine engine(grid.columns);
+            if (engine.validate(grid.items).isValid())
+                continue;
+            QStringList strokeBrushes;
+            for (const QuickAccess::Item &item : std::as_const(grid.items)) {
+                if (showsStrokePreview(item))
+                    strokeBrushes << item.id;
+            }
+            for (const QString &id : std::as_const(strokeBrushes)) {
+                const QuickAccess::LayoutResult result = engine.resizeItem(grid.items, id, 1, qMin(2, grid.columns));
+                if (result.isValid()) {
+                    grid.items = result.items;
+                    changed = true;
+                    break;
+                }
+            }
+        }
+    }
+    return changed;
+}
 constexpr int SeparatorEdgeMargin = 5;
 
 QPoint globalMousePosition(const QMouseEvent *event)
@@ -426,8 +474,10 @@ void upgradeLegacySettings(const QJsonObject &settings)
 QuickAccessDock::QuickAccessDock(QWidget *parent, bool enableGestures)
     : QDockWidget(i18nc("@title:window", "Quick Access Palette"), parent)
     , m_executor(new QuickAccess::ItemExecutor(this))
+    , m_strokePreviews(new QuickAccessStrokePreviews(this))
     , m_popupMode(!enableGestures)
 {
+    connect(m_strokePreviews, &QuickAccessStrokePreviews::changed, this, &QuickAccessDock::updateStrokePreviews);
     setObjectName(QStringLiteral("QuickAccessPalette"));
     auto *root = new QWidget(this);
     auto *layout = new QVBoxLayout(root);
@@ -752,6 +802,8 @@ void QuickAccessDock::loadProfile()
     QString error;
     if (repository.exists()) {
         if (repository.load(&m_document, &error)) {
+            if (repairBrushSpans(&m_document))
+                repository.save(m_document, &error);
             KConfigGroup config = KSharedConfig::openConfig()->group(QStringLiteral("QuickAccess"));
             if (config.readEntry("MigrationVersion", 0) < 2) {
                 QuickAccess::LegacyImportResult imported;
@@ -911,6 +963,7 @@ bool QuickAccessDock::saveProfile()
 void QuickAccessDock::rebuildUi()
 {
     m_rebuilding = true;
+    m_strokePreviewButtons.clear();
     while (m_tabs->count() > 0) {
         QWidget *page = m_tabs->widget(0);
         m_tabs->removeTab(0);
@@ -927,6 +980,23 @@ void QuickAccessDock::rebuildUi()
         m_tabs->setCurrentIndex(activeIndex);
     m_rebuilding = false;
     applyAppearanceSettings();
+
+    QStringList names;
+    for (const StrokePreviewButton &entry : std::as_const(m_strokePreviewButtons))
+        names << entry.name;
+    m_strokePreviews->setNames(names);
+    updateStrokePreviews();
+}
+
+void QuickAccessDock::updateStrokePreviews()
+{
+    for (StrokePreviewButton &entry : m_strokePreviewButtons) {
+        if (entry.shown || !entry.button || !m_strokePreviews->ready(entry.name))
+            continue;
+        entry.button->setIcon(
+            QIcon(m_strokePreviews->pixmap(entry.name, entry.size, entry.button->devicePixelRatioF())));
+        entry.shown = true;
+    }
 }
 
 QWidget *QuickAccessDock::createTabPage(const QuickAccess::Tab &tab)
@@ -993,6 +1063,7 @@ QWidget *QuickAccessDock::createItemWidget(const QuickAccess::Item &item)
                                  .arg(fontSize));
         if (!m_popupMode)
             attachItemMenu(label, item);
+        attachItemDrag(label, item);
         return label;
     }
     if (item.type == QuickAccess::ItemType::Separator) {
@@ -1005,6 +1076,7 @@ QWidget *QuickAccessDock::createItemWidget(const QuickAccess::Item &item)
         auto *separator = new QuickAccessSeparator(vertical, thickness, color, m_tabs);
         if (!m_popupMode)
             attachItemMenu(separator, item);
+        attachItemDrag(separator, item);
         return separator;
     }
 
@@ -1014,7 +1086,20 @@ QWidget *QuickAccessDock::createItemWidget(const QuickAccess::Item &item)
                                      : appearance.readEntry("DockerIconSize", DefaultIconSize);
     button->setMinimumSize(iconSize, iconSize);
 
-    if (item.type == QuickAccess::ItemType::Brush && m_canvas) {
+    if (showsStrokePreview(item)) {
+        // The stroke preview fills the item's cells (an empty preview area
+        // until it is available); the name is only in the tooltip.
+        const QString name = item.payload.value(QStringLiteral("brush_name")).toString();
+        const int spacing = 2;
+        const QSize cells(item.columnSpan * iconSize + (item.columnSpan - 1) * spacing,
+                          item.rowSpan * iconSize + (item.rowSpan - 1) * spacing);
+        const QSize previewSize = cells - QSize(8, 8);
+        button->setFullText(QString());
+        button->setToolTip(name);
+        button->setIcon(QIcon(m_strokePreviews->pixmap(QString(), previewSize, devicePixelRatioF())));
+        button->setIconSize(previewSize);
+        m_strokePreviewButtons.append({name, button, previewSize, false});
+    } else if (item.type == QuickAccess::ItemType::Brush && m_canvas) {
         const QString name = item.payload.value(QStringLiteral("brush_name")).toString();
         const auto resources =
             KisResourceServerProvider::instance()->paintOpPresetServer()->resourceModel()->resourcesForName(name);
@@ -1102,7 +1187,135 @@ QWidget *QuickAccessDock::createItemWidget(const QuickAccess::Item &item)
     });
     if (!m_popupMode)
         attachItemMenu(button, item);
+    attachItemDrag(button, item);
     return button;
+}
+
+namespace
+{
+/// Gap between palette cells; matches the grid layout in createTabPage().
+constexpr int GridCellSpacing = 2;
+} // namespace
+
+int QuickAccessDock::cellSize() const
+{
+    const KConfigGroup appearance = KSharedConfig::openConfig()->group(QStringLiteral("QuickAccess"));
+    return m_popupMode ? appearance.readEntry("PopupIconSize", DefaultIconSize)
+                       : appearance.readEntry("DockerIconSize", DefaultIconSize);
+}
+
+void QuickAccessDock::attachItemDrag(QWidget *widget, const QuickAccess::Item &item)
+{
+    widget->setProperty("quickaccess_item_id", item.id);
+    widget->installEventFilter(this);
+}
+
+QPoint QuickAccessDock::dragTarget(const QuickAccess::Item &item, const QPoint &globalPosition) const
+{
+    const QuickAccess::Grid *grid = const_cast<QuickAccessDock *>(this)->activeGrid();
+    const int step = cellSize() + GridCellSpacing;
+    const QPoint delta = globalPosition - m_dragStart;
+    const int row = qMax(0, item.row + qRound(delta.y() / double(step)));
+    const int column = qBound(0,
+                              item.column + qRound(delta.x() / double(step)),
+                              qMax(0, (grid ? grid->columns : 1) - item.columnSpan));
+    return QPoint(column, row);
+}
+
+void QuickAccessDock::cancelItemDrag()
+{
+    if (m_dragHighlight)
+        m_dragHighlight->deleteLater();
+    m_dragHighlight = nullptr;
+    m_dragItemId.clear();
+}
+
+bool QuickAccessDock::eventFilter(QObject *watched, QEvent *event)
+{
+    // Ctrl + left-drag moves an item to another cell of its grid, as in the
+    // original plugin. A plain click still activates the item; the Ctrl press
+    // is swallowed so the item does not fire. Any other button cancels.
+    auto *widget = qobject_cast<QWidget *>(watched);
+    const QString itemId = widget ? widget->property("quickaccess_item_id").toString() : QString();
+    if (itemId.isEmpty())
+        return QDockWidget::eventFilter(watched, event);
+    auto findItem = [this](const QString &id) -> const QuickAccess::Item * {
+        const QuickAccess::Grid *grid = activeGrid();
+        if (!grid)
+            return nullptr;
+        for (const QuickAccess::Item &item : grid->items) {
+            if (item.id == id)
+                return &item;
+        }
+        return nullptr;
+    };
+    switch (event->type()) {
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonDblClick: {
+        auto *mouse = static_cast<QMouseEvent *>(event);
+        if (!m_dragItemId.isEmpty()) {
+            cancelItemDrag();
+            return true;
+        }
+        if (mouse->button() != Qt::LeftButton || !(mouse->modifiers() & Qt::ControlModifier) || !findItem(itemId))
+            return false;
+        m_dragItemId = itemId;
+        m_dragStart = mouse->globalPosition().toPoint();
+        return true;
+    }
+    case QEvent::MouseMove: {
+        if (m_dragItemId.isEmpty())
+            return false;
+        const QuickAccess::Item *item = findItem(m_dragItemId);
+        QWidget *gridWidget = widget->parentWidget();
+        if (!item || !gridWidget)
+            return true;
+        const QPoint target = dragTarget(*item, static_cast<QMouseEvent *>(event)->globalPosition().toPoint());
+        if (!m_dragHighlight || m_dragHighlight->parentWidget() != gridWidget) {
+            if (m_dragHighlight)
+                m_dragHighlight->deleteLater();
+            m_dragHighlight = new QRubberBand(QRubberBand::Rectangle, gridWidget);
+        }
+        const int size = cellSize();
+        const int step = size + GridCellSpacing;
+        m_dragHighlight->setGeometry(target.x() * step,
+                                     target.y() * step,
+                                     item->columnSpan * size + (item->columnSpan - 1) * GridCellSpacing,
+                                     item->rowSpan * size + (item->rowSpan - 1) * GridCellSpacing);
+        m_dragHighlight->show();
+        return true;
+    }
+    case QEvent::MouseButtonRelease: {
+        if (m_dragItemId.isEmpty())
+            return false;
+        const QString id = m_dragItemId;
+        const QuickAccess::Item *item = findItem(id);
+        const QPoint target =
+            item ? dragTarget(*item, static_cast<QMouseEvent *>(event)->globalPosition().toPoint()) : QPoint();
+        const bool moved = item && (target.y() != item->row || target.x() != item->column);
+        cancelItemDrag();
+        if (moved) {
+            // Deferred: the move rebuilds the pages, deleting this widget
+            // while its release is still being delivered.
+            QTimer::singleShot(0, this, [this, id, target]() {
+                QuickAccess::Grid *grid = activeGrid();
+                if (!grid)
+                    return;
+                const QuickAccess::LayoutResult result =
+                    QuickAccess::LayoutEngine(grid->columns).moveItem(grid->items, id, target.y(), target.x());
+                if (!result.isValid())
+                    return;
+                grid->items = result.items;
+                saveProfile();
+                rebuildUi();
+            });
+        }
+        return true;
+    }
+    default:
+        break;
+    }
+    return QDockWidget::eventFilter(watched, event);
 }
 
 void QuickAccessDock::attachItemMenu(QWidget *widget, const QuickAccess::Item &item)
@@ -1114,16 +1327,16 @@ void QuickAccessDock::attachItemMenu(QWidget *widget, const QuickAccess::Item &i
         QAction *removeAction =
             menu.addAction(removeIcon.isEmpty() ? QIcon::fromTheme(QStringLiteral("edit-delete")) : QIcon(removeIcon),
                            i18nc("@action", "Remove"));
-        QAction *propertyAction = nullptr;
-        if (item.type != QuickAccess::ItemType::Brush) {
-            propertyAction =
-                menu.addAction(QIcon::fromTheme(QStringLiteral("document-properties")), i18nc("@action", "Property"));
-        }
+        QAction *propertyAction =
+            menu.addAction(QIcon::fromTheme(QStringLiteral("document-properties")), i18nc("@action", "Property"));
         QAction *selected = menu.exec(widget->mapToGlobal(position));
         if (selected == removeAction) {
             removeItem(item.id);
         } else if (selected == propertyAction) {
-            editItemProperties(item.id);
+            if (item.type == QuickAccess::ItemType::Brush)
+                editBrushProperties(item.id);
+            else
+                editItemProperties(item.id);
         }
     });
 }
@@ -1206,13 +1419,25 @@ void QuickAccessDock::addItem(QuickAccess::Item item)
     if (!grid)
         return;
 
-    int bottom = 0;
-    for (const QuickAccess::Item &existing : std::as_const(grid->items))
-        bottom = qMax(bottom, existing.bottom());
-    item.row = bottom;
-    item.column = 0;
     item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     item.normalize();
+    item.columnSpan = qMin(item.columnSpan, grid->columns);
+    const bool sequential = m_sequentialPlacement && m_sequentialGridId == grid->id;
+    if (sequential) {
+        // Fill the row left to right; wrap when the item no longer fits.
+        if (m_sequentialColumn + item.columnSpan > grid->columns) {
+            ++m_sequentialRow;
+            m_sequentialColumn = 0;
+        }
+        item.row = m_sequentialRow;
+        item.column = m_sequentialColumn;
+    } else {
+        int bottom = 0;
+        for (const QuickAccess::Item &existing : std::as_const(grid->items))
+            bottom = qMax(bottom, existing.bottom());
+        item.row = bottom;
+        item.column = 0;
+    }
 
     const QuickAccess::LayoutResult result = QuickAccess::LayoutEngine(grid->columns).addItem(grid->items, item);
     if (!result.isValid()) {
@@ -1222,6 +1447,19 @@ void QuickAccessDock::addItem(QuickAccess::Item item)
         return;
     }
     grid->items = result.items;
+    if (sequential) {
+        // Continue just right of where the item landed.
+        for (const QuickAccess::Item &placed : std::as_const(grid->items)) {
+            if (placed.id != item.id)
+                continue;
+            m_sequentialRow = placed.row;
+            m_sequentialColumn = placed.column + placed.columnSpan;
+            if (m_sequentialColumn >= grid->columns) {
+                m_sequentialRow = placed.row + placed.rowSpan;
+                m_sequentialColumn = 0;
+            }
+        }
+    }
     saveProfile();
     rebuildUi();
 }
@@ -1238,6 +1476,8 @@ void QuickAccessDock::addCurrentBrush()
     QuickAccess::Item item;
     item.type = QuickAccess::ItemType::Brush;
     item.payload.insert(QStringLiteral("brush_name"), preset->name());
+    item.payload.insert(BrushDisplayKey, BrushDisplayStroke);
+    item.columnSpan = qMin(2, activeGrid() ? activeGrid()->columns : 2);
     addItem(item);
 }
 
@@ -1375,10 +1615,23 @@ void QuickAccessDock::showResourcesDialog()
     if (!m_canvas)
         return;
     QuickAccessResourcesDialog dialog(m_canvas, m_document, this);
+    // Items added from the dialog fill the grid's last empty row from the left
+    // and wrap to the next row, instead of each starting a new row.
+    if (QuickAccess::Grid *grid = activeGrid()) {
+        int bottom = 0;
+        for (const QuickAccess::Item &existing : std::as_const(grid->items))
+            bottom = qMax(bottom, existing.bottom());
+        m_sequentialPlacement = true;
+        m_sequentialGridId = grid->id;
+        m_sequentialRow = bottom;
+        m_sequentialColumn = 0;
+    }
     connect(&dialog, &QuickAccessResourcesDialog::brushRequested, this, [this](const QString &name) {
         QuickAccess::Item item;
         item.type = QuickAccess::ItemType::Brush;
         item.payload.insert(QStringLiteral("brush_name"), name);
+        item.payload.insert(BrushDisplayKey, BrushDisplayStroke);
+        item.columnSpan = qMin(2, activeGrid() ? activeGrid()->columns : 2);
         addItem(item);
     });
     connect(&dialog, &QuickAccessResourcesDialog::actionRequested, this, [this](const QString &id) {
@@ -1410,6 +1663,7 @@ void QuickAccessDock::showResourcesDialog()
                 rebuildUi();
             });
     dialog.exec();
+    m_sequentialPlacement = false;
 }
 
 void QuickAccessDock::showGridEditDialog()
@@ -1803,6 +2057,65 @@ void QuickAccessDock::editItemProperties(const QString &itemId)
             item.payload.insert(QStringLiteral("icon_name"), iconEdit->text().trimmed());
         }
     }
+    saveProfile();
+    rebuildUi();
+}
+
+void QuickAccessDock::editBrushProperties(const QString &itemId)
+{
+    QuickAccess::Grid *grid = activeGrid();
+    if (!grid)
+        return;
+    auto itemIt = std::find_if(grid->items.begin(), grid->items.end(), [&itemId](const QuickAccess::Item &item) {
+        return item.id == itemId;
+    });
+    if (itemIt == grid->items.end() || itemIt->type != QuickAccess::ItemType::Brush)
+        return;
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(i18nc("@title:window", "Quick Access Item Property"));
+    dialog.setMinimumWidth(320);
+    auto *root = new QVBoxLayout(&dialog);
+    auto *form = new QFormLayout();
+    root->addLayout(form);
+    auto *nameLabel = new QLabel(itemIt->payload.value(QStringLiteral("brush_name")).toString(), &dialog);
+    form->addRow(i18nc("@label", "Brush:"), nameLabel);
+    auto *display = new QComboBox(&dialog);
+    display->addItem(i18nc("@item:inlistbox", "Stroke Preview"), BrushDisplayStroke);
+    display->addItem(i18nc("@item:inlistbox", "Icon"), BrushDisplayIcon);
+    const bool stroke = showsStrokePreview(*itemIt);
+    display->setCurrentIndex(stroke ? 0 : 1);
+    display->setToolTip(i18n("A stroke preview uses two cells; an icon uses one."));
+    form->addRow(i18nc("@label:listbox", "Display:"), display);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    root->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    const bool newStroke = display->currentData().toString() == BrushDisplayStroke;
+    if (newStroke == stroke)
+        return;
+    // A stroke preview takes two cells, an icon one; neighbours are pushed
+    // aside as when an item is resized in the grid editor.
+    const int columnSpan = newStroke ? qMin(2, grid->columns) : 1;
+    // The display decides the span when items are normalized, so it is set
+    // before resizing.
+    QList<QuickAccess::Item> items = grid->items;
+    for (QuickAccess::Item &item : items) {
+        if (item.id == itemId)
+            item.payload.insert(BrushDisplayKey, newStroke ? BrushDisplayStroke : BrushDisplayIcon);
+    }
+    const QuickAccess::LayoutResult result =
+        QuickAccess::LayoutEngine(grid->columns).resizeItem(items, itemId, 1, columnSpan);
+    if (!result.isValid()) {
+        QMessageBox::warning(this,
+                             i18nc("@title:window", "Quick Access Layout"),
+                             i18n("The item could not be resized in the active grid."));
+        return;
+    }
+    grid->items = result.items;
     saveProfile();
     rebuildUi();
 }

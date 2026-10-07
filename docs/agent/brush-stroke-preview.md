@@ -42,6 +42,11 @@ preset files and in the code, but this docker no longer displays it.
   control rows in narrow docks). Other chooser instances retain their existing
   responsive behavior. The regression test uses the actual popup wrapper and
   docker initialization order, then resizes and toggles the preview mode.
+- Quick Access (2026-10-07): its Resources dialog embeds a `KisPresetChooser`
+  in stroke preview mode with the docker filters, and its palette and Grid
+  Edit brush items use the cache through `QuickAccessStrokePreviews` (see
+  `quick-access.md`). The toolbar popup and
+  the Brush Editor list still show icons.
 - Grouping by engine or bundle (2026-10-07) is described in
   [`brush-preset-grouping.md`](brush-preset-grouping.md).
 - `KisPresetDockerFilters` adds two per-instance checkable dropdown menus:

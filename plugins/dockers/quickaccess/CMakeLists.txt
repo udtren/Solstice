@@ -20,6 +20,7 @@ set(KRITA_QUICKACCESS_DOCKER_SOURCES
     QuickAccessItemExecutor.cpp
     QuickAccessResourcesDialog.cpp
     QuickAccessSettingsDialog.cpp
+    QuickAccessStrokePreviews.cpp
 )
 
 kis_add_library(kritaquickaccessdocker MODULE ${KRITA_QUICKACCESS_DOCKER_SOURCES})

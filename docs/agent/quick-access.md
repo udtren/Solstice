@@ -69,15 +69,63 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
 
 - Grid width is fixed by configured column count and cell size. Resizing the
   docker must not reflow the grid.
+- Ctrl + left-drag moves an item in the active grid, as the original
+  `GridItemDragFilter` (`remaster/quick_access_palette/docker/drag_filter.py`):
+  `attachItemDrag()` installs the dock as event filter on every item widget
+  (property `quickaccess_item_id`), in the docker and the popup. The Ctrl
+  press is swallowed so the item does not fire; a `QRubberBand` on the grid
+  widget shows the target; the target cell is the press-to-cursor delta
+  rounded to cells of `cellSize() + 2` (the grid layout spacing), with the
+  column clamped to the grid. Release applies `LayoutEngine::moveItem()`
+  (pushing others) through a zero-delay timer, because the rebuild deletes
+  the widget receiving the release. Any other button cancels and is
+  swallowed.
+- While the Resources dialog is open, `addItem()` uses a sequential cursor
+  like the original `begin_sequential_placement()`: it starts at the row
+  below the last item, column 0; an item that no longer fits wraps to the
+  next row; after each add the cursor moves just right of where the item
+  landed. Header menu adds still start a new row below the last item.
 - Actions are stored and executed by internal action ID. UI labels use Krita's
   displayed action text or a configured custom name.
 - Item Property supports custom name, colors, font size, and an icon selected
   through the native OS file dialog.
+- Brush items have a `display` payload value (2026-10-07): `stroke` shows
+  the preset's stroke preview over the item's cells without text (name in
+  the tooltip); `icon` or no value shows the preset icon, so profiles saved
+  earlier keep their look. New brushes (Resources dialog, Add Current Brush)
+  get `stroke`.
+- `Item::normalize()` gives a `stroke` brush 1x2 cells and an icon brush 1x1;
+  `Grid::normalize()` and the layout engine (`clampBrush()`) limit a brush to
+  the grid's columns. The display value must be set before
+  `LayoutEngine::resizeItem()`, which normalizes the item (setting it
+  afterwards left the span at 1: user report). The brush context menu's
+  Property opens `editBrushProperties()`, which sets `display` and resizes
+  the item, pushing neighbours like the grid editor.
+- `loadProfile()` repairs overlaps left by brushes saved as `stroke` while
+  they were still one cell wide (`repairBrushSpans()`): it resizes one such
+  brush through the layout engine, which re-places only overlapping items,
+  and saves the profile.
+- Grid Edit draws `stroke` brushes with their stroke previews over their
+  span and icon brushes with the preset icon, through the dialog's own
+  `QuickAccessStrokePreviews`.
+- Stroke previews come from `KisBrushStrokePreviewCache` (see
+  `brush-stroke-preview.md`) through `QuickAccessStrokePreviews`: one cache
+  consumer per palette (docker and popup) and per Grid Edit dialog. It finds
+  the first preset with the item's name, requests its saved preview, and
+  draws it on the docker's `#303030` preview background, scaled to fit. The
+  palette requests all stroke brush items of its profile after each rebuild;
+  buttons get their preview when `previewReady()` reports it.
 - Header button background and font colors are independently configurable.
   Parent color dialogs to the containing window, not a styled swatch button, to
   prevent the swatch stylesheet from leaking into the dialog.
-- The Resource dialog uses editable tables for Actions and Dockers and a
-  thumbnail grid for Brushes.
+- The Resource dialog uses editable tables for Actions and Dockers. Its
+  Brushes tab is a `KisPresetChooser` set up like the Brush Presets docker
+  (`enableDockerFilters()`, `setStrokePreviewMode(true)`, tagging bar):
+  stroke previews, tags, search, engine and bundle filters and grouping.
+  The grouping choice is the docker's `Solstice/BrushPresetGrouping`
+  setting. Its item view allows extended selection (strict selection off);
+  Add Selected Brushes and double-click add the selected presets in display
+  order. The dialog's own search field is hidden on that tab.
 - Settings remain separated into General, Popup and HueSVC, Quick Adjust, and
   Temporary Brushes tabs.
 - Quick Brush Adjustments and the compact HueSVC popup share the configurable

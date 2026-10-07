@@ -61,7 +61,11 @@ void Item::normalize()
     rowSpan = qMax(1, rowSpan);
     columnSpan = qMax(1, columnSpan);
 
-    if (type == ItemType::Brush || type == ItemType::Color || type == ItemType::BrushSize) {
+    if (type == ItemType::Brush) {
+        // A brush shown as a stroke preview takes two cells, an icon one.
+        rowSpan = 1;
+        columnSpan = payload.value(QStringLiteral("display")).toString() == QStringLiteral("stroke") ? 2 : 1;
+    } else if (type == ItemType::Color || type == ItemType::BrushSize) {
         rowSpan = 1;
         columnSpan = 1;
     } else if (type == ItemType::BrushBlendMode) {
@@ -135,6 +139,8 @@ void Grid::normalize()
     columns = qMax(1, columns);
     for (Item &item : items) {
         item.normalize();
+        if (item.type == ItemType::Brush)
+            item.columnSpan = qMin(item.columnSpan, columns);
     }
 }
 

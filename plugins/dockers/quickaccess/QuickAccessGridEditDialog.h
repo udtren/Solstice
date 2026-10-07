@@ -19,6 +19,7 @@ class QTabWidget;
 class QToolButton;
 class QuickAccessGridCanvas;
 class QuickAccessGridItemButton;
+class QuickAccessStrokePreviews;
 
 class QuickAccessGridEditDialog : public QDialog
 {
@@ -59,6 +60,8 @@ private:
     QList<QuickAccessGridCanvas *> m_canvases;
     QVector<QSet<QString>> m_selection;
     QVector<QList<QList<QuickAccess::Item>>> m_history;
+    /// Stroke previews of brushes shown as stroke previews.
+    QuickAccessStrokePreviews *m_strokePreviews{nullptr};
 };
 
 #endif

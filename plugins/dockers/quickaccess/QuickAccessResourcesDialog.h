@@ -11,9 +11,9 @@
 #include <QDialog>
 
 class KisCanvas2;
+class KisPresetChooser;
 class QIcon;
 class QLineEdit;
-class QListWidget;
 class QPushButton;
 class QTableWidget;
 class QTabWidget;
@@ -40,7 +40,6 @@ private:
         IdentifierRole = Qt::UserRole + 1,
     };
 
-    void populateBrushes();
     void populateActions();
     void populateDockers();
     void populateTableRow(QTableWidget *table,
@@ -63,7 +62,9 @@ private:
     QuickAccess::Document m_document;
     QLineEdit *m_search{nullptr};
     QTabWidget *m_tabs{nullptr};
-    QListWidget *m_brushes{nullptr};
+    /// The Brush Presets docker's chooser: stroke previews, tags, search,
+    /// engine and bundle filters and grouping.
+    KisPresetChooser *m_brushes{nullptr};
     QTableWidget *m_actions{nullptr};
     QTableWidget *m_dockers{nullptr};
 };

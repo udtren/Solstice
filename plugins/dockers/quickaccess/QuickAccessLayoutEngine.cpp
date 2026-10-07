@@ -11,6 +11,16 @@
 namespace QuickAccess
 {
 
+namespace
+{
+/// A stroke preview brush takes two cells, or every column of a narrower grid.
+void clampBrush(Item &item, int columns)
+{
+    if (item.type == ItemType::Brush)
+        item.columnSpan = qMin(item.columnSpan, qMax(1, columns));
+}
+} // namespace
+
 LayoutEngine::LayoutEngine(int columns)
     : m_columns(qMax(1, columns))
 {
@@ -64,6 +74,7 @@ LayoutEngine::resizeItem(const QList<Item> &items, const QString &itemId, int ro
     resized.rowSpan = qMax(1, rowSpan);
     resized.columnSpan = qMax(1, columnSpan);
     resized.normalize();
+    clampBrush(resized, m_columns);
     return placeWithPush(rest, resized);
 }
 
@@ -106,12 +117,14 @@ LayoutResult LayoutEngine::placeWithPush(const QList<Item> &existingItems, Item 
     activeItem.row = qMax(0, activeItem.row);
     activeItem.column = qMax(0, activeItem.column);
     activeItem.normalize();
+    clampBrush(activeItem, m_columns);
     QList<Item> placed{activeItem};
     if (activeItem.columnSpan <= m_columns) {
         for (Item item : stableOrder(existingItems)) {
             item.row = qMax(0, item.row);
             item.column = qMax(0, item.column);
             item.normalize();
+            clampBrush(item, m_columns);
             if (item.columnSpan <= m_columns && needsReposition(item, placed)) {
                 item = firstFreePosition(item, placed);
             }

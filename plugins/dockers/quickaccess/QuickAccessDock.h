@@ -21,6 +21,9 @@ class QTabWidget;
 class QToolButton;
 class QWidget;
 class QuickAccessGestureController;
+class QuickAccessStrokePreviews;
+class QPushButton;
+class QRubberBand;
 
 namespace QuickAccess
 {
@@ -41,6 +44,10 @@ public:
     KisCanvas2 *canvas() const;
     void reloadGestureSettings();
 
+protected:
+    /// Ctrl + left-drag on an item moves it in its grid (see attachItemDrag()).
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private Q_SLOTS:
     void slotCurrentTabChanged(int index);
 
@@ -54,6 +61,12 @@ private:
     QWidget *createTabPage(const QuickAccess::Tab &tab);
     QWidget *createItemWidget(const QuickAccess::Item &item);
     void attachItemMenu(QWidget *widget, const QuickAccess::Item &item);
+    /// Ctrl + left-drag moves the item without the Grid Edit dialog.
+    void attachItemDrag(QWidget *widget, const QuickAccess::Item &item);
+    /// The active grid cell (row, column) a Ctrl-drag of @p item points at.
+    QPoint dragTarget(const QuickAccess::Item &item, const QPoint &globalPosition) const;
+    void cancelItemDrag();
+    int cellSize() const;
     QString itemText(const QuickAccess::Item &item) const;
     void activateItem(const QuickAccess::Item &item);
     QuickAccess::Tab *activeTab();
@@ -73,6 +86,10 @@ private:
     void showSettingsDialog();
     void applyAppearanceSettings();
     void editItemProperties(const QString &itemId);
+    /// Brush items: choose the stroke preview or the preset icon.
+    void editBrushProperties(const QString &itemId);
+    /// Shows stroke previews that became available on brush buttons.
+    void updateStrokePreviews();
     void removeItem(const QString &itemId);
     void showPalettePopup();
     void showColorPopup();
@@ -93,6 +110,25 @@ private:
     QPointer<QuickAccessDock> m_palettePopup;
     QPointer<QWidget> m_colorPopup;
     QPointer<QToolButton> m_popupPinButton;
+    // Brush buttons showing stroke previews: preset name, button, preview size.
+    struct StrokePreviewButton {
+        QString name;
+        QPointer<QPushButton> button;
+        QSize size;
+        bool shown{false};
+    };
+    QuickAccessStrokePreviews *m_strokePreviews{nullptr};
+    // Ctrl + left-drag of an item: its id, the press position, the target frame.
+    QString m_dragItemId;
+    QPoint m_dragStart;
+    QPointer<QRubberBand> m_dragHighlight;
+    // While the Resources dialog is open, added items fill the grid's last
+    // empty row from the left and wrap (as the original plugin does).
+    bool m_sequentialPlacement{false};
+    QString m_sequentialGridId;
+    int m_sequentialRow{0};
+    int m_sequentialColumn{0};
+    QList<StrokePreviewButton> m_strokePreviewButtons;
     bool m_rebuilding{false};
     bool m_popupMode{false};
     bool m_popupPinned{false};

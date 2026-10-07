@@ -66,6 +66,39 @@ void QuickAccessCoreTest::itemNormalization()
     QCOMPARE(brush.rowSpan, 1);
     QCOMPARE(brush.columnSpan, 1);
 
+    // A brush shown as a stroke preview takes two cells.
+    Item strokeBrush = makeItem(QStringLiteral("stroke"), 0, 0, 1);
+    strokeBrush.type = ItemType::Brush;
+    strokeBrush.payload.insert(QStringLiteral("display"), QStringLiteral("stroke"));
+    strokeBrush.normalize();
+    QCOMPARE(strokeBrush.rowSpan, 1);
+    QCOMPARE(strokeBrush.columnSpan, 2);
+    strokeBrush.payload.insert(QStringLiteral("display"), QStringLiteral("icon"));
+    strokeBrush.normalize();
+    QCOMPARE(strokeBrush.columnSpan, 1);
+
+    // Resizing to a stroke preview pushes the neighbour; a one-column grid
+    // keeps the brush in one cell.
+    Item wide = makeItem(QStringLiteral("wide"), 0, 0, 1);
+    wide.type = ItemType::Brush;
+    Item neighbour = makeItem(QStringLiteral("neighbour"), 0, 1, 1);
+    neighbour.type = ItemType::Brush;
+    wide.payload.insert(QStringLiteral("display"), QStringLiteral("stroke"));
+    const LayoutResult resized = LayoutEngine(4).resizeItem({wide, neighbour}, QStringLiteral("wide"), 1, 2);
+    QVERIFY(resized.isValid());
+    for (const Item &item : resized.items) {
+        if (item.id == QStringLiteral("wide"))
+            QCOMPARE(item.columnSpan, 2);
+        else
+            QVERIFY(item.column >= 2 || item.row > 0);
+    }
+    Grid narrow;
+    narrow.columns = 1;
+    narrow.items = {wide};
+    narrow.normalize();
+    QCOMPARE(narrow.items.first().columnSpan, 1);
+    QVERIFY(LayoutEngine(1).validate(narrow.items).isValid());
+
     Item separator = makeItem(QStringLiteral("separator"), 0, 0, 4);
     separator.type = ItemType::Separator;
     separator.rowSpan = 3;
