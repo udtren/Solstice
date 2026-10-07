@@ -224,38 +224,20 @@ void KisSplashScreen::displayLinks(bool show)
             lblLinksText << i18n(
                 "<p><a href=\"https://github.com/udtren/Solstice\"><span style=\" text-decoration: underline; "
                 "color:%1;\">Solstice Website</span></a></p>",
-                color)
-                         << i18n(
-                                "<p><a href=\"https://krita.org/support-us/\"><span style=\" text-decoration: "
-                                "underline; color:%1;\">Support Upstream Krita</span></a></p>",
-                                color);
+                color);
 #ifdef Q_OS_MACOS
         }
 #endif
+        // Solstice: the upstream Krita links (support, manual, community,
+        // scripting) are not shown; the documentation is Solstice's own.
         lblLinksText << i18n(
-            "<p><a href=\"https://docs.krita.org/en/user_manual/getting_started.html\"><span style=\" text-decoration: "
-            "underline; color:%1;\">Getting Started</span></a></p>",
-            color)
-                     << i18n(
-                            "<p><a href=\"https://docs.krita.org/\"><span style=\" text-decoration: underline; "
-                            "color:%1;\">Manual</span></a></p>",
-                            color)
-                     << "</td><td>" << i18n("<p><span style=\" color:%1;\"><b>Coding Solstice</b></span></p>", color)
-                     << i18n(
-                            "<p><a href=\"https://krita-artists.org\"><span style=\" text-decoration: underline; "
-                            "color:%1;\">User Community</span></a></p>",
-                            color)
+            "<p><a href=\"https://github.com/udtren/Solstice/tree/krita-sol-gpu/docs\"><span style=\" "
+            "text-decoration: underline; color:%1;\">Documentation</span></a></p>",
+            color) << "</td><td>"
+                     << i18n("<p><span style=\" color:%1;\"><b>Coding Solstice</b></span></p>", color)
                      << i18n(
                             "<p><a href=\"https://github.com/udtren/Solstice\"><span style=\" text-decoration: "
                             "underline; color:%1;\">Source Code</span></a></p>",
-                            color)
-                     << i18n(
-                            "<p><a href=\"https://api.kde.org/krita/html/classKrita.html\"><span style=\" "
-                            "text-decoration: underline; color:%1;\">Scripting API</span></a></p>",
-                            color)
-                     << i18n(
-                            "<p><a href=\"https://scripting.krita.org/lessons/introduction\"><span style=\" "
-                            "text-decoration: underline; color:%1;\">Scripting School</span></a></p>",
                             color)
                      << "</td></tr></table></body>"
                      << "</html>";

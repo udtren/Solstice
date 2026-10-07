@@ -30,8 +30,9 @@ rendering still need platform verification. No packaging identity was renamed.
 the solid fill is used. Restore the correct artist credit with final artwork.
 Original artwork remains available in Git history. The empty seasonal splash
 file has no dimensions and is unchanged; its code path remains disabled.
-Third-party sponsor artwork, upstream links, and contributor attributions are
-unchanged. Template/store-screenshot audits remain future work, not completed
+Third-party sponsor artwork, upstream links, and contributor attributions were
+unchanged by that pass (the About dialog was trimmed later, on 2026-10-07; see
+"In-application branded visuals"). Template/store-screenshot audits remain future work, not completed
 by this mechanical image replacement.
 
 The Windows build embeds Next's SVGZ and splash QRC in `krita.dll` and
@@ -140,8 +141,18 @@ gray placeholders do not complete them.
 - [ ] Audit `support-krita` and other donation/community icons on the Welcome page.
 - [ ] Keep upstream Krita links visually identified as upstream rather than presenting
       them as Solstice services.
-- [ ] Review the About dialog sponsor artwork and decide whether to retain it as an
-      explicitly labelled upstream Krita section.
+- [x] Review the About dialog sponsor artwork and decide whether to retain it as an
+      explicitly labelled upstream Krita section. Decided 2026-10-07 (user): the
+      About dialog hides Krita-related items.
+      - `KisAboutApplication` deletes the Authors (upstream developers),
+        Translators (generic KDE text), Sponsors (upstream fund) and Also Thanks To
+        (upstream credits) tabs; their resources (`developers.txt`, `credits.txt`,
+        sponsor images) are unchanged.
+      - About, License and Third-party libraries remain. The License tab keeps
+        the attribution to Krita and its contributors, and the GPL text.
+      - `KisSplashScreen::displayLinks()` (About tab and splash with links) shows
+        Solstice Website, Documentation (`docs/` on GitHub) and Source Code; the
+        krita.org support, manual, community and scripting links are gone.
 - [ ] Search all embedded QRC resources for Krita wordmarks, logos, mascot artwork, and
       screenshots containing the old interface name.
 - [ ] Review welcome-page banners under `share/krita/donation/`; the internal path may

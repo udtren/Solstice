@@ -4,15 +4,17 @@ User guide: [`../docker-locks.md`](../docker-locks.md).
 
 Added 2026-10-07 at the user's request, modelled on Clip Studio Paint's
 "fix palette dock width / height / arrangement" options.
-The user checked all three options in the application (2026-10-07).
+The user checked all three options in the application (2026-10-07). The
+user then had the third, floating prevention, removed the same day as not
+needed (see "Removed: floating prevention").
 
 ## Locations
 
 | Part | Location |
 | --- | --- |
 | Menu actions | `KisMainWindow` constructor, appended to `d->dockWidgetMenu` (Settings → Dockers) after the docker list and a separator. Plain `QAction`s, not registered in `kritamenu.action`. |
-| Settings | `kritarc` keys `Solstice/LockDockedDockerWidths`, `Solstice/LockDockedDockerHeights`, `Solstice/PreventDockedDockerFloating` (all default `false`), read and written through `KisConfig`. |
-| Apply | `KisMainWindow::updateSolsticeDockLocks()`, `slotSolsticeDockLocksToggled()`, `watchSolsticeDockLocks()`, `applySolsticeNoFloat()` |
+| Settings | `kritarc` keys `Solstice/LockDockedDockerWidths`, `Solstice/LockDockedDockerHeights` (default `false`), read and written through `KisConfig`. |
+| Apply | `KisMainWindow::updateSolsticeDockLocks()`, `slotSolsticeDockLocksToggled()` |
 | Separator lock | `KisMainWindow::event()`, `solsticeSeparatorLocked()`, `resetSolsticeSeparatorCursor()` |
 
 `krita5.xmlgui` is deliberately unchanged: a change requires bumping
@@ -52,27 +54,29 @@ Lifetime rules (a first version crashed at startup):
 - The synthetic cursor reset in `updateSolsticeDockLocks()` runs only for a
   visible window.
 - The destructor disconnects the dockers' signals from the window before
-  `delete d`: the dockers are destroyed later by the QWidget base, and the
-  `topLevelChanged()`/`featuresChanged()` lambdas read `d`.
+  `delete d`: the dockers are destroyed later by the QWidget base. It was
+  added for the floating prevention's lambdas, which read `d`, and is kept
+  for the remaining docker connections.
 
-## Floating prevention
+## Removed: floating prevention
 
-`applySolsticeNoFloat()` removes `QDockWidget::DockWidgetFloatable` from
-docked dockers and marks them with the dynamic property `solsticeNoFloat`;
-when the option is off it restores the feature only on dockers it marked.
-While the option is on, floating dockers are left as they are: dragging a
-docked docker unplugs it into a temporary floating window and emits
-`topLevelChanged(true)`. A first version restored the feature there, and a
-drop outside the dock areas then left the docker floating (user report);
-without the feature, Qt returns the docker to its place. Qt then neither floats the docker by dragging nor
-by double-click, and `KoDockWidgetTitleBar` hides its Float button through
-`featuresChanged()`. Movable stays, so dockers can still be re-docked.
+The third option, **Prevent Docked Dockers from Floating**, was removed on
+2026-10-07 at the user's request. Its implementation:
 
-Each docker is connected once (`solsticeDockLocksWatched`) to
-`topLevelChanged()` and `featuresChanged()`, so docking a floating docker,
-and unlocking a docker locked from its title bar, re-apply the rule. Dockers
-locked from the title bar (`Locked` property, or no features) are skipped:
-`KoDockWidgetTitleBar::setLocked()` saves and restores the features itself.
+- `applySolsticeNoFloat()` removed `QDockWidget::DockWidgetFloatable` from
+  docked dockers, marked by the property `solsticeNoFloat`.
+- `watchSolsticeDockLocks()` re-applied the rule on `topLevelChanged()` and
+  `featuresChanged()`.
+
+It is in Git history before the removal commit. Pitfall recorded there: the
+feature must not be restored on `topLevelChanged(true)`. Dragging unplugs a
+docker into a temporary floating window, and restoring the feature let the
+drop leave it floating.
+
+Dock widget features are not saved in the window state, so dockers start
+floatable again after a restart. The `kritarc` key
+`Solstice/PreventDockedDockerFloating` is no longer read; stale values are
+harmless.
 
 The options are application-wide: toggling one in a window writes the
 settings and calls `updateSolsticeDockLocks()` on every main window from
@@ -84,12 +88,10 @@ settings and calls `updateSolsticeDockLocks()` on every main window from
 - Width lock: dock area edges and side-by-side separators cannot be dragged,
   and show no resize cursor; stacked separators still can (and vice versa
   for the height lock); both off restores dragging and cursors.
-- Floating prevention: the Float button disappears on docked dockers;
-  dragging a title outside the dock areas and double-clicking it do not
-  float; re-docking into another area or a tab group still works; already
-  floating dockers stay floating and lose the ability once docked; turning
-  the option off restores floating.
-- Title bar lock: lock and unlock a docker with the option on and off; the
+- Floating: the Dockers submenu shows only the two lock options; dockers
+  float by dragging, double-clicking or the Float button, with the locks on
+  or off.
+- Title bar lock: lock and unlock a docker with the locks on and off; the
   docker's lock state and Float button stay correct.
 - Workspaces: loading a workspace with floating dockers still floats them.
 

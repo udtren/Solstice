@@ -30,7 +30,7 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 - **[Puppet Warp](docs/puppet-warp.md)**: pose and reshape artwork with movable
   and rotatable pins in the Transform Tool.
 - **[Docker locks](docs/docker-locks.md)**: lock the widths and heights of
-  docked dockers and keep them from floating.
+  docked dockers.
 - **[Overview live update](docs/overview-live-update.md)**: the Overview
   docker follows the canvas while painting.
 - **[Solstice interface](docs/ui-modernization.md)**: the bundled Cantarell UI

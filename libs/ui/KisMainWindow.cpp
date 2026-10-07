@@ -281,10 +281,8 @@ public:
     // Solstice docker locks (docs/agent/docker-locks.md)
     QAction *lockDockWidths{nullptr};
     QAction *lockDockHeights{nullptr};
-    QAction *preventDockFloating{nullptr};
     bool dockWidthsLocked{false};
     bool dockHeightsLocked{false};
-    bool dockFloatingPrevented{false};
     KisAction *resetConfigurations {nullptr};
     KisAction *toggleDockerTitleBars {nullptr};
 #ifdef Q_OS_ANDROID
@@ -471,8 +469,7 @@ KisMainWindow::KisMainWindow(QUuid uuid)
     d->dockWidgetMenu->addSeparator();
     d->lockDockWidths = new QAction(i18nc("@action:inmenu", "Lock Docked Docker Widths"), this);
     d->lockDockHeights = new QAction(i18nc("@action:inmenu", "Lock Docked Docker Heights"), this);
-    d->preventDockFloating = new QAction(i18nc("@action:inmenu", "Prevent Docked Dockers from Floating"), this);
-    for (QAction *lockAction : {d->lockDockWidths, d->lockDockHeights, d->preventDockFloating}) {
+    for (QAction *lockAction : {d->lockDockWidths, d->lockDockHeights}) {
         lockAction->setCheckable(true);
         d->dockWidgetMenu->addAction(lockAction);
         connect(lockAction, SIGNAL(toggled(bool)), SLOT(slotSolsticeDockLocksToggled()));
@@ -738,8 +735,8 @@ KisMainWindow::KisMainWindow(QUuid uuid)
 
 KisMainWindow::~KisMainWindow()
 {
-    // Solstice docker locks: the dockers outlive d (they are destroyed with
-    // the QWidget base), so their signals must not reach this window.
+    // The dockers outlive d (they are destroyed with the QWidget base), so
+    // their signals must not reach this window.
     Q_FOREACH (QDockWidget *dock, dockWidgets()) {
         disconnect(dock, nullptr, this, nullptr);
     }
@@ -2819,7 +2816,6 @@ QDockWidget* KisMainWindow::createDockWidget(KoDockFactoryBase* factory)
     dockWidget->setAttribute(Qt::WA_MacSmallSize, true);
 #endif
     dockWidget->setFont(KisUiFont::dockFont());
-    watchSolsticeDockLocks(dockWidget);
 
     connect(dockWidget, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)), this, SLOT(forceDockTabFonts()));
 
@@ -2831,20 +2827,14 @@ void KisMainWindow::updateSolsticeDockLocks()
     KisConfig cfg(true);
     d->dockWidthsLocked = cfg.readEntry<bool>("Solstice/LockDockedDockerWidths", false);
     d->dockHeightsLocked = cfg.readEntry<bool>("Solstice/LockDockedDockerHeights", false);
-    d->dockFloatingPrevented = cfg.readEntry<bool>("Solstice/PreventDockedDockerFloating", false);
 
     const std::pair<QAction *, bool> states[] = {{d->lockDockWidths, d->dockWidthsLocked},
-                                                 {d->lockDockHeights, d->dockHeightsLocked},
-                                                 {d->preventDockFloating, d->dockFloatingPrevented}};
+                                                 {d->lockDockHeights, d->dockHeightsLocked}};
     for (const auto &state : states) {
         if (state.first) {
             QSignalBlocker blocker(state.first);
             state.first->setChecked(state.second);
         }
-    }
-    Q_FOREACH (QDockWidget *dock, dockWidgets()) {
-        watchSolsticeDockLocks(dock);
-        applySolsticeNoFloat(dock);
     }
     if (isVisible() && !d->dockWidthsLocked && !d->dockHeightsLocked) {
         resetSolsticeSeparatorCursor();
@@ -2856,51 +2846,10 @@ void KisMainWindow::slotSolsticeDockLocksToggled()
     KisConfig cfg(false);
     cfg.writeEntry<bool>("Solstice/LockDockedDockerWidths", d->lockDockWidths->isChecked());
     cfg.writeEntry<bool>("Solstice/LockDockedDockerHeights", d->lockDockHeights->isChecked());
-    cfg.writeEntry<bool>("Solstice/PreventDockedDockerFloating", d->preventDockFloating->isChecked());
     // The settings are application-wide: every window follows them.
     Q_FOREACH (QPointer<KisMainWindow> window, KisPart::instance()->mainWindows()) {
         if (window) {
             window->updateSolsticeDockLocks();
-        }
-    }
-}
-
-void KisMainWindow::watchSolsticeDockLocks(QDockWidget *dock)
-{
-    if (dock->property("solsticeDockLocksWatched").toBool()) {
-        return;
-    }
-    dock->setProperty("solsticeDockLocksWatched", true);
-    // Docking, undocking and the title bar lock all change what applies.
-    connect(dock, &QDockWidget::topLevelChanged, this, [this, dock]() {
-        applySolsticeNoFloat(dock);
-    });
-    connect(dock, &QDockWidget::featuresChanged, this, [this, dock]() {
-        applySolsticeNoFloat(dock);
-    });
-}
-
-void KisMainWindow::applySolsticeNoFloat(QDockWidget *dock)
-{
-    // A docker locked from its title bar has no features; the title bar
-    // restores them on unlock, and featuresChanged() brings us back here.
-    if (dock->property("Locked").toBool() || dock->features() == QDockWidget::NoDockWidgetFeatures) {
-        return;
-    }
-    const bool floatable = dock->features().testFlag(QDockWidget::DockWidgetFloatable);
-    if (d->dockFloatingPrevented) {
-        // Docked dockers lose the feature. Floating ones keep what they have:
-        // dragging a docked docker unplugs it into a temporary floating
-        // window (topLevelChanged(true)), and restoring the feature then
-        // let the drop make it float.
-        if (floatable && !dock->isFloating()) {
-            dock->setProperty("solsticeNoFloat", true);
-            dock->setFeatures(dock->features() & ~QDockWidget::DockWidgetFloatable);
-        }
-    } else if (dock->property("solsticeNoFloat").toBool()) {
-        dock->setProperty("solsticeNoFloat", false);
-        if (!floatable) {
-            dock->setFeatures(dock->features() | QDockWidget::DockWidgetFloatable);
         }
     }
 }

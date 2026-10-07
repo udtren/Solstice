@@ -1,8 +1,7 @@
 # Docker locks
 
-Docker locks keep the docked dockers where they are while you work, similar
-to Clip Studio Paint's options for fixing the palette dock width, height and
-arrangement.
+Docker locks keep the sizes of docked dockers while you work, similar to Clip
+Studio Paint's options for fixing the palette dock width and height.
 
 ## Options
 
@@ -14,7 +13,6 @@ remembered between sessions:
 | --- | --- |
 | **Lock Docked Docker Widths** | The separators that change widths (between the dock areas and the canvas, and between dockers side by side) can no longer be dragged. |
 | **Lock Docked Docker Heights** | The separators that change heights (between dockers stacked in a column, and between the top or bottom dock area and the canvas) can no longer be dragged. |
-| **Prevent Docked Dockers from Floating** | Docked dockers cannot be torn off: their Float button is hidden, and dragging or double-clicking the title does not make them float. |
 
 While a lock is on, the resize cursor no longer appears over the locked
 separators.
@@ -23,13 +21,11 @@ separators.
 
 - The locks only stop dragging. Resizing the main window, showing or hiding a
   docker, or loading a workspace can still change the dockers' sizes.
-- Docked dockers can still be dragged to another dock area or into a tab
-  group. With **Prevent Docked Dockers from Floating**, a docker dropped
-  outside a dock area returns to its place instead of floating.
-- Dockers that are already floating stay floating and can be docked; once
-  docked, they follow the option.
+- Docked dockers can still be dragged to another dock area, into a tab
+  group, or out of the dock areas to float.
 - The separators inside a floating group of tabbed dockers are not locked.
-- A docker locked with its own title bar lock button keeps that lock; the
-  options apply again when it is unlocked.
+- A docker locked with its own title bar lock button keeps that lock.
+- An earlier test version also had **Prevent Docked Dockers from Floating**.
+  It was removed on 2026-10-07; dockers can float again after a restart.
 
 Agent-facing notes are in [`agent/docker-locks.md`](agent/docker-locks.md).

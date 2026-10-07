@@ -456,8 +456,6 @@ private Q_SLOTS:
     void slotSolsticeDockLocksToggled();
 
 private:
-    void applySolsticeNoFloat(QDockWidget *dock);
-    void watchSolsticeDockLocks(QDockWidget *dock);
     bool solsticeSeparatorLocked() const;
     void resetSolsticeSeparatorCursor();
 

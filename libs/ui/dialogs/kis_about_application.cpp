@@ -43,93 +43,12 @@ KisAboutApplication::KisAboutApplication(QWidget *parent)
 
     wdgTab->aboutTab->layout()->addWidget(splash);
 
-    QString authors = i18n(
-        "<html>"
-        "<head/>"
-        "<body>"
-        "<h1 align=\"center\">Upstream Krita Developers</h1></p>"
-        "<p>");
-
-    QFile fileDevelopers(":/developers.txt");
-    Q_ASSERT(fileDevelopers.exists());
-    if (fileDevelopers.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream developersText(&fileDevelopers);
-        KisPortingUtils::setUtf8OnStream(developersText);
-        authors.append(developersText.readAll().split("\n", Qt::SkipEmptyParts).join(", "));
+    // Solstice: the upstream Krita authors, translators, sponsors and credits
+    // tabs are removed (docs/agent/solstice-visual-branding-todo.md); the License tab keeps the
+    // attribution to Krita and its contributors.
+    for (QWidget *tab : {wdgTab->authorsTab, wdgTab->translatorsTab, wdgTab->kickstarterTab, wdgTab->creditsTab}) {
+        delete tab; // also removes its tab
     }
-    authors.append(".</p></body></html>");
-    wdgTab->lblAuthors->setText(authors);
-
-    // Translators
-    // TODO: move to KisApplication after string freeze is lifted
-    KAboutData aboutData(KAboutData::applicationData());
-    if (aboutData.translators().isEmpty()) {
-        aboutData.setTranslator(i18nc("NAME OF TRANSLATORS", "Your names"),
-                                i18nc("EMAIL OF TRANSLATORS", "Your emails"));
-    }
-
-    QString translatorHtml = i18n(
-        "<html>"
-        "<head/>"
-        "<body>"
-        "<h1 align=\"center\"><b>Translators</b></h1>"
-        "<p><ul>");
-
-    Q_FOREACH (const KAboutPerson &person, aboutData.translators()) {
-        translatorHtml.append(QString("<li>%1</li>").arg(person.name()));
-    }
-
-    translatorHtml.append("<ul></p>");
-    translatorHtml.append(
-        i18n("<p>KDE is translated into many languages thanks to the work of the "
-             "translation teams all over the world.</p><p>For more information on KDE "
-             "internationalization visit <a href=\"http://l10n.kde.org\">http://l10n."
-             "kde.org</a></p>"));
-    translatorHtml.append("</body></html>");
-
-    wdgTab->lblTranslators->setText(translatorHtml);
-
-    QString sponsors = i18n(
-        "<html><head/><body>"
-        "<h1 align=\"center\">Upstream Krita Development Fund</h1>"
-        "<p align=\"center\"> <a href=\"https://intel.com\"><img src=\":/intel.png\"></a> "
-        "<h2 align=\"center\">One Time Sponsors</h2>"
-        "<p align=\"center\"> <a href=\"https://www.unrealengine.com/en-US/megagrants\"><img src=\":/epic.png\"></a> "
-        "<p align=\"center\"> <a href=\"http://brokenrul.es/\"><img src=\":/broken_rules.png\"></a> "
-        "<p align=\"center\"> <a href=\"https://game-chuck.com/\"><img src=\":/gamechuck.png\"></a> "
-        "<p align=\"center\"> <a href=\"https://www.fosshub.com/Krita.html\"><img src=\":/fosshub.png\"></a> "
-        "<p align=\"center\"> <a href=\"http://www.asifa-hollywood.org/\"><img src=\":/asifa.png\"></a> "
-        "</body></html>");
-    wdgTab->lblKickstarter->setText(sponsors);
-
-    QString credits = i18n(
-        "<html>"
-        "<head/>"
-        "<body>"
-        "<h1 align=\"center\">Thanks To</h1>"
-        "<p>");
-
-    QFile fileCredits(":/credits.txt");
-    Q_ASSERT(fileCredits.exists());
-    if (fileCredits.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream creditsText(&fileCredits);
-        KisPortingUtils::setUtf8OnStream(creditsText);
-
-        Q_FOREACH (const QString &credit, creditsText.readAll().split('\n', Qt::SkipEmptyParts)) {
-            if (credit.contains(":")) {
-                QList<QString> creditSplit = credit.split(':');
-                credits.append(creditSplit.at(0));
-                credits.append(" (<i>" + creditSplit.at(1) + "</i>)");
-                credits.append(", ");
-            }
-        }
-        credits.chop(2);
-    }
-    credits.append(
-        i18n(".</p><p><i>For supporting upstream Krita development with advice, icons, brush sets and "
-             "more.</i></p></body></html>"));
-
-    wdgTab->lblCredits->setText(credits);
 
     QString license = i18n(
         "<html>"
