@@ -1,3 +1,6 @@
+colorDepthDef=F32
+colorModelDef=RGBA
+colorProfileDef=sRGB-elle-V2-srgbtrc.icc
 Solstice/GpuEngine=true
 Solstice/ModernInterface=true
 widgetStyle=Solstice

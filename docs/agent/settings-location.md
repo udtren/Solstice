@@ -439,6 +439,7 @@ The defaults were inventoried first:
 | Solstice interface | off | on | embedded `kritarc` `Solstice/ModernInterface`; fallbacks in `KisMainWindow.cpp`, `kis_dlg_preferences.cc` (also its "restore defaults") |
 | First-time resource message | "Krita is running for the first time..." | "Solstice is setting up its resources..." | `KisResourceLocator::firstTimeInstallation()` |
 | GPU engine (user, 2026-10-07) | off | on | embedded `kritarc` top-level `Solstice/GpuEngine=true`; "restore defaults" in `KisGpuEngineUi.cpp`. The code fallback in `KisGpuEngineSettings::enabledInConfig()` stays `false`: test programs do not mount the embedded defaults, and a `true` fallback would enable the engine in every image test |
+| New document (user, 2026-10-07) | RGBA 8-bit sRGB | RGBA 32-bit float, `sRGB-elle-V2-srgbtrc.icc` | embedded `kritarc` top-level `colorModelDef`, `colorDepthDef=F32`, `colorProfileDef`; `KisConfig::defaultColorDepth(true)`. The dialog still offers every color space, and `KisDocument` remembers the last choice |
 | Language (user, 2026-10-07) | system language | English | `KisSolsticeProfile::createFreshProfile()` writes `[Language] krita=en_US` (QByteArray, as `kswitchlanguagedialog_p.cpp` does) to `klanguageoverridesrc`; new profiles only, imported ones keep theirs |
 
 Kept as they are (recommended):
@@ -446,8 +447,8 @@ Kept as they are (recommended):
 - docker locks off;
 - no brush preset grouping;
 - the upstream renderer, tablet (WinTab), cursor, autosave (7 min), undo
-  (200), new document (A4 at 300 ppi, 8-bit sRGB) and welcome-page news
-  (off) defaults;
+  (200), new document size (A4 at 300 ppi) and welcome-page news (off)
+  defaults;
 - the window layout from the embedded `[MainWindow] State`.
 
 Effects:

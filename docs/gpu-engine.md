@@ -396,8 +396,9 @@ whether to convert it:
 
 Check **Do not ask again** to remember the answer. You can change it later
 in **Opening other documents** next to the GPU engine option (Ask, Convert,
-or Keep). New documents are not converted: choose RGBA and a float depth in
-the New Document dialog to use the GPU engine.
+or Keep). New documents default to RGBA 32-bit float, which the GPU engine
+accelerates; the New Document dialog offers the other color spaces too and
+remembers the last choice.
 
 File layers are not converted, and in a document that is already RGBA float,
 layers in other color spaces stay as they are; such layers are composited

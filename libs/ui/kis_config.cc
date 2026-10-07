@@ -254,8 +254,11 @@ void KisConfig::defColorModel(const QString & model) const
 
 QString KisConfig::defaultColorDepth(bool defaultValue) const
 {
-    return (defaultValue ? KoColorSpaceRegistry::instance()->rgb8()->colorDepthId().id()
-                        : m_cfg.readEntry("colorDepthDef", KoColorSpaceRegistry::instance()->rgb8()->colorDepthId().id()));
+    // Solstice: new documents default to RGBA 32-bit float (embedded kritarc
+    // colorDepthDef); "restore defaults" matches.
+    return (defaultValue
+                ? Float32BitsColorDepthID.id()
+                : m_cfg.readEntry("colorDepthDef", KoColorSpaceRegistry::instance()->rgb8()->colorDepthId().id()));
 }
 
 void KisConfig::setDefaultColorDepth(const QString & depth) const

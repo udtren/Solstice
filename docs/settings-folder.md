@@ -52,7 +52,10 @@ A new profile (no Krita settings, or **No** on the first start) starts with:
   - Krita 3 Default Resources, the SeExpr examples and the RGBA brushes are
     installed but disabled.
   - Enable them in **Settings > Manage Resource Libraries**.
-- the GPU engine on (see the [GPU engine guide](gpu-engine.md));
+- the GPU engine on (see the [GPU engine guide](gpu-engine.md)), and new
+  documents in RGBA 32-bit float with the sRGB profile, which the GPU engine
+  accelerates. Other color spaces stay available in the New Document dialog,
+  which remembers your last choice;
 - English as the interface language (change it with **Settings > Switch
   Application Language**).
 
