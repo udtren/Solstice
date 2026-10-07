@@ -44,6 +44,15 @@ exactly. They were found in the Liquify GPU work (phase 4.97).
   The color left in transparent pixels therefore depends on the SIMD width,
   the row alignment and the neighbouring pixels. It is not reproducible on
   the GPU.
+- **RGBA32F composites depend on the tile's address.** Tile data of 16-byte
+  pixels is `malloc()`ed (`KisTileData::allocateData()`; only 4- and 8-byte
+  pixels use the Boost pools), so it is only 16-byte aligned.
+  `KoStreamedMath::genericComposite()` splits every row into a scalar head,
+  a vector body and a scalar tail by the destination address, and the scalar
+  and vector code round differently. The same "over" of the same pixels gave
+  different results (one to five ulps in a channel or two) in about half of
+  20 repeated CPU runs (phase 4.96). Never require bit identity after an
+  RGBA32F composite on the CPU.
 - **With a selection or partial opacity** the SIMD path blends and, when
   *some* pixel of the batch has a result alpha other than 1, clamps the
   colors of the whole batch to 1 (`xsimd::min(dst_c, unitValue)`). HDR

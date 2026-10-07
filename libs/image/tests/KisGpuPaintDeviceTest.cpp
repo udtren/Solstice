@@ -9,6 +9,7 @@
 #include <QElapsedTimer>
 #include <QFloat16>
 #include <QObject>
+#include <QPainter>
 #include <QScopeGuard>
 #include <QSemaphore>
 #include <QThread>
@@ -31,6 +32,7 @@
 #include <KisGpuLayerStackCompositor.h>
 #include <KisGpuTileFill.h>
 
+#include "KisPuppetTransformWorker.h"
 #include "gpu/KisGpuConvolutionWorker.h"
 #include "gpu/KisGpuGridWarpWorker.h"
 #include "gpu/KisGpuMergeBatch.h"
@@ -91,6 +93,8 @@ private Q_SLOTS:
     void testGpuTransformMatchesCpu();
     void testGpuLiquifyMatchesCpu_data();
     void testGpuLiquifyMatchesCpu();
+    void testGpuPuppetMatchesCpu_data();
+    void testGpuPuppetMatchesCpu();
     void testGpuGaussianMatchesCpu_data();
     void testGpuGaussianMatchesCpu();
     void testGpuGaussianPatchesMatchCpu();
@@ -215,16 +219,17 @@ void fillRandomAny(KisPaintDeviceSP device, const QRect &rect, quint32 seed, flo
 }
 
 /**
- * GPU convolutions (phase 4.98) against the CPU FFT convolution: channels
- * within a relative tolerance (1e-5 for F32, 1e-3 for F16, about one half
- * ulp), colors ignored where either stored alpha is near the null threshold
- * of the FFT worker. Returns the number of failing channels; logs the first.
+ * Results that cannot be bit-identical (the FFT-based Gaussian blur of phase
+ * 4.98, Puppet Warp's "over" composite of phase 4.96): channels within a
+ * relative tolerance (1e-5 for F32, 1e-3 for F16, about one half ulp),
+ * colors ignored where either alpha is near the FFT worker's null threshold.
+ * Returns the number of failing channels; logs the first.
  */
-int convolutionMismatches(const std::vector<float> &expected,
-                          const std::vector<float> &actual,
-                          const QRect &rect,
-                          bool f16,
-                          double *worstRelative = nullptr)
+int toleranceMismatches(const std::vector<float> &expected,
+                        const std::vector<float> &actual,
+                        const QRect &rect,
+                        bool f16,
+                        double *worstRelative = nullptr)
 {
     const double tolerance = f16 ? 1e-3 : 1e-5;
     const float nullAlpha = f16 ? 2.0f / 1024 : 2.4e-7f;
@@ -1004,6 +1009,132 @@ void KisGpuPaintDeviceTest::testGpuLiquifyMatchesCpu()
     QVERIFY(readPixels(gpu, checkRect) == expected);
 }
 
+void KisGpuPaintDeviceTest::testGpuPuppetMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("scenario");
+    QTest::addColumn<bool>("offset");
+    for (bool f16 : {false, true})
+        for (const char *scenario : {"move", "elbow", "fold", "orders", "elbow-back", "squeeze"})
+            for (bool offset : {false, true}) {
+                if (f16 && offset)
+                    continue;
+                QTest::newRow(
+                    qPrintable(QString("%1-%2%3").arg(f16 ? "f16" : "f32", scenario, offset ? "-offset" : "")))
+                    << f16 << QString(scenario) << offset;
+            }
+}
+
+void KisGpuPaintDeviceTest::testGpuPuppetMatchesCpu()
+{
+    // Phase 4.96: KisPuppetTransformWorker::run() (the mesh ARAP model) with
+    // the polygons painted on the GPU must equal the CPU bit for bit,
+    // including the per-pin layers composited with "over", and Undo.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QString, scenario);
+    QFETCH(bool, offset);
+    if (!m_backend->context().deviceInfo().supportsFloat64)
+        QSKIP("shaderFloat64 is not supported");
+    const bool previousProjection = KisGpuMergeBatch::isEnabled();
+    KisGpuMergeBatch::setEnabled(true);
+    const auto restore = qScopeGuard([&]() {
+        KisGpuMergeBatch::setEnabled(previousProjection);
+        qunsetenv("KRITA_GPU_PUPPET");
+    });
+    const auto *cs = rgbaFloat(f16);
+    // A torso with an arm, as in KisPuppetTransformWorkerTest, scaled by 2.
+    const QRectF meshBounds(0, 0, 800, 640);
+    const QVector<QRect> parts{QRect(0, 100, 200, 400), QRect(200, 200, 280, 60), QRect(420, 260, 60, 320)};
+    QImage mask(meshBounds.size().toSize(), QImage::Format_Grayscale8);
+    mask.fill(0);
+    {
+        QPainter gc(&mask);
+        for (const QRect &part : parts)
+            gc.fillRect(part, Qt::white);
+    }
+    const QPointF torso(100, 300), shoulder(220, 230), elbow(450, 230);
+    QVector<QPointF> original{torso, shoulder, elbow};
+    QVector<QPointF> transformed = original;
+    QVector<qreal> rotations{0.0, 0.0, 0.0};
+    QVector<int> orders;
+    if (scenario == "move") {
+        original = {torso};
+        transformed = {torso + QPointF(37.3, -21.6)};
+        rotations = {0.3};
+    } else if (scenario == "elbow") {
+        rotations[2] = M_PI / 2;
+    } else if (scenario == "fold") {
+        rotations[2] = 2.4;
+    } else if (scenario == "orders" || scenario == "elbow-back") {
+        rotations[2] = M_PI / 2;
+        orders = {0, 0, scenario == "orders" ? 1 : -1};
+    } else if (scenario == "squeeze") {
+        transformed[2] = elbow + QPointF(-160, 70);
+        transformed[0] = torso + QPointF(30, -40);
+        rotations[1] = -0.4;
+    }
+    const QPoint shift = offset ? QPoint(13, -7) : QPoint();
+    KisPaintDeviceSP source = new KisPaintDevice(cs);
+    source->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(QRect(-64, -64, 1024, 900)));
+    for (int i = 0; i < parts.size(); ++i)
+        fillRandomAny(source, parts[i], 71 + i);
+    source->moveTo(shift);
+    const auto mesh = KisPuppetTransformWorker::Mesh::build(mask, meshBounds.translated(shift), 0);
+    for (QPointF &point : original)
+        point += shift;
+    for (QPointF &point : transformed)
+        point += shift;
+    KisPuppetTransformWorker worker(mesh, original, transformed, rotations, orders);
+    QVERIFY(worker.isValid());
+    if (scenario != "move")
+        QVERIFY(worker.stackingGroups().size() > 1);
+
+    auto makeDestination = [&]() {
+        KisPaintDeviceSP dst = new KisPaintDevice(cs);
+        dst->setDefaultBounds(source->defaultBounds());
+        dst->moveTo(shift);
+        return dst;
+    };
+    KisPaintDeviceSP cpu = makeDestination();
+    qputenv("KRITA_GPU_PUPPET", "0");
+    const quint64 before = KisGpuGridWarpWorker::runCount();
+    worker.run(source, cpu);
+    QCOMPARE(KisGpuGridWarpWorker::runCount(), before);
+
+    KisPaintDeviceSP gpu = makeDestination();
+    fillRandomAny(gpu, QRect(600, 0, 100, 100), 5); // run() clears the destination first
+    qputenv("KRITA_GPU_PUPPET", "1");
+    const QRect checkRect =
+        (cpu->exactBounds() | source->exactBounds() | QRect(600, 0, 100, 100)).adjusted(-40, -40, 40, 40);
+    const auto original0 = readFloats(gpu, checkRect);
+    KisTransaction transaction(gpu);
+    worker.run(source, gpu);
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo(); // the first redo after endAndTake() only arms the command
+    QCOMPARE(KisGpuGridWarpWorker::runCount(), before + quint64(worker.stackingGroups().size()));
+
+    const auto expected = readFloats(cpu, checkRect);
+    const auto actual = readFloats(gpu, checkRect);
+    // One group is painted straight into the destination: bit-identical.
+    // Several groups are composited with "over" on the CPU in both paths.
+    // For RGBA32F that op is not reproducible even on the CPU: F32 tiles are
+    // malloc()ed (16-byte alignment), and the SIMD/scalar split of each row
+    // follows the address, so repeated CPU runs differ by a few ulps in some
+    // channels. The phase 0 compositing rule (1e-5) applies there.
+    const bool exact = f16 || worker.stackingGroups().size() == 1;
+    if (exact) {
+        QVERIFY(expected == actual);
+    } else {
+        QCOMPARE(toleranceMismatches(expected, actual, checkRect, false), 0);
+    }
+    QCOMPARE(gpu->exactBounds(), cpu->exactBounds());
+    command->undo();
+    QVERIFY(readFloats(gpu, checkRect) == original0);
+    command->redo();
+    QVERIFY(readFloats(gpu, checkRect) == actual);
+}
+
 void KisGpuPaintDeviceTest::testGpuGaussianMatchesCpu_data()
 {
     QTest::addColumn<bool>("f16");
@@ -1090,7 +1221,7 @@ void KisGpuPaintDeviceTest::testGpuGaussianMatchesCpu()
     const auto expected = readFloats(cpu, checkRect);
     const auto actual = readFloats(gpu, checkRect);
     double worst = 0.0;
-    const int failures = convolutionMismatches(expected, actual, checkRect, f16, &worst);
+    const int failures = toleranceMismatches(expected, actual, checkRect, f16, &worst);
     qInfo() << "worst relative difference" << worst;
     QCOMPARE(failures, 0);
     // Outside the apply rect, nothing changes (bit for bit).
@@ -1150,7 +1281,7 @@ void KisGpuPaintDeviceTest::testGpuGaussianPatchesMatchCpu()
     // minimum size and stay on the CPU, mixed with GPU patches.
     const quint64 gpuRuns = KisGpuConvolutionWorker::runCount() - before;
     QVERIFY2(gpuRuns > 0 && gpuRuns < quint64(patches.size()), qPrintable(QString::number(gpuRuns)));
-    QCOMPARE(convolutionMismatches(expected, actual, bounds, false), 0);
+    QCOMPARE(toleranceMismatches(expected, actual, bounds, false), 0);
 }
 
 void KisGpuPaintDeviceTest::testGpuGaussianFiltersMatchCpu_data()
@@ -1222,7 +1353,7 @@ void KisGpuPaintDeviceTest::testGpuGaussianFiltersMatchCpu()
         const auto actual = run(true, withSelection);
         QVERIFY(KisGpuConvolutionWorker::runCount() > before);
         double worst = 0.0;
-        QCOMPARE(convolutionMismatches(expected, actual, bounds, f16, &worst), 0);
+        QCOMPARE(toleranceMismatches(expected, actual, bounds, f16, &worst), 0);
         qInfo() << "selection" << withSelection << "worst relative difference" << worst;
     }
 }
@@ -2791,6 +2922,36 @@ void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
         }
         report("puppet warp (rigid MLS)", median3(samples));
     }
+    // Phase 4.96: Puppet Warp's mesh model (the Transform Tool's current
+    // model), the polygons on the GPU; three pins, the middle one turned.
+    KisGpuMergeBatch::setEnabled(true);
+    {
+        QImage mask(bounds.size(), QImage::Format_Grayscale8);
+        mask.fill(255);
+        const auto mesh = KisPuppetTransformWorker::Mesh::build(mask, bounds, 0);
+        const QVector<QPointF> pins{QPointF(600, 900), QPointF(1240, 1750), QPointF(1900, 2700)};
+        KisPuppetTransformWorker worker(mesh, pins, pins, {0.0, 0.5, 0.0});
+        for (bool gpuPuppet : {false, true}) {
+            qputenv("KRITA_GPU_PUPPET", gpuPuppet ? "1" : "0");
+            std::vector<double> samples;
+            const quint64 runs = KisGpuGridWarpWorker::runCount();
+            for (int i = 0; i < 3; ++i) {
+                KisPaintDeviceSP src = fresh(), dst = new KisPaintDevice(cs);
+                dst->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+                QElapsedTimer timer;
+                timer.start();
+                worker.run(src, dst);
+                samples.push_back(timer.nsecsElapsed() / 1e6);
+            }
+            QCOMPARE(KisGpuGridWarpWorker::runCount() > runs, gpuPuppet);
+            report(QString("puppet warp (mesh, %1 groups)%2")
+                       .arg(worker.stackingGroups().size())
+                       .arg(gpuPuppet ? " GPU" : ""),
+                   median3(samples));
+        }
+        qunsetenv("KRITA_GPU_PUPPET");
+    }
+    KisGpuMergeBatch::setEnabled(previousProjection);
     // Phase 4.97: the Liquify polygons on the GPU (KisGpuGridWarpWorker).
     KisGpuMergeBatch::setEnabled(true);
     for (bool gpuLiquify : {false, true}) {

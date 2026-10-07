@@ -610,6 +610,30 @@ void InplaceTransformStrokeStrategy::initStrokeCallback()
         });
     }
 
+    // Solstice: hand the original pixels to the tool for Puppet Warp's mesh
+    // (a copy-on-write copy, so the tool reads its own tiles).
+    KritaUtils::addJobBarrier(extraInitJobs, [this]() {
+        KisPaintDeviceSP preview;
+        {
+            QMutexLocker l(&m_d->devicesCacheMutex);
+            const QList<KisPaintDeviceSP> caches = m_d->devicesCacheHash.values();
+            if (caches.size() == 1) {
+                preview = new KisPaintDevice(*caches.first());
+            } else if (!caches.isEmpty()) {
+                preview = new KisPaintDevice(caches.first()->colorSpace());
+                preview->setDefaultBounds(caches.first()->defaultBounds());
+                KisPainter gc(preview);
+                Q_FOREACH (KisPaintDeviceSP cache, caches) {
+                    const QRect rect = cache->extent();
+                    gc.bitBlt(rect.topLeft(), cache, rect);
+                }
+            }
+        }
+        if (preview) {
+            Q_EMIT sigPreviewDeviceReady(preview);
+        }
+    });
+
     KritaUtils::addJobBarrier(extraInitJobs, [this]() {
         QMutexLocker l(&m_d->dirtyRectsMutex);
 

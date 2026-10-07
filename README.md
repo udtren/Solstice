@@ -113,8 +113,8 @@ and layer flips now batch their GPU readbacks.
 The brush prototype requires `KRITA_GPU_BRUSH=1` in addition to enabling the
 GPU engine. Dab generation, texture generation, masking, filter calculations
 and most transform calculations still run on the CPU; the Transform Tool's
-affine transforms, Liquify and Gaussian Blur (also inside Unsharp Mask and
-Gaussian High Pass) are applied on the GPU for float layers. Large mirrored brushes with
+affine transforms, Liquify, Puppet Warp and Gaussian Blur (also inside
+Unsharp Mask and Gaussian High Pass) are applied on the GPU for float layers. Large mirrored brushes with
 Alpha Lock can still catch up after pen release; further tuning of that case
 is deferred. This is an ongoing rewrite, not a fully GPU-based painting pipeline.
 
@@ -139,9 +139,12 @@ Blackwell (driver 596.86), using local development builds:
 | Transform Tool apply, scale + rotate (bicubic), 2480 x 3508 RGBA32F | 470 ms | 64.1 ms |
 | Liquify apply, 20 strokes, 2480 x 3508 RGBA32F | 225 ms | 57.8 ms |
 | Gaussian Blur apply, radius 30, 2480 x 3508 RGBA32F | 213 ms | 62.0 ms |
+| Puppet Warp apply, 3 pins, 2480 x 3508 RGBA32F | 713 ms | 190 ms |
 
-The transform results are identical to the CPU results, pixel for pixel. The
-Gaussian Blur results match the CPU results within one rounding step.
+The affine transform and Liquify results are identical to the CPU results,
+pixel for pixel; so are Puppet Warp's parts, which are then combined on the
+CPU. The Gaussian Blur results match the CPU results within one rounding
+step.
 
 Each value is the median of three fresh-process results, with GPU completion
 included and Vulkan validation disabled. Projection and canvas results use

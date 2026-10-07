@@ -136,6 +136,17 @@ and driver. Three processes of `benchmarkFiltersAndTransforms` with
   (32,768 source pixels) in place, is in the history page. Without the
   threshold the GPU took 1.7-1.9ms for 64x64 and 128x128 (CPU 0.4-3.0ms).
 
+## GPU Puppet Warp (phase 4.96, 2026-10-07)
+
+Puppet Warp's mesh model (the Transform Tool's current model; the table at
+the top measures the legacy MLS worker), a full-layer mesh with three pins,
+the middle one turned by 0.5 rad, three stacking groups. Same build setup as
+above; medians of three processes.
+
+| Operation | CPU | GPU |
+| --- | ---: | ---: |
+| Puppet Warp apply (mesh, 3 groups) | 713 ms (690-754) | 190 ms (189-200) |
+
 ## Staleness
 
 Re-measure after changes to `KisGpuTileAccess` transfers, the transform

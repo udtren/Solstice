@@ -255,6 +255,8 @@ private:
     void initGuiAfterTransformMode();
 
     void initThumbnailImage(KisPaintDeviceSP previewDevice);
+    /// The transaction's original rect of @p device as a thumbnail (at most 2000 px).
+    QImage createThumbnail(KisPaintDeviceSP device, QTransform *thumbToImageTransform) const;
     void updateApplyResetAvailability();
 
 private:
@@ -267,6 +269,10 @@ private:
     bool m_actuallyMoveWhileSelected {false}; // true <=> selection has been moved while clicked
 
     KisPaintDeviceSP m_selectedPortionCache;
+    /// Solstice: the original pixels of an in-place stroke (Accurate preview);
+    /// the thumbnail for Puppet Warp's mesh is made from it on demand.
+    KisPaintDeviceSP m_inplacePreviewDevice;
+    bool m_inplacePuppetMaskReady = false;
     KisStrokeId m_strokeId;
     void *m_strokeStrategyCookie {0};
     bool m_currentlyUsingOverlayPreviewStyle {false};
@@ -350,6 +356,7 @@ private Q_SLOTS:
 
     void slotTransactionGenerated(TransformTransactionProperties transaction, ToolTransformArgs args, void *strokeStrategyCookie);
     void slotPreviewDeviceGenerated(KisPaintDeviceSP device);
+    void slotInplacePreviewDeviceGenerated(KisPaintDeviceSP device);
 
     // context menu options for updating the transform type
     // this is to help with discoverability since come people can't find the tool options

@@ -99,6 +99,7 @@ struct KisWarpTransformStrategy::Private
     QVector<int> rubberBandBaseSelection;
 
     mutable QImage puppetMask;
+    QImage puppetMaskSource; ///< setPuppetMaskSource(); used without a thumbnail
     mutable qint64 puppetMaskCacheKey{-1};
     mutable QRectF puppetMaskBounds;
     mutable int puppetMaskExpansion{-1};
@@ -274,7 +275,7 @@ void KisWarpTransformStrategy::setTransformType(TransformType type) {
 
 void KisWarpTransformStrategy::Private::updatePuppetMask() const
 {
-    const QImage source = q->originalImage();
+    const QImage source = q->originalImage().isNull() ? puppetMaskSource : q->originalImage();
     const QRectF bounds = transaction.originalRect();
     if (source.isNull() || bounds.isEmpty()) {
         puppetMask = QImage();
@@ -377,6 +378,11 @@ void KisWarpTransformStrategy::Private::updatePuppetMask() const
     puppetMaskCacheKey = source.cacheKey();
     puppetMaskBounds = bounds;
     puppetMaskExpansion = currentArgs.puppetExpansion();
+}
+
+void KisWarpTransformStrategy::setPuppetMaskSource(const QImage &image)
+{
+    m_d->puppetMaskSource = image;
 }
 
 void KisWarpTransformStrategy::Private::ensurePuppetMesh()

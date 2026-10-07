@@ -7,7 +7,7 @@ sources: [docs/agent/gpu-engine.md, git history]
 
 # GPU engine history: filters and transforms (phases 4.93-)
 
-CPU filter/transform baseline, GPU affine passes, GPU Liquify grid warp, GPU Gaussian blur. Moved verbatim from `docs/agent/gpu-engine.md`; current state, decisions and
+CPU filter/transform baseline, GPU affine passes, GPU Liquify grid warp, GPU Gaussian blur, GPU Puppet Warp rendering. Moved verbatim from `docs/agent/gpu-engine.md`; current state, decisions and
 invariants stay there ([gpu-engine.md](../../gpu-engine.md)). Each section records what was true
 when it was written; later sections and the current document take precedence.
 
@@ -448,3 +448,84 @@ virtual). The user reported the manual checks OK on 2026-10-07: Gaussian
 Blur, Unsharp Mask and Gaussian High Pass on RGBA32F and RGBA16F layers
 (apply time, result, selection, Undo/Redo, preview, filter mask), 8-bit
 unchanged.
+
+## GPU Puppet Warp mesh rendering (phase 4.96)
+
+Reserved since phase 4.95 and started after phase 4.98 (task order of
+2026-10-07). The folded-joint issue of the mesh model stays open, as the user
+decided on 2026-10-07 (`docs/agent/puppet-warp.md`); this phase only moves
+the final rendering of the current model to the GPU.
+
+**How the CPU renders.** `KisPuppetTransformWorker::run()` clears the
+destination and calls `GridIterationTools::processGrid()` at 8 px precision
+with `GridIterationTools::PaintDevicePolygonOp` behind `OrderFilterOp`
+(skip cells without artwork; with several stacking groups, keep only the
+group's cells). With one stacking group it paints straight into the
+destination. With several, each group paints into its own layer, and the
+layers are composited bottom to top with `COMPOSITE_OVER`.
+
+**GPU implementation.** The polygon op is the one Liquify uses, so the
+phase 4.97 recorder and pass are reused unchanged:
+
+- One group: `KisGpuGridWarpWorker::Recorder` behind the same
+  `OrderFilterOp`, then `KisGpuGridWarpWorker::run()` into the destination.
+- Several groups: one grid pass with `GroupRecordersOp` records every group
+  (the CPU walks the grid once per group), then each group is painted on the
+  GPU into its layer and composited with `COMPOSITE_OVER` on the CPU as
+  before.
+- The layers now take the destination's offset (`moveTo()`), on the CPU path
+  too; `KisGpuGridWarpWorker::canRun()` requires equal offsets.
+- On failure the target is cleared and painted on the CPU.
+- Scope: that of `KisGpuGridWarpWorker::canRun()` (RGBA32F/F16, LOD 0, equal
+  color space, default pixel and offset). The preview while editing
+  (`runOnQImage()`) and legacy MLS transforms stay on the CPU.
+- `KRITA_GPU_PUPPET=0` disables it, as do `KRITA_GPU_LIQUIFY=0` and
+  `KRITA_GPU_TRANSFORM=0` (they disable the shared grid warp).
+
+**The "over" composite is not reproducible, even on the CPU.** The first
+parity run differed by one ulp in one or two channels for several groups in
+F32. Running the CPU path 20 times against itself differed the same way in
+about half the runs. RGBA32F tile data is `malloc()`ed (16 bytes per pixel,
+no pool; `KisTileData::allocateData()`), so its address modulo the SIMD
+width varies, and `KoStreamedMath::genericComposite()` splits each row into
+a scalar head, a vector body and a scalar tail by the address. The vector
+and scalar "over" round differently (up to about 5 ulps at low alpha).
+Therefore:
+
+- one group (painted straight into the destination) and all F16 rows are
+  compared bit for bit;
+- several F32 groups are compared with the phase 0 compositing rule (relative
+  1e-5).
+
+**Tests** (Vulkan validation):
+
+- New `KisGpuPaintDeviceTest::testGpuPuppetMatchesCpu`, 18 rows: F32 and F16;
+  move (one group), elbow at 90 degrees, fold (137 degrees), orders front and
+  back, squeeze; an offset variant for F32. Exact bounds, Undo/Redo, a
+  destination that held pixels before `run()`. Stable over three runs.
+- `KisGpuPaintDeviceTest` 306 (1 skipped: the opt-in benchmark),
+  `KisPuppetTransformWorkerTest` 14, `test_animated_transform_parameters` 4,
+  `kis_warp_transform_worker_test` 7.
+
+**Benchmark** (2480x3508 RGBA32F, a full-layer mesh, three pins, the middle
+one turned by 0.5 rad, three stacking groups; `benchmarkFiltersAndTransforms`,
+medians of three processes): CPU 713 ms (690-754), GPU 190 ms (189-200).
+
+- Recording each group in its own grid pass first gave 247 ms; one pass for
+  all groups saved about 57 ms.
+- Per group on the GPU: preparation 5-11 ms, wait 2-6 ms, download 7-15 ms.
+  The rest is the grid pass (`map()`, `touchesArtwork()`, `ownerAt()` per
+  cell) and the CPU composites.
+
+**Reverted and reapplied.** The user's first check found Puppet Warp
+misbehaving and the work was reverted (2026-10-07). The cause was older: with
+the Accurate preview settings the Transform Tool made no thumbnail, so
+Puppet Warp never built its mesh (legacy MLS, no mesh overlay, an empty
+layer before the first pin). That was fixed (`docs/agent/puppet-warp.md`,
+"Mesh mask and overlay"), and this phase was reapplied unchanged at the
+user's request.
+
+Installed `libs/image` and `tool_transform2`; hashes match. The user reported
+the manual checks OK on 2026-10-07: Puppet Warp with the Accurate and Fast
+previews (mesh shown, image kept before the first pin), pins, orders, apply
+and Undo/Redo on RGBA32F and RGBA16F layers.

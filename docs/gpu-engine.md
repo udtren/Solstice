@@ -20,7 +20,7 @@ final merge can stay on the GPU. Other RGBA16F brush blend modes continue
 through the CPU path. Dab generation remains on
 the CPU in both formats.
 Most filters and transforms still run on the CPU; the exceptions are
-described below (Transform Tool, Liquify, Gaussian Blur). The engine is on by default in
+described below (Transform Tool, Liquify, Puppet Warp, Gaussian Blur). The engine is on by default in
 new profiles and in profiles that never changed the option (since 2026-10-07).
 
 Accelerated layer blend modes include Normal, Multiply, Screen, Addition /
@@ -233,8 +233,13 @@ result is identical to the CPU result, pixel for pixel. In a measurement on a
 2480x3508 layer, applying a scale and rotation took about 63ms instead of
 about 430ms. Applying Liquify is also done on the GPU for these layers, again
 identical to the CPU result: about 56ms instead of about 220ms for 20 strokes
-over a large part of the same layer. The preview while editing, perspective,
-warp, Puppet Warp, cage and mesh transforms still run on the CPU, as does
+over a large part of the same layer. Applying Puppet Warp is done on the GPU
+for these layers as well: about 190ms instead of about 710ms with three pins
+on the same layer. Where its parts are stacked by pin order, they are
+combined on the CPU, which can differ from a CPU-only result by tiny rounding
+amounts (repeated CPU-only results differ the same way). The preview while
+editing, perspective, warp, legacy Puppet Warp transforms, cage and mesh
+transforms still run on the CPU, as does
 Liquify when the layer's position differs from its original copy (an internal
 case the Transform Tool does not use).
 
@@ -512,8 +517,8 @@ export formats write the file directly and are not covered.)
   Half-precision storage and intermediate rounding are preserved after each
   dab; small rounding differences from CPU arithmetic remain possible.
   It is still under development; filters and transforms are not accelerated,
-  except the Transform Tool's affine transforms, Liquify and Gaussian Blur
-  (described above).
+  except the Transform Tool's affine transforms, Liquify, Puppet Warp and
+  Gaussian Blur (described above).
 - Soft proofing, channel selection in the Channels docker, and some display
   color profiles (LUT-based profiles, absolute colorimetric intent) use the
   CPU for the canvas display.

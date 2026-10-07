@@ -73,6 +73,29 @@ diagonals, sampled at source-pixel resolution and kept only where the mask
 covers them, then mapped through the solved deformation. Legacy transforms
 draw the old display grid, which is not solver topology.
 
+**Mask source.** The mask is made from a thumbnail of the original pixels
+(at most 2000 px):
+
+- with the Fast (overlay) preview, the strategy's thumbnail from
+  `TransformStrokeStrategy::sigPreviewDeviceReady`;
+- with the Accurate previews (in-place stroke, `InplaceTransformStrokeStrategy`)
+  there is no thumbnail. Since 2026-10-07 the in-place stroke emits
+  `sigPreviewDeviceReady` with a copy-on-write copy of its node caches (merged
+  for several nodes) after creating them. `KisToolTransform` keeps it and, in
+  Puppet mode, makes a thumbnail with `createThumbnail()` and passes it to
+  `KisWarpTransformStrategy::setPuppetMaskSource()`. It is used only for the
+  mask, never drawn (the strategies would draw a thumbnail as an overlay at
+  0.9 opacity over the in-place result). When the device arrives in Puppet
+  mode, the tool rebuilds the mesh and commits the arguments.
+- Before this, Accurate previews never had a mesh: Puppet Warp fell back to
+  the legacy MLS model without a mesh overlay, and with no pins the layer
+  disappeared (next point).
+- `KisTransformUtils::transformDevice()`: a warp or legacy Puppet transform
+  without control points now copies the source (as
+  `KisWarpTransformWorker::transformQImage()` does for the preview). The
+  in-place stroke clears the layer first, and the warp worker writes nothing
+  without points.
+
 `KisWarpTransformStrategy::Private::updatePuppetMask()`:
 
 1. Treats source pixels with alpha greater than 8 as artwork.
@@ -163,6 +186,13 @@ stored mesh keeps preview, overlay, final rendering and bounds identical.
   weights, and extrapolation from the border cells outside the grid.
 - `run()` renders like `KisWarpTransformWorker::run()`: it clears the
   destination, then `processGrid` at 8 px precision.
+- **GPU rendering (phase 4.96).** With the GPU engine and RGBA float devices,
+  `run()` records the same cells with `KisGpuGridWarpWorker::Recorder` (the
+  Liquify recorder) and paints them on the GPU, bit-identical per group.
+  Several groups are recorded in one grid pass (`GroupRecordersOp`) and still
+  composited with "over" on the CPU. Group layers take the destination's
+  offset. `KRITA_GPU_PUPPET=0` keeps it on the CPU. Details and the parity
+  rule: `docs/agent/wiki/history/gpu-phases-4.93-.md`, phase 4.96.
 - `runOnQImage()` renders the preview in thumbnail space through the
   strategy's image/thumbnail maps. `approxChangeRect()` maps the rect.
 - `KisTransformUtils::needRect()` returns the source bounds; `changeRect()`
@@ -353,8 +383,9 @@ rigid points unrotated (tore the joint).
 1. Done in phase 4.95 for the mesh model: triangular ARAP with geodesic
    pin ownership; visible mesh and solver topology are identical. Next: a
    contour-following triangulation and a density setting.
-2. GPU rendering of the mesh warp (planned, GPU engine phase 4.96; waiting
-   for the user's manual check of the current behaviour).
+2. Done in GPU engine phase 4.96: the final rendering of the mesh warp on the
+   GPU. Next, if needed: composite the group layers on the GPU, and a GPU
+   preview.
 2a. Folded joints that overlap instead of pushing artwork aside (open issue
    above).
 3. Add explicit pin type, strength, rotation correction, and influence radius
@@ -386,6 +417,8 @@ cmd.exe /d /s /c "call <krita-dev-root>\env.bat && <krita-dev-root>\_build\bin\t
 - a moved pin carrying the free end;
 - scale consistency for the level-of-detail preview;
 - device rendering;
+- (in `KisGpuPaintDeviceTest`) `testGpuPuppetMatchesCpu`: the GPU rendering
+  against the CPU;
 - 64x64 solve time.
 
 `test_animated_transform_parameters` loads the installed tool plugin: install
@@ -431,5 +464,7 @@ Restart after installing. Format modified C++ and run `git diff --check`.
   separately for the final rendering.
 - Keep transforms without a mesh on the legacy MLS path.
 - Missing serialized fields retain safe backwards-compatible defaults.
+- Both preview styles (Fast and Accurate) must build the mesh from the same
+  kind of thumbnail; the Accurate mask source is never drawn.
 - Do not infer interaction correctness from compilation alone; verify
   hit-testing, cursor mode, and press/move/release symmetry interactively.

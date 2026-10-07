@@ -33,6 +33,12 @@ related:
   rules (clamping, alpha handling, double -> float -> half rounding), so the
   measured difference is at most one rounding step. Pixels outside the rect
   must still be bit-identical.
+- **Puppet Warp** (phase 4.96) paints its polygons bit-identically (the
+  Liquify recorder). With several stacking groups, though, the CPU composites
+  the group layers with "over", and for RGBA32F that is not reproducible even
+  between CPU runs (see
+  [Krita copy and sampling semantics](krita-copy-semantics.md)). Those cases
+  use the phase 0 rule; one group and F16 stay bit-identical.
 
 ## Techniques that made bit parity work
 

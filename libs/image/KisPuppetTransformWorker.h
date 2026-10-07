@@ -116,7 +116,14 @@ public:
      */
     QVector<int> stackingGroups() const;
 
+    /**
+     * Final rendering. With the GPU engine, RGBA float devices are painted on
+     * the GPU (phase 4.96, KisGpuGridWarpWorker), bit-identical to the CPU.
+     */
     void run(KisPaintDeviceSP srcDevice, KisPaintDeviceSP dstDevice) const;
+
+    /// False when KRITA_GPU_PUPPET=0 keeps run() on the CPU (development switch).
+    static bool isGpuEnabled();
 
     /**
      * Preview in thumbnail space: @p srcImage (ARGB32) at @p srcImageOffset;

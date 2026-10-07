@@ -112,6 +112,10 @@ wrong anyway.
   After `KisFilter::prefersSingleCall()` was added, `kis_filter_test`,
   `kis_filter_mask_test` and `KisGpuPaintDeviceTest` crashed with
   0xc0000005 in old plugins until `cmake --install` of the whole build.
+- **Git Bash `sed -i` rewrites CRLF files with LF.** Running `sed -i` on a
+  CRLF source file converted the whole file, so `git diff` showed every
+  line. Edit CRLF files with the edit helper (or Python in binary mode) and
+  check `file <path>` afterwards.
 - **`Select-Object -First N` stops the producer.** Piping
   `cmake --build` into `... | Select-Object -First 30` in PowerShell ended
   the build early once 30 lines matched. Redirect the build to a log file and

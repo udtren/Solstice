@@ -141,6 +141,12 @@ public:
 Q_SIGNALS:
     void sigTransactionGenerated(TransformTransactionProperties transaction, ToolTransformArgs args, void *cookie);
     void sigConvexHullCalculated(QPolygon convexHull, void *cookie);
+    /**
+     * Solstice: the original pixels of the transformed nodes, after their
+     * caches were created. The tool builds Puppet Warp's mesh from it, as it
+     * does from TransformStrokeStrategy's preview device.
+     */
+    void sigPreviewDeviceReady(KisPaintDeviceSP device);
 
 protected:
     void postProcessToplevelCommand(KUndo2Command *command) override;

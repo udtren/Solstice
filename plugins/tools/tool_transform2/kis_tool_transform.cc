@@ -763,6 +763,14 @@ void KisToolTransform::initTransformMode(ToolTransformArgs::TransformMode mode)
 
 void KisToolTransform::initGuiAfterTransformMode()
 {
+    // Solstice: with the in-place (Accurate) preview there is no overlay
+    // thumbnail; Puppet Warp builds its mesh from its own copy, never drawn.
+    if (!m_currentlyUsingOverlayPreviewStyle && m_inplacePreviewDevice && !m_inplacePuppetMaskReady
+        && m_currentArgs.mode() == ToolTransformArgs::PUPPET) {
+        QTransform thumbToImageTransform;
+        m_puppetStrategy->setPuppetMaskSource(createThumbnail(m_inplacePreviewDevice, &thumbToImageTransform));
+        m_inplacePuppetMaskReady = true;
+    }
     currentStrategy()->externalConfigChanged();
     outlineChanged();
     updateOptionWidget();
@@ -770,12 +778,10 @@ void KisToolTransform::initGuiAfterTransformMode()
     setFunctionalCursor();
 }
 
-void KisToolTransform::initThumbnailImage(KisPaintDeviceSP previewDevice)
+QImage KisToolTransform::createThumbnail(KisPaintDeviceSP device, QTransform *thumbToImageTransform) const
 {
     QImage origImg;
-    m_selectedPortionCache = previewDevice;
-
-    QTransform thumbToImageTransform;
+    *thumbToImageTransform = QTransform();
 
     const int maxSize = 2000;
 
@@ -783,28 +789,40 @@ void KisToolTransform::initThumbnailImage(KisPaintDeviceSP previewDevice)
     int x, y, w, h;
     srcRect.getRect(&x, &y, &w, &h);
 
-    if (m_selectedPortionCache) {
+    if (device) {
         if (w > maxSize || h > maxSize) {
             qreal scale = qreal(maxSize) / (w > h ? w : h);
             QTransform scaleTransform = QTransform::fromScale(scale, scale);
 
             QRect thumbRect = scaleTransform.mapRect(m_transaction.originalRect()).toAlignedRect();
 
-            origImg = m_selectedPortionCache->
-                    createThumbnailUncached(thumbRect.width(),
-                                    thumbRect.height(),
-                                    srcRect, 1,
-                                    KoColorConversionTransformation::internalRenderingIntent(),
-                                    KoColorConversionTransformation::internalConversionFlags());
-            thumbToImageTransform = scaleTransform.inverted();
+            origImg = device->createThumbnailUncached(thumbRect.width(),
+                                                      thumbRect.height(),
+                                                      srcRect,
+                                                      1,
+                                                      KoColorConversionTransformation::internalRenderingIntent(),
+                                                      KoColorConversionTransformation::internalConversionFlags());
+            *thumbToImageTransform = scaleTransform.inverted();
 
         } else {
-            origImg = m_selectedPortionCache->convertToQImage(0, x, y, w, h,
-                                                              KoColorConversionTransformation::internalRenderingIntent(),
-                                                              KoColorConversionTransformation::internalConversionFlags());
-            thumbToImageTransform = QTransform();
+            origImg = device->convertToQImage(0,
+                                              x,
+                                              y,
+                                              w,
+                                              h,
+                                              KoColorConversionTransformation::internalRenderingIntent(),
+                                              KoColorConversionTransformation::internalConversionFlags());
         }
     }
+    return origImg;
+}
+
+void KisToolTransform::initThumbnailImage(KisPaintDeviceSP previewDevice)
+{
+    m_selectedPortionCache = previewDevice;
+
+    QTransform thumbToImageTransform;
+    const QImage origImg = createThumbnail(m_selectedPortionCache, &thumbToImageTransform);
 
     // init both strokes since the thumbnail is initialized only once
     // during the stroke
@@ -1043,6 +1061,9 @@ void KisToolTransform::startStroke(ToolTransformArgs::TransformMode mode, bool f
 
     } else {
         InplaceTransformStrokeStrategy *transformStrategy = new InplaceTransformStrokeStrategy(mode, m_currentArgs.filterId(), forceReset, rootNodes, selection, externalSource, image().data(), image().data(), image()->root(), m_forceLodMode);
+        connect(transformStrategy,
+                SIGNAL(sigPreviewDeviceReady(KisPaintDeviceSP)),
+                SLOT(slotInplacePreviewDeviceGenerated(KisPaintDeviceSP)));
         connect(transformStrategy, SIGNAL(sigTransactionGenerated(TransformTransactionProperties, ToolTransformArgs, void*)), SLOT(slotTransactionGenerated(TransformTransactionProperties, ToolTransformArgs, void*)));
         connect(transformStrategy, SIGNAL(sigConvexHullCalculated(QPolygon, void*)), SLOT(slotConvexHullCalculated(QPolygon, void*)));
         strategy = transformStrategy;
@@ -1062,6 +1083,9 @@ void KisToolTransform::startStroke(ToolTransformArgs::TransformMode mode, bool f
 
     KIS_SAFE_ASSERT_RECOVER_NOOP(m_changesTracker.isEmpty());
 
+    m_inplacePreviewDevice = nullptr;
+    m_inplacePuppetMaskReady = false;
+    m_puppetStrategy->setPuppetMaskSource(QImage());
     slotPreviewDeviceGenerated(0);
 }
 
@@ -1148,6 +1172,21 @@ void KisToolTransform::slotPreviewDeviceGenerated(KisPaintDeviceSP device)
     } else {
         initThumbnailImage(device);
         initGuiAfterTransformMode();
+    }
+}
+
+void KisToolTransform::slotInplacePreviewDeviceGenerated(KisPaintDeviceSP device)
+{
+    // Ignore a stroke that has already ended.
+    if (!m_strokeId
+        || static_cast<void *>(qobject_cast<InplaceTransformStrokeStrategy *>(sender())) != m_strokeStrategyCookie) {
+        return;
+    }
+    m_inplacePreviewDevice = device;
+    if (m_currentArgs.mode() == ToolTransformArgs::PUPPET) {
+        // Builds the mesh; the stroke renders with it from now on.
+        initGuiAfterTransformMode();
+        commitChanges();
     }
 }
 

@@ -89,3 +89,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   PowerShell `Select-Object -First` ending a build.
 - `benchmarks/transform-and-filter-costs.md`: GPU Gaussian blur rows.
 - `decisions/gpu-phase-numbering.md`: 4.98 done, next 4.99.
+
+## 2026-10-07 ingest: GPU Puppet Warp mesh rendering (phase 4.96)
+
+- `history/gpu-phases-4.93-.md`: the phase 4.96 record.
+- `concepts/krita-copy-semantics.md`: RGBA32F composites depend on the tile
+  address (malloc alignment, SIMD/scalar split).
+- `concepts/cpu-gpu-bit-parity.md`: which Puppet Warp results are compared
+  bit for bit.
+- `pitfalls/build-format-test.md`: Git Bash `sed -i` and CRLF files.
+- `benchmarks/transform-and-filter-costs.md`: the Puppet Warp row.
+- `decisions/gpu-phase-numbering.md`: 4.96 implemented.
+
+## 2026-10-07 ingest: Puppet Warp mesh with the Accurate preview
+
+- `history/gpu-phases-4.93-.md`: phase 4.96 reverted and reapplied; the
+  Accurate preview never built the mesh (fixed, `docs/agent/puppet-warp.md`).

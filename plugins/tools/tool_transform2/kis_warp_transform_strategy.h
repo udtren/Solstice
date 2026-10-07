@@ -40,6 +40,13 @@ public:
     void setTransformFunction(const QPointF &mousePos, bool perspectiveModifierActive, bool shiftModifierActive, bool altModifierActive) override;
     void setTransformType(TransformType type);
 
+    /**
+     * Solstice: the original pixels for Puppet Warp's mesh when there is no
+     * overlay thumbnail (the in-place, Accurate preview). Used only for the
+     * mesh, never drawn. A null image clears it.
+     */
+    void setPuppetMaskSource(const QImage &image);
+
     /// Puppet Warp: changes the stacking order of the selected pins.
     /// Returns false when no pin is selected.
     bool changePuppetOrder(int change); // ToolTransformArgs::PuppetOrderChange

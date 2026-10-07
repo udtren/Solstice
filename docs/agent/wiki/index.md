@@ -73,7 +73,7 @@ matches the task.
 ### Decisions
 
 - [GPU engine phase numbering](decisions/gpu-phase-numbering.md): how phase
-  numbers are assigned; 4.96 is reserved, the next free number.
+  numbers are assigned, and the next free number.
 - [`krita5.xmlgui` stays unchanged](decisions/xmlgui-unchanged.md): why menu
   changes avoid the main XMLGUI file.
 - [Solstice version vs. Krita compatibility version](decisions/versioning.md):

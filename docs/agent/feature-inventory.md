@@ -162,6 +162,17 @@ Pin selection, click action and order (same phase, user request):
 - the code-built "Click pin" combo and Order buttons in `kis_tool_transform_config_widget.*`;
 - `slotPuppetOrderChange()` in `kis_tool_transform.*`;
 - order levels (`orderAt()`, `orderLevels()`, `OrderFilterOp`) in `libs/image/KisPuppetTransformWorker.*`.
+Puppet Warp mesh with the Accurate preview (2026-10-07, user request):
+- `sigPreviewDeviceReady` and the preview job in
+  `plugins/tools/tool_transform2/strokes/inplace_transform_stroke_strategy.{h,cpp}`;
+- `createThumbnail()`, `slotInplacePreviewDeviceGenerated()`, `m_inplacePreviewDevice` and the
+  mask source in `initGuiAfterTransformMode()` in `kis_tool_transform.{h,cc}`;
+- `setPuppetMaskSource()` in `kis_warp_transform_strategy.{h,cpp}`;
+- the copy for warps without control points in `kis_transform_utils.cpp`.
+Phase 4.96 adds GPU rendering of Puppet Warp's mesh model:
+- the GPU branches, `GroupRecordersOp` and `isGpuEnabled()` in `libs/image/KisPuppetTransformWorker.{h,cpp}`
+  (reusing `KisGpuGridWarpWorker`); group layers take the destination's offset;
+- tests: `KisGpuPaintDeviceTest::testGpuPuppetMatchesCpu` and the benchmark's mesh Puppet Warp rows.
 Phase 4.98 adds the GPU Gaussian convolution (Gaussian Blur, Unsharp Mask, Gaussian High Pass):
 - new `libs/gpu/KisGpuSeparableConvolutionPass.*` and `libs/gpu/shaders/separable_convolution.comp`
   (four shaders in `libs/gpu/CMakeLists.txt`);

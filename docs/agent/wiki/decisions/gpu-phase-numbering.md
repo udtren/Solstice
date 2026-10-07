@@ -22,11 +22,11 @@ stays reserved for that step, even when other work happens first.
 | --- | --- | --- |
 | 4.94 | GPU affine transform passes | done, manual check OK |
 | 4.95 | Puppet Warp mesh ARAP model (CPU) | committed (`298e67c6e4`); folded-joint issue open (`puppet-warp.md`) |
-| 4.96 | **Reserved:** Puppet Warp mesh rendering on the GPU | not started |
+| 4.96 | Puppet Warp mesh rendering on the GPU (started after 4.98) | done, manual check OK |
 | 4.97 | GPU Liquify grid warp | done, manual check OK |
 | 4.98 | GPU Gaussian blur family | done, manual check OK |
 
-The next new phase is **4.99**, unless the work is the reserved 4.96.
+The next new phase is **4.99**.
 
 **Why.** The handoff and the priority documents already referred to 4.96
 as Puppet Warp's GPU rendering. Reusing the number for Liquify would have

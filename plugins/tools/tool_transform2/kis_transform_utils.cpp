@@ -309,6 +309,16 @@ void transformDeviceImpl(const ToolTransformArgs &config,
         QVector<QPointF> transformedPoints;
         warpControlPoints(config, &originalPoints, &transformedPoints);
 
+        if (originalPoints.isEmpty()) {
+            // Solstice: without control points (e.g. Puppet Warp before the
+            // first pin, while its mesh is not built yet) the warp worker
+            // writes nothing, and the in-place stroke has already cleared the
+            // layer. Keep the artwork, like the preview
+            // (KisWarpTransformWorker::transformQImage()) does.
+            dstDevice->makeCloneFromRough(srcDevice, srcDevice->extent());
+            return;
+        }
+
         KisWarpTransformWorker worker(config.warpType(), originalPoints, transformedPoints, config.alpha(), updater);
         worker.run(srcDevice, dstDevice);
     } else if (config.mode() == ToolTransformArgs::CAGE) {

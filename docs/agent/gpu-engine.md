@@ -87,8 +87,9 @@ details are in the phase records, now in the wiki history pages (see
   The user confirmed phase 4.53 and the CPU filter/FFT readback bundle
   (4.54-4.55). Phases 4.56-4.57 batch affine transform and layer-flip readbacks;
   details and verification are below. Filters and transforms then still
-  executed their calculations on the CPU; phases 4.94, 4.97 and 4.98 later
-  moved the affine passes, Liquify and the Gaussian convolution to the GPU.
+  executed their calculations on the CPU; phases 4.94, 4.96, 4.97 and 4.98
+  later moved the affine passes, Puppet Warp's mesh rendering, Liquify and the
+  Gaussian convolution to the GPU.
   Phases
   0–3 are implemented, including real-app canvas and memory-budget checks;
   the phase 3.3 dialog checklist remains documented separately. Layer stacks of RGBA float
@@ -862,9 +863,10 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   default 0). See "Feature gate and user interface".
 - Environment `KRITA_GPU_PROJECTION=1` or `0` overrides `Solstice/GpuEngine`
   (development switch; `KisGpuMergeBatch::setEnabled()` in tests).
-- With the engine on, `KRITA_GPU_TRANSFORM=0`, `KRITA_GPU_LIQUIFY=0` and
-  `KRITA_GPU_CONVOLUTION=0` keep the affine passes, Liquify and the Gaussian
-  convolution on the CPU (development switches).
+- With the engine on, `KRITA_GPU_TRANSFORM=0`, `KRITA_GPU_LIQUIFY=0`,
+  `KRITA_GPU_PUPPET=0` and `KRITA_GPU_CONVOLUTION=0` keep the affine passes,
+  Liquify (and with it Puppet Warp, which shares the grid warp), Puppet Warp
+  alone and the Gaussian convolution on the CPU (development switches).
 - No `.kra` changes or persisted ids: `.kra` files stay readable by the CPU
   path and upstream Krita; GPU mode stores RGBA F32/F16 layers with the
   normal Krita color space ids. Saving works through the CPU path: the tile
@@ -950,6 +952,9 @@ Phase 0 has no user-visible behavior. From phase 3 on:
 7. Gaussian Blur, Unsharp Mask and Gaussian High Pass on RGBA32F and RGBA16F
    layers (phase 4.98): apply time and result, with a selection, Undo/Redo,
    the dialog preview, and a filter mask while painting below it.
+8. Puppet Warp apply on RGBA32F and RGBA16F layers (phase 4.96): one pin,
+   several pins with a turned joint and pin orders, Undo/Redo; the result
+   matches the preview.
 
 ## Phase history
 
@@ -962,7 +967,7 @@ cross-cutting findings to `docs/agent/wiki/` (see `wiki/index.md`).
 - [Blend modes, RGBA16F and transfers (phases 4.17-4.57)](wiki/history/gpu-phases-4.17-4.57.md): Blend-mode coverage, asynchronous submissions, RGBA16F brushes, context reuse, batched readbacks.
 - [Paint trace and latency analysis (phases 4.58-4.81)](wiki/history/gpu-phases-4.58-4.81.md): Paint pipeline trace, capture protocol, real-app stage and lock analysis, shared canvas builds.
 - [Generated dabs and brush latency (phases 4.82-4.92)](wiki/history/gpu-phases-4.82-4.92.md): GPU circle dabs, update period, Wash latency, shared pipelines, immediate canvas uploads.
-- [Filters and transforms (phases 4.93-)](wiki/history/gpu-phases-4.93-.md): CPU filter/transform baseline, GPU affine passes, GPU Liquify grid warp, GPU Gaussian blur.
+- [Filters and transforms (phases 4.93-)](wiki/history/gpu-phases-4.93-.md): CPU filter/transform baseline, GPU affine passes, GPU Liquify grid warp, GPU Gaussian blur, GPU Puppet Warp rendering.
 
 Section index:
 
@@ -1051,6 +1056,7 @@ Section index:
 - [GPU affine transform passes (phase 4.94)](wiki/history/gpu-phases-4.93-.md#gpu-affine-transform-passes-phase-494)
 - [GPU Liquify grid warp (phase 4.97)](wiki/history/gpu-phases-4.93-.md#gpu-liquify-grid-warp-phase-497)
 - [GPU Gaussian blur family (phase 4.98)](wiki/history/gpu-phases-4.93-.md#gpu-gaussian-blur-family-phase-498)
+- [GPU Puppet Warp mesh rendering (phase 4.96)](wiki/history/gpu-phases-4.93-.md#gpu-puppet-warp-mesh-rendering-phase-496)
 
 ## Risks and open questions
 

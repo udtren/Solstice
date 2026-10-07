@@ -16,6 +16,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <queue>
 #include <utility>
 #include <vector>
@@ -27,6 +28,8 @@
 #include "kis_paint_device.h"
 #include "kis_painter.h"
 #include "kis_warptransform_worker.h"
+
+#include "gpu/KisGpuGridWarpWorker.h"
 
 namespace
 {
@@ -158,6 +161,22 @@ struct OrderFilterOp {
         if (filterOrder && worker.ownerAt(cell.boundingRect().center()) != order)
             return;
         op(srcPolygon, dstPolygon);
+    }
+};
+
+/// Forwards each grid cell to the recorder of its stacking group, with the
+/// cell filter of OrderFilterOp: one grid pass records every group.
+struct GroupRecordersOp {
+    const KisPuppetTransformWorker &worker;
+    const QVector<int> &groups; ///< stackingGroups()
+    std::vector<std::unique_ptr<KisGpuGridWarpWorker::Recorder>> &recorders;
+    void operator()(const QPolygonF &srcPolygon, const QPolygonF &dstPolygon)
+    {
+        if (!worker.touchesArtwork(srcPolygon))
+            return;
+        const int group = groups.indexOf(worker.ownerAt(srcPolygon.boundingRect().center()));
+        if (group >= 0)
+            (*recorders[size_t(group)])(srcPolygon, dstPolygon);
     }
 };
 } // namespace
@@ -673,8 +692,22 @@ void KisPuppetTransformWorker::run(KisPaintDeviceSP srcDevice, KisPaintDeviceSP 
     auto mapOp = [this](const QPointF &point) {
         return map(point);
     };
+    // Solstice GPU engine (phase 4.96): record the polygons the CPU would
+    // paint (the same cell filter) and paint them on the GPU, bit-identical;
+    // on failure the target is cleared and painted on the CPU.
     const QVector<int> levels = stackingGroups();
     if (levels.size() == 1) {
+        if (isGpuEnabled() && KisGpuGridWarpWorker::canRun(srcDevice, dstDevice)) {
+            KisGpuGridWarpWorker::Recorder recorder(dstDevice->colorSpace() == srcDevice->colorSpace());
+            recorder.setCanMergeRects(false);
+            OrderFilterOp<KisGpuGridWarpWorker::Recorder> filterOp{recorder, *this, 0, false, {}};
+            GridIterationTools::processGrid(filterOp, mapOp, srcBounds, 8);
+            recorder.finalize();
+            if (KisGpuGridWarpWorker::run(srcDevice, dstDevice, recorder)) {
+                return;
+            }
+            dstDevice->clear();
+        }
         GridIterationTools::PaintDevicePolygonOp polygonOp(srcDevice, dstDevice);
         polygonOp.setCanMergeRects(false);
         OrderFilterOp<GridIterationTools::PaintDevicePolygonOp> filterOp{polygonOp, *this, 0, false, {}};
@@ -683,15 +716,38 @@ void KisPuppetTransformWorker::run(KisPaintDeviceSP srcDevice, KisPaintDeviceSP 
         return;
     }
     // Render each pin's part separately and composite them bottom to top
-    // (stackingGroups()), so parts never erase each other.
-    for (int level : levels) {
+    // (stackingGroups()), so parts never erase each other. The layers share
+    // the destination's offset, so the GPU can paint them as well.
+    auto makeLayer = [&]() {
         KisPaintDeviceSP layer = new KisPaintDevice(dstDevice->colorSpace());
         layer->setDefaultBounds(dstDevice->defaultBounds());
-        GridIterationTools::PaintDevicePolygonOp polygonOp(srcDevice, layer);
-        polygonOp.setCanMergeRects(false);
-        OrderFilterOp<GridIterationTools::PaintDevicePolygonOp> filterOp{polygonOp, *this, level, true, {}};
-        GridIterationTools::processGrid(filterOp, mapOp, srcBounds, 8);
-        polygonOp.finalize();
+        layer->moveTo(dstDevice->x(), dstDevice->y());
+        return layer;
+    };
+    // On the GPU path, one grid pass records every group (the CPU path walks
+    // the grid once per group).
+    std::vector<std::unique_ptr<KisGpuGridWarpWorker::Recorder>> recorders;
+    if (isGpuEnabled() && KisGpuGridWarpWorker::canRun(srcDevice, makeLayer())) {
+        for (int i = 0; i < levels.size(); ++i) {
+            recorders.emplace_back(
+                new KisGpuGridWarpWorker::Recorder(dstDevice->colorSpace() == srcDevice->colorSpace()));
+            recorders.back()->setCanMergeRects(false);
+        }
+        GroupRecordersOp groupOp{*this, levels, recorders};
+        GridIterationTools::processGrid(groupOp, mapOp, srcBounds, 8);
+        for (auto &recorder : recorders)
+            recorder->finalize();
+    }
+    for (int i = 0; i < levels.size(); ++i) {
+        KisPaintDeviceSP layer = makeLayer();
+        if (recorders.empty() || !KisGpuGridWarpWorker::run(srcDevice, layer, *recorders[size_t(i)])) {
+            layer->clear();
+            GridIterationTools::PaintDevicePolygonOp polygonOp(srcDevice, layer);
+            polygonOp.setCanMergeRects(false);
+            OrderFilterOp<GridIterationTools::PaintDevicePolygonOp> filterOp{polygonOp, *this, levels[i], true, {}};
+            GridIterationTools::processGrid(filterOp, mapOp, srcBounds, 8);
+            polygonOp.finalize();
+        }
         const QRect rect = layer->extent();
         if (rect.isEmpty())
             continue;
@@ -699,6 +755,11 @@ void KisPuppetTransformWorker::run(KisPaintDeviceSP srcDevice, KisPaintDeviceSP 
         gc.setCompositeOpId(COMPOSITE_OVER);
         gc.bitBlt(rect.topLeft(), layer, rect);
     }
+}
+
+bool KisPuppetTransformWorker::isGpuEnabled()
+{
+    return qgetenv("KRITA_GPU_PUPPET") != "0";
 }
 
 QImage KisPuppetTransformWorker::runOnQImage(const QImage &srcImage,
