@@ -89,8 +89,8 @@ Read these before adding or updating any feature:
 - Brush option shared model (phase 1 implemented for Deform, manual check pending):
   `docs/agent/brush-option-shared-model-plan.md`, findings in
   `docs/agent/brush-option-shared-model-phase0.md`
-- UI modernization plan (not implemented):
-  `docs/agent/ui-modernization-plan.md`
+- UI modernization plan (phase 0 recorded, phase 1 theme prototype pending
+  the user's comparison): `docs/agent/ui-modernization-plan.md`
 - GitHub Actions Windows trial builds: `docs/agent/github-actions.md`
 
 Before changing a listed feature, read its complete agent document. When a new
