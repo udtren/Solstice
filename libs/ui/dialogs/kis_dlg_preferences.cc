@@ -39,6 +39,7 @@
 #include <QFontComboBox>
 #include <QFont>
 #include <QSurfaceFormat>
+#include <QTreeView>
 #include <QColorSpace>
 
 #include <KisApplication.h>
@@ -353,7 +354,8 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
     m_chkSolsticeInterface = new QCheckBox(i18n("Solstice interface (docker titles, document tabs, toolbars)"), this);
     m_chkSolsticeInterface->setToolTip(
         i18n("Gives docker titles a header band, sizes document tabs to their titles with an underline on the "
-             "current tab, and separates toolbars with a line. The colors follow the current theme."));
+             "current tab, separates toolbars with a line, and shows the settings pages as a compact list. The colors "
+             "follow the current theme."));
     m_chkSolsticeInterface->setChecked(cfg.readEntry<bool>("Solstice/ModernInterface", false));
     formLayout->addRow(m_chkSolsticeInterface);
 
@@ -2543,7 +2545,10 @@ KisDlgPreferences::KisDlgPreferences(QWidget* parent, const char* name)
     setWindowTitle(i18n("Configure Krita"));
     setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::RestoreDefaults);
 
-    setFaceType(KPageDialog::List);
+    // Solstice interface: a compact sidebar (icon and name in one row)
+    // instead of large icons above bold names; see the end of the constructor.
+    const bool solsticeInterface = KisConfig(true).readEntry<bool>("Solstice/ModernInterface", false);
+    setFaceType(solsticeInterface ? KPageDialog::Tree : KPageDialog::List);
 
     // General
     KoVBox *vbox = new KoVBox();
@@ -2670,6 +2675,16 @@ KisDlgPreferences::KisDlgPreferences(QWidget* parent, const char* name)
     }
 
     connect(restoreDefaultsButton, SIGNAL(clicked(bool)), this, SLOT(slotDefault()));
+
+    if (solsticeInterface) {
+        if (QTreeView *sidebar = findChild<QTreeView *>()) {
+            sidebar->setRootIsDecorated(false);
+            sidebar->setIndentation(0);
+            sidebar->setIconSize(QSize(20, 20));
+            sidebar->setStyleSheet(QStringLiteral("QTreeView::item { padding: 5px 6px; }"));
+            sidebar->setFixedWidth(220);
+        }
+    }
 
     KisConfig cfg(true);
     QString currentPageName = cfg.readEntry<QString>("KisDlgPreferences/CurrentPage");

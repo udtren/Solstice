@@ -44,6 +44,10 @@ Switch back with **Settings → Themes → Krita darker** (or any other theme).
   color; other tabs use dimmer text.
 - **Toolbars** are separated from the area below by a line, with slightly more
   padding.
+- **Settings dialog** pages are listed in a compact sidebar, with a small
+  icon and the name in one row, instead of large icons above bold names.
+  This applies when the dialog is opened again after the option is
+  changed.
 
 The colors follow the current theme, so the option works with light and dark
 themes. Clear the check box to return to the original look; the change applies
@@ -80,7 +84,11 @@ Fusion** to return to the original look.
   restarted.
 - Text tool panels and other QML-based panels are not affected by the
   Solstice style.
-- The Settings dialog still uses larger text and icons than the main window.
+- Without the Solstice interface option, the Settings dialog keeps its large
+  page icons.
+- Panels built with QML, such as Text Properties, follow the theme's colors
+  but keep their own control shapes; the Solstice style does not apply to
+  them.
 - The color of the area around the canvas comes from **Configure Solstice →
   Display → Canvas Border Color**, not from the theme.
 - The theme, the Solstice interface option and the Solstice style have been
