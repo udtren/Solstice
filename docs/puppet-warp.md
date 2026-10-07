@@ -99,6 +99,14 @@ Locked, hidden, non-editable, or unsupported node types may be skipped.
   changed. Limbs closer together than that can still pull on each other.
 - A joint bends over a small area around its pin, so a rotated part can shift
   by a few pixels.
+- **Folding a joint far** (about 90 degrees or more) pushes the artwork around
+  the joint outward and can leave a gap next to it, instead of laying the
+  turned part over or under its neighbour.
+- Parts that touch in the artwork (for example a hand resting on the hip)
+  count as connected, so rotating the elbow can also affect how the area
+  near the hip moves.
+- Order applies to whole parts (each part belongs to its nearest pin along
+  the artwork); a part cannot be partly in front and partly behind.
 - There are no per-pin strength, influence-radius, or rotation-lock options.
 - Puppet transforms saved with older versions keep their original, less rigid
   deformation when reopened.

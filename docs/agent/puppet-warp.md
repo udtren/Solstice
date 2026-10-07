@@ -145,12 +145,9 @@ stored mesh keeps preview, overlay, final rendering and bounds identical.
   - Constraining those points unrotated instead tore the joint (worse).
 - **Soft joints were tried and dropped.** Lower stiffness within 1.5-3 cells of
   a pin left the fold gap at 430-1166 px.
-- **Remaining limitation:** folding a joint far (137 degrees in
-  `testFoldedElbowGap`) still leaves a gap of 558 px in the upper arm. The
-  turned part shares the joint vertices with its neighbour, so the connected
-  mesh drags the neighbour's edge instead of overlapping it. Overlap needs a
-  hinge: a mesh cut at the joint with duplicated vertices, the parts rendered
-  separately, and a joint disc covering the outer side.
+- **Remaining limitation:** folding a joint far still pushes the artwork
+  around the joint aside and leaves a gap (558 px in the upper arm at 137
+  degrees in `testFoldedElbowGap`). See "Open issue: folded joints" below.
 - **Initial guess:** every vertex starts with the rigid motion of the pin
   nearest to it along the mesh. That is a multi-source Dijkstra over triangle
   edges, with empty edges costing 50x. A rotated pin therefore already turns
@@ -271,6 +268,61 @@ Add Puppet-specific multi-layer regression coverage before changing this path.
   and scale gestures in Puppet mode (empty-canvas drags select pins instead).
 - `Show mesh` affects visualization only, never pixels or identity.
 
+## Open issue: folded joints
+
+Status (2026-10-07): unsolved; the user decided to leave Puppet Warp as
+committed in `749ec6cbbd` for now.
+
+**Symptom.** Rotating a joint pin far (about 90 degrees or more) pushes the
+artwork around the joint outward and opens a gap on the neighbour's side
+(user screenshots of an elbow folded onto the hip). The turned part and its
+neighbour share the joint's mesh vertices, so the connected mesh must stretch
+or squeeze instead of letting the parts overlap.
+
+**Attempt: hinge with a mesh cut (implemented, then reverted at the user's
+request).**
+- Split a rotated pin's part along a line through the pin: the side toward
+  neighbouring pins was reassigned to the neighbour, the rest turned.
+  Vertices on the split got one solver variable per side, so the sides
+  overlapped and Order decided the top.
+- Each side's pin constraint had to use a triangle of its own side
+  (barycentric extrapolation). Using the containing triangle mixed in the
+  other side's vertices and bent the neighbour by 8-12 px.
+- The outer side of the bend opens like a wedge. A turned disc around the pin
+  (0.5-1.5 cells) did not reach the edge of a wide (100 px) arm. Sweeping the
+  joint's cross section along the outer split ray through the rotation
+  angle filled it with a rounded joint in synthetic tests.
+- The split followed mesh triangles (24 px), leaving steps and rotated teeth
+  along the cut. An exact split line near the pin, plus 2 px rendering cells
+  around the hinge, fixed that in tests (coarse cells had to overlap the fine
+  region by one cell to avoid one-pixel T-junction cracks).
+- A 60-degree cone toward the neighbour cut an L-shaped elbow badly; a
+  bisector between the neighbour's direction and the turning part's
+  direction (a mitre) was better.
+- The mesh overlay had to break its lines where the side changes.
+- Synthetic tests passed (no gap, exact rotation, no holes in a wide joint),
+  but on the user's artwork (pins at the shoulder and the elbow, forearm
+  folded across the body) the joint still showed a ragged notch and stray
+  pieces on the outer side, and the overlay scattered. Likely causes not
+  covered by the tests: rounded or irregular joint silhouettes, the hand
+  touching the torso (the hip pin then counts as a neighbour), and one
+  fixed split line for a joint that should bend over an area.
+
+**Also tried and dropped earlier:** soft joints (lower stiffness within
+1.5-3 cells of a pin; gap 430-1166 px), constraining the neighbour-facing
+rigid points unrotated (tore the joint).
+
+**If this is resumed:**
+- Build the regression image from the user's real artwork (a rounded elbow,
+  forearm folded across the body, hand touching the hip) before changing the
+  solver; the synthetic rectangle tests were not predictive.
+- Consider what Clip Studio Paint appears to do (parts slide under each other
+  with a soft blend at the joint) rather than a hard cut, or a cut limited to
+  the inner side of the bend with the outer side left connected and
+  stretched.
+- Decide how touching but separate parts (hand on hip) should count as
+  neighbours.
+
 ## Known limitations
 
 1. The mesh is a regular grid (about 24 px cells, at most 64x64), not a
@@ -279,12 +331,19 @@ Add Puppet-specific multi-layer regression coverage before changing this path.
 2. The displayed mesh is not editable.
 3. A joint bends over about one cell around the pin, so a rotated free part
    turns about the pin but may shift by a few pixels. In the unit test a
-   90-degree elbow rotation turns the forearm by 93 degrees with a 7 px tip
-   offset.
+   90-degree elbow rotation turns the forearm by 90.6 degrees with a 4.5 px
+   deviation.
+3a. Folding a joint far pushes the surrounding artwork aside and leaves a gap
+   instead of overlapping the parts (see "Open issue: folded joints").
+3b. Neighbouring pins are pins whose parts touch in the artwork, so a hand
+   touching the hip makes the hip pin a neighbour of the elbow and changes
+   which side of the elbow turns.
 4. Legacy transforms (no stored mesh) keep the MLS model with its Euclidean MST
    topology and heuristic terminal guides.
 5. There are no explicit fixed/movable/rotation-disabled/weighted pin types.
-6. There is no ordering/depth control for folded artwork.
+6. Order is per owning pin: one part cannot be split across orders, and the
+   part a pixel belongs to follows the geodesic nearest pin, which can differ
+   from the intended limb near a joint.
 7. Opaque backgrounds mask the entire rectangle.
 8. Full-resolution mask construction is synchronous, although cached.
 9. Rotation rings can become visually crowded.
@@ -294,7 +353,10 @@ Add Puppet-specific multi-layer regression coverage before changing this path.
 1. Done in phase 4.95 for the mesh model: triangular ARAP with geodesic
    pin ownership; visible mesh and solver topology are identical. Next: a
    contour-following triangulation and a density setting.
-2. GPU rendering of the mesh warp (planned, GPU engine phase 4.96).
+2. GPU rendering of the mesh warp (planned, GPU engine phase 4.96; waiting
+   for the user's manual check of the current behaviour).
+2a. Folded joints that overlap instead of pushing artwork aside (open issue
+   above).
 3. Add explicit pin type, strength, rotation correction, and influence radius
    while preserving backwards-compatible serialized defaults.
 4. Improve masks with Euclidean expansion, configurable alpha threshold,
