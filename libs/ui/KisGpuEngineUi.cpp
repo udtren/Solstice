@@ -284,7 +284,8 @@ KisGpuEngineSettingsWidget::KisGpuEngineSettingsWidget(QWidget *parent)
 
 void KisGpuEngineSettingsWidget::load(bool requestDefault)
 {
-    m_enabled->setChecked(requestDefault ? false : KisGpuEngineSettings::enabledInConfig());
+    // Solstice: the GPU engine is on by default (embedded kritarc defaults).
+    m_enabled->setChecked(requestDefault ? true : KisGpuEngineSettings::enabledInConfig());
     const int policy = requestDefault ? int(KisGpuEngineSettings::Ask) : int(KisGpuEngineSettings::convertPolicy());
     m_convertPolicy->setCurrentIndex(qMax(0, m_convertPolicy->findData(policy)));
 }

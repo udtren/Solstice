@@ -167,6 +167,19 @@ bool KisSolsticeProfile::createFreshProfile(QString *error)
     if (!makeFolders(error)) {
         return false;
     }
+    // Solstice defaults (docs/agent/settings-location.md, phase 4): a new
+    // profile starts in English. The format is the one of
+    // kswitchlanguagedialog_p.cpp: [Language] <application name>=<languages>.
+    {
+        QSettings overrides(KisSolsticePaths::configFilePath(QStringLiteral("klanguageoverridesrc")),
+                            QSettings::IniFormat);
+        overrides.beginGroup(QStringLiteral("Language"));
+        if (!overrides.contains(QStringLiteral("krita"))) {
+            overrides.setValue(QStringLiteral("krita"), QByteArray("en_US"));
+        }
+        overrides.endGroup();
+        overrides.sync();
+    }
     if (!setState(State::Ready)) {
         setError(error, QStringLiteral("Could not write the profile marker"));
         return false;

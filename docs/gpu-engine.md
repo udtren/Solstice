@@ -19,7 +19,8 @@ Saturation and Luminosity. Wash's Alpha Darken painting buffer, preview and
 final merge can stay on the GPU. Other RGBA16F brush blend modes continue
 through the CPU path. Dab generation remains on
 the CPU in both formats.
-Filters and transforms still run on the CPU. The engine is off by default.
+Filters and transforms still run on the CPU. The engine is on by default in
+new profiles and in profiles that never changed the option (since 2026-10-07).
 
 Accelerated layer blend modes include Normal, Multiply, Screen, Addition /
 Linear Dodge, Subtract, Darken, Lighten, Difference, Overlay, Hard Light,
@@ -368,15 +369,17 @@ other modes and workloads can behave differently. See the
 [basic blend-brush measurements](agent/wiki/history/gpu-phases-4.17-4.57.md#rgba16f-basic-blend-brushes-phases-449-450)
 and [extended major-mode measurements](agent/wiki/history/gpu-phases-4.17-4.57.md#rgba16f-extended-major-blend-brushes-phases-451-452).
 
-## Turning it on
+## Turning it on or off
+
+The engine is on by default. To change it:
 
 1. Open **Settings → Configure Solstice → Performance → General**.
-2. In **GPU Engine (Vulkan)**, check **Use the GPU engine for RGBA float
-   documents**.
-3. Restart Solstice. The status line in the same place then shows the GPU in
-   use once an RGBA float document is open.
+2. In **GPU Engine (Vulkan)**, check or uncheck **Use the GPU engine for RGBA
+   float documents**.
+3. Restart Solstice. With the engine on, the status line in the same place
+   shows the GPU in use once an RGBA float document is open.
 
-Uncheck the option and restart to go back to the CPU engine.
+Without a usable Vulkan GPU the engine is not used, and Solstice works on the CPU.
 
 ## Documents in other color spaces
 

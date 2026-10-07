@@ -357,7 +357,7 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
         i18n("Gives docker titles a header band, sizes document tabs to their titles with an underline on the "
              "current tab, separates toolbars with a line, and shows the settings pages as a compact list. The colors "
              "follow the current theme."));
-    m_chkSolsticeInterface->setChecked(cfg.readEntry<bool>("Solstice/ModernInterface", false));
+    m_chkSolsticeInterface->setChecked(cfg.readEntry<bool>("Solstice/ModernInterface", true));
     formLayout->addRow(m_chkSolsticeInterface);
     m_chkOverviewLiveUpdate = new QCheckBox(i18n("Update the Overview docker while painting"), this);
     m_chkOverviewLiveUpdate->setToolTip(
@@ -875,7 +875,7 @@ void GeneralTab::setDefault()
 
 
     chkUseCustomFont->setChecked(false);
-    m_chkSolsticeInterface->setChecked(false);
+    m_chkSolsticeInterface->setChecked(true);
     m_chkOverviewLiveUpdate->setChecked(true);
     m_spnInterfaceScale->setValue(100);
     cmbCustomFont->setCurrentFont(qApp->font());
@@ -2590,7 +2590,7 @@ KisDlgPreferences::KisDlgPreferences(QWidget* parent, const char* name)
 
     // Solstice interface: a compact sidebar (icon and name in one row)
     // instead of large icons above bold names; see the end of the constructor.
-    const bool solsticeInterface = KisConfig(true).readEntry<bool>("Solstice/ModernInterface", false);
+    const bool solsticeInterface = KisConfig(true).readEntry<bool>("Solstice/ModernInterface", true);
     setFaceType(solsticeInterface ? KPageDialog::Tree : KPageDialog::List);
 
     // General

@@ -42,7 +42,8 @@ KRITAGLOBAL_EXPORT bool legacyProfileExists();
 /// The language of the Krita profile's language override (e.g. "ja"), or empty.
 KRITAGLOBAL_EXPORT QString legacyLanguage();
 
-/// Creates the profile folders for a fresh start and marks the profile Ready.
+/// Creates the profile folders for a fresh start (with the language set to
+/// English) and marks the profile Ready.
 KRITAGLOBAL_EXPORT bool createFreshProfile(QString *error = nullptr);
 
 /**

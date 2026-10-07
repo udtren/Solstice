@@ -95,9 +95,12 @@ details are in the phase records, now in the wiki history pages (see
   GPU-resident projection tiles (3.1), the canvas textures are filled from
   those tiles on the GPU through a buffer shared with OpenGL (3.2), and the
   engine has a user setting, document conversion, and failure warnings
-  (3.3). The GPU engine is **off by default** (Preferences → Performance →
-  GPU Engine, `Solstice/GpuEngine`; `KRITA_GPU_PROJECTION=1/0` overrides
-  it); with it off, Krita's runtime behavior is unchanged.
+  (3.3). The GPU engine is **on by default** since 2026-10-07: the embedded
+  `krita/data/kritarc` sets `Solstice/GpuEngine=true`, and the code fallback
+  stays off, so tests are unaffected (`docs/agent/settings-location.md`,
+  phase 4). It is set in Preferences → Performance → GPU Engine;
+  `KRITA_GPU_PROJECTION=1/0` overrides it. With it off, Krita's runtime
+  behavior is unchanged.
 - Implementation:
   - `libs/gpu/` (target `kritagpu`): Vulkan foundation, shaders in
     `libs/gpu/shaders/`, tests in `libs/gpu/tests/`;
@@ -487,7 +490,7 @@ All other modes run on the CPU.
 
 ### Feature gate and user interface (implemented in phase 3.3)
 
-- `Solstice/GpuEngine` (bool, default off; `KisGpuEngineSettings`) enables
+- `Solstice/GpuEngine` (bool; embedded default on, code fallback off; `KisGpuEngineSettings`) enables
   the engine for the whole process. `KisGpuMergeBatch::isEnabled()` decides
   once (`std::call_once`; a value set by `setEnabled()` before the first
   call wins), so a change applies after a restart: switching while merges

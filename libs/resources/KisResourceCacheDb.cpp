@@ -45,7 +45,11 @@ const QString METADATA_STORAGES = "storages";
 const QString KisResourceCacheDb::resourceCacheDbFilename { "resourcecache.sqlite" };
 const QString KisResourceCacheDb::databaseVersion { "0.0.18" };
 QStringList KisResourceCacheDb::storageTypes { QStringList() };
-QStringList KisResourceCacheDb::disabledBundles { QStringList() << "Krita_3_Default_Resources.bundle" };
+// Solstice: of the installed bundles only Krita_4_Default_Resources is enabled
+// in a new profile (docs/agent/settings-location.md, phase 4).
+QStringList KisResourceCacheDb::disabledBundles{QStringList() << "Krita_3_Default_Resources.bundle"
+                                                              << "Krita_Artists_SeExpr_examples.bundle"
+                                                              << "RGBA_brushes.bundle"};
 
 bool KisResourceCacheDb::s_valid {false};
 QString KisResourceCacheDb::s_lastError {QString()};

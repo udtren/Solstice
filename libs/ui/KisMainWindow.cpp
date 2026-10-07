@@ -392,7 +392,7 @@ KisMainWindow::KisMainWindow(QUuid uuid)
     KisGpuEngineUi::install();
 
     // Solstice interface: docker title bars created below follow the setting.
-    KoDockWidgetTitleBar::setSolsticeLookEnabled(KisConfig(true).readEntry<bool>("Solstice/ModernInterface", false));
+    KoDockWidgetTitleBar::setSolsticeLookEnabled(KisConfig(true).readEntry<bool>("Solstice/ModernInterface", true));
 
     d->workspacemodel = new KisResourceModel(ResourceType::Workspaces, this);
     connect(d->workspacemodel, SIGNAL(modelReset()), this, SLOT(updateWindowMenu()));
@@ -1075,7 +1075,7 @@ void KisMainWindow::customizeTabBar()
 
     // Solstice interface (docs/agent/ui-modernization-plan.md, phase 2):
     // document tabs, toolbars and docker titles in the theme's colors.
-    const bool solsticeLook = KisConfig(true).readEntry<bool>("Solstice/ModernInterface", false);
+    const bool solsticeLook = KisConfig(true).readEntry<bool>("Solstice/ModernInterface", true);
     QString toolBarStyleSheet;
     if (solsticeLook) {
         const QPalette palette = qApp->palette();

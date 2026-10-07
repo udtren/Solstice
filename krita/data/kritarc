@@ -1,3 +1,7 @@
+Solstice/GpuEngine=true
+Solstice/ModernInterface=true
+widgetStyle=Solstice
+
 [advancedColorSelector]
 allowHorizontalLayout=true
 colorSelectorConfiguration=3|0|5|0
@@ -359,7 +363,7 @@ ShowCustomDocumentWidgetByDefault=true
 LastReturnType=Custom Document
 
 [theme]
-Theme=Krita dark
+Theme=Solstice Dark
 
 [python]
 enable_colorspace=true

@@ -2,8 +2,9 @@
 
 User guide: [`../settings-folder.md`](../settings-folder.md).
 
-Status (2026-10-07): **phases 1-3 implemented** (path service; Solstice
-profile and Krita import; remaining Local files); phases 4-5 pending. Phases follow the order the
+Status (2026-10-07): **phases 1-4 implemented** (path service; Solstice
+profile and Krita import; remaining Local files; Solstice defaults); phase 5
+(verification) pending. Phases follow the order the
 user approved.
 
 User decisions (2026-10-07):
@@ -410,6 +411,79 @@ Manual check passed (2026-10-07, user): after using the Text Properties
 docker (QML), `cache\qmlcache` held 43 files; since the install only `Temp`
 changed in `%LOCALAPPDATA%`, and `%LOCALAPPDATA%\krita` and `%APPDATA%\krita`
 were unchanged.
+
+### Phase 4 result (2026-10-07)
+
+User decisions:
+
+- of the installed bundles, only `Krita_4_Default_Resources` is enabled;
+- everything else follows the recommendations below.
+
+The defaults were inventoried first:
+
+- Solstice options are mostly `readEntry()` fallbacks; none were in the
+  embedded `kritarc`.
+- The installation ships four bundles:
+  - `Krita_3_Default_Resources`: 131 presets, 170 brushes;
+  - `Krita_4_Default_Resources`: 117 presets, 79 brushes, 81 patterns;
+  - `Krita_Artists_SeExpr_examples`: 34 SeExpr scripts;
+  - `RGBA_brushes`: 6 presets.
+- The ship also includes loose resources (39 presets, 112 patterns, 69
+  templates, 9 workspaces and others).
+
+| Default | Before | Now | Where |
+| --- | --- | --- | --- |
+| Enabled bundles in a new resource database | all except Krita 3 | Krita 4 only | `KisResourceCacheDb::disabledBundles` (+ SeExpr examples, RGBA brushes) |
+| Theme | Krita dark | Solstice Dark | embedded `krita/data/kritarc` `[theme]` |
+| Widget style | none (Breeze, then Fusion) | Solstice | embedded `kritarc` top-level `widgetStyle` |
+| Solstice interface | off | on | embedded `kritarc` `Solstice/ModernInterface`; fallbacks in `KisMainWindow.cpp`, `kis_dlg_preferences.cc` (also its "restore defaults") |
+| First-time resource message | "Krita is running for the first time..." | "Solstice is setting up its resources..." | `KisResourceLocator::firstTimeInstallation()` |
+| GPU engine (user, 2026-10-07) | off | on | embedded `kritarc` top-level `Solstice/GpuEngine=true`; "restore defaults" in `KisGpuEngineUi.cpp`. The code fallback in `KisGpuEngineSettings::enabledInConfig()` stays `false`: test programs do not mount the embedded defaults, and a `true` fallback would enable the engine in every image test |
+| Language (user, 2026-10-07) | system language | English | `KisSolsticeProfile::createFreshProfile()` writes `[Language] krita=en_US` (QByteArray, as `kswitchlanguagedialog_p.cpp` does) to `klanguageoverridesrc`; new profiles only, imported ones keep theirs |
+
+Kept as they are (recommended):
+
+- docker locks off;
+- no brush preset grouping;
+- the upstream renderer, tablet (WinTab), cursor, autosave (7 min), undo
+  (200), new document (A4 at 300 ppi, 8-bit sRGB) and welcome-page news
+  (off) defaults;
+- the window layout from the embedded `[MainWindow] State`.
+
+Effects:
+
+- The bundle list applies when a storage is first registered: new profiles,
+  and bundles a user adds with one of these names. Imported resource
+  databases keep their own enabled and disabled bundles.
+- Embedded `kritarc` entries are the fallback layer for every profile.
+  Imported profiles that never set the theme, style or Solstice interface
+  therefore get the Solstice ones; values that were set are kept.
+- The first-start presets ("b) Basic-5 Size Opacity", "a) Eraser Circle")
+  are in `Krita_4_Default_Resources`, so the first start still selects them.
+
+Inconsistencies found and left for later:
+
+- Quick Access settings dialog size: the fallback is 340x480 when read and
+  550x650 on legacy import (`QuickAccessDock.cpp:1713-1714` vs `406-407`).
+- `OpenGLRenderer`: the fallback is `angle` in `main.cc` on Windows but
+  `auto` in `kis_opengl.cpp` and `kis_config.cc`.
+
+Tests:
+
+- `TestResourceCacheDb` 5/5, `TestResourceModel` 19/19, `TestStorageModel`
+  7/7.
+- `TestResourceLocator` 26/27 and `TestBundleStorage` 8/9 fail only on
+  missing resource loaders in the test environment ("Could not create loader
+  for ..."), as before.
+
+Manual check (pending): start a new profile without touching the real one,
+by closing Solstice and starting it with `SOLSTICE_PROFILE_ROOT` and both
+`SOLSTICE_LEGACY_*` variables pointing at empty scratch folders. Expected:
+
+- no import question;
+- Solstice Dark, the Solstice style and the Solstice interface;
+- in the bundle manager, only Krita 4 enabled;
+- "b) Basic-5 Size Opacity" selected.
 
 ### First start and import (design, phase 2)
 

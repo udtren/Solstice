@@ -10,6 +10,7 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QSettings>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -138,6 +139,9 @@ void KisSolsticeProfileTest::testFreshProfile()
     QVERIFY(!legacyProfileExists());
     QVERIFY(createFreshProfile());
     QCOMPARE(state(), State::Ready);
+    // A new profile starts in English.
+    QSettings overrides(KisSolsticePaths::configFilePath("klanguageoverridesrc"), QSettings::IniFormat);
+    QCOMPARE(overrides.value("Language/krita").toByteArray(), QByteArray("en_US"));
     for (const QString &dir : {KisSolsticePaths::configDir(),
                                KisSolsticePaths::logDir(),
                                KisSolsticePaths::defaultResourceDir(),

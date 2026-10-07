@@ -41,6 +41,25 @@ keeps using that folder.
 
 Without Krita settings, Solstice starts with its defaults and does not ask.
 
+## Defaults of a new profile
+
+A new profile (no Krita settings, or **No** on the first start) starts with:
+
+- the **Solstice Dark** theme, the **Solstice** widget style and the Solstice
+  interface (docker titles, document tabs and toolbars);
+- of the bundles that come with Solstice, only **Krita 4 Default Resources**
+  enabled.
+  - Krita 3 Default Resources, the SeExpr examples and the RGBA brushes are
+    installed but disabled.
+  - Enable them in **Settings > Manage Resource Libraries**.
+- the GPU engine on (see the [GPU engine guide](gpu-engine.md));
+- English as the interface language (change it with **Settings > Switch
+  Application Language**).
+
+An imported Krita profile keeps its own bundles and settings. Where the Krita
+profile never chose a theme, widget style or interface option, the Solstice
+defaults above apply.
+
 ## Starting over
 
 To run the first start again, close Solstice and delete (or rename)
