@@ -85,5 +85,6 @@ bar; the filter bar's destructor clears it (`QPointer` to the view).
 
 - A preset in several bundles appears only in one bundle group.
 - Group headers cannot be collapsed.
-- Grouping is available only in the Brush Presets docker (stroke preview
-  grid), not in the toolbar popup or the Brush Editor list.
+- Grouping is available in the Brush Presets docker, the toolbar brush popup
+  and the Quick Access Resources dialog (all with the docker filter bar), not
+  in the Brush Editor list.

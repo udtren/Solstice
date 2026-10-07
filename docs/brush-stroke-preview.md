@@ -28,13 +28,21 @@ docker instances start with all entries selected.
 
 The Brush Presets docker always shows stroke previews; the icon view and its
 Thumbnails/Details settings are not available there. The docker's display
-menu has one setting, **Preview Size**, which changes the stroke cells
-independently of the toolbar brush popup and the Brush Editor's preset list. Those lists
-continue to show the original preset icons. The F5 live preview keeps its
-existing appearance and live brush-setting behavior.
+menu has one setting, **Preview Size**, which changes the stroke cells.
 
-The [Quick Access](quick-access.md) palette and its Resources dialog also show
-stroke previews, from the same cache: generated previews appear there at once.
+The other preset lists show stroke previews too, from the same cache, so a
+generated preview appears everywhere at once:
+
+- the **toolbar brush popup** (the brush button in the toolbar): the same
+  view as the docker, with tags, search, the Engines and Bundles filters and
+  grouping;
+- the **Brush Editor**'s preset list: stroke previews, with its existing
+  engine filter; its display menu also has only **Preview Size**;
+- the [Quick Access](quick-access.md) palette and its Resources dialog.
+
+The lists share the preview size and the grouping choice; a list picks up a
+change made in another one when it is opened again after restarting. The F5
+live preview keeps its existing appearance and live brush-setting behavior.
 
 ## Grouping
 

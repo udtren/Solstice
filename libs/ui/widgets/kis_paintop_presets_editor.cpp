@@ -142,6 +142,8 @@ KisPaintOpPresetsEditor::KisPaintOpPresetsEditor(KisCanvasResourceProvider * res
         // Brush Presets
         KisPresetChooser* presetChooser = m_d->uiWdgPaintOpPresetSettings.presetWidget;
         presetChooser->showTaggingBar(true);
+        // Solstice: stroke previews as in the Brush Presets docker.
+        presetChooser->setStrokePreviewMode(true);
 
         // Brush Presets ViewMode Menu
         QMenu* viewModeMenu = new QMenu(this);
@@ -149,7 +151,10 @@ KisPaintOpPresetsEditor::KisPaintOpPresetsEditor(KisCanvasResourceProvider * res
             viewModeMenu->setStyleSheet("margin: 6px");
 
             // View Modes Btns
-            viewModeMenu->addSection(i18nc("@title Which elements to display (e.g., thumbnails or details)", "Display"));
+            // Solstice: the list always shows stroke previews, so the icon view
+            // settings are hidden and the size slider sets the preview width.
+            viewModeMenu->addSection(i18nc("@title Which elements to display (e.g., thumbnails or details)", "Display"))
+                ->setVisible(false);
             KisPresetChooser::ViewMode mode = (KisPresetChooser::ViewMode)cfg.presetChooserViewMode();
             QActionGroup *actionGroup = new QActionGroup(this);
 
@@ -157,6 +162,7 @@ KisPaintOpPresetsEditor::KisPaintOpPresetsEditor(KisCanvasResourceProvider * res
             action->setCheckable(true);
             action->setChecked(mode == KisPresetChooser::THUMBNAIL);
             action->setActionGroup(actionGroup);
+            action->setVisible(false);
 
             connect(action, &QAction::triggered,
                 m_d->uiWdgPaintOpPresetSettings.presetWidget, &KisPresetChooser::setViewModeToThumbnail);
@@ -165,12 +171,13 @@ KisPaintOpPresetsEditor::KisPaintOpPresetsEditor(KisCanvasResourceProvider * res
             action->setCheckable(true);
             action->setChecked(mode == KisPresetChooser::DETAIL);
             action->setActionGroup(actionGroup);
+            action->setVisible(false);
 
             connect(action, &QAction::triggered,
                 m_d->uiWdgPaintOpPresetSettings.presetWidget, &KisPresetChooser::setViewModeToDetail);
 
             // Icon Size Slider
-            viewModeMenu->addSection(i18n("Icon Size"));
+            viewModeMenu->addSection(i18n("Preview Size"));
 
             QSlider* iconSizeSlider = new QSlider(this);
             iconSizeSlider->setOrientation(Qt::Horizontal);

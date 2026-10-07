@@ -32,8 +32,18 @@ preset files and in the code, but this docker no longer displays it.
   actions, and renames the size section to "Preview Size". The setting
   `Solstice/BrushStrokePreview` is no longer read; existing values are
   ignored. `KisPresetChooser::setStrokePreviewMode()` still supports both
-  modes (the tests toggle it), and the toolbar popup and Brush Editor keep
-  their icon view and Display menu.
+  modes (the tests toggle it).
+- The toolbar brush popup and the Brush Editor list show stroke previews too
+  (user request 2026-10-07). `KisPaintopBox` calls
+  `enableStrokePreviewSetting()` on its `KisPaintOpPresetsChooserPopup`, so
+  the popup matches the docker (filters, grouping, Preview Size only).
+  `KisPaintOpPresetsEditor` calls `setStrokePreviewMode(true)` on its
+  `presetWidget` without the docker filters (it has its own engine combo
+  box) and hides its Display section and Thumbnails/Details actions; its size
+  section is "Preview Size". All instances share
+  `Solstice/BrushStrokePreviewWidth` and `Solstice/BrushPresetGrouping`,
+  read when each instance enables preview mode or creates its filter bar.
+  The preset strip and the popup palette still show icons.
 - `KisResourceItemChooser::setBottomBarLayout` explicitly restores the requested
   grid after the docker's responsive initialization has entered horizontal
   strip mode. Disabling responsiveness alone does not undo that previous
@@ -45,8 +55,7 @@ preset files and in the code, but this docker no longer displays it.
 - Quick Access (2026-10-07): its Resources dialog embeds a `KisPresetChooser`
   in stroke preview mode with the docker filters, and its palette and Grid
   Edit brush items use the cache through `QuickAccessStrokePreviews` (see
-  `quick-access.md`). The toolbar popup and
-  the Brush Editor list still show icons.
+  `quick-access.md`).
 - Grouping by engine or bundle (2026-10-07) is described in
   [`brush-preset-grouping.md`](brush-preset-grouping.md).
 - `KisPresetDockerFilters` adds two per-instance checkable dropdown menus:
@@ -114,6 +123,10 @@ static implementation, replacing the registry factory after plugin loading,
 so pre-install tests do not silently exercise an older installed plugin.
 Do not run all UI tests. The test uses test-mode resource/config locations;
 its optional `SOLSTICE_PREVIEW_BASELINE_DIR` writes comparison PNGs there.
+Run it offscreen with fonts: `QT_QPA_PLATFORM=offscreen` and
+`QT_QPA_FONTDIR=C:\Windows\Fonts`. Without fonts the text metrics differ;
+`testResponsiveDockerLayout` then fails its 1100x100 check, because the
+filter bar (with the grouping dropdown) wraps one more row.
 
 ### Automated verification (2026-10-04)
 
@@ -402,9 +415,11 @@ scope. The implementation notes above describe the current source.
    without saving: the preview stays, and `*` appears.
 4. Paint while previews are generating: no stutter. Generation resumes
    after the stroke.
-5. Toolbar brush popup and Brush Editor list: unchanged icons.
-6. The docker's display menu shows only Preview Size (no Display section, no
-   Stroke Previews toggle); the toolbar popup still offers Thumbnails/Details.
+5. Toolbar brush popup: stroke previews, filters and grouping as in the
+   docker; Brush Editor list: stroke previews with its engine filter.
+6. The display menus of the docker, the toolbar popup and the Brush Editor
+   list show only Preview Size (no Display section, no Stroke Previews
+   toggle).
 
 ## Original implementation assessment (2026-10-04, before implementation)
 
@@ -478,5 +493,5 @@ files were changed during this assessment.
 ## Later enhancements
 
 - A square "dab image" view (one dab of the brush tip), as a separate mode.
-- Stroke previews in other choosers (toolbar popup, popup palette, Quick
-  Access), reusing `KisBrushStrokePreviewCache`.
+- Stroke previews in the remaining choosers (preset strip, popup palette),
+  reusing `KisBrushStrokePreviewCache`.

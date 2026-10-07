@@ -346,6 +346,8 @@ KisPaintopBox::KisPaintopBox(KisViewManager *viewManager, QWidget *parent, const
     m_presetsChooserPopup = new KisPaintOpPresetsChooserPopup();
     m_presetsChooserPopup->setMinimumHeight(550);
     m_presetsChooserPopup->setMinimumWidth(450);
+    // Solstice: stroke previews, filters and grouping as in the Brush Presets docker.
+    m_presetsChooserPopup->enableStrokePreviewSetting();
     m_presetSelectorPopupButton->setPopupWidget(m_presetsChooserPopup);
 
     QHBoxLayout* baseLayout = new QHBoxLayout(this);
