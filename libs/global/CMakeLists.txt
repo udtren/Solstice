@@ -30,6 +30,7 @@ set(kritaglobal_LIB_SRCS
     KisDeleteLaterWrapper.cpp
     KisUsageLogger.cpp
     KisSolsticePaths.cpp
+    KisSolsticeProfile.cpp
     KisFileUtils.cpp
     KisSignalMapper.cpp
     KisRegion.cpp

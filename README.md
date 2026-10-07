@@ -31,6 +31,9 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
   and rotatable pins in the Transform Tool.
 - **[Docker locks](docs/docker-locks.md)**: lock the widths and heights of
   docked dockers.
+- **[Settings folder](docs/settings-folder.md)**: Solstice keeps its
+  settings and resources in `%APPDATA%\Solstice`, separate from Krita, and can
+  import a Krita profile on the first start.
 - **[Overview live update](docs/overview-live-update.md)**: the Overview
   docker follows the canvas while painting.
 - **[Solstice interface](docs/ui-modernization.md)**: the bundled Cantarell UI

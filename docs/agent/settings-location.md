@@ -1,7 +1,10 @@
 # Settings location: design (phase 0)
 
-Status (2026-10-07): **phase 1 implemented** (path service, no change in
-locations); phases 2-5 pending. Phases follow the order the user approved.
+User guide: [`../settings-folder.md`](../settings-folder.md).
+
+Status (2026-10-07): **phases 1-2 implemented** (path service; Solstice
+profile and Krita import); phases 3-5 pending. Phases follow the order the
+user approved.
 
 User decisions (2026-10-07):
 
@@ -273,7 +276,108 @@ Tests:
   and on the missing patterns loader. It uses explicit test folders, not
   these paths, and was not run before the change.
 
-### First start and import (phase 2)
+### Phase 2 result (2026-10-07)
+
+**Paths.** `KisSolsticePaths` returns the profile layout:
+
+- `config\`; KXmlGui's local files go to `config\kxmlgui5`;
+- `logs\`, including `kritacrash.log`;
+- `resources\` (the default resource folder);
+- `cache\`.
+
+`kconfigName()` is relative to GenericConfigLocation. On another drive,
+`configDir()` falls back to `%LOCALAPPDATA%\Solstice\config`.
+
+Overrides for trials and tests:
+
+- `SOLSTICE_PROFILE_ROOT` (the profile folder);
+- `SOLSTICE_LEGACY_CONFIG_DIR` and `SOLSTICE_LEGACY_RESOURCE_DIR` (the
+  Krita profile to import).
+
+In test mode the profile is `%APPDATA%\qttest\Solstice`.
+
+**kritarc defaults.**
+
+- `cmake/modules/SolsticeEmbedRcc.cmake` compiles `krita/kritarc-defaults.qrc`
+  (`kritarc` at the root) with `rcc --binary`. It embeds the result as
+  `solsticeKritarcDefaultsRcc` (via `SolsticeEmbedRccToCpp.cmake`).
+- `KisSolsticePaths::registerMainConfigDefaults()` mounts it with
+  `QResource::registerResource(data, mapRoot)` at the folder of the cleaned
+  `":/kconfig/" + mainConfigName()`, for any profile location.
+- The original `:/kconfig/kritarc` stays in `krita.qrc`.
+
+**Profile and import.** `libs/global/KisSolsticeProfile.{h,cpp}`:
+
+- State marker `config\SOLSTICE_PROFILE`: `importing` or `ready`; a missing
+  marker means no profile.
+- `legacyProfileExists()`: `%LOCALAPPDATA%\kritarc`, or `%APPDATA%\krita` with
+  `resourcecache.sqlite`.
+- `importConfiguration()`:
+  - copies `kritarc`, `kritadisplayrc`, `kritashortcutsrc`,
+    `krita-scripterrc`, `karboncalligraphyrc` and `klanguageoverridesrc`;
+  - in `kritarc`, rewrites references to `%APPDATA%\krita` to
+    `resources\` (`rewritePaths()`) — forward slashes, backslashes, escaped
+    backslashes and `$HOME/...`, matching whole folder names only (spaces do
+    not end a name, so `krita - Copy` is kept);
+  - copies `%APPDATA%\krita\kxmlgui5` to `config\kxmlgui5`;
+  - marks the profile `importing`, or `ready` when no resources follow.
+- `resourcesToImport()`: true unless the Krita `kritarc` sets a custom
+  `ResourceDirectory` (kept as it is, not copied, not rewritten).
+- `planResourceCopy()`: every file except `resourcecache.sqlite.N~` and
+  `kxmlgui5/`.
+- `copyResources()`:
+  - checks free space (size plus 64 MB);
+  - copies in 4 MB chunks with progress and cancel;
+  - keeps modification times (the resource database compares them);
+  - marks the profile `ready`. On failure or cancel it removes `resources\`.
+- `abandonImport()` removes `config\` and `resources\` (and so the marker).
+
+**Startup** (`krita/main.cc`):
+
+1. `registerMainConfigDefaults()`, then `prepareSolsticeProfile()` before
+   `KConfig::setMainConfigName()` and the temporary `QCoreApplication`:
+   - with no marker and a Krita profile, a `MessageBoxW` (Yes = import,
+     No = fresh, Cancel = quit) whose text is built in, in Japanese or
+     English, from the Krita language override or the Windows UI language;
+   - with no Krita profile, a fresh profile;
+   - batch runs (`--export*`) do not ask and create nothing.
+2. `finishSolsticeImport()` after the single-instance check, before the splash
+   and `KisApplication::start()`: copies the resources with a modal
+   `QProgressDialog`. On failure or cancel it calls `abandonImport()`, warns,
+   and quits.
+
+`KoResourcePaths`' `cleanup()` drops `%APPDATA%\krita` (stock Krita's
+`AppDataLocation`) from resource searches, since the resource folder is
+elsewhere.
+
+**Tests:**
+
+- `KisSolsticePathsTest` 6/6: layout, override, relative KConfig name, and
+  the main config with mounted defaults.
+- `KisSolsticeProfileTest` 7/7: path rewriting (all forms, `krita - Copy`,
+  `kritaX`), fresh profile, full import, custom resource folder, and a
+  cancelled copy with rollback. It also checks that contents and
+  modification times match, and that the Krita files are unchanged.
+- The regression set as in phase 1 shows no change: `TestResourceLocator`
+  26/27 and `TestResourceStorage` 4/6, the same failures as before.
+
+**Manual checks (pending):**
+
+- First start with the Krita profile, answering Yes: progress window; brushes,
+  bundles (enabled and disabled), tags, workspaces, shortcuts, display and
+  language settings, Quick Access, Rest Note, Asset Library and Vision ML
+  models all as before; `Help > Show system information` shows the logs.
+- Second start: no question.
+- Answering No: Solstice's defaults (bundles from the installation).
+- Cancel at the question, and cancel during the copy: on the next start the
+  question appears again; `%APPDATA%\krita` is unchanged.
+- Krita and Solstice running at the same time.
+
+To start over during testing, close Solstice and delete
+`%APPDATA%\Solstice`. For trials without touching it, set
+`SOLSTICE_PROFILE_ROOT` (and the legacy overrides, pointing at copies).
+
+### First start and import (design, phase 2)
 
 The import decision has to come before any configuration is read.
 `kritadisplayrc`, the language and `kritarc` are all read before

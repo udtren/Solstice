@@ -6,6 +6,9 @@
 #include "KisSolsticePaths.h"
 
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QResource>
 #include <QStandardPaths>
 
 #ifdef Q_OS_WIN
@@ -28,7 +31,6 @@ QString roamingAppData()
         CoTaskMemFree(path);
     }
 #endif
-    // Same parent as GenericConfigLocation elsewhere (~/.config).
     return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
 }
 
@@ -36,10 +38,30 @@ QString join(const QString &dir, const QString &fileName)
 {
     return QDir(dir).filePath(fileName);
 }
+
+QString environmentPath(const char *name)
+{
+    const QString value = qEnvironmentVariable(name);
+    return value.isEmpty() ? QString() : QDir::cleanPath(QDir::fromNativeSeparators(value));
+}
+
+QString genericConfigLocation()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+}
+
+bool isRelativeTo(const QString &base, const QString &target)
+{
+    return QDir::isRelativePath(QDir(base).relativeFilePath(target));
+}
 } // namespace
 
 QString KisSolsticePaths::profileRoot()
 {
+    const QString overridden = environmentPath("SOLSTICE_PROFILE_ROOT");
+    if (!overridden.isEmpty()) {
+        return overridden;
+    }
     QString root = roamingAppData();
     if (QStandardPaths::isTestModeEnabled()) {
         root = join(root, QStringLiteral("qttest"));
@@ -49,7 +71,13 @@ QString KisSolsticePaths::profileRoot()
 
 QString KisSolsticePaths::configDir()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+    const QString preferred = join(profileRoot(), QStringLiteral("config"));
+    if (isRelativeTo(genericConfigLocation(), preferred)) {
+        return preferred;
+    }
+    // KConfig needs a name relative to GenericConfigLocation; on another
+    // drive the configuration stays under it.
+    return join(genericConfigLocation(), QStringLiteral("Solstice/config"));
 }
 
 QString KisSolsticePaths::configFilePath(const QString &fileName)
@@ -59,8 +87,7 @@ QString KisSolsticePaths::configFilePath(const QString &fileName)
 
 QString KisSolsticePaths::kconfigName(const QString &fileName)
 {
-    const QDir base(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
-    return base.relativeFilePath(configFilePath(fileName));
+    return QDir(genericConfigLocation()).relativeFilePath(configFilePath(fileName));
 }
 
 QString KisSolsticePaths::mainConfigName()
@@ -68,9 +95,28 @@ QString KisSolsticePaths::mainConfigName()
     return kconfigName(QStringLiteral("kritarc"));
 }
 
+bool KisSolsticePaths::registerMainConfigDefaults(const uchar *rccData)
+{
+    // KConfig reads defaults from ":/kconfig/" + name; Qt cleans the "../"
+    // parts, so the defaults have to be mounted at the cleaned folder.
+    const QString lookup = QStringLiteral(":/kconfig/") + mainConfigName();
+    if (QFile::exists(lookup)) {
+        return true;
+    }
+    const QString cleaned = QDir::cleanPath(lookup);
+    if (!cleaned.startsWith(QStringLiteral(":/"))) {
+        return false;
+    }
+    const QString mapRoot = QFileInfo(cleaned.mid(1)).path();
+    if (!QResource::registerResource(rccData, mapRoot)) {
+        return false;
+    }
+    return QFile::exists(lookup);
+}
+
 QString KisSolsticePaths::logDir()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+    return join(profileRoot(), QStringLiteral("logs"));
 }
 
 QString KisSolsticePaths::logFilePath(const QString &fileName)
@@ -80,21 +126,39 @@ QString KisSolsticePaths::logFilePath(const QString &fileName)
 
 QString KisSolsticePaths::crashLogPath()
 {
-    return join(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation),
-                QStringLiteral("kritacrash.log"));
+    return logFilePath(QStringLiteral("kritacrash.log"));
 }
 
 QString KisSolsticePaths::defaultResourceDir()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    return join(profileRoot(), QStringLiteral("resources"));
 }
 
 QString KisSolsticePaths::cacheDir()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    return join(profileRoot(), QStringLiteral("cache"));
 }
 
 QString KisSolsticePaths::xmlguiDataDir()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    return configDir();
+}
+
+QString KisSolsticePaths::legacyConfigDir()
+{
+    const QString overridden = environmentPath("SOLSTICE_LEGACY_CONFIG_DIR");
+    return overridden.isEmpty() ? genericConfigLocation() : overridden;
+}
+
+QString KisSolsticePaths::legacyResourceDir()
+{
+    const QString overridden = environmentPath("SOLSTICE_LEGACY_RESOURCE_DIR");
+    if (!overridden.isEmpty()) {
+        return overridden;
+    }
+    QString root = roamingAppData();
+    if (QStandardPaths::isTestModeEnabled()) {
+        root = join(root, QStringLiteral("qttest"));
+    }
+    return join(root, QStringLiteral("krita"));
 }

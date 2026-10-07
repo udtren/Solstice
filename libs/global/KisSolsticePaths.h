@@ -12,22 +12,29 @@
 
 /**
  * Where Solstice keeps its configuration, logs, resources and cache
- * (docs/agent/settings-location.md). Every such path is built here, so that
- * the profile location is decided in one place.
+ * (docs/agent/settings-location.md). Every such path is built here.
  *
- * Phase 1: every function returns the location used so far (shared with a
- * stock Krita install): %LOCALAPPDATA% for configuration and logs,
- * %APPDATA%\krita for resources, %LOCALAPPDATA%\krita\cache for the cache.
- * Phase 2 switches to %APPDATA%\Solstice\{config,logs,resources,cache}.
+ * The profile is %APPDATA%\Solstice with the subfolders config\, logs\,
+ * resources\ and cache\. KConfig resolves configuration names against
+ * GenericConfigLocation (%LOCALAPPDATA%), so kconfigName() returns names
+ * relative to it ("../Roaming/Solstice/config/kritarc"). When no relative path
+ * exists (the folders are on different drives), the configuration falls back
+ * to %LOCALAPPDATA%\Solstice\config.
  *
- * Usable before any QCoreApplication exists, except defaultResourceDir(),
- * cacheDir() and xmlguiDataDir(), which depend on the application name.
- * Test mode (QStandardPaths::setTestModeEnabled) is respected.
+ * The functions for the previous locations (shared with a stock Krita
+ * install) are the import sources of KisSolsticeProfile.
+ *
+ * Environment overrides, for trials and tests: SOLSTICE_PROFILE_ROOT (the
+ * profile folder), SOLSTICE_LEGACY_CONFIG_DIR and SOLSTICE_LEGACY_RESOURCE_DIR
+ * (the Krita profile to import). In test mode
+ * (QStandardPaths::setTestModeEnabled) the default profile is
+ * %APPDATA%\qttest\Solstice.
+ *
+ * Usable before any QCoreApplication exists.
  */
 namespace KisSolsticePaths
 {
-/// The Solstice profile folder, %APPDATA%\Solstice (a "qttest" subfolder of
-/// %APPDATA% in test mode). Not used for any file yet in phase 1.
+/// The Solstice profile folder.
 KRITAGLOBAL_EXPORT QString profileRoot();
 
 /// Folder of the configuration files (kritarc, kritadisplayrc, ...).
@@ -36,13 +43,20 @@ KRITAGLOBAL_EXPORT QString configDir();
 KRITAGLOBAL_EXPORT QString configFilePath(const QString &fileName);
 /**
  * Name to pass to KConfig / KSharedConfig::openConfig() for configuration
- * file @p fileName. KConfig resolves names against GenericConfigLocation and
- * does not handle absolute main config names, so this is a path relative to
- * that location (just @p fileName while the folder is the same).
+ * file @p fileName: a path relative to GenericConfigLocation, because KConfig
+ * does not handle absolute main config names.
  */
 KRITAGLOBAL_EXPORT QString kconfigName(const QString &fileName);
 /// Name of the main configuration (kritarc), for KConfig::setMainConfigName().
 KRITAGLOBAL_EXPORT QString mainConfigName();
+/**
+ * Makes the embedded kritarc defaults visible where KConfig looks for them
+ * (":/kconfig/" + mainConfigName(), which Qt cleans into another resource
+ * path). @p rccData is a binary resource (rcc --binary) holding "kritarc"
+ * at its root; it must stay valid for the lifetime of the process.
+ * Returns false if the defaults could not be mounted.
+ */
+KRITAGLOBAL_EXPORT bool registerMainConfigDefaults(const uchar *rccData);
 
 /// Folder of the usage and system information logs.
 KRITAGLOBAL_EXPORT QString logDir();
@@ -58,6 +72,11 @@ KRITAGLOBAL_EXPORT QString defaultResourceDir();
 KRITAGLOBAL_EXPORT QString cacheDir();
 /// Folder that holds KXmlGui's local "kxmlgui5" directory.
 KRITAGLOBAL_EXPORT QString xmlguiDataDir();
+
+/// Previous configuration folder, shared with stock Krita (%LOCALAPPDATA%).
+KRITAGLOBAL_EXPORT QString legacyConfigDir();
+/// Previous resource folder, shared with stock Krita (%APPDATA%\krita).
+KRITAGLOBAL_EXPORT QString legacyResourceDir();
 } // namespace KisSolsticePaths
 
 #endif // KISSOLSTICEPATHS_H

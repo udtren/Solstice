@@ -16,37 +16,59 @@
 
 #include "KisSolsticePaths.h"
 
+extern const unsigned char solsticePathsTestDefaultsRcc[];
+
 class KisSolsticePathsTest : public QObject
 {
     Q_OBJECT
 private Q_SLOTS:
-    void testLegacyLocations();
+    void cleanup();
+    void testProfileLayout();
+    void testProfileRootOverride();
     void testKConfigNameRelativeToConfigLocation();
-    void testResourceDefaultsThroughRelativeName();
+    void testMainConfigWithDefaults();
 };
 
-void KisSolsticePathsTest::testLegacyLocations()
+void KisSolsticePathsTest::cleanup()
 {
-    // Phase 1 (docs/agent/settings-location.md): the same locations as before.
-    const QString config = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    const QString data = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-    QCOMPARE(KisSolsticePaths::configDir(), config);
-    QCOMPARE(KisSolsticePaths::configFilePath("kritadisplayrc"), QDir(config).filePath("kritadisplayrc"));
-    QCOMPARE(KisSolsticePaths::kconfigName("kritashortcutsrc"), QStringLiteral("kritashortcutsrc"));
-    QCOMPARE(KisSolsticePaths::mainConfigName(), QStringLiteral("kritarc"));
-    QCOMPARE(KisSolsticePaths::logDir(), data);
-    QCOMPARE(KisSolsticePaths::logFilePath("krita.log"), QDir(data).filePath("krita.log"));
-    QCOMPARE(KisSolsticePaths::crashLogPath(), QDir(config).filePath("kritacrash.log"));
-    QCOMPARE(KisSolsticePaths::defaultResourceDir(), QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-    QCOMPARE(KisSolsticePaths::cacheDir(), QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
-    QCOMPARE(KisSolsticePaths::xmlguiDataDir(), QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-    QVERIFY(KisSolsticePaths::profileRoot().endsWith(QStringLiteral("qttest/Solstice")));
+    qunsetenv("SOLSTICE_PROFILE_ROOT");
+}
+
+void KisSolsticePathsTest::testProfileLayout()
+{
+    // docs/agent/settings-location.md: %APPDATA%\Solstice\{config,logs,resources,cache}
+    const QString root = KisSolsticePaths::profileRoot();
+    QVERIFY(root.endsWith(QStringLiteral("qttest/Solstice")));
+    QCOMPARE(KisSolsticePaths::configDir(), root + QStringLiteral("/config"));
+    QCOMPARE(KisSolsticePaths::configFilePath("kritadisplayrc"), root + QStringLiteral("/config/kritadisplayrc"));
+    QCOMPARE(KisSolsticePaths::logDir(), root + QStringLiteral("/logs"));
+    QCOMPARE(KisSolsticePaths::logFilePath("krita.log"), root + QStringLiteral("/logs/krita.log"));
+    QCOMPARE(KisSolsticePaths::crashLogPath(), root + QStringLiteral("/logs/kritacrash.log"));
+    QCOMPARE(KisSolsticePaths::defaultResourceDir(), root + QStringLiteral("/resources"));
+    QCOMPARE(KisSolsticePaths::cacheDir(), root + QStringLiteral("/cache"));
+    QCOMPARE(KisSolsticePaths::xmlguiDataDir(), root + QStringLiteral("/config"));
+    QVERIFY(KisSolsticePaths::legacyResourceDir().endsWith(QStringLiteral("qttest/krita")));
+
+    // KConfig names are relative to GenericConfigLocation.
+    const QString name = KisSolsticePaths::kconfigName("kritashortcutsrc");
+    QVERIFY2(name.startsWith(QStringLiteral("../")), qPrintable(name));
+    const QDir configLocation(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
+    QCOMPARE(QDir::cleanPath(configLocation.filePath(name)), KisSolsticePaths::configFilePath("kritashortcutsrc"));
+    QCOMPARE(KisSolsticePaths::mainConfigName(), KisSolsticePaths::kconfigName("kritarc"));
+}
+
+void KisSolsticePathsTest::testProfileRootOverride()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    qputenv("SOLSTICE_PROFILE_ROOT", QFile::encodeName(QDir::toNativeSeparators(dir.path())));
+    QCOMPARE(KisSolsticePaths::profileRoot(), QDir::cleanPath(dir.path()));
+    QCOMPARE(KisSolsticePaths::defaultResourceDir(), QDir::cleanPath(dir.path()) + QStringLiteral("/resources"));
 }
 
 void KisSolsticePathsTest::testKConfigNameRelativeToConfigLocation()
 {
-    // Phase 2 relies on KConfig names relative to GenericConfigLocation that
-    // leave it ("../..."): KConfig appends them to that folder.
+    // KConfig appends names to GenericConfigLocation, so "../" names leave it.
     QTemporaryDir dir;
     QVERIFY(dir.isValid());
     const QString target = dir.filePath("solsticetestrc");
@@ -63,15 +85,26 @@ void KisSolsticePathsTest::testKConfigNameRelativeToConfigLocation()
     QCOMPARE(reread.group("General").readEntry("value", 0), 42);
 }
 
-void KisSolsticePathsTest::testResourceDefaultsThroughRelativeName()
+void KisSolsticePathsTest::testMainConfigWithDefaults()
 {
-    // KConfig reads defaults from ":/kconfig/" + name. With a "../" name the
-    // Qt resource path is cleaned, so the defaults must be registered at the
-    // cleaned path (here :/solstice-paths-test/defaultsrc).
-    QVERIFY(QFile::exists(QStringLiteral(":/kconfig/../solstice-paths-test/defaultsrc")));
-    KConfig::setMainConfigName(QStringLiteral("../solstice-paths-test/defaultsrc"));
-    KConfig config(QString(), KConfig::NoGlobals);
-    QCOMPARE(config.group("General").readEntry("solsticeDefault", QString()), QStringLiteral("fromqrc"));
+    // As krita/main.cc does: the main config lives in the profile, and the
+    // embedded defaults are mounted where KConfig looks for them.
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    qputenv("SOLSTICE_PROFILE_ROOT", QFile::encodeName(QDir::toNativeSeparators(dir.path())));
+    QVERIFY(KisSolsticePaths::registerMainConfigDefaults(solsticePathsTestDefaultsRcc));
+    KConfig::setMainConfigName(KisSolsticePaths::mainConfigName());
+    QDir().mkpath(KisSolsticePaths::configDir());
+    {
+        KConfig config(QString(), KConfig::NoGlobals);
+        QCOMPARE(config.group("General").readEntry("solsticeDefault", QString()), QStringLiteral("fromqrc"));
+        config.group("General").writeEntry("userValue", 7);
+        QVERIFY(config.sync());
+    }
+    QVERIFY(QFile::exists(KisSolsticePaths::configFilePath("kritarc")));
+    KConfig reread(QString(), KConfig::NoGlobals);
+    QCOMPARE(reread.group("General").readEntry("userValue", 0), 7);
+    QCOMPARE(reread.group("General").readEntry("solsticeDefault", QString()), QStringLiteral("fromqrc"));
 }
 
 SIMPLE_TEST_MAIN(KisSolsticePathsTest)

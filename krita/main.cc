@@ -40,10 +40,12 @@
 #include <KisApplication.h>
 #include <KisMainWindow.h>
 #include <KisSolsticePaths.h>
+#include <KisSolsticeProfile.h>
 #include <KisSupportedArchitectures.h>
 #include <KisUsageLogger.h>
 #include <KoConfig.h>
 #include <KoResourcePaths.h>
+#include <QProgressDialog>
 #include <kconfig.h>
 #include <kis_config.h>
 #include <kis_debug.h>
@@ -162,6 +164,182 @@ void resetRotation()
 }
 } // namespace
 #endif
+
+// Solstice: the kritarc defaults as a binary resource (SolsticeEmbedRcc.cmake).
+extern const unsigned char solsticeKritarcDefaultsRcc[];
+
+namespace
+{
+// Solstice profile: the first start asks whether to import the Krita profile
+// (docs/agent/settings-location.md). The question comes before Qt starts,
+// because the display, language and main configuration are read before the
+// application exists; the texts are built in, in English and Japanese.
+
+bool solsticeUseJapanese()
+{
+    if (KisSolsticeProfile::legacyLanguage().startsWith(QLatin1String("ja"))) {
+        return true;
+    }
+#ifdef Q_OS_WIN
+    return PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_JAPANESE;
+#else
+    return false;
+#endif
+}
+
+void showSolsticeProfileError(const QString &message)
+{
+#ifdef Q_OS_WIN
+    MessageBoxW(nullptr,
+                reinterpret_cast<LPCWSTR>(message.utf16()),
+                L"Solstice",
+                MB_OK | MB_ICONWARNING | MB_SETFOREGROUND);
+#else
+    qWarning() << message;
+#endif
+}
+
+enum class SolsticeProfileChoice {
+    Import,
+    Fresh,
+    Quit,
+};
+
+SolsticeProfileChoice askImportKritaProfile(qint64 resourceBytes)
+{
+    const bool japanese = solsticeUseJapanese();
+    const QString size = QString::number(double(resourceBytes) / (1024.0 * 1024.0 * 1024.0), 'f', 1);
+    QString text;
+    if (japanese) {
+        text = QStringLiteral(
+                   "Krita の設定とリソースが見つかりました。\n\n"
+                   "Solstice に引き継ぎますか？\n\n"
+                   "はい: Krita の設定、ブラシ、ワークスペースなどを Solstice 用のフォルダーにコピーします%1。"
+                   "Krita のファイルは変更しません。\n"
+                   "いいえ: Solstice の初期設定で始めます。\n"
+                   "キャンセル: 今回は起動しません。次回の起動時にもう一度確認します。")
+                   .arg(resourceBytes > 0 ? QStringLiteral("（約 %1 GB）").arg(size) : QString());
+    } else {
+        text = QStringLiteral(
+                   "Krita settings and resources were found.\n\n"
+                   "Do you want to use them in Solstice?\n\n"
+                   "Yes: copy Krita's settings, brushes, workspaces and other resources to Solstice's own "
+                   "folder%1. Krita's files are not changed.\n"
+                   "No: start with Solstice's default settings.\n"
+                   "Cancel: do not start now; Solstice asks again next time.")
+                   .arg(resourceBytes > 0 ? QStringLiteral(" (about %1 GB)").arg(size) : QString());
+    }
+#ifdef Q_OS_WIN
+    switch (MessageBoxW(nullptr,
+                        reinterpret_cast<LPCWSTR>(text.utf16()),
+                        L"Solstice",
+                        MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND)) {
+    case IDYES:
+        return SolsticeProfileChoice::Import;
+    case IDNO:
+        return SolsticeProfileChoice::Fresh;
+    default:
+        return SolsticeProfileChoice::Quit;
+    }
+#else
+    Q_UNUSED(text);
+    return SolsticeProfileChoice::Import;
+#endif
+}
+
+/// Before Qt starts: creates the profile, asking about a Krita profile on the
+/// first start. Returns false to quit.
+bool prepareSolsticeProfile(int argc, char **argv)
+{
+    using namespace KisSolsticeProfile;
+    if (state() != State::Missing) {
+        return true;
+    }
+    for (int i = 1; i < argc; ++i) {
+        // Batch exports do not ask; the next interactive start does.
+        if (QByteArray(argv[i]).startsWith("--export")) {
+            return true;
+        }
+    }
+    QString error;
+    if (legacyProfileExists()) {
+        const qint64 bytes = resourcesToImport() ? planResourceCopy().bytes : 0;
+        switch (askImportKritaProfile(bytes)) {
+        case SolsticeProfileChoice::Quit:
+            return false;
+        case SolsticeProfileChoice::Import:
+            if (importConfiguration(&error)) {
+                return true;
+            }
+            abandonImport();
+            showSolsticeProfileError((solsticeUseJapanese()
+                                          ? QStringLiteral("Krita の設定をコピーできませんでした。\n%1")
+                                          : QStringLiteral("Could not copy the Krita settings.\n%1"))
+                                         .arg(error));
+            return false;
+        case SolsticeProfileChoice::Fresh:
+            break;
+        }
+    }
+    if (!createFreshProfile(&error)) {
+        showSolsticeProfileError((solsticeUseJapanese()
+                                      ? QStringLiteral("Solstice のフォルダーを作成できませんでした。\n%1")
+                                      : QStringLiteral("Could not create Solstice's folders.\n%1"))
+                                     .arg(error));
+        return false;
+    }
+    return true;
+}
+
+/// After the application exists, before any resource is loaded: copies the
+/// resources of an import. Returns false to quit.
+bool finishSolsticeImport()
+{
+    using namespace KisSolsticeProfile;
+    if (state() != State::Importing) {
+        return true;
+    }
+    const bool japanese = solsticeUseJapanese();
+    const ResourceCopyPlan plan = planResourceCopy();
+    QProgressDialog dialog(japanese ? QStringLiteral("Krita のリソースを Solstice にコピーしています…")
+                                    : QStringLiteral("Copying Krita's resources to Solstice…"),
+                           japanese ? QStringLiteral("キャンセル") : QStringLiteral("Cancel"),
+                           0,
+                           1000);
+    dialog.setWindowTitle(QStringLiteral("Solstice"));
+    dialog.setWindowModality(Qt::ApplicationModal);
+    dialog.setMinimumDuration(0);
+    dialog.setAutoClose(false);
+    dialog.setAutoReset(false);
+    dialog.setMinimumWidth(420);
+    dialog.show();
+    QString error;
+    const bool copied = copyResources(
+        plan,
+        [&](qint64 done) {
+            dialog.setValue(plan.bytes > 0 ? int(done * 1000 / plan.bytes) : 1000);
+            QCoreApplication::processEvents();
+            return !dialog.wasCanceled();
+        },
+        &error);
+    dialog.close();
+    if (copied) {
+        KisUsageLogger::log(QStringLiteral("Imported the Krita profile: %1 files, %2 MB")
+                                .arg(plan.files.size())
+                                .arg(plan.bytes / (1024 * 1024)));
+        return true;
+    }
+    abandonImport();
+    QMessageBox::warning(nullptr,
+                         QStringLiteral("Solstice"),
+                         (japanese ? QStringLiteral("Krita の設定の引き継ぎを中止しました。\n%1\n\n"
+                                                    "次回の起動時にもう一度確認します。")
+                                   : QStringLiteral("Importing the Krita profile was stopped.\n%1\n\n"
+                                                    "Solstice asks again next time."))
+                             .arg(error));
+    return false;
+}
+} // namespace
 
 #ifdef Q_OS_ANDROID
 extern "C" JNIEXPORT void
@@ -371,7 +549,12 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 
     // Solstice: the profile folders (docs/agent/settings-location.md). The main
     // configuration is first opened by static startup functions of the
-    // temporary application below, so its name is set here.
+    // temporary application below, so its name is set here. On the first
+    // start the profile is created, importing the Krita profile if wanted.
+    KisSolsticePaths::registerMainConfigDefaults(solsticeKritarcDefaultsRcc);
+    if (!prepareSolsticeProfile(argc, argv)) {
+        return 0;
+    }
     const QDir configPath(KisSolsticePaths::configDir());
     KConfig::setMainConfigName(KisSolsticePaths::mainConfigName());
     qputenv("SOLSTICE_CONFIG_DIR", QFile::encodeName(QDir::toNativeSeparators(KisSolsticePaths::configDir())));
@@ -806,6 +989,12 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
         }
     }
 #endif
+
+    // Solstice: copy the resources of a Krita profile import before anything
+    // loads resources.
+    if (!finishSolsticeImport()) {
+        return 0;
+    }
 
     if (!runningInKDE) {
         // Icons in menus are ugly and distracting

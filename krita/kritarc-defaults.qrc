@@ -1,0 +1,12 @@
+<!--
+  SPDX-FileCopyrightText: none
+  SPDX-License-Identifier: CC0-1.0
+
+  Solstice: the kritarc defaults as a binary resource, mounted at runtime
+  where KConfig looks for them (docs/agent/settings-location.md).
+-->
+<RCC>
+    <qresource prefix="/">
+        <file alias="kritarc">@KRITARC_PATH@</file>
+    </qresource>
+</RCC>

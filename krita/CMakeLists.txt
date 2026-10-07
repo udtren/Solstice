@@ -152,6 +152,14 @@ set(KRITARC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/data/kritarc")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/krita5.xmlgui" "${KRITA5_XMLGUI_PATH}" @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/krita.qrc" "${KRITA_QRC_PATH}" @ONLY)
 
+# Solstice: the kritarc defaults as a binary resource, mounted at runtime where
+# KConfig looks for them (docs/agent/settings-location.md).
+include(SolsticeEmbedRcc)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/kritarc-defaults.qrc" "${CMAKE_CURRENT_BINARY_DIR}/kritarc-defaults.qrc" @ONLY)
+solstice_embed_rcc(KRITARC_DEFAULTS_SRC solsticeKritarcDefaultsRcc "${CMAKE_CURRENT_BINARY_DIR}/kritarc-defaults.qrc"
+    DEPENDS "${KRITARC_PATH}")
+list(APPEND krita_SRCS ${KRITARC_DEFAULTS_SRC})
+
 # separate listing, both used by Krita and KritaSketch
 set(krita_QRCS
     ${KRITA_QRC_PATH}
