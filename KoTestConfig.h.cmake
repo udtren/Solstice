@@ -8,3 +8,7 @@
 
 /* This variable contains the path to the plugins install dir */
 #define KRITA_PLUGINS_DIR_FOR_TESTS "${CMAKE_INSTALL_PREFIX}/${KRITA_PLUGIN_INSTALL_DIR}"
+
+/* Solstice: the installed Fontconfig configuration (fonts.conf) for tests,
+   which run from the build tree where KoFontRegistry does not find it */
+#define KRITA_FONTCONFIG_DIR_FOR_TESTS "${CMAKE_INSTALL_PREFIX}/etc/fonts"

@@ -72,6 +72,10 @@
 namespace
 {
 constexpr int DefaultIconSize = 42;
+// The settings dialog's size when none is stored: the legacy Python plugin's
+// default, also used when its settings are imported without a size.
+constexpr int DefaultSettingsDialogWidth = 550;
+constexpr int DefaultSettingsDialogHeight = 650;
 
 /// Brush item display: "stroke" (stroke preview) or "icon" (preset icon).
 /// Items saved before the option existed have no value and keep the icon.
@@ -403,8 +407,10 @@ void upgradeLegacySettings(const QJsonObject &settings)
     config.writeEntry(
         "InactiveTabBackgroundColor",
         defaults.value(QStringLiteral("tab_inactive_background_color")).toString(QStringLiteral("#2b2b2b")));
-    config.writeEntry("SettingsDialogWidth", defaults.value(QStringLiteral("config_dialog_width")).toInt(550));
-    config.writeEntry("SettingsDialogHeight", defaults.value(QStringLiteral("config_dialog_height")).toInt(650));
+    config.writeEntry("SettingsDialogWidth",
+                      defaults.value(QStringLiteral("config_dialog_width")).toInt(DefaultSettingsDialogWidth));
+    config.writeEntry("SettingsDialogHeight",
+                      defaults.value(QStringLiteral("config_dialog_height")).toInt(DefaultSettingsDialogHeight));
     config.writeEntry("PopupIconSize",
                       settings.value(QStringLiteral("popup"))
                           .toObject()
@@ -857,10 +863,12 @@ void QuickAccessDock::loadProfile()
                 config.writeEntry("InactiveTabBackgroundColor",
                                   defaults.value(QStringLiteral("tab_inactive_background_color"))
                                       .toString(QStringLiteral("#2b2b2b")));
-                config.writeEntry("SettingsDialogWidth",
-                                  defaults.value(QStringLiteral("config_dialog_width")).toInt(550));
-                config.writeEntry("SettingsDialogHeight",
-                                  defaults.value(QStringLiteral("config_dialog_height")).toInt(650));
+                config.writeEntry(
+                    "SettingsDialogWidth",
+                    defaults.value(QStringLiteral("config_dialog_width")).toInt(DefaultSettingsDialogWidth));
+                config.writeEntry(
+                    "SettingsDialogHeight",
+                    defaults.value(QStringLiteral("config_dialog_height")).toInt(DefaultSettingsDialogHeight));
                 config.writeEntry("HueSVCEnabled", defaults.value(QStringLiteral("huesvc_enabled")).toBool(true));
                 config.writeEntry("QuickAdjustEnabled",
                                   defaults.value(QStringLiteral("quick_adjust_enabled")).toBool(true));
@@ -1710,8 +1718,8 @@ void QuickAccessDock::showSettingsDialog()
     current.inactiveTabFontColor = QColor(config.readEntry("InactiveTabFontColor", QStringLiteral("#a0a0a0")));
     current.inactiveTabBackgroundColor =
         QColor(config.readEntry("InactiveTabBackgroundColor", QStringLiteral("#2b2b2b")));
-    current.dialogWidth = config.readEntry("SettingsDialogWidth", 340);
-    current.dialogHeight = config.readEntry("SettingsDialogHeight", 480);
+    current.dialogWidth = config.readEntry("SettingsDialogWidth", DefaultSettingsDialogWidth);
+    current.dialogHeight = config.readEntry("SettingsDialogHeight", DefaultSettingsDialogHeight);
     const KConfigGroup gestureConfig = KSharedConfig::openConfig()->group(QStringLiteral("QuickAccessGesture"));
     current.gestureEnabled = gestureConfig.readEntry("Enabled", true);
     current.hueSvcEnabled = config.readEntry("HueSVCEnabled", true);

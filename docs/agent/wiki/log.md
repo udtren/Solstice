@@ -128,3 +128,8 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
     lives in the Solstice profile (`%APPDATA%\Solstice`).
   - `pitfalls/build-format-test.md`: `updated` date.
 - Benchmarks: all dated 2026-10-07 (current builds); nothing stale.
+
+## 2026-10-08 ingest: test Fontconfig configuration
+
+- `pitfalls/build-format-test.md`: why tests warned "Cannot load default
+  config file" and how the test mains now find the installed `fonts.conf`.

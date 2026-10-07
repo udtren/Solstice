@@ -32,11 +32,19 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
 
 ## Configuration and compatibility
 
-- Profile directory: `%APPDATA%\krita\quickaccess\`
-- Default profile: `%APPDATA%\krita\quickaccess\default.kqap`
+- Profile directory: `quickaccess\` in the resource folder,
+  `%APPDATA%\Solstice\resources\quickaccess\` by default (before the
+  settings location change: `%APPDATA%\krita\quickaccess\`;
+  `docs/agent/settings-location.md`).
+- Default profile: `default.kqap` in that folder
+  (`KoResourcePaths::saveLocation("data", "quickaccess/")`).
 - Deleting only `default.kqap` does not reset every setting. Appearance,
   gesture, HueSVC, and Quick Adjust values also live in KConfig groups in
-  `%LOCALAPPDATA%\kritarc`.
+  the profile's kritarc (`%APPDATA%\Solstice\config\kritarc`).
+- The settings dialog's size (`SettingsDialogWidth`/`Height`) defaults to
+  550x650 (`DefaultSettingsDialogWidth`/`Height`), the legacy Python plugin's
+  default, both when nothing is stored and when legacy settings without a
+  size are imported (2026-10-08; it was 340x480 when nothing was stored).
 - Preserve migrated legacy JSON keys. Native aliases use categories such as
   `actions` and `dockers`, with fields including `custom_name`,
   `background_color`, `font_color`, `font_size`, and `icon_name`.

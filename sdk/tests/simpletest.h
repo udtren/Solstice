@@ -2,14 +2,30 @@
 #define SIMPLETEST_H
 
 #include <QTest>
+#include <QFile>
 #include <QStandardPaths>
 #include <QLocale>
 // #include <KLocalizedString>
 #include <KoTestConfig.h>
 #include <KisSynchronizedConnection.h>
 
+/**
+ * Solstice: tests run from the build tree, so KoFontRegistry does not find the
+ * installed fonts.conf and Fontconfig reports "Cannot load default config
+ * file". Point Fontconfig at the installed configuration, unless the
+ * environment already chooses one. Call before the QApplication exists.
+ */
+inline void kisTestSetupFontconfig()
+{
+    const QString dir = QStringLiteral(KRITA_FONTCONFIG_DIR_FOR_TESTS);
+    if (qgetenv("FONTCONFIG_PATH").isEmpty() && QFile::exists(dir + QStringLiteral("/fonts.conf"))) {
+        qputenv("FONTCONFIG_PATH", QFile::encodeName(dir));
+    }
+}
+
 #define SIMPLE_MAIN_IMPL(TestObject) \
     qputenv("LANGUAGE", "en"); \
+    kisTestSetupFontconfig(); \
     QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates)); \
     QStandardPaths::setTestModeEnabled(true); \
     KisSynchronizedConnectionBase::setAutoModeForUnittestsEnabled(true); \

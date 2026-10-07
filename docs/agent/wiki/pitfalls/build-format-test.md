@@ -105,8 +105,15 @@ wrong anyway.
     but fail in the parallel run (120-150 s each).
 
   With the MIME database, `TestSvgParserRoundTrip` went from 8 failures to 5
-  and `kis_jpegxl_test` from 3 to 2. Fontconfig warns "Cannot load default
-  config file" in some tests; this was not investigated.
+  and `kis_jpegxl_test` from 3 to 2. Fontconfig warned "Cannot load default
+  config file" in tests that load fonts. Resolved (2026-10-08): tests run
+  from `_build/bin`, where `KoFontRegistry` looks for
+  `<application root>/etc/fonts` (`_build/etc/fonts`, absent). The test mains
+  (`sdk/tests/simpletest.h`, `kistest.h`) now set `FONTCONFIG_PATH` to the
+  installed `etc/fonts` (`KRITA_FONTCONFIG_DIR_FOR_TESTS` in
+  `KoTestConfig.h.cmake`) when it is unset and `fonts.conf` exists. With the
+  configuration, `TestSvgText` fails 41 cases instead of 46 (all
+  pre-existing; it is not in the ctest list above).
 - **A new virtual function in a plugin base class breaks the installed
   plugins** (2026-10-07). Tests load filter plugins from the install prefix.
   After `KisFilter::prefersSingleCall()` was added, `kis_filter_test`,

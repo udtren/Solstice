@@ -464,8 +464,9 @@ Effects:
 
 Inconsistencies found and left for later:
 
-- Quick Access settings dialog size: the fallback is 340x480 when read and
-  550x650 on legacy import (`QuickAccessDock.cpp:1713-1714` vs `406-407`).
+- Quick Access settings dialog size: the fallback was 340x480 when read and
+  550x650 on legacy import. Resolved (2026-10-08): 550x650 in both
+  (`DefaultSettingsDialogWidth`/`Height` in `QuickAccessDock.cpp`).
 - `OpenGLRenderer`: the fallback was `angle` in `main.cc` on Windows but
   `auto` in `kis_opengl.cpp` and `kis_config.cc`. This is resolved
   (2026-10-07): it is `auto` everywhere, and on Windows "Auto" prefers desktop
