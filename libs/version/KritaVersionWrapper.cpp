@@ -22,6 +22,18 @@ QString KritaVersionWrapper::versionString(bool checkGit)
     return version;
 }
 
+QString KritaVersionWrapper::solsticeVersionString(bool checkGit)
+{
+    QString version = QStringLiteral(SOLSTICE_VERSION_STRING);
+
+    if (checkGit) {
+#ifdef KRITA_GIT_SHA1_STRING
+        version = QStringLiteral("%1 (git %2)").arg(version, QStringLiteral(KRITA_GIT_SHA1_STRING));
+#endif
+    }
+    return version;
+}
+
 bool KritaVersionWrapper::isDevelopersBuild()
 {
     // Qt6 is not considered stable yet, don't present it as such.

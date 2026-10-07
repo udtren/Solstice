@@ -721,7 +721,7 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
     KAboutData aboutData(
         "krita",
         "Solstice",
-        KritaVersionWrapper::versionString(true),
+        KritaVersionWrapper::solsticeVersionString(true),
         "", // TODO: "short description" needs new string exception
         KAboutLicense::GPL,
         i18nc("@info:credit",

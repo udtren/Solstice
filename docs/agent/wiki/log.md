@@ -44,3 +44,9 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   - qtbase v6.8.0 `src/gui/painting/qpolygon.cpp`;
   - the installed Qt 6.8 `qnumeric.h`;
   - this session's build and test experience.
+
+## 2026-10-07 ingest: Solstice versioning
+
+- New page `decisions/versioning.md`. Source: `docs/agent/versioning.md` and
+  the version uses found in `kra_converter.cpp`, `KisResourceLocator.cpp`,
+  `KisResourceCacheDb.cpp` and `libkis/Krita.cpp`.

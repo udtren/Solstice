@@ -108,8 +108,9 @@ QString DlgBugInfo::basicSystemInformationReplacementText()
     QString info;
 
     // Krita version info
-    info.append("Krita");
-    info.append("\n  Version: ").append(KritaVersionWrapper::versionString(true));
+    info.append("Solstice");
+    info.append("\n  Version: ").append(KritaVersionWrapper::solsticeVersionString(true));
+    info.append("\n  Based on Krita: ").append(KritaVersionWrapper::versionString());
     info.append("\n\n");
 
     info.append("Qt");

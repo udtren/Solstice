@@ -88,8 +88,11 @@ private Q_SLOTS:
     void slotResourceWasSelected(KoResourceSP resource);
     void slotCurrentPresetChanged();
 
-private:
+protected:
+    // Protected, not private: the Python bindings (sip) subclass this widget.
     bool eventFilter(QObject *object, QEvent *event) override;
+
+private:
     void updatePreviewRequests();
     bool m_strokePreview = false;
     bool m_dockerFilters = false;

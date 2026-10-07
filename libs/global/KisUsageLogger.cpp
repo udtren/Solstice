@@ -105,8 +105,9 @@ QString KisUsageLogger::basicSystemInfo()
     // NOTE: This is intentionally not translated!
 
     // Krita version info
-    systemInfo.append("Krita\n");
-    systemInfo.append("\n Version: ").append(KritaVersionWrapper::versionString(true));
+    systemInfo.append("Solstice\n");
+    systemInfo.append("\n Version: ").append(KritaVersionWrapper::solsticeVersionString(true));
+    systemInfo.append("\n Based on Krita: ").append(KritaVersionWrapper::versionString());
 #ifdef Q_OS_WIN
     {
         using namespace KisWindowsPackageUtils;
@@ -267,11 +268,17 @@ void KisUsageLogger::writeHeader()
     s_instance->d->logFile.write(sessionHeader.toUtf8());
 
     QString KritaAndQtVersion;
-    KritaAndQtVersion.append("Krita Version: ").append(KritaVersionWrapper::versionString(true))
-            .append(", Qt version compiled: ").append(QT_VERSION_STR)
-            .append(", loaded: ").append(qVersion())
-            .append(". Process ID: ")
-            .append(QString::number(qApp->applicationPid())).append("\n");
+    KritaAndQtVersion.append("Solstice Version: ")
+        .append(KritaVersionWrapper::solsticeVersionString(true))
+        .append(", based on Krita: ")
+        .append(KritaVersionWrapper::versionString())
+        .append(", Qt version compiled: ")
+        .append(QT_VERSION_STR)
+        .append(", loaded: ")
+        .append(qVersion())
+        .append(". Process ID: ")
+        .append(QString::number(qApp->applicationPid()))
+        .append("\n");
 
     KritaAndQtVersion.append("-- -- -- -- -- -- -- --\n");
     s_instance->d->logFile.write(KritaAndQtVersion.toUtf8());

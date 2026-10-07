@@ -10,7 +10,8 @@ compositing, an experimental GPU pixel-brush path, and productivity tools
 integrated natively into the application.
 
 Solstice is independently maintained and desktop-only. It is not an official
-Krita edition, and development no longer tracks upstream Krita.
+Krita edition, and development no longer tracks upstream Krita. It is in
+testing; see [Versions](docs/versioning.md) for the version numbering.
 
 [Highlights](#highlights) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 

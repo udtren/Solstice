@@ -74,6 +74,8 @@ matches the task.
   numbers are assigned; 4.96 is reserved, the next free number.
 - [`krita5.xmlgui` stays unchanged](decisions/xmlgui-unchanged.md): why menu
   changes avoid the main XMLGUI file.
+- [Solstice version vs. Krita compatibility version](decisions/versioning.md):
+  why `0.1.0-alpha` is shown while `6.0.5-prealpha` stays internal.
 
 ### Pitfalls
 

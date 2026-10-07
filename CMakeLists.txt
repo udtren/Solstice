@@ -173,6 +173,22 @@ endif()
 
 message(STATUS "Krita version: ${KRITA_VERSION_STRING}")
 
+# Solstice's own version, shown to users (docs/agent/versioning.md). The Krita
+# version above stays the compatibility version: .kra "kritaVersion", resource
+# folder updates, the resource database and Krita.version() use it.
+set(SOLSTICE_VERSION_MAJOR 0)
+set(SOLSTICE_VERSION_MINOR 1)
+set(SOLSTICE_VERSION_PATCH 0)
+# Pre-release label: "alpha", "beta", "rc.1"; empty for a release.
+set(SOLSTICE_VERSION_LABEL "alpha")
+# Fourth digit of the Windows file version (rebuilds of the same version).
+set(SOLSTICE_VERSION_BUILD 0)
+set(SOLSTICE_VERSION_STRING "${SOLSTICE_VERSION_MAJOR}.${SOLSTICE_VERSION_MINOR}.${SOLSTICE_VERSION_PATCH}")
+if(SOLSTICE_VERSION_LABEL)
+    string(APPEND SOLSTICE_VERSION_STRING "-${SOLSTICE_VERSION_LABEL}")
+endif()
+message(STATUS "Solstice version: ${SOLSTICE_VERSION_STRING}")
+
 # Define the generic version of the Krita libraries here
 # This makes it easy to advance it when the next Krita release comes.
 #

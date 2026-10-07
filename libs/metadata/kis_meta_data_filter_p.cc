@@ -95,6 +95,7 @@ void ToolInfoFilter::filter(KisMetaData::Store* store) const
     store->getEntry(xmpSchema, "ModifyDate").value() = Value(QDate::currentDate());
     store->getEntry(xmpSchema, "MetadataDate").value() = Value(QDate::currentDate());
     if (!store->containsEntry(xmpSchema, "CreatorTool")) {
-        store->getEntry(xmpSchema, "CreatorTool").value() = Value(i18n("Krita %1", KritaVersionWrapper::versionString()));
+        store->getEntry(xmpSchema, "CreatorTool").value() =
+            Value(i18n("Solstice %1", KritaVersionWrapper::solsticeVersionString()));
     }
 }

@@ -31,6 +31,17 @@
 #define KRITA_VERSION_STRING "@KRITA_VERSION_STRING@"
 
 /**
+ * @def SOLSTICE_VERSION_STRING
+ * @brief Solstice's own version, shown to users, e.g. "0.1.0-alpha".
+ * KRITA_VERSION_STRING stays the compatibility version for file formats,
+ * resources and scripting (docs/agent/versioning.md).
+ */
+#define SOLSTICE_VERSION_STRING "@SOLSTICE_VERSION_STRING@"
+#define SOLSTICE_VERSION_MAJOR @SOLSTICE_VERSION_MAJOR@
+#define SOLSTICE_VERSION_MINOR @SOLSTICE_VERSION_MINOR@
+#define SOLSTICE_VERSION_PATCH @SOLSTICE_VERSION_PATCH@
+
+/**
  * @def KRITA_STABLE_VERSION_MAJOR
  * @ingroup KritaMacros
  * @brief Major version of stable Krita, at compile time
