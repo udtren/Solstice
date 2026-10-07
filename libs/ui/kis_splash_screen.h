@@ -13,7 +13,6 @@
 #include "ui_wdgsplash.h"
 
 class QPixmap;
-class QSvgWidget;
 
 #include "kritaui_export.h"
 
@@ -56,8 +55,6 @@ private:
     QTimer m_timer;
     bool m_themed;
     bool m_displayLinks { false };
-    QSvgWidget *m_brandingSvg;
-    QSvgWidget *m_bannerSvg;
     QLabel *m_loadingTextLabel;
     QLabel *m_artCreditsLabel;
     QString m_versionHtml;

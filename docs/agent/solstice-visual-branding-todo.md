@@ -100,14 +100,16 @@ gray placeholders do not complete them.
 - [ ] Replace `krita/data/splash/electrichearts_20250824A_kiki_4K.png`.
 - [ ] Provide a correctly sized lower-resolution source if the desktop build later needs
       one; Android-specific splash work is not in scope for this distribution.
-- [ ] Replace `krita/data/splash/banner.svg` with a Solstice wordmark.
-- [ ] Verify that the round branding icon and wordmark align correctly in
-      `KisSplashScreen` at 100%, 150%, 200%, and 300% display scaling.
+- [x] Banner and logo overlays: removed instead of replaced (2026-10-07, user
+      request). `KisSplashScreen` shows a single splash image with the version and
+      loading text at the top right; it no longer creates the `banner.svg` and
+      `krita-branding.svgz` overlays. The files stay in their QRCs; the
+      branding SVG is still the window icon source.
 - [ ] Update the splash artist credit in `libs/ui/kis_splash_screen.cpp`.
 - [ ] Confirm loading text remains readable against the brightest and darkest parts of
       the new artwork.
-- [ ] Verify the compact About-dialog form of the splash does not crop the logo,
-      wordmark, links, or artwork credit.
+- [ ] Verify the compact About-dialog form of the splash does not crop the links
+      or artwork credit.
 - [ ] Decide whether seasonal splash support will use Solstice artwork, then replace or
       remove the empty `splash_holidays_dummy.png` placeholder.
 

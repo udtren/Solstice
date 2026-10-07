@@ -13,7 +13,6 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QScreen>
-#include <QSvgWidget>
 #include <QWindow>
 #include <kis_debug.h>
 
@@ -56,9 +55,8 @@ KisSplashScreen::KisSplashScreen(bool themed, QWidget *parent, Qt::WindowFlags f
     m_loadingTextLabel->setAlignment(Qt::AlignRight | Qt::AlignTop);
     addDropShadow(m_loadingTextLabel);
 
-    m_brandingSvg = new QSvgWidget(QStringLiteral(":/krita-branding.svgz"), lblSplash);
-    m_bannerSvg = new QSvgWidget(QStringLiteral(":/splash/banner.svg"), lblSplash);
-    addDropShadow(m_bannerSvg);
+    // Solstice: a single splash image, without the logo and banner overlays
+    // (docs/agent/solstice-visual-branding-todo.md).
 
     m_artCreditsLabel = new QLabel(lblSplash);
     m_artCreditsLabel->setTextFormat(Qt::PlainText);
@@ -101,7 +99,6 @@ void KisSplashScreen::updateSplashImage()
     } else {
         splashHeight = SPLASH_HEIGHT_LOADING;
     }
-    const int bannerHeight = splashHeight * 0.16875;
     const int marginTop = splashHeight * 0.05;
     const int marginRight = splashHeight * 0.1;
 
@@ -127,18 +124,9 @@ void KisSplashScreen::updateSplashImage()
     img.setDevicePixelRatio(devicePixelRatioF());
     lblSplash->setPixmap(img);
 
-    // Align banner to top-left with margin.
-    m_bannerSvg->setFixedHeight(bannerHeight);
-    m_bannerSvg->setFixedWidth(bannerHeight * m_bannerSvg->sizeHint().width() / m_bannerSvg->sizeHint().height());
-    m_bannerSvg->move(width - m_bannerSvg->width() - marginRight, marginTop);
-
-    // Place logo to the left of banner.
-    m_brandingSvg->setFixedSize(bannerHeight, bannerHeight);
-    m_brandingSvg->move(m_bannerSvg->x() - m_brandingSvg->width(), marginTop);
-
-    // Place loading text immediately below.
-    m_loadingTextLabel->move(marginRight, m_brandingSvg->geometry().bottom());
-    m_loadingTextLabel->setFixedWidth(m_bannerSvg->geometry().right() - marginRight);
+    // Loading text at the top right, with margins.
+    m_loadingTextLabel->move(marginRight, marginTop);
+    m_loadingTextLabel->setFixedWidth(width - 2 * marginRight);
 
     // Place credits text on bottom right with similar margins.
     m_artCreditsLabel->setText(source.artistCredit);
