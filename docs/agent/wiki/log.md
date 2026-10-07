@@ -56,6 +56,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the version uses found in `kra_converter.cpp`, `KisResourceLocator.cpp`,
   `KisResourceCacheDb.cpp` and `libkis/Krita.cpp`.
 
+## 2026-10-07 ingest: README benchmark refresh
+
+- `benchmarks/transform-and-filter-costs.md`, section "README refresh
+  (2026-10-07)": all README rows remeasured (three fresh processes each),
+  with the affine and Liquify GPU rows added to the README.
+
 ## 2026-10-07 ingest: test MIME database and known failing tests
 
 - `pitfalls/build-format-test.md`:

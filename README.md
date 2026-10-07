@@ -126,42 +126,45 @@ be included in a published build.
 **These numbers measure specific engine operations, not overall application
 performance.** They are not frame rates or pen-to-screen latency measurements.
 
-Measured on October 4, 2026, with an AMD Ryzen 9 9950X and NVIDIA RTX PRO 6000
-Blackwell (driver 596.86), using local development builds. The operation table
-retains the earlier baseline; it has not been remeasured after the latest
-filter and transform readback changes:
+Measured on October 7, 2026, with an AMD Ryzen 9 9950X and NVIDIA RTX PRO 6000
+Blackwell (driver 596.86), using local development builds:
 
 | Workload | CPU | GPU |
 | --- | ---: | ---: |
-| Resident full layer projection, 4096 x 4096 RGBA32F, 16 layers | 247 ms | 56.6 ms |
-| Canvas data preparation, 4096 x 4096 RGBA32F, 8 layers | 1060 ms | 1.62 ms |
-| Four mirror passes, 14 dabs of 73 x 73 pixels | 0.958 ms | 0.381 ms |
-| Four mirror passes, 32 dabs of 256 x 256 pixels | 45.14 ms | 2.02 ms |
+| Resident full layer projection, 4096 x 4096 RGBA32F, 16 layers | 254 ms | 58.2 ms |
+| Canvas data preparation, 4096 x 4096 RGBA32F, 8 layers | 1088 ms | 1.70 ms |
+| Four mirror passes, 14 dabs of 73 x 73 pixels | 0.994 ms | 0.435 ms |
+| Four mirror passes, 32 dabs of 256 x 256 pixels | 47.7 ms | 2.06 ms |
+| Transform Tool apply, scale + rotate (bicubic), 2480 x 3508 RGBA32F | 470 ms | 64.1 ms |
+| Liquify apply, 20 strokes, 2480 x 3508 RGBA32F | 225 ms | 57.8 ms |
+
+The transform results are identical to the CPU results, pixel for pixel.
 
 Each value is the median of three fresh-process results, with GPU completion
 included and Vulkan validation disabled. Projection and canvas results use
 five-sample medians per process; mirror results use five-update averages after
-warming all three brush staging slots. Projection excludes full CPU readback
+warming all three brush staging slots; transform results are medians of three
+calls with a CPU-resident source layer. Projection excludes full CPU readback
 (46-49 ms). Canvas preparation starts with GPU-resident projection pixels and
 excludes projection work and final OpenGL texture copies. Mirror measurements
 include reflection and uploads, compare against serial CPU painting, and
 exclude dab generation, scheduling and display.
 
-The latest completed-stroke measurements, after projection work-buffer reuse,
-show both the remaining overhead and a workload that benefits from GPU brushes:
+Completed-stroke measurements from the same day show both the remaining
+overhead and a workload that benefits from GPU brushes:
 
 | Queued stroke | CPU only | GPU projection and brush |
 | --- | ---: | ---: |
-| RGBA32F, 64px Normal Wash | 5.67 ms | 10.61 ms |
-| RGBA32F, 256px Normal Buildup | 8.07 ms | 10.55 ms |
-| RGBA16F, 128px Soft Light (SVG) Wash, selection and both mirrors | 74.36 ms | 13.79 ms |
+| RGBA32F, 64px Normal Wash | 6.04 ms | 10.54 ms |
+| RGBA32F, 256px Normal Buildup | 8.07 ms | 11.76 ms |
+| RGBA16F, 128px Soft Light (SVG) Wash, selection and both mirrors | 70.00 ms | 12.55 ms |
 
 These use a 1024 x 1024 document, four layers and 24 queued line segments.
 Each value is the median of five-sample medians from three fresh processes.
 They include brush generation, final merging and completed projection, but
 exclude tablet input and screen presentation. These are different workloads,
 not an F16-versus-F32 comparison. See the
-[measurement details](docs/agent/wiki/history/gpu-phases-4.17-4.57.md#projection-context-reuse-phase-453).
+[measurement details and ranges](docs/agent/wiki/benchmarks/transform-and-filter-costs.md#readme-refresh-2026-10-07).
 
 **Complete short strokes can still be slower on the GPU.** Work-buffer reuse
 removed an avoidable wait, but its before/after timing ranges overlap and do

@@ -49,6 +49,73 @@ GPU breakdowns are in the history page:
 The Levels and Curves rows are suspect (see phase 4.93) and are not
 repeated here.
 
+## README refresh (2026-10-07)
+
+All README benchmark rows were measured again: three fresh processes per
+workload, run one after another, with Vulkan validation off and Solstice
+closed.
+
+- Build: `3f1ea61d3f`, RelWithDebInfo.
+- Hardware: Ryzen 9 9950X, RTX PRO 6000 Blackwell, driver 596.86.
+- Settings: `KRITA_GPU_BENCH_SIZE=4096`, `KRITA_GPU_BENCH_LAYERS=16`,
+  `KRITA_GPU_BENCH_REPEATS=5`, `KRITA_GPU_STROKE_REPEATS=5`, and
+  `KRITA_GPU_BENCHMARK_FILTERS=1` for the transform and filter run.
+- All 15 processes passed.
+
+Commands (absolute paths; `env.bat` changes the working directory):
+
+```bat
+KisGpuProjectionTest.exe benchmarkRefresh
+KisGpuCanvasUploadTest.exe benchmarkCanvasUpdate
+KisGpuBrushTest.exe benchmarkCombinedMirrors
+KisGpuStrokeTest.exe testStroke:64-wash testStroke:256-buildup testHalfBlendModes:soft_light_svg-wash1-channels15
+KisGpuPaintDeviceTest.exe benchmarkFiltersAndTransforms
+```
+
+Medians of the three process results, with the range of process results:
+
+| Workload | CPU (ms) | GPU (ms) |
+| --- | ---: | ---: |
+| 4096-square, 16-layer resident projection | 254.3 (250.6-259.5) | 58.2 (57.5-58.9) |
+| Full CPU readback after it | - | 48.9 (46.0-49.2) |
+| 4096-square canvas preparation | 1088.5 (1083.9-1121.4) | 1.695 (1.561-2.021) |
+| 256-square canvas preparation | 5.569 (5.213-6.234) | 0.291 (0.151-0.312) |
+| Nearby mirrors, 14 dabs at 73px | 0.994 (0.950-1.030) | 0.435 (0.358-0.490) |
+| Nearby mirrors, 32 dabs at 256px | 47.67 (46.86-54.08) | 2.061 (1.889-2.099) |
+| Distant mirrors, 14 dabs at 73px | 0.875 (0.871-0.880) | 0.311 (0.290-0.419) |
+| Distant mirrors, 32 dabs at 256px | 46.52 (45.47-46.96) | 2.075 (1.994-2.129) |
+| Affine scale 0.9 + rotate 10°, bicubic | 470.1 (456.1-499.2) | 64.1 (61.6-65.6) |
+| Liquify, 20 moves, sigma 200 | 225.2 (220.9-288.7) | 57.8 (57.3-75.6) |
+
+Completed strokes (1024-square, four layers, 24 segments; medians of process
+medians):
+
+| Stroke | CPU | GPU projection | GPU projection + brush |
+| --- | ---: | ---: | ---: |
+| F32 64px Normal Wash | 6.035 (5.822-6.464) | 9.794 (9.750-10.183) | 10.541 (10.296-10.674) |
+| F32 256px Normal Buildup | 8.069 (7.807-8.340) | 12.873 (12.777-12.927) | 11.755 (9.970-12.251) |
+| F16 128px Soft Light SVG Wash, selection + mirrors | 69.997 (69.120-72.327) | 57.788 (48.370-58.314) | 12.554 (11.870-13.634) |
+
+Filters, one call over 2480x3508 RGBA32F:
+
+| Filter | Time (ms) |
+| --- | ---: |
+| Gaussian blur r5 | 1040 |
+| Gaussian blur r30 | 1088 |
+| HSV adjust | 182 |
+| Unsharp mask | 6577 |
+| Levels | 181 |
+
+Whole-layer readback took 13.4 ms. Curves is still suspect at 0.1 ms.
+
+Notes:
+
+- The benchmark's "puppet warp (rigid MLS)" row measures the old
+  `KisWarpTransformWorker`. The Transform Tool's Puppet Warp uses the mesh
+  model since phase 4.95, so that row (647 ms) is not used for the README.
+- Compared with October 4, the projection, canvas and mirror medians are
+  within a few percent; no change is claimed from that difference.
+
 ## Staleness
 
 Re-measure after changes to `KisGpuTileAccess` transfers, the transform
