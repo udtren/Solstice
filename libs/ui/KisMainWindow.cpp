@@ -128,6 +128,7 @@
 #include "kis_canvas_resource_provider.h"
 #include "kis_clipboard.h"
 #include "kis_config.h"
+#include "kis_painting_tweaks.h"
 #include "kis_config_notifier.h"
 #include "kis_custom_image_widget.h"
 #include "animation/KisAnimationRender.h"
@@ -383,6 +384,9 @@ KisMainWindow::KisMainWindow(QUuid uuid)
 
     // GPU engine (Solstice): tell the user if the engine stops.
     KisGpuEngineUi::install();
+
+    // Solstice interface: docker title bars created below follow the setting.
+    KoDockWidgetTitleBar::setSolsticeLookEnabled(KisConfig(true).readEntry<bool>("Solstice/ModernInterface", false));
 
     d->workspacemodel = new KisResourceModel(ResourceType::Workspaces, this);
     connect(d->workspacemodel, SIGNAL(modelReset()), this, SLOT(updateWindowMenu()));
@@ -699,9 +703,8 @@ KisMainWindow::KisMainWindow(QUuid uuid)
     QTabBar *tabBar = d->findTabBarHACK();
     if (tabBar) {
         tabBar->setElideMode(Qt::ElideRight);
-        // load customized tab style
+        // load customized tab style (Solstice: also sets whether tabs expand)
         customizeTabBar();
-        tabBar->setExpanding(true);
         tabBar->setAcceptDrops(true);
         tabBar->setChangeCurrentOnDrag(true);
     }
@@ -1043,12 +1046,78 @@ void KisMainWindow::customizeTabBar()
            )")
            .arg(closeButtonImageUrl, closeButtonHoverColor);
 
+    // Solstice interface (docs/agent/ui-modernization-plan.md, phase 2):
+    // document tabs, toolbars and docker titles in the theme's colors.
+    const bool solsticeLook = KisConfig(true).readEntry<bool>("Solstice/ModernInterface", false);
+    QString toolBarStyleSheet;
+    if (solsticeLook) {
+        const QPalette palette = qApp->palette();
+        const QColor window = palette.color(QPalette::Window);
+        const QColor text = palette.color(QPalette::WindowText);
+        auto mix = [&](qreal textAmount) {
+            return KisPaintingTweaks::blendColors(text, window, textAmount).name();
+        };
+        tabStyleSheet += QStringLiteral(R"(
+            QTabBar::tab {
+                background: %1;
+                color: %2;
+                border: none;
+                border-right: 1px solid %3;
+                border-bottom: 2px solid transparent;
+                padding: 5px 10px;
+            }
+            QTabBar::tab:hover:!selected {
+                background: %4;
+                color: %5;
+            }
+            QTabBar::tab:selected {
+                background: %6;
+                color: %5;
+                border-bottom: 2px solid %7;
+            }
+           )")
+                             .arg(mix(0.03),
+                                  mix(0.62),
+                                  mix(0.16),
+                                  mix(0.09),
+                                  text.name(),
+                                  mix(0.12),
+                                  palette.color(QPalette::Highlight).name());
+        toolBarStyleSheet = QStringLiteral(R"(
+            QToolBar {
+                border: none;
+                border-bottom: 1px solid %1;
+                padding: 2px 4px;
+                spacing: 2px;
+            }
+            QToolBar::separator {
+                background: %1;
+                width: 1px;
+                height: 1px;
+                margin: 4px;
+            }
+           )")
+                                .arg(mix(0.16));
+    }
 
     QTabBar* tabBar = d->findTabBarHACK();
     if (tabBar) {
         tabBar->setStyleSheet(tabStyleSheet);
+        // Solstice: tabs sized to their titles keep the close button next to
+        // the title; the default stretches them across the window.
+        tabBar->setExpanding(!solsticeLook);
     }
 
+    Q_FOREACH (KisToolBar *toolBar, toolBars()) {
+        toolBar->setStyleSheet(toolBarStyleSheet);
+    }
+
+    KoDockWidgetTitleBar::setSolsticeLookEnabled(solsticeLook);
+    Q_FOREACH (QDockWidget *dock, dockWidgets()) {
+        if (KoDockWidgetTitleBar *titleBar = qobject_cast<KoDockWidgetTitleBar *>(dock->titleBarWidget())) {
+            titleBar->updateSolsticeLook();
+        }
+    }
 }
 
 bool KisMainWindow::canvasDetached() const

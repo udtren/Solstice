@@ -349,6 +349,14 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
     //
     // Window Tab
     //
+    // Solstice: the interface look, added at the end of the Window tab.
+    m_chkSolsticeInterface = new QCheckBox(i18n("Solstice interface (docker titles, document tabs, toolbars)"), this);
+    m_chkSolsticeInterface->setToolTip(
+        i18n("Gives docker titles a header band, sizes document tabs to their titles with an underline on the "
+             "current tab, and separates toolbars with a line. The colors follow the current theme."));
+    m_chkSolsticeInterface->setChecked(cfg.readEntry<bool>("Solstice/ModernInterface", false));
+    formLayout->addRow(m_chkSolsticeInterface);
+
     chkUseCustomFont->setChecked(cfg.readEntry<bool>("use_custom_system_font", false));
     cmbCustomFont->findChild <QComboBox*>("stylesComboBox")->setVisible(false);
 
@@ -824,6 +832,7 @@ void GeneralTab::setDefault()
 
 
     chkUseCustomFont->setChecked(false);
+    m_chkSolsticeInterface->setChecked(false);
     cmbCustomFont->setCurrentFont(qApp->font());
     intFontSize->setValue(qApp->font().pointSize());
 
@@ -2919,6 +2928,7 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
         cfg.setIgnoreHighFunctionKeys(m_general->chkIgnoreHighFunctionKeys->isChecked());
 
         cfg.writeEntry<bool>("use_custom_system_font", m_general->chkUseCustomFont->isChecked());
+        cfg.writeEntry<bool>("Solstice/ModernInterface", m_general->m_chkSolsticeInterface->isChecked());
         cfg.writeEntry<bool>("Solstice/ColorPickFromAnywhere", m_general->chkColorPickFromAnywhere->isChecked());
         cfg.writeEntry<bool>("Solstice/DisableTopMenuShortcuts", m_general->chkDisableTopMenuShortcuts->isChecked());
         KisColorButton *slotButtons[] = {

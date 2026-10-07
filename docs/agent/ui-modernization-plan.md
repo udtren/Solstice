@@ -6,6 +6,9 @@
 - フェーズ0: 環境と変更前の代表画面を記録した（「フェーズ0の記録」）。
 - フェーズ1: 追加テーマ `Solstice Dark` の試作を作成・インストールした。
   ユーザーが切り替えて確認し、問題なし。既定テーマや設定は変更していない。
+- フェーズ2: 設定「Solstice interface」（既定オフ）で、ドッカー見出し・文書タブ・
+  ツールバーの外観を切り替える実装をインストールした。ユーザーが確認し、問題なし。
+- 次の判断: フェーズ3（共通部品）に進むかどうか。計画どおりフェーズ2で一度区切る。
 
 SolsticeのQt Widgetsを維持し、配色、ドッカー見出し、ドキュメントタブ、
 ツールバーから段階的に見た目を整える。描画作業の情報密度と既存操作を保ち、
@@ -178,6 +181,41 @@ Palette、HueSVC、Layersを固定している。文書はRGBA 16ビット浮動
 確認事項（ユーザー）: 通常・ホバー・押下・選択・無効の見分け、日本語の
 小さい文字、スライダー、Quick Access等の独自UI、テーマの往復切替で旧配色が
 残らないこと。
+
+### フェーズ2の実装（Solstice interface）
+
+設定: 「設定 → Solsticeの設定 → General → Window」の末尾に、チェックボックス
+「Solstice interface (docker titles, document tabs, toolbars)」をコードで追加した
+（`.ui` は変更していない）。保存先は `kritarc` の `Solstice/ModernInterface`、
+既定はオフ。オフのときは従来と同じ描画・寸法になる。OKで閉じると
+`KisConfigNotifier::configChanged()` → `KisMainWindow::configChanged()` →
+`customizeTabBar()` の既存経路で反映される。テーマ変更時も `customizeTabBar()`
+が呼ばれるため、色はテーマに追従する。
+
+| 部品 | 変更内容 | 実装箇所 |
+| --- | --- | --- |
+| ドッカー見出し | 見出しの帯（本文色6%を混ぜたウィンドウ色）と下端の1px線（同16%）、余白を左右6／4px・上下3pxに拡大。スタイルの `CE_DockWidgetTitle` 描画は省略 | `KoDockWidgetTitleBar`: 静的フラグ `setSolsticeLookEnabled()`、`updateSolsticeLook()`、`paintEvent()` |
+| 文書タブ | タブをタイトル幅に（`setExpanding(false)`）、選択中は明るい面と選択色の下線2px、非選択は本文色62%の文字、境界1px、ホバー面 | `KisMainWindow::customizeTabBar()` の既存QSSに追加。閉じるボタンのQSSは従来どおり |
+| ツールバー | 下端の1px線、余白2／4px、区切り線を線色で表示 | 同上、各 `KisToolBar` にQSSを設定（オフでは空のQSSに戻す） |
+
+フラグはライブラリの下位層（`libs/widgets`）にあるため、`KisConfig` は読まず、
+`KisMainWindow` のコンストラクタ（ドッカー作成前）と `customizeTabBar()` が
+設定する。既存のドッカーは `customizeTabBar()` の中で `updateSolsticeLook()`
+を呼んで更新する。
+
+確認事項（ユーザー）: オン／オフの往復、テーマ切替、ドッカーの浮動・タブ化・
+狭幅・ロック、文書タブの切替・並べ替え・閉じる・未保存表示、ツールバーの
+ボタンとツールバー内のスライダー・コンボボックスの見た目と操作。
+
+ユーザー確認（2026年10月7日）: 問題なし。変更後の画面は
+`<krita-dev-root>\ui-images\after` にある（`image3.jpg`: Solstice DarkとSolstice
+interfaceを有効にした描画画面、Asset Libraryとブラシエディターを含む。
+`image3(1).jpg`: 設定ダイアログ）。変更前の `before` と同じ条件で撮影されている。
+
+未確認・制限: 125%以外の表示倍率。ツールバーへのQSSは子ウィジェットにも
+スタイルシート描画を適用するため、ツールバー内の独自部品の見た目が変わる
+可能性がある（実機で確認する）。ドッカーをタブ化したときのタブ（QMainWindow
+のドッカータブ）は対象外。
 
 ### フェーズ2の具体的な変更
 

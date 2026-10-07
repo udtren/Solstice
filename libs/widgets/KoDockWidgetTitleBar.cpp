@@ -26,12 +26,17 @@
 
 #include <KSqueezedTextLabel>
 
+#include <kis_painting_tweaks.h>
+
 static inline bool hasFeature(const QDockWidget *dockwidget, QDockWidget::DockWidgetFeature feature)
 {
     return (dockwidget->features() & feature) == feature;
 }
 
 constexpr int SPACING = 6;
+
+// Solstice interface: off unless the main window enables it.
+static bool s_solsticeLook = false;
 
 KoDockWidgetTitleBar::KoDockWidgetTitleBar(QDockWidget* dockWidget)
         : QWidget(dockWidget), d(new Private(this))
@@ -80,6 +85,27 @@ KoDockWidgetTitleBar::KoDockWidgetTitleBar(QDockWidget* dockWidget)
     connect(dockWidget, SIGNAL(windowTitleChanged(const QString &)), SLOT(dockWidgetTitleChanged(const QString &)));
 
     d->featuresChanged(QDockWidget::NoDockWidgetFeatures);
+    updateSolsticeLook();
+}
+
+void KoDockWidgetTitleBar::setSolsticeLookEnabled(bool enabled)
+{
+    s_solsticeLook = enabled;
+}
+
+bool KoDockWidgetTitleBar::solsticeLookEnabled()
+{
+    return s_solsticeLook;
+}
+
+void KoDockWidgetTitleBar::updateSolsticeLook()
+{
+    if (s_solsticeLook) {
+        layout()->setContentsMargins(6, 3, 4, 3);
+    } else {
+        layout()->setContentsMargins(2, 0, 2, 0);
+    }
+    update();
 }
 
 KoDockWidgetTitleBar::~KoDockWidgetTitleBar()
@@ -92,6 +118,16 @@ void KoDockWidgetTitleBar::paintEvent(QPaintEvent*)
     QStylePainter p(this);
 
     QDockWidget *q = qobject_cast<QDockWidget*>(parentWidget());
+
+    if (s_solsticeLook) {
+        // A band slightly apart from the window color and a separator line
+        // below it, so the title reads as the docker's header.
+        const QColor window = palette().color(QPalette::Window);
+        const QColor text = palette().color(QPalette::WindowText);
+        p.fillRect(rect(), KisPaintingTweaks::blendColors(text, window, 0.06));
+        p.fillRect(QRect(0, height() - 1, width(), 1), KisPaintingTweaks::blendColors(text, window, 0.16));
+        return;
+    }
 
     int fw = q->isFloating() ? q->style()->pixelMetric(QStyle::PM_DockWidgetFrameWidth, 0, q) : 0;
     int mw = q->style()->pixelMetric(QStyle::PM_DockWidgetTitleMargin, 0, q);

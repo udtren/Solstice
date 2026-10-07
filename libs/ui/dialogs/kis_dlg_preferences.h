@@ -132,6 +132,8 @@ private Q_SLOTS:
 public:
     QButtonGroup m_pasteFormatGroup;
     KisCumulativeUndoData m_cumulativeUndoData;
+    /// Solstice interface (docker titles, document tabs, toolbars); Window tab.
+    QCheckBox *m_chkSolsticeInterface {nullptr};
 };
 
 

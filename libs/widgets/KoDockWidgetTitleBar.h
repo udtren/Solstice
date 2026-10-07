@@ -25,6 +25,17 @@ public:
 
     void updateIcons();
 
+    /**
+     * Solstice interface (docs/agent/ui-modernization-plan.md, phase 2): a
+     * title band with a separator line and more padding. Off by default; the
+     * main window sets it from the "Solstice/ModernInterface" setting before
+     * and after creating dockers, and title bars created later follow it.
+     */
+    static void setSolsticeLookEnabled(bool enabled);
+    static bool solsticeLookEnabled();
+    /// Applies the current Solstice look setting to this title bar.
+    void updateSolsticeLook();
+
 public Q_SLOTS:
     void setLocked(bool locked);
 
