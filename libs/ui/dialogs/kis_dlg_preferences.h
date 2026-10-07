@@ -134,6 +134,8 @@ public:
     KisCumulativeUndoData m_cumulativeUndoData;
     /// Solstice interface (docker titles, document tabs, toolbars); Window tab.
     QCheckBox *m_chkSolsticeInterface {nullptr};
+    /// Overview docker updates while painting; Window tab.
+    QCheckBox *m_chkOverviewLiveUpdate {nullptr};
 };
 
 

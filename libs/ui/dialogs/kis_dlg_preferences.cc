@@ -358,6 +358,12 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
              "follow the current theme."));
     m_chkSolsticeInterface->setChecked(cfg.readEntry<bool>("Solstice/ModernInterface", false));
     formLayout->addRow(m_chkSolsticeInterface);
+    m_chkOverviewLiveUpdate = new QCheckBox(i18n("Update the Overview docker while painting"), this);
+    m_chkOverviewLiveUpdate->setToolTip(
+        i18n("Updates the changed part of the Overview thumbnail during strokes, about ten times a second. "
+             "When off, the Overview updates after the image stops changing."));
+    m_chkOverviewLiveUpdate->setChecked(cfg.readEntry<bool>("Solstice/OverviewLiveUpdate", true));
+    formLayout->addRow(m_chkOverviewLiveUpdate);
 
     chkUseCustomFont->setChecked(cfg.readEntry<bool>("use_custom_system_font", false));
     cmbCustomFont->findChild <QComboBox*>("stylesComboBox")->setVisible(false);
@@ -835,6 +841,7 @@ void GeneralTab::setDefault()
 
     chkUseCustomFont->setChecked(false);
     m_chkSolsticeInterface->setChecked(false);
+    m_chkOverviewLiveUpdate->setChecked(true);
     cmbCustomFont->setCurrentFont(qApp->font());
     intFontSize->setValue(qApp->font().pointSize());
 
@@ -2944,6 +2951,7 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
 
         cfg.writeEntry<bool>("use_custom_system_font", m_general->chkUseCustomFont->isChecked());
         cfg.writeEntry<bool>("Solstice/ModernInterface", m_general->m_chkSolsticeInterface->isChecked());
+        cfg.writeEntry<bool>("Solstice/OverviewLiveUpdate", m_general->m_chkOverviewLiveUpdate->isChecked());
         cfg.writeEntry<bool>("Solstice/ColorPickFromAnywhere", m_general->chkColorPickFromAnywhere->isChecked());
         cfg.writeEntry<bool>("Solstice/DisableTopMenuShortcuts", m_general->chkDisableTopMenuShortcuts->isChecked());
         KisColorButton *slotButtons[] = {

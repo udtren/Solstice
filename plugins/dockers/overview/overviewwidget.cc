@@ -25,7 +25,9 @@
 #include <KisMainWindow.h>
 #include "KisIdleTasksManager.h"
 #include <KisDisplayConfig.h>
+#include <kis_config_notifier.h>
 
+#include <QtConcurrent>
 
 OverviewWidget::OverviewWidget(QWidget * parent)
     : KisWidgetWithIdleTask<QWidget>(parent)
@@ -37,6 +39,13 @@ OverviewWidget::OverviewWidget(QWidget * parent)
     setContextMenuPolicy(Qt::PreventContextMenu);
     KisConfig cfg(true);
     slotThemeChanged();
+
+    // Solstice live updates (see overviewwidget.h).
+    m_liveCompressor = new KisSignalCompressor(100, KisSignalCompressor::FIRST_ACTIVE, this);
+    connect(m_liveCompressor, SIGNAL(timeout()), SLOT(startLiveUpdate()));
+    connect(&m_liveWatcher, SIGNAL(finished()), SLOT(finishLiveUpdate()));
+    connect(KisConfigNotifier::instance(), SIGNAL(configChanged()), SLOT(slotConfigChanged()));
+    slotConfigChanged();
     recalculatePreviewDimensions();
 }
 
@@ -53,7 +62,20 @@ void OverviewWidget::setCanvas(KisCanvas2 *canvas)
 
     KisWidgetWithIdleTask<QWidget>::setCanvas(canvas);
 
+    ++m_liveGeneration;
+    {
+        QMutexLocker locker(&m_dirtyLock);
+        m_dirtyRect = QRect();
+    }
+
     if (m_canvas) {
+        // Solstice live updates: the same notification the canvas uses,
+        // emitted from the image's worker threads.
+        connect(m_canvas->image(),
+                SIGNAL(sigImageUpdated(QRect)),
+                this,
+                SLOT(slotImageUpdated(QRect)),
+                Qt::DirectConnection);
         connect(m_canvas->displayColorConverter(), SIGNAL(displayConfigurationChanged()), SLOT(startUpdateCanvasProjection()));
         connect(m_canvas->canvasController()->proxyObject, SIGNAL(canvasStateChanged()), this, SLOT(update()), Qt::UniqueConnection);
         connect(m_canvas->viewManager()->mainWindow(), SIGNAL(themeChanged()), this, SLOT(slotThemeChanged()), Qt::UniqueConnection);
@@ -214,9 +236,122 @@ void OverviewWidget::wheelEvent(QWheelEvent* event)
 
 void OverviewWidget::updateThumbnail(QImage pixmap)
 {
+    if (pixmap.size() != m_pixmap.size()) {
+        ++m_liveGeneration; // pending live results were scaled for the old size
+    }
     m_pixmap = QPixmap::fromImage(pixmap);
     m_oldPixmap = m_pixmap.copy();
     update();
+}
+
+void OverviewWidget::slotConfigChanged()
+{
+    m_liveUpdates = KisConfig(true).readEntry<bool>("Solstice/OverviewLiveUpdate", true);
+}
+
+void OverviewWidget::slotImageUpdated(const QRect &rect)
+{
+    // Worker thread: only collect the area and wake the GUI thread.
+    if (!m_liveUpdates) {
+        return;
+    }
+    {
+        QMutexLocker locker(&m_dirtyLock);
+        m_dirtyRect |= rect;
+    }
+    QMetaObject::invokeMethod(m_liveCompressor, "start", Qt::QueuedConnection);
+}
+
+void OverviewWidget::startLiveUpdate()
+{
+    if (!m_canvas || !m_canvas->image() || m_pixmap.isNull()) {
+        return;
+    }
+    if (m_liveWatcher.isRunning()) {
+        return; // finishLiveUpdate() picks up what accumulated meanwhile
+    }
+    QRect dirty;
+    {
+        QMutexLocker locker(&m_dirtyLock);
+        dirty = m_dirtyRect;
+        m_dirtyRect = QRect();
+    }
+    KisImageSP image = m_canvas->image();
+    const QRect bounds = image->bounds();
+    dirty &= bounds;
+    if (dirty.isEmpty()) {
+        return;
+    }
+    // Large changes (fills, filters, transforms) are left to the idle task's
+    // full regeneration after the change.
+    if (qint64(dirty.width()) * dirty.height() * 4 > qint64(bounds.width()) * bounds.height()) {
+        return;
+    }
+
+    // The thumbnail pixels covering the change. They are sampled from the
+    // projection at twice the thumbnail size (once for thumbnails as large as
+    // the image) and only then converted to display colors and scaled down,
+    // so the cost follows the thumbnail area, not the image area: about 2 ms
+    // for a brush-sized change of a 2480x3508 RGBA32F image.
+    const QSize thumbnailSize = m_pixmap.size();
+    const qreal sx = qreal(thumbnailSize.width()) / bounds.width();
+    const qreal sy = qreal(thumbnailSize.height()) / bounds.height();
+    const QRect target = QRectF(dirty.x() * sx, dirty.y() * sy, dirty.width() * sx, dirty.height() * sy)
+                             .toAlignedRect()
+                             .adjusted(-1, -1, 1, 1)
+        & QRect(QPoint(), thumbnailSize);
+    if (target.isEmpty()) {
+        return;
+    }
+    const int oversample =
+        thumbnailSize.width() * 2 <= bounds.width() && thumbnailSize.height() * 2 <= bounds.height() ? 2 : 1;
+
+    const KisDisplayConfig config = m_canvas->displayColorConverter()->displayConfig();
+    const bool pixelArt = isPixelArt();
+    const int generation = m_liveGeneration;
+    KisPaintDeviceSP projection = image->projection();
+    m_liveWatcher.setFuture(QtConcurrent::run([=]() {
+        const QRect sampled(target.topLeft() * oversample, target.size() * oversample);
+        KisPaintDeviceSP thumbnail = projection->createThumbnailDevice(thumbnailSize.width() * oversample,
+                                                                       thumbnailSize.height() * oversample,
+                                                                       bounds,
+                                                                       sampled);
+        QImage image = thumbnail->convertToQImage(config.profile,
+                                                  sampled.x(),
+                                                  sampled.y(),
+                                                  sampled.width(),
+                                                  sampled.height(),
+                                                  config.intent,
+                                                  config.conversionFlags);
+        LiveResult result;
+        result.target = target;
+        result.generation = generation;
+        result.image = oversample == 1 ? image
+                                       : image.scaled(target.size(),
+                                                      Qt::IgnoreAspectRatio,
+                                                      pixelArt ? Qt::FastTransformation : Qt::SmoothTransformation);
+        return result;
+    }));
+}
+
+void OverviewWidget::finishLiveUpdate()
+{
+    const LiveResult result = m_liveWatcher.result();
+    if (result.generation == m_liveGeneration && !m_pixmap.isNull() && !result.image.isNull()) {
+        QPainter painter(&m_pixmap);
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.drawImage(result.target, result.image);
+        painter.end();
+        update();
+    }
+    bool pending = false;
+    {
+        QMutexLocker locker(&m_dirtyLock);
+        pending = !m_dirtyRect.isEmpty();
+    }
+    if (pending) {
+        m_liveCompressor->start();
+    }
 }
 
 void OverviewWidget::slotThemeChanged()

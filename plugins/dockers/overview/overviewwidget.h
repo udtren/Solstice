@@ -11,6 +11,8 @@
 #include <QObject>
 #include <QWidget>
 #include <QPixmap>
+#include <QFutureWatcher>
+#include <QMutex>
 
 #include "KisWidgetWithIdleTask.h"
 
@@ -39,6 +41,13 @@ public Q_SLOTS:
     void startUpdateCanvasProjection();
     void updateThumbnail(QImage pixmap);
     void slotThemeChanged();
+
+private Q_SLOTS:
+    /// Solstice live updates: called from image worker threads.
+    void slotImageUpdated(const QRect &rect);
+    void startLiveUpdate();
+    void finishLiveUpdate();
+    void slotConfigChanged();
 
 Q_SIGNALS:
     void signalDraggingStarted();
@@ -86,6 +95,24 @@ private:
     QPointF m_lastPos {QPointF(0, 0)};
 
     QColor m_outlineColor;
+
+    /**
+     * Solstice live updates (docs/agent/overview-live-update.md): while the
+     * image changes, the changed part of the thumbnail is read from the
+     * projection and scaled on a worker thread, at most every 100 ms. The
+     * idle task still regenerates the whole thumbnail afterwards.
+     */
+    struct LiveResult {
+        QRect target; ///< in thumbnail pixels
+        QImage image;
+        int generation{0};
+    };
+    bool m_liveUpdates{true};
+    QMutex m_dirtyLock;
+    QRect m_dirtyRect; ///< image coordinates, guarded by m_dirtyLock
+    KisSignalCompressor *m_liveCompressor{nullptr};
+    QFutureWatcher<LiveResult> m_liveWatcher;
+    int m_liveGeneration{0}; ///< changes with the canvas and the thumbnail size
 };
 
 
