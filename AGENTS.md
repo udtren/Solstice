@@ -89,7 +89,7 @@ Read these before adding or updating any feature:
 - Brush option shared model (phase 1 implemented for Deform, manual check pending):
   `docs/agent/brush-option-shared-model-plan.md`, findings in
   `docs/agent/brush-option-shared-model-phase0.md`
-- UI modernization (phases 0-2 done; phase 3 not started):
+- UI modernization (phases 0-3 done; phase 4 not started):
   `docs/agent/ui-modernization-plan.md`
 - GitHub Actions Windows trial builds: `docs/agent/github-actions.md`
 

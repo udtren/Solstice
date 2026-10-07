@@ -27,7 +27,8 @@ Krita edition, and development no longer tracks upstream Krita.
 - **[Puppet Warp](docs/puppet-warp.md)**: pose and reshape artwork with movable
   and rotatable pins in the Transform Tool.
 - **[Solstice interface](docs/ui-modernization.md)**: an optional Solstice Dark
-  theme and refined docker titles, document tabs and toolbars.
+  theme, refined docker titles, document tabs and toolbars, and a flat
+  Solstice widget style.
 - **[Brush Presets](docs/brush-stroke-preview.md)**: cached stroke previews in
   a grid that adapts to the docker's width, with multi-select engine and bundle
   filters alongside tags and search.

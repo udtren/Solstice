@@ -4,6 +4,7 @@ kis_add_tests(
     kis_simple_math_parser_test.cpp # FIXME this test should be in the ui directory
     TestKoProgressUpdater.cpp
     TestSqueezedComboBox.cpp
+    KisSolsticeStyleTest.cpp
     kis_parse_spin_boxes_test.cpp
     LINK_LIBRARIES kritawidgetutils kritaimage kritatestsdk
 )

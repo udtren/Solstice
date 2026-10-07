@@ -64,6 +64,7 @@
 #include <KisMimeDatabase.h>
 #include <KisResourceServerProvider.h>
 #include <KisScopedPerformanceLogger.h>
+#include <KisSolsticeStyle.h>
 #include <KisUsageLogger.h>
 #include <KoColorSpaceRegistry.h>
 #include <KoDockRegistry.h>
@@ -269,7 +270,10 @@ KisApplication::KisApplication(const QString &key, int &argc, char **argv)
         // if style is set from config, try to load that
         KisConfig cfg(true);
         QString widgetStyleFromConfig = cfg.widgetStyle();
-        if (widgetStyleFromConfig != "") {
+        if (KisSolsticeStyle::isStyleKey(widgetStyleFromConfig)) {
+            // Solstice: Fusion with flat common controls (ui-modernization-plan.md)
+            qApp->setStyle(new KisSolsticeStyle());
+        } else if (widgetStyleFromConfig != "") {
             qApp->setStyle(widgetStyleFromConfig);
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
         } else if (style()->objectName().toLower() == "macintosh") {

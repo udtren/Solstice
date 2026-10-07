@@ -35,15 +35,38 @@ The colors follow the current theme, so the option works with light and dark
 themes. Clear the check box to return to the original look; the change applies
 when the dialog is closed with **OK**.
 
+## Solstice style
+
+**Settings → Styles → Solstice** draws the common controls flat and rounded in
+the theme's colors, on top of the Fusion style:
+
+- Buttons are rounded; toggled buttons and the active tool are filled with
+  the selection color.
+- Check boxes and radio buttons are filled with the selection color when
+  checked.
+- Input fields get a rounded frame that turns to the selection color when
+  focused.
+- Menus show the highlighted item as a rounded block.
+- Scroll bars have a flat track and a rounded handle.
+- Tabs in dialogs and docker groups are flat, with a line under the current
+  tab.
+
+Sizes and layouts are the same as with Fusion. Choose **Settings → Styles →
+Fusion** to return to the original look.
+
 ## Limitations
 
-- Only the main window's docker titles, document tabs and toolbars change.
-  Buttons, input fields, menus and dialogs keep their current look.
+- The Solstice interface option changes only the main window's docker
+  titles, document tabs and toolbars; the Solstice style changes the common
+  controls.
+- With the Solstice style, a few lists and menus keep the Fusion look: the
+  layer list, tag menus, the recent files menu and the color label filter.
+  Spin boxes and their input fields also keep the Fusion look.
 - The Settings dialog still uses larger text and icons than the main window.
 - The color of the area around the canvas comes from **Configure Solstice →
   Display → Canvas Border Color**, not from the theme.
-- The theme and the Solstice interface option have been checked on Windows
-  at 125% display scaling only.
+- The theme, the Solstice interface option and the Solstice style have been
+  checked on Windows at 125% display scaling only.
 
 Agent-facing notes are in
 [`agent/ui-modernization-plan.md`](agent/ui-modernization-plan.md).

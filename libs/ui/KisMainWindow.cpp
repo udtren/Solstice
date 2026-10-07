@@ -86,6 +86,7 @@
 #include <KoToolRegistry.h>
 #include <KoDockFactoryBase.h>
 #include <KoDockWidgetTitleBar.h>
+#include <KisSolsticeStyle.h>
 #include <kis_utility_title_bar.h>
 #include <KoDocumentInfoDlg.h>
 #include <KoDocumentInfo.h>
@@ -488,6 +489,11 @@ KisMainWindow::KisMainWindow(QUuid uuid)
         d->styleMenu->addAction(d->actionMap.value(styleName));
     }
 
+    // Solstice: Fusion with flat common controls (ui-modernization-plan.md)
+    action = new QAction(KisSolsticeStyle::styleKey(), d->styleActions);
+    action->setCheckable(true);
+    d->actionMap.insert(KisSolsticeStyle::styleKey(), action);
+    d->styleMenu->addAction(action);
 
     // select the config value, or the current style if that does not exist
     QString styleFromConfig = cfg.widgetStyle().toLower();
@@ -2812,6 +2818,12 @@ void KisMainWindow::slotUpdateWidgetStyle()
      Q_FOREACH (auto key, d->actionMap.keys()) { // find checked style to save to config
          if(d->actionMap.value(key)->isChecked()) {
             cfg.setWidgetStyle(key);
+            if (KisSolsticeStyle::isStyleKey(key)) {
+                // Solstice: Fusion-based, reported to widgets as Fusion
+                qApp->setProperty(currentUnderlyingStyleNameProperty, QStringLiteral("fusion"));
+                qApp->setStyle(new KisSolsticeStyle());
+                continue;
+            }
             qApp->setProperty(currentUnderlyingStyleNameProperty, key);
             qApp->setStyle(key);
 
