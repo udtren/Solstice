@@ -67,6 +67,28 @@ public:
         return m_srcBase + QPointF(0.5 * m_xCoeff, 0.5 * m_yCoeff);
     }
 
+    /**
+     * Solstice GPU engine: the constructor's coefficients, so that
+     * KisGpuGridWarpWorker evaluates getValue() with exactly the CPU values.
+     */
+    struct Coefficients {
+        QPointF a;
+        QPointF c;
+        QPointF d;
+        QPointF srcBase;
+        QPointF dstBase;
+        qreal qA;
+        qreal qBConst;
+        qreal qDDiv;
+        qreal xCoeff;
+        qreal yCoeff;
+    };
+
+    inline Coefficients coefficients() const
+    {
+        return {m_a, m_c, m_d, m_srcBase, m_dstBase, m_qA, m_qB_const, m_qD_div, m_xCoeff, m_yCoeff};
+    }
+
     inline QPointF map(const QPointF &pt) {
         setX(pt.x());
         setY(pt.y());

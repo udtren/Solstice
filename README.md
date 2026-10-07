@@ -108,7 +108,8 @@ and layer flips now batch their GPU readbacks.
 
 The brush prototype requires `KRITA_GPU_BRUSH=1` in addition to enabling the
 GPU engine. Dab generation, texture generation, masking, filter calculations
-and transform calculations still run on the CPU. Large mirrored brushes with
+and most transform calculations still run on the CPU; the Transform Tool's
+affine transforms and Liquify are applied on the GPU for float layers. Large mirrored brushes with
 Alpha Lock can still catch up after pen release; further tuning of that case
 is deferred. This is an ongoing rewrite, not a fully GPU-based painting pipeline.
 

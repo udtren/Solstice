@@ -31,6 +31,7 @@
 #include <KisGpuLayerStackCompositor.h>
 #include <KisGpuTileFill.h>
 
+#include "gpu/KisGpuGridWarpWorker.h"
 #include "gpu/KisGpuMergeBatch.h"
 #include "gpu/KisGpuTileAccess.h"
 #include "gpu/KisGpuTileBackend.h"
@@ -86,6 +87,8 @@ private Q_SLOTS:
     void testTransformSequenceUndo();
     void testGpuTransformMatchesCpu_data();
     void testGpuTransformMatchesCpu();
+    void testGpuLiquifyMatchesCpu_data();
+    void testGpuLiquifyMatchesCpu();
     void testCompositeMatchesCpu();
     void testUndoRedo();
     void testCopyOnWriteIsolation();
@@ -753,6 +756,171 @@ void KisGpuPaintDeviceTest::testCpuTransformsBatchReadback()
     QVERIFY(read(gpu) == before);
     command->redo();
     QVERIFY(read(gpu) == after);
+}
+
+void KisGpuPaintDeviceTest::testGpuLiquifyMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("stroke");
+    QTest::addColumn<int>("precision");
+    QTest::addColumn<QString>("variant");
+    const char *strokes[] = {"push", "wash", "grow", "shrink", "rotate", "fold", "far", "undo", "none"};
+    for (bool f16 : {false, true}) {
+        for (const char *stroke : strokes) {
+            for (const QString variant : {"plain", "offset", "opaque-default"}) {
+                if (f16 && variant != "plain")
+                    continue;
+                QTest::newRow(qPrintable(QString("%1-%2-p8-%3").arg(f16 ? "f16" : "f32", stroke, variant)))
+                    << f16 << QString(stroke) << 8 << variant;
+            }
+        }
+        for (int precision : {1, 4, 16}) {
+            QTest::newRow(qPrintable(QString("%1-push-p%2-plain").arg(f16 ? "f16" : "f32").arg(precision)))
+                << f16 << QStringLiteral("push") << precision << QStringLiteral("plain");
+        }
+    }
+}
+
+void KisGpuPaintDeviceTest::testGpuLiquifyMatchesCpu()
+{
+    // Phase 4.97: KisLiquifyTransformWorker::run() with the polygons painted
+    // on the GPU must equal the CPU bit for bit, including Undo.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QString, stroke);
+    QFETCH(int, precision);
+    QFETCH(QString, variant);
+    if (!m_backend->context().deviceInfo().supportsFloat64)
+        QSKIP("shaderFloat64 is not supported");
+    const bool previousProjection = KisGpuMergeBatch::isEnabled();
+    KisGpuMergeBatch::setEnabled(true);
+    const auto restore = qScopeGuard([&]() {
+        KisGpuMergeBatch::setEnabled(previousProjection);
+        qunsetenv("KRITA_GPU_LIQUIFY");
+    });
+    const auto *cs = rgbaFloat(f16);
+    const QRect bounds(-64, -64, 1024, 1024);
+    const QRect content(37, -21, 401, 363);
+    KisPaintDeviceSP source = new KisPaintDevice(cs);
+    source->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+    KoColor paper(cs);
+    if (variant == "opaque-default") {
+        cs->fromNormalisedChannelsValue(paper.data(), {0.95f, 0.9f, 0.85f, 1.0f});
+        source->setDefaultPixel(paper);
+    }
+    if (f16) {
+        KisPaintDeviceSP f32 = new KisPaintDevice(rgbaFloat(false));
+        fillRandom(f32, content, 23);
+        const auto floats = readPixels(f32, content);
+        QByteArray raw(content.width() * content.height() * cs->pixelSize(), Qt::Uninitialized);
+        rgbaFloat(false)->convertPixelsTo(reinterpret_cast<const quint8 *>(floats.data()),
+                                          reinterpret_cast<quint8 *>(raw.data()),
+                                          cs,
+                                          content.width() * content.height(),
+                                          KoColorConversionTransformation::internalRenderingIntent(),
+                                          KoColorConversionTransformation::internalConversionFlags());
+        source->writeBytes(reinterpret_cast<const quint8 *>(raw.constData()), content);
+    } else {
+        fillRandom(source, content, 23);
+    }
+    QRect srcBounds = content;
+    if (variant == "offset") {
+        source->moveTo(13, -7);
+        srcBounds.translate(13, -7);
+    }
+
+    KisLiquifyTransformWorker worker(srcBounds, nullptr, precision);
+    const QPointF center = QRectF(srcBounds).center();
+    if (stroke == "push" || stroke == "undo") {
+        for (int step = 0; step < 12; ++step)
+            worker.translatePoints(center + QPointF(-120 + step * 18.3, -40 + step * 7.1),
+                                   QPointF(6.5, 3.25),
+                                   40,
+                                   false,
+                                   1.0);
+        if (stroke == "undo")
+            for (int step = 0; step < 6; ++step)
+                worker.undoPoints(center + QPointF(-60 + step * 20.0, -10), 0.6, 35);
+    } else if (stroke == "wash") {
+        for (int step = 0; step < 12; ++step)
+            worker.translatePoints(center + QPointF(-100 + step * 15.0, 20 - step * 4.0),
+                                   QPointF(-4.0, 9.0),
+                                   30,
+                                   true,
+                                   0.35);
+    } else if (stroke == "grow" || stroke == "shrink") {
+        for (int step = 0; step < 8; ++step)
+            worker.scalePoints(center + QPointF(step * 3.7, -step * 2.9),
+                               stroke == "grow" ? 0.12 : -0.15,
+                               45,
+                               false,
+                               1.0);
+    } else if (stroke == "rotate") {
+        for (int step = 0; step < 8; ++step)
+            worker.rotatePoints(center + QPointF(-step * 4.1, step * 1.3), 0.21, 50, false, 1.0);
+    } else if (stroke == "fold") {
+        // Large moves with a small radius: crossing, non-convex cells.
+        worker.translatePoints(center, QPointF(90, -35), 12, false, 1.0);
+        worker.translatePoints(center + QPointF(25, 10), QPointF(-110, 60), 9, false, 1.0);
+        worker.rotatePoints(center + QPointF(-30, 30), 2.7, 15, false, 1.0);
+    } else if (stroke == "far") {
+        // Pushes content beyond the source bounds.
+        worker.translatePoints(QPointF(srcBounds.left() + 10, srcBounds.top() + 20),
+                               QPointF(-140, -90),
+                               60,
+                               false,
+                               1.0);
+    }
+
+    auto makeDestination = [&]() {
+        KisPaintDeviceSP dst = new KisPaintDevice(cs);
+        dst->setDefaultBounds(new TestUtil::TestingTimedDefaultBounds(bounds));
+        if (variant == "opaque-default")
+            dst->setDefaultPixel(paper);
+        if (variant == "offset")
+            dst->moveTo(13, -7); // the Transform Tool's devices share the offset
+        return dst;
+    };
+
+    KisPaintDeviceSP cpu = makeDestination();
+    qputenv("KRITA_GPU_LIQUIFY", "0");
+    const quint64 before = KisGpuGridWarpWorker::runCount();
+    worker.run(source, cpu);
+    QCOMPARE(KisGpuGridWarpWorker::runCount(), before);
+
+    KisPaintDeviceSP gpu = makeDestination();
+    fillRandom(gpu, QRect(0, 0, 100, 100), 5); // run() clears the destination first
+    qputenv("KRITA_GPU_LIQUIFY", "1");
+    const QRect checkRect =
+        (cpu->exactBounds() | source->exactBounds() | QRect(0, 0, 100, 100)).adjusted(-80, -80, 80, 80);
+    const auto original = readPixels(gpu, checkRect);
+    KisTransaction transaction(gpu);
+    worker.run(source, gpu);
+    QScopedPointer<KUndo2Command> command(transaction.endAndTake());
+    command->redo(); // the first redo after endAndTake() only arms the command
+    QCOMPARE(KisGpuGridWarpWorker::runCount(), before + 1);
+
+    const auto expected = readPixels(cpu, checkRect);
+    const auto actual = readPixels(gpu, checkRect);
+    if (expected != actual) {
+        int mismatches = 0;
+        for (size_t i = 0; i < expected.size(); ++i) {
+            if (std::memcmp(&expected[i], &actual[i], sizeof(float))) {
+                const int pixel = int(i / 4);
+                if (mismatches++ < 5)
+                    qInfo() << "mismatch at"
+                            << checkRect.topLeft() + QPoint(pixel % checkRect.width(), pixel / checkRect.width())
+                            << "channel" << i % 4 << "CPU" << expected[i] << "GPU" << actual[i];
+            }
+        }
+        qInfo() << "mismatching channels" << mismatches;
+    }
+    QVERIFY(expected == actual);
+    QCOMPARE(gpu->exactBounds(), cpu->exactBounds());
+    command->undo();
+    QVERIFY(readPixels(gpu, checkRect) == original);
+    command->redo();
+    QVERIFY(readPixels(gpu, checkRect) == expected);
 }
 
 void KisGpuPaintDeviceTest::testGpuTransformMatchesCpu_data()
@@ -2281,8 +2449,12 @@ void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
         }
         report("puppet warp (rigid MLS)", median3(samples));
     }
-    {
+    // Phase 4.97: the Liquify polygons on the GPU (KisGpuGridWarpWorker).
+    KisGpuMergeBatch::setEnabled(true);
+    for (bool gpuLiquify : {false, true}) {
+        qputenv("KRITA_GPU_LIQUIFY", gpuLiquify ? "1" : "0");
         std::vector<double> samples;
+        const quint64 runs = KisGpuGridWarpWorker::runCount();
         for (int i = 0; i < 3; ++i) {
             KisLiquifyTransformWorker worker(bounds, nullptr, 8);
             for (int step = 0; step < 20; ++step)
@@ -2294,8 +2466,11 @@ void KisGpuPaintDeviceTest::benchmarkFiltersAndTransforms()
             worker.run(src, dst);
             samples.push_back(timer.nsecsElapsed() / 1e6);
         }
-        report("liquify (20 moves, sigma 200)", median3(samples));
+        QCOMPARE(KisGpuGridWarpWorker::runCount() - runs, gpuLiquify ? quint64(3) : quint64(0));
+        report(gpuLiquify ? "liquify (20 moves, sigma 200) GPU" : "liquify (20 moves, sigma 200)", median3(samples));
     }
+    qunsetenv("KRITA_GPU_LIQUIFY");
+    KisGpuMergeBatch::setEnabled(previousProjection);
     qInfo() << "Layer" << bounds.size() << "RGBA32F, threads" << threads
             << "- CPU-resident source except the readback row; medians of 3";
 }

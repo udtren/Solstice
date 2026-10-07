@@ -6266,6 +6266,126 @@ manual checks OK on 2026-10-06:
 - unchanged perspective, warp, Puppet Warp and Liquify;
 - image resize and rotate.
 
+### GPU Liquify grid warp (phase 4.97)
+
+The user chose Liquify next (task order 1, 3, 4, 6 of 2026-10-07). Phase
+4.96 stays reserved for Puppet Warp's mesh rendering.
+
+**How the CPU worker paints.** `KisLiquifyTransformWorker::run()` clears the
+destination and calls `GridIterationTools::iterateThroughGrid()` over the
+sub-grid touched by strokes (`calculateCorrectSubGrid()`), then copies the
+rest of the source rect (`cutOutSubgridFromBounds()`). For every cell,
+`PaintDevicePolygonOp`:
+
+- skips an empty bound rect (`clipDstPolygon.boundingRect().toAlignedRect()`);
+- copies a pixel-aligned identity cell with `KisPainter::copyAreaOptimized()`,
+  postponed and merged (`KisRegion::mergeSparseRects()`) when
+  `canProcessRectsInRandomOrder()` found every cell convex;
+- otherwise first flushes the postponed copies, then visits every pixel of the
+  bound rect inside the polygon (`QPolygonF::containsPoint`, odd-even) and
+  writes `KisRandomSubAccessor::sampledOldRawData()` at
+  `KisFourPointInterpolatorBackward::getValue()` (or at
+  `fallbackSourcePoint()` when the interpolator is not valid).
+
+A later cell overwrites the pixels of an earlier one where they overlap
+(folds, and the one-pixel overlap from `adjustAlignedPolygon()`).
+
+**GPU implementation.**
+
+- **`KisGpuGridWarpWorker::Recorder`** (`libs/image/gpu`) is passed to
+  `iterateThroughGrid()` in place of `PaintDevicePolygonOp` and mirrors its
+  decisions, recording operations in order:
+  - copies (split into 128x128 chunks);
+  - warps, with the CPU's bound rect, the polygon edges' values that do not
+    depend on the pixel (`qFuzzyCompare` skip, direction,
+    `(x2 - x1) / (y2 - y1)`, the implicit closing edge), the interpolator's
+    coefficients (new `KisFourPointInterpolatorBackward::coefficients()`),
+    `isValid(0.1)` and the fallback point.
+- **`libs/gpu/shaders/grid_warp.comp`**, through **`KisGpuGridWarpPass`**:
+  - *claim* (`-DCLAIM`): one workgroup per operation; each pixel it writes
+    stores `atomicMax(owner, index + 1)` in a device-local owner buffer over
+    the union of the bound rects;
+  - *resolve* (RGBA32F/F16): one invocation per destination tile-grid pixel;
+    the owner computes it, the default pixel elsewhere.
+  - `getValue()` in doubles with `precise`, correctly rounded division and
+    square root (fma residuals over neighbouring doubles), and CPU branch order,
+    including `yMu2` computed with `xBasedMu()`.
+  - Sampling: `qRound()` is `int(d + 0.5)` for these non-negative values (Qt
+    6.8 on x86-64 with SSE2); the `qint16` weights are mixed like
+    `KoMixColorsOpImpl::mixColors()` with their sum as the alpha divisor,
+    with the double -> float (-> half) rounding of phase 4.94.
+  - A sample outside the source tile grid sets a flag. The source access
+    covers the source polygons plus 8 pixels and the copy rects. The worker
+    then returns false, and `run()` clears the destination and paints on the
+    CPU.
+- **`KisLiquifyTransformWorker::run()`** records and runs the GPU path when
+  `KisGpuGridWarpWorker::canRun()`; the trailing copies outside the sub-grid
+  stay on the CPU (`copyAreaOptimized()` shares whole tiles). The written rect
+  is downloaded in one batch first.
+- **Scope** (`canRun()`):
+  - RGBA32F/F16, LOD 0, no wrap-around, `shaderFloat64`;
+  - distinct devices with the same color space and default pixel;
+  - **the same offset.** With different offsets `bitBlt()` cannot use
+    `fastBitBlt()`. The Copy composite op (`KoOptimizedCompositeOpCopy128`)
+    then clears fully transparent pixels in whole SIMD batches, and the
+    color of transparent pixels depends on the batch grouping. The first test
+    run failed on exactly those pixels. The Transform Tool's source is a copy
+    of the node's device, so the offsets match.
+  - `KRITA_GPU_LIQUIFY=0` or `KRITA_GPU_TRANSFORM=0` disables it.
+  - The Liquify preview while painting (`runOnQImage()` on the 8-bit
+    thumbnail) and level-of-detail previews stay on the CPU.
+- **Debug.** `KRITA_GPU_TRANSFORM_DEBUG=1` prints the operation count and
+  stage times; trace scope `transform.gpu_grid_warp`.
+
+**Tests** (Vulkan validation):
+
+- New `KisGpuPaintDeviceTest::testGpuLiquifyMatchesCpu`, 44 rows. All rows
+  are bit-identical to the CPU, with exact bounds, Undo/Redo, and a
+  destination that held pixels before `run()`:
+  - F32 and F16;
+  - push, wash, grow, shrink, rotate;
+  - fold: large moves with small radii, giving crossing, non-convex cells and
+    unmerged copies;
+  - far: content pushed outside the source rect;
+  - the undo brush, and no stroke;
+  - pixel precision 1, 4, 8 and 16;
+  - plain, offset and opaque-default variants.
+- `KisGpuPaintDeviceTest` 251 (1 skipped: the opt-in benchmark),
+  `kis_liquify_transform_worker_test` 15 (also with `KRITA_GPU_PROJECTION=1`),
+  `KisGpuProjectionTest` 199, `KisGpuEngineTest` 11.
+
+**Benchmark** (2480x3508 RGBA32F, 20 moves with sigma 200, about 46,000
+operations; `benchmarkFiltersAndTransforms`): CPU 219ms, GPU 56ms (3.9x).
+Temporary instrumentation, since removed, gave this breakdown:
+
+| Stage | Time |
+| --- | --- |
+| Clear and `canProcessRectsInRandomOrder()` | about 13ms |
+| Recording through `iterateThroughGrid()` | about 18ms |
+| GPU path | about 20ms |
+| Remaining CPU copies | about 2ms |
+
+Inside the GPU path:
+
+| Stage | Time |
+| --- | --- |
+| Prepare (source upload, 1216 tiles) | about 5ms |
+| Table write (about 15MB of operations) | about 3.5ms |
+| GPU wait | about 1.8ms |
+| Batched download | about 7.6ms |
+
+Further gains would need a recorder that walks the grid without the per-cell
+`QVector`/`QPolygonF` allocations of `iterateThroughGrid()`, or a GPU
+convexity check.
+
+Installed gpu/image; hashes match. The user reported the manual checks OK on 2026-10-07:
+
+- Liquify move, scale, rotate and undo strokes on RGBA32F and RGBA16F layers;
+  apply, Undo and Redo;
+- a large Liquify over most of a layer: apply time;
+- 8-bit layers unchanged (CPU);
+- the preview while painting unchanged.
+
 ## Risks and open questions
 
 - Interop requires desktop OpenGL; users on ANGLE must switch renderer.

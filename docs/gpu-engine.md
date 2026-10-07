@@ -229,8 +229,12 @@ The Transform Tool's scale, rotate and shear (Free Transform without
 perspective) are now applied on the GPU for RGBA 32/16-bit float layers. The
 result is identical to the CPU result, pixel for pixel. In a measurement on a
 2480x3508 layer, applying a scale and rotation took about 63ms instead of
-about 430ms. The preview while editing, perspective, warp, Puppet Warp,
-Liquify, cage and mesh transforms still run on the CPU. With mirroring and
+about 430ms. Applying Liquify is also done on the GPU for these layers, again
+identical to the CPU result: about 56ms instead of about 220ms for 20 strokes
+over a large part of the same layer. The preview while editing, perspective,
+warp, Puppet Warp, cage and mesh transforms still run on the CPU, as does
+Liquify when the layer's position differs from its original copy (an internal
+case the Transform Tool does not use). With mirroring and
 blend modes such as Overlay or Dodge, where mirrored dabs overlap the stroke,
 the result can differ slightly from a CPU stroke because the dabs are grouped
 differently; the CPU brush shows the same kind of variation between strokes.

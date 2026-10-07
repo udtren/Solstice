@@ -1,0 +1,505 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Krita contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Grid warp (GPU engine phase 4.97): the polygon painting of
+ * GridIterationTools::PaintDevicePolygonOp for a recorded list of operations
+ * (KisGpuGridWarpWorker), as used by KisLiquifyTransformWorker::run().
+ *
+ * The CPU paints the operations one after another; a later operation
+ * overwrites the pixels of an earlier one. Two passes reproduce this:
+ *  - CLAIM: one workgroup per operation; every pixel the operation writes
+ *    stores max(owner, operation + 1) in the owner buffer;
+ *  - RESOLVE: one invocation per pixel of the destination tile grid; the
+ *    owning operation computes the pixel (no owner: the default pixel).
+ *
+ * The result equals the CPU bit for bit:
+ *  - QPolygonF::containsPoint(OddEvenFill) with per-edge values from the
+ *    CPU (qt_polygon_isect_line: x = x1 + slope * (y - y1), x <= px);
+ *  - KisFourPointInterpolatorBackward::getValue() in doubles with the CPU's
+ *    coefficients, correctly rounded divisions and square root;
+ *  - KisRandomSubAccessor::sampledOldRawData(): qRound()ed bilinear qint16
+ *    weights and KoMixColorsOpImpl::mixColors() with their sum;
+ *  - copy operations copy the source pixel unchanged.
+ * A sample outside the source tile grid sets the failure flag; the caller
+ * then discards the result and runs the CPU path.
+ *
+ * Compile with -DCLAIM for the claim pass; otherwise the resolve pass,
+ * with -DTILE_F16 for RGBA16F tiles.
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+#ifdef TILE_F16
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#define PIXEL f16vec4
+#else
+#define PIXEL vec4
+#endif
+
+layout(local_size_x = 64, local_size_y = 1) in;
+
+const int OpCopy = 0;
+const int OpWarp = 1; // KisFourPointInterpolatorBackward::isValid()
+const int OpFallback = 2; // invalid interpolator: one sample at the fallback point
+
+struct Op {
+    dvec4 edge[4]; // x1, y1, y2, slope; edgeDir[i] == 0: no edge
+    dvec2 a;
+    dvec2 c;
+    dvec2 d;
+    dvec2 srcBase;
+    dvec2 dstBase;
+    dvec2 fallback;
+    double qA;
+    double qBConst;
+    double qDDiv;
+    double xCoeff;
+    double yCoeff;
+    double padding;
+    ivec4 rect; // x, y, width, height: the pixels the operation visits
+    ivec4 edgeDir; // +1, -1 or 0
+    ivec4 info; // x: type
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 32) readonly buffer OpTable
+{
+    Op op[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) buffer TilePixels
+{
+    PIXEL px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer AddressTable
+{
+    uint64_t addr[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 4) buffer OwnerTable
+{
+    uint owner[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 4) buffer FlagBuffer
+{
+    uint failed;
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer Params
+{
+    ivec4 ownerRect; // x, y, width, height
+    ivec2 srcGridOrigin;
+    int srcGridWidth;
+    int srcGridHeight;
+    ivec2 dstGridOrigin;
+    int dstGridWidth;
+    int dstGridHeight;
+    int opCount;
+    int padding0;
+    int padding1;
+    int padding2;
+    vec4 defaultPixel;
+};
+
+layout(push_constant) uniform Constants
+{
+    Params params;
+    AddressTable srcTiles;
+    AddressTable dstTiles;
+    OpTable ops;
+    OwnerTable owners;
+    FlagBuffer flag;
+}
+constants;
+
+// QPolygonF::containsPoint(pt, Qt::OddEvenFill) for an integer pixel.
+bool containsPixel(Op op, int x, int y)
+{
+    const double px = double(x);
+    const double py = double(y);
+    int winding = 0;
+    for (int i = 0; i < 4; ++i) {
+        const int dir = op.edgeDir[i];
+        if (dir == 0)
+            continue;
+        const dvec4 e = op.edge[i];
+        if (py >= e.y && py < e.z) {
+            precise double dy = py - e.y;
+            precise double offset = e.w * dy;
+            precise double ex = e.x + offset;
+            if (ex <= px)
+                winding += dir;
+        }
+    }
+    return (winding & 1) != 0;
+}
+
+#ifdef CLAIM
+
+void main()
+{
+    const int index = int(gl_WorkGroupID.y * gl_NumWorkGroups.x + gl_WorkGroupID.x);
+    if (index >= constants.params.opCount)
+        return;
+    const Op op = constants.ops.op[index];
+    const ivec4 owner = constants.params.ownerRect;
+    const int count = op.rect.z * op.rect.w;
+    const uint value = uint(index + 1);
+    for (int i = int(gl_LocalInvocationID.x); i < count; i += 64) {
+        const int x = op.rect.x + i % op.rect.z;
+        const int y = op.rect.y + i / op.rect.z;
+        if (op.info.x != OpCopy && !containsPixel(op, x, y))
+            continue;
+        const int ox = x - owner.x;
+        const int oy = y - owner.y;
+        atomicMax(constants.owners.owner[oy * owner.z + ox], value);
+    }
+}
+
+#else
+
+// The double @p steps representable values away from @p value (same sign).
+double neighborDouble(double value, int steps)
+{
+    uvec2 parts = unpackDouble2x32(value);
+    uint64_t bits = (uint64_t(parts.y) << 32) | uint64_t(parts.x);
+    bits = uint64_t(int64_t(bits) + int64_t(steps));
+    return packDouble2x32(uvec2(uint(bits & 0xffffffffUL), uint(bits >> 32)));
+}
+
+// Correctly rounded a / b (the CPU's IEEE division) for finite operands.
+double exactDivide(double a, double b)
+{
+    precise double q = a / b;
+    if (a == 0.0LF || isinf(q) || isnan(q))
+        return q;
+    double best = q;
+    double bestResidual = abs(fma(-q, b, a));
+    for (int i = -2; i <= 2; ++i) {
+        if (i == 0)
+            continue;
+        precise double candidate = neighborDouble(q, i);
+        precise double residual = abs(fma(-candidate, b, a));
+        if (residual < bestResidual) {
+            best = candidate;
+            bestResidual = residual;
+        }
+    }
+    return best;
+}
+
+// Correctly rounded sqrt(v) (std::sqrt) for finite v > 0.
+double exactSqrt(double v)
+{
+    precise double r = sqrt(v);
+    if (!(v > 0.0LF) || isinf(v) || isinf(r) || isnan(r))
+        return r;
+    double best = r;
+    double bestResidual = abs(fma(-r, r, v));
+    for (int i = -2; i <= 2; ++i) {
+        if (i == 0)
+            continue;
+        precise double candidate = neighborDouble(r, i);
+        precise double residual = abs(fma(-candidate, candidate, v));
+        if (residual < bestResidual) {
+            best = candidate;
+            bestResidual = residual;
+        }
+    }
+    return best;
+}
+
+// double -> float, rounded to nearest even like a C++ conversion.
+float toFloat(double value)
+{
+    precise float f = float(value);
+    if (isinf(f) || isnan(f) || double(f) == value)
+        return f;
+    float best = f;
+    double bestError = abs(double(f) - value);
+    for (int i = -1; i <= 1; i += 2) {
+        uint bits = floatBitsToUint(f);
+        float candidate = uintBitsToFloat(uint(int(bits) + i));
+        double error = abs(double(candidate) - value);
+        if (error < bestError || (error == bestError && (floatBitsToUint(candidate) & 1u) == 0u)) {
+            best = candidate;
+            bestError = error;
+        }
+    }
+    return best;
+}
+
+#ifdef TILE_F16
+// Imath float -> half rounding (nearest even, denormals included).
+float roundToHalf(float value)
+{
+    uint x = floatBitsToUint(value);
+    if (value == 0.0)
+        return value;
+    uint sign = (x >> 16) & 0x8000u;
+    int e = int((x >> 23) & 0xffu) - 127 + 15;
+    uint m = x & 0x007fffffu;
+    uint h;
+    if (e <= 0) {
+        if (e < -10)
+            return uintBitsToFloat(sign << 16);
+        m |= 0x00800000u;
+        int t = 14 - e;
+        uint a = (1u << uint(t - 1)) - 1u;
+        uint b = (m >> uint(t)) & 1u;
+        h = sign | ((m + a + b) >> uint(t));
+    } else {
+        h = (sign | (uint(e) << 10)) + ((m + 0x00000fffu + ((m >> 13) & 1u)) >> 13);
+    }
+    return unpackHalf2x16(h).x;
+}
+const double ChannelMax = 65504.0LF; // HALF_MAX
+#else
+const double ChannelMax = 3.4028234663852886e38LF; // FLT_MAX
+#endif
+
+float storeChannel(double value)
+{
+    if (value > ChannelMax)
+        value = ChannelMax;
+    if (value < -ChannelMax)
+        value = -ChannelMax;
+    float f = toFloat(value);
+#ifdef TILE_F16
+    f = roundToHalf(f);
+#endif
+    return f;
+}
+
+bool g_failed = false;
+
+PIXEL sourcePixel(int x, int y)
+{
+    const ivec2 p = ivec2(x, y) - constants.params.srcGridOrigin;
+    const ivec2 tile = p >> 6;
+    if (any(lessThan(p, ivec2(0))) || tile.x >= constants.params.srcGridWidth
+        || tile.y >= constants.params.srcGridHeight) {
+        g_failed = true;
+        return PIXEL(constants.params.defaultPixel);
+    }
+    const uint64_t address = constants.srcTiles.addr[tile.y * constants.params.srcGridWidth + tile.x];
+    if (address == 0)
+        return PIXEL(constants.params.defaultPixel);
+    const ivec2 inTile = p & 63;
+    return TilePixels(address).px[inTile.y * 64 + inTile.x];
+}
+
+bool inGoodRange(double value)
+{
+    return value >= 0.0LF && value <= 1.0LF;
+}
+
+// KisFourPointInterpolatorBackward: setY(py), setX(px), getValue().
+dvec2 backwardMap(Op op, double pixelX, double pixelY)
+{
+    const double eps = 1e-6LF;
+    precise double mPy = pixelY - op.dstBase.y;
+    precise double qBVarY = mPy * op.d.x;
+    precise double qCVarY = mPy * op.a.x;
+    precise double mPx = pixelX - op.dstBase.x;
+    precise double qBVarX = -mPx * op.d.y;
+    precise double qCVarX = -mPx * op.a.y;
+
+    precise double qB = op.qBConst + qBVarX + qBVarY;
+    precise double qC = qCVarX + qCVarY;
+
+    double nu = 0.0LF;
+    double sqrtD = 0.0LF;
+    bool dontCheckOtherNu = false;
+    if (abs(op.qA) < eps) {
+        nu = exactDivide(-qC, qB);
+        dontCheckOtherNu = true;
+    } else {
+        precise double qB2 = qB * qB;
+        precise double fourA = 4.0LF * op.qA;
+        precise double fourAC = fourA * qC;
+        precise double D = qB2 - fourAC;
+        if (D > 0.0LF) {
+            sqrtD = exactSqrt(D);
+            precise double num = -qB - sqrtD;
+            precise double value = num * op.qDDiv;
+            nu = value;
+        } else {
+            nu = 0.0LF;
+            dontCheckOtherNu = true;
+        }
+    }
+
+    const double nu1 = nu;
+    precise double xDenomNu1 = op.a.x + nu1 * op.d.x;
+    precise double xNum1 = mPx - nu1 * op.c.x;
+    const double xMu1 = exactDivide(xNum1, xDenomNu1);
+    const bool goodNu1 = inGoodRange(nu1);
+    precise double resultX;
+    precise double resultY;
+    if (goodNu1 && inGoodRange(xMu1)) {
+        resultX = op.srcBase.x + xMu1 * op.xCoeff;
+        resultY = op.srcBase.y + nu1 * op.yCoeff;
+        return dvec2(resultX, resultY);
+    }
+    precise double yDenomNu1 = op.a.y + nu1 * op.d.y;
+    precise double yNum1 = mPy - nu1 * op.c.y;
+    const double yMu1 = exactDivide(yNum1, yDenomNu1);
+    if (goodNu1 && inGoodRange(yMu1)) {
+        resultX = op.srcBase.x + yMu1 * op.xCoeff;
+        resultY = op.srcBase.y + nu1 * op.yCoeff;
+        return dvec2(resultX, resultY);
+    }
+
+    double nu2 = nu1;
+    double xDenomNu2 = xDenomNu1;
+    double xMu2 = xMu1;
+    double yDenomNu2 = yDenomNu1;
+    double yMu2 = yMu1;
+    if (!dontCheckOtherNu) {
+        precise double num2 = -qB + sqrtD;
+        precise double value2 = num2 * op.qDDiv;
+        nu2 = value2;
+        precise double xDenom2 = op.a.x + nu2 * op.d.x;
+        xDenomNu2 = xDenom2;
+        precise double xNum2 = mPx - nu2 * op.c.x;
+        xMu2 = exactDivide(xNum2, xDenomNu2);
+        const bool goodNu2 = inGoodRange(nu2);
+        if (goodNu2 && inGoodRange(xMu2)) {
+            resultX = op.srcBase.x + xMu2 * op.xCoeff;
+            resultY = op.srcBase.y + nu2 * op.yCoeff;
+            return dvec2(resultX, resultY);
+        }
+        precise double yDenom2 = op.a.y + nu2 * op.d.y;
+        yDenomNu2 = yDenom2;
+        // The CPU computes this one with xBasedMu() (kept as is).
+        yMu2 = exactDivide(xNum2, yDenomNu2);
+        if (goodNu2 && inGoodRange(yMu2)) {
+            resultX = op.srcBase.x + yMu2 * op.xCoeff;
+            resultY = op.srcBase.y + nu2 * op.yCoeff;
+            return dvec2(resultX, resultY);
+        }
+    }
+
+    const double denoms[4] = double[4](xDenomNu1, yDenomNu1, xDenomNu2, yDenomNu2);
+    const double mus[4] = double[4](xMu1, yMu1, xMu2, yMu2);
+    const double nus[4] = double[4](nu1, nu1, nu2, nu2);
+    const dvec2 center = op.fallback;
+    int bestI = -1;
+    double distanceFromCenter = 0.0LF;
+    dvec2 best = center;
+    const int meaningfulCount = dontCheckOtherNu ? 2 : 4;
+    for (int i = 0; i < meaningfulCount; ++i) {
+        if (abs(denoms[i]) < eps)
+            continue;
+        precise double rx = op.srcBase.x + mus[i] * op.xCoeff;
+        precise double ry = op.srcBase.y + nus[i] * op.yCoeff;
+        precise double dx = center.x - rx;
+        precise double dy = center.y - ry;
+        precise double dist = dx * dx + dy * dy;
+        if (bestI < 0 || dist < distanceFromCenter) {
+            distanceFromCenter = dist;
+            bestI = i;
+            best = dvec2(rx, ry);
+        }
+    }
+    return best;
+}
+
+// KisRandomSubAccessor::moveTo(point) + sampledOldRawData().
+vec4 sampleSource(dvec2 point)
+{
+    if (isnan(point.x) || isnan(point.y) || isinf(point.x) || isinf(point.y) || abs(point.x) > 1.0e9LF
+        || abs(point.y) > 1.0e9LF) {
+        g_failed = true;
+        return vec4(0.0);
+    }
+    const double fx = floor(point.x);
+    const double fy = floor(point.y);
+    const int x = int(fx);
+    const int y = int(fy);
+    precise double hsub = point.x - fx;
+    if (hsub < 0.0LF)
+        hsub = 1.0LF + hsub;
+    precise double vsub = point.y - fy;
+    if (vsub < 0.0LF)
+        vsub = 1.0LF + vsub;
+    precise double invH = 1.0LF - hsub;
+    precise double invV = 1.0LF - vsub;
+    // qRound(d) == int(d + 0.5) for d >= 0 (Qt on x86-64 with SSE2).
+    precise double w0d = invH * invV * 255.0LF + 0.5LF;
+    precise double w1d = invV * hsub * 255.0LF + 0.5LF;
+    precise double w2d = vsub * invH * 255.0LF + 0.5LF;
+    precise double w3d = hsub * vsub * 255.0LF + 0.5LF;
+    const int weights[4] = int[4](int(w0d), int(w1d), int(w2d), int(w3d));
+    const int sumOfWeights = weights[0] + weights[1] + weights[2] + weights[3];
+    const ivec2 offsets[4] = ivec2[4](ivec2(0, 0), ivec2(1, 0), ivec2(0, 1), ivec2(1, 1));
+
+    precise double totalR = 0.0LF;
+    precise double totalG = 0.0LF;
+    precise double totalB = 0.0LF;
+    precise double totalAlpha = 0.0LF;
+    for (int k = 0; k < 4; ++k) {
+        const vec4 color = vec4(sourcePixel(x + offsets[k].x, y + offsets[k].y));
+        precise double alphaTimesWeight = double(color.a) * double(weights[k]);
+        precise double r = double(color.r) * alphaTimesWeight;
+        precise double g = double(color.g) * alphaTimesWeight;
+        precise double b = double(color.b) * alphaTimesWeight;
+        totalR = totalR + r;
+        totalG = totalG + g;
+        totalB = totalB + b;
+        totalAlpha = totalAlpha + alphaTimesWeight;
+    }
+    if (!(totalAlpha > 0.0LF))
+        return vec4(0.0);
+    return vec4(storeChannel(exactDivide(totalR, totalAlpha)),
+                storeChannel(exactDivide(totalG, totalAlpha)),
+                storeChannel(exactDivide(totalB, totalAlpha)),
+                storeChannel(exactDivide(totalAlpha, double(sumOfWeights))));
+}
+
+void main()
+{
+    const int gridPixelsX = constants.params.dstGridWidth * 64;
+    const int gridPixelsY = constants.params.dstGridHeight * 64;
+    const int gx = int(gl_GlobalInvocationID.x);
+    const int gy = int(gl_GlobalInvocationID.y);
+    if (gx >= gridPixelsX || gy >= gridPixelsY)
+        return;
+    const int x = constants.params.dstGridOrigin.x + gx;
+    const int y = constants.params.dstGridOrigin.y + gy;
+
+    uint owner = 0u;
+    const ivec4 ownerRect = constants.params.ownerRect;
+    const int ox = x - ownerRect.x;
+    const int oy = y - ownerRect.y;
+    if (ox >= 0 && oy >= 0 && ox < ownerRect.z && oy < ownerRect.w)
+        owner = constants.owners.owner[oy * ownerRect.z + ox];
+
+    PIXEL result = PIXEL(constants.params.defaultPixel);
+    if (owner != 0u) {
+        const Op op = constants.ops.op[owner - 1u];
+        if (op.info.x == OpCopy) {
+            result = sourcePixel(x, y);
+        } else if (op.info.x == OpWarp) {
+            result = PIXEL(sampleSource(backwardMap(op, double(x), double(y))));
+        } else {
+            result = PIXEL(sampleSource(op.fallback));
+        }
+    }
+    if (g_failed)
+        constants.flag.failed = 1u;
+
+    const ivec2 tile = ivec2(gx, gy) >> 6;
+    const uint64_t address = constants.dstTiles.addr[tile.y * constants.params.dstGridWidth + tile.x];
+    if (address == 0)
+        return;
+    const ivec2 inTile = ivec2(gx, gy) & 63;
+    TilePixels(address).px[inTile.y * 64 + inTile.x] = result;
+}
+
+#endif

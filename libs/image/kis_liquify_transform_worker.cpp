@@ -11,6 +11,7 @@
 #include "kis_dom_utils.h"
 #include "krita_utils.h"
 #include "KisSpatialContainer.h"
+#include "gpu/KisGpuGridWarpWorker.h"
 
 
 struct Q_DECL_HIDDEN KisLiquifyTransformWorker::Private
@@ -430,11 +431,33 @@ void KisLiquifyTransformWorker::run(KisPaintDeviceSP srcDevice, KisPaintDeviceSP
     polygonOp.setDebugColor(Qt::red);
 #endif
 
-    iterateThroughGrid<AlwaysCompletePolygonPolicy>(polygonOp, indexesOp,
-                                                    m_d->gridSize,
-                                                    m_d->originalPoints,
-                                                    m_d->transformedPoints,
-                                                    correctSubGrid);
+    // Solstice GPU engine (phase 4.97): record the polygons the CPU would
+    // paint and paint them on the GPU, bit-identical; the CPU otherwise.
+    bool paintedOnGpu = false;
+    if (KisGpuGridWarpWorker::canRun(srcDevice, dstDevice)) {
+        KisGpuGridWarpWorker::Recorder recorder(dstDevice->colorSpace() == srcDevice->colorSpace());
+        recorder.setCanMergeRects(canMergeRects);
+        recorder.reserve(correctSubGrid.width() * correctSubGrid.height());
+        iterateThroughGrid<AlwaysCompletePolygonPolicy>(recorder,
+                                                        indexesOp,
+                                                        m_d->gridSize,
+                                                        m_d->originalPoints,
+                                                        m_d->transformedPoints,
+                                                        correctSubGrid);
+        paintedOnGpu = KisGpuGridWarpWorker::run(srcDevice, dstDevice, recorder);
+        if (!paintedOnGpu) {
+            dstDevice->clear();
+        }
+    }
+
+    if (!paintedOnGpu) {
+        iterateThroughGrid<AlwaysCompletePolygonPolicy>(polygonOp,
+                                                        indexesOp,
+                                                        m_d->gridSize,
+                                                        m_d->originalPoints,
+                                                        m_d->transformedPoints,
+                                                        correctSubGrid);
+    }
     QList<QRectF> areasToCopy = cutOutSubgridFromBounds(correctSubGrid, m_d->srcBounds, m_d->gridSize, m_d->originalPoints);
 #ifdef DEBUG_PAINTING_POLYGONS
     QList<QColor> colors = {Qt::blue, Qt::green, Qt::yellow, Qt::black};

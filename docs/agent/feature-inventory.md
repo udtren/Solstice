@@ -157,6 +157,13 @@ Pin selection, click action and order (same phase, user request):
 - the code-built "Click pin" combo and Order buttons in `kis_tool_transform_config_widget.*`;
 - `slotPuppetOrderChange()` in `kis_tool_transform.*`;
 - order levels (`orderAt()`, `orderLevels()`, `OrderFilterOp`) in `libs/image/KisPuppetTransformWorker.*`.
+Phase 4.97 adds the GPU Liquify grid warp:
+- new `libs/gpu/KisGpuGridWarpPass.*` and `libs/gpu/shaders/grid_warp.comp` (claim and resolve
+  shaders in `libs/gpu/CMakeLists.txt`);
+- new `libs/image/gpu/KisGpuGridWarpWorker.*` (in `libs/image/CMakeLists.txt`);
+- the GPU branch in `KisLiquifyTransformWorker::run()` (`libs/image/kis_liquify_transform_worker.cpp`);
+- `KisFourPointInterpolatorBackward::coefficients()` in `libs/image/kis_four_point_interpolator_backward.h`;
+- tests: `KisGpuPaintDeviceTest::testGpuLiquifyMatchesCpu` and the benchmark's GPU Liquify row.
 Phase 4.94 adds GPU affine transform passes:
 - new `libs/gpu/KisGpuTransformPass.*` and `libs/gpu/shaders/transform_pass.comp`;
 - new `libs/image/gpu/KisGpuTransformWorker.*`;
