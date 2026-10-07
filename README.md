@@ -26,6 +26,8 @@ Krita edition, and development no longer tracks upstream Krita.
   background removal and Smart Fill.
 - **[Puppet Warp](docs/puppet-warp.md)**: pose and reshape artwork with movable
   and rotatable pins in the Transform Tool.
+- **[Docker locks](docs/docker-locks.md)**: lock the widths and heights of
+  docked dockers and keep them from floating.
 - **[Solstice interface](docs/ui-modernization.md)**: an optional Solstice Dark
   theme, refined docker titles, document tabs and toolbars, and a flat
   Solstice widget style.

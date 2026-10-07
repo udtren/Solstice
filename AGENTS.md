@@ -79,6 +79,7 @@ Read these before adding or updating any feature:
 - Vision ML: `docs/agent/vision-ml.md`
 - Lazy Tools: `docs/agent/lazy-tools.md`
 - Puppet Warp: `docs/agent/puppet-warp.md`
+- Docker locks: `docs/agent/docker-locks.md`
 - GPU Engine (branch `krita-sol-gpu`): `docs/agent/gpu-engine.md`
 - GPU Engine work order (priority 1 measurement work in progress):
   `docs/agent/gpu-work-priorities.md`

@@ -433,6 +433,8 @@ private Q_SLOTS:
 
 protected:
 
+    /// Solstice: stops moving the separators of locked docked dockers.
+    bool event(QEvent *event) override;
     void closeEvent(QCloseEvent * e) override;
     void resizeEvent(QResizeEvent * e) override;
     void showEvent(QShowEvent *event) override;
@@ -443,7 +445,21 @@ protected:
 
     bool windowsLayoutSavingAllowed() const override;
 
+public:
+    /**
+     * Solstice docker locks (Settings > Dockers): reads the settings and
+     * applies them to this window's dockers and menu.
+     */
+    void updateSolsticeDockLocks();
+
+private Q_SLOTS:
+    void slotSolsticeDockLocksToggled();
+
 private:
+    void applySolsticeNoFloat(QDockWidget *dock);
+    void watchSolsticeDockLocks(QDockWidget *dock);
+    bool solsticeSeparatorLocked() const;
+    void resetSolsticeSeparatorCursor();
 
     friend class KisWelcomePageWidget;
     void dragMove(QDragMoveEvent *event);
