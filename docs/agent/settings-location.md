@@ -2,9 +2,9 @@
 
 User guide: [`../settings-folder.md`](../settings-folder.md).
 
-Status (2026-10-07): **phases 1-4 implemented** (path service; Solstice
-profile and Krita import; remaining Local files; Solstice defaults); phase 5
-(verification) pending. Phases follow the order the
+Status (2026-10-07): **complete.** Phases 1-5 are implemented and verified:
+the path service, the Solstice profile and Krita import, the remaining Local
+files, the Solstice defaults, and the automated and manual checks. Phases follow the order the
 user approved.
 
 User decisions (2026-10-07):
@@ -485,6 +485,48 @@ by closing Solstice and starting it with `SOLSTICE_PROFILE_ROOT` and both
 - Solstice Dark, the Solstice style and the Solstice interface;
 - in the bundle manager, only Krita 4 enabled;
 - "b) Basic-5 Size Opacity" selected.
+
+### Phase 5: verification
+
+**Automated (2026-10-07).** All passed:
+
+| Area | Suites |
+| --- | --- |
+| Profile | `KisSolsticePathsTest` 6, `KisSolsticeProfileTest` 7 |
+| Global | `KisGlobalTest` 19, `KisSignalAutoConnectionTest` 7, `KisSignalCompressorTest` 10 |
+| Resources | `TestResourceCacheDb` 5, `TestResourceModel` 19, `TestStorageModel` 7, `TestTagModel` 15, `TestTagFilterResourceProxyModel` 12, `TestResourceTypeModel` 5, `TestFolderStorage` 7, `TestMemoryStorage` 8, `TestResourceLoaderRegistry` 3 |
+| GPU engine | `KisGpuPaintDeviceTest` 251 (1 skipped: opt-in benchmark), `KisGpuProjectionTest` 199, `KisGpuEngineTest` 11, `kis_liquify_transform_worker_test` 15 |
+| UI | `QuickAccessCoreTest` 9, `KisSolsticeStyleTest` 7 |
+
+`TestResourceLocator` and `TestBundleStorage` keep their pre-existing
+missing-loader failures.
+
+**Manual, already confirmed by the user (2026-10-07):**
+
+- import with the real Krita profile, second start, side by side with Krita
+  (phase 2);
+- no new files in `%LOCALAPPDATA%` and the QML cache in the profile
+  (phase 3);
+- a new profile without a Krita profile, with the Solstice defaults
+  (phase 4).
+
+**Manual, confirmed by the user (2026-10-07).** Each ran on a scratch
+profile.
+`SOLSTICE_PROFILE_ROOT` is set in PowerShell, then `run-krita.bat` starts
+Solstice. Starting `krita.exe` directly does not work without the
+development environment.
+
+1. Krita profile present, **No**: Solstice defaults; the real Krita and
+   Solstice profiles are unchanged.
+2. **Cancel** at the question: nothing is created; the next start asks again.
+3. **Yes**, then **Cancel** during the copy: warning, then exit;
+   `config\` and `resources\` are removed; the next start asks again.
+4. **Reset All Settings** in a scratch profile: the backup is
+   `config\kritarc.backup`; after a restart the Solstice defaults apply.
+5. Help > Show system information, Show Krita log and Show crash log (for bug reports): they
+   read from `logs\`.
+6. Python: the Scripter remembers its settings (`config\krita-scripterrc`),
+   and the Python Plugin Manager's choices persist (`kritarc` `[python]`).
 
 ### First start and import (design, phase 2)
 

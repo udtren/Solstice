@@ -55,3 +55,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - New page `decisions/versioning.md`. Source: `docs/agent/versioning.md` and
   the version uses found in `kra_converter.cpp`, `KisResourceLocator.cpp`,
   `KisResourceCacheDb.cpp` and `libkis/Krita.cpp`.
+
+## 2026-10-07 ingest: settings location complete
+
+- No new wiki page: the decisions and findings are in `docs/agent/settings-location.md`.
+  These include the relative KConfig names, the mounted kritarc defaults, the import rules,
+  the Solstice defaults and the verification.
+- Pitfall recorded in `docs/agent/settings-location.md` (phase 5): starting `krita.exe`
+  directly does not work in the development environment; use `run-krita.bat`.
