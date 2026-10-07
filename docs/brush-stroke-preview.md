@@ -23,12 +23,13 @@ copies shared by multiple bundles match any checked member bundle and remain
 a single item in the list. **Not in a bundle** covers
 local/imported presets and other non-bundle storage; it does not infer which
 bundle a copied preset originally came from. Filtering never changes bundle
-activation. These filters are specific to each Brush Presets docker and remain
-available in icon mode. New docker instances start with all entries selected.
+activation. These filters are specific to each Brush Presets docker. New
+docker instances start with all entries selected.
 
-Open the docker's display menu and toggle **Stroke Previews** to return to the
-original icon view. The size slider changes the stroke cells independently
-of the toolbar brush popup and the Brush Editor's preset list. Those lists
+The Brush Presets docker always shows stroke previews; the icon view and its
+Thumbnails/Details settings are not available there. The docker's display
+menu has one setting, **Preview Size**, which changes the stroke cells
+independently of the toolbar brush popup and the Brush Editor's preset list. Those lists
 continue to show the original preset icons. The F5 live preview keeps its
 existing appearance and live brush-setting behavior.
 

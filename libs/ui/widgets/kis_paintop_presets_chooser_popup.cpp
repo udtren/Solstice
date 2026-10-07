@@ -33,7 +33,9 @@ public:
     KisPopupButton *viewModeButton {nullptr};
     QMenu *menu{nullptr};
     QList<QAction *> modeActions;
-    QAction *strokeAction{nullptr};
+    QAction *displaySection{nullptr};
+    QAction *sizeSection{nullptr};
+    bool strokePreviewOnly{false};
 };
 
 KisPaintOpPresetsChooserPopup::KisPaintOpPresetsChooserPopup(QWidget * parent)
@@ -45,7 +47,8 @@ KisPaintOpPresetsChooserPopup::KisPaintOpPresetsChooserPopup(QWidget * parent)
     m_d->menu = menu;
     menu->setStyleSheet("margin: 6px");
 
-    menu->addSection(i18nc("@title Which elements to display (e.g., thumbnails or details)", "Display"));
+    m_d->displaySection =
+        menu->addSection(i18nc("@title Which elements to display (e.g., thumbnails or details)", "Display"));
 
     QActionGroup *actionGroup = new QActionGroup(this);
 
@@ -76,7 +79,7 @@ KisPaintOpPresetsChooserPopup::KisPaintOpPresetsChooserPopup(QWidget * parent)
     QWidgetAction *sliderAction= new QWidgetAction(this);
     sliderAction->setDefaultWidget(iconSizeSlider);
 
-    menu->addSection(i18n("Icon Size"));
+    m_d->sizeSection = menu->addSection(i18n("Icon Size"));
     menu->addAction(sliderAction);
 
 
@@ -165,22 +168,17 @@ void KisPaintOpPresetsChooserPopup::setResponsiveness(bool value)
 
 void KisPaintOpPresetsChooserPopup::enableStrokePreviewSetting()
 {
-    if (m_d->strokeAction)
+    if (m_d->strokePreviewOnly)
         return;
+    m_d->strokePreviewOnly = true;
     m_d->uiWdgPaintOpPresets.wdgPresetChooser->enableDockerFilters();
-    m_d->strokeAction = m_d->menu->addAction(i18n("Stroke Previews"));
-    m_d->strokeAction->setCheckable(true);
-    auto apply = [this](bool enabled) {
-        m_d->uiWdgPaintOpPresets.wdgPresetChooser->setStrokePreviewMode(enabled);
-        for (auto *action : m_d->modeActions)
-            action->setVisible(!enabled);
-        slotUpdateMenu();
-    };
-    const bool enabled = KisConfig(true).readEntry<bool>("Solstice/BrushStrokePreview", true);
-    m_d->strokeAction->setChecked(enabled);
-    apply(enabled);
-    connect(m_d->strokeAction, &QAction::toggled, this, [apply](bool checked) {
-        KisConfig(false).writeEntry("Solstice/BrushStrokePreview", checked);
-        apply(checked);
-    });
+    // Solstice: the Brush Presets docker always shows stroke previews. The
+    // icon view settings (Display: Thumbnails/Details) do not apply there
+    // and are hidden; the size slider sets the preview width.
+    m_d->uiWdgPaintOpPresets.wdgPresetChooser->setStrokePreviewMode(true);
+    for (auto *action : m_d->modeActions)
+        action->setVisible(false);
+    m_d->displaySection->setVisible(false);
+    m_d->sizeSection->setText(i18n("Preview Size"));
+    slotUpdateMenu();
 }

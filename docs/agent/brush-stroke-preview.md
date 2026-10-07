@@ -24,8 +24,16 @@ preset files and in the code, but this docker no longer displays it.
   chooser is unsynchronized from `KisResourceItemChooserSync`, has a private
   width key `Solstice/BrushStrokePreviewWidth` (90-240, default 180), and uses
   a rectangular icon grid. The existing slider maps 30-80 to that width.
-  Tooltips show names, not the resource tooltip's stored icons. The display
-  menu exposes `Solstice/BrushStrokePreview` (default true) only in the docker.
+  Tooltips show names, not the resource tooltip's stored icons.
+- The docker is fixed to stroke preview mode (user request 2026-10-07: turning
+  the former "Stroke Previews" menu toggle off made the item disappear from
+  the menu, and the icon view is not wanted). `enableStrokePreviewSetting()`
+  turns the mode on, hides the Display section and its Thumbnails/Details
+  actions, and renames the size section to "Preview Size". The setting
+  `Solstice/BrushStrokePreview` is no longer read; existing values are
+  ignored. `KisPresetChooser::setStrokePreviewMode()` still supports both
+  modes (the tests toggle it), and the toolbar popup and Brush Editor keep
+  their icon view and Display menu.
 - `KisResourceItemChooser::setBottomBarLayout` explicitly restores the requested
   grid after the docker's responsive initialization has entered horizontal
   strip mode. Disabling responsiveness alone does not undo that previous
@@ -332,9 +340,9 @@ scope. The implementation notes above describe the current source.
 
 ### Settings
 
-- `Solstice/BrushStrokePreview` (bool, default true): stroke previews in the
-  Brush Presets docker; false restores the icon view. Shown in the docker's
-  view menu.
+- `Solstice/BrushStrokePreview` (bool, default true): originally the docker's
+  stroke preview toggle; no longer read since the docker was fixed to stroke
+  previews (2026-10-07).
 - Optional size key, see "Item layout".
 
 ## Files expected to change
@@ -388,7 +396,8 @@ scope. The implementation notes above describe the current source.
 4. Paint while previews are generating: no stutter. Generation resumes
    after the stroke.
 5. Toolbar brush popup and Brush Editor list: unchanged icons.
-6. Turn `Solstice/BrushStrokePreview` off: the icon view returns.
+6. The docker's display menu shows only Preview Size (no Display section, no
+   Stroke Previews toggle); the toolbar popup still offers Thumbnails/Details.
 
 ## Original implementation assessment (2026-10-04, before implementation)
 
