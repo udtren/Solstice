@@ -19,6 +19,18 @@ well. A custom font chosen earlier stays in use until it is turned off.
 Cantarell is licensed under the SIL Open Font License 1.1; the license is
 installed as `share/krita/fonts/Cantarell-OFL.txt`.
 
+## Interface scale
+
+**Settings → Configure Solstice → General → Window → Interface scale** makes
+the whole interface larger or smaller, from 75% to 200% in steps of 5%. It
+multiplies the system's display scaling, so 110% on a 100% display shows the
+interface at 1.1 times its size. The canvas follows the new scale too.
+
+The scale applies after Solstice is restarted. 100%, 150% and 200% give the
+sharpest result; other values can make thin lines and icons slightly blurry,
+as with fractional display scaling in the system. A `QT_SCALE_FACTOR`
+environment variable, if set, takes precedence.
+
 ## Solstice Dark theme
 
 **Settings → Themes → Solstice Dark** selects a dark color theme with neutral

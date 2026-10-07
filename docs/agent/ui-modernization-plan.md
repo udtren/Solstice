@@ -303,6 +303,20 @@ Fusionスタイルを使い、ウィジェットのパレットを受け取り�
 フェーズ4の残り（未着手）: アイコンの線幅と大きさの統一（アイコン素材の
 方針決定が必要）。
 
+### インターフェースの倍率（2026年10月7日、ユーザー指示）
+
+設定「General → Window → Interface scale」: 75%〜200%、5%刻み、既定100%。
+スライダーと数値入力（`m_spnInterfaceScale`）、「(requires restart)」の表示。
+値は `kritadisplayrc` の `SolsticeInterfaceScale`（高DPI設定と同じQSettingsの
+ファイル。起動の最初に読めるため）。`krita/main.cc` は高DPI設定を読む箇所で
+値を読み、100以外で環境変数 `QT_SCALE_FACTOR` が未設定なら設定する。Qtは
+アプリケーションオブジェクト作成時にこれを読むので、反映は再起動後。
+
+倍率はOSの表示倍率（Windowsの丸め方針 `RoundPreferFloor` 適用後）に掛かる。
+端数の倍率では1px線やアイコンがにじむことがある。キャンバスも倍率に従う。
+GPUエンジンの表示経路（Vulkan→OpenGL）での端数倍率は未確認。既存のAndroid
+専用アクション `change_interface_scale` は使っていない。
+
 ### UIフォント（Cantarell、2026年10月7日、ユーザー指示）
 
 既定のUIフォントを同梱のCantarell（Regular／Bold／Italic／BoldItalic）にした。

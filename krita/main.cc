@@ -412,6 +412,13 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
             QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
         }
 #endif
+        // Solstice: interface scale (Settings > General > Window), a factor on
+        // top of the system's display scaling. Qt reads QT_SCALE_FACTOR when the
+        // application object is created; a value the user set is kept.
+        const int interfaceScale = qBound(75, kritarc.value("SolsticeInterfaceScale", 100).toInt(), 200);
+        if (interfaceScale != 100 && !qEnvironmentVariableIsSet("QT_SCALE_FACTOR")) {
+            qputenv("QT_SCALE_FACTOR", QByteArray::number(interfaceScale / 100.0));
+        }
 
 #ifdef HAVE_X11
         if (!qEnvironmentVariableIsSet("QT_XCB_GL_INTEGRATION")) {

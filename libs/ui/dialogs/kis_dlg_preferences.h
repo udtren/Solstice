@@ -136,6 +136,8 @@ public:
     QCheckBox *m_chkSolsticeInterface {nullptr};
     /// Overview docker updates while painting; Window tab.
     QCheckBox *m_chkOverviewLiveUpdate {nullptr};
+    /// Interface scale in percent (75-200, steps of 5); applied at the next start.
+    QSpinBox *m_spnInterfaceScale{nullptr};
 };
 
 

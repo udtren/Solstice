@@ -364,6 +364,42 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
              "When off, the Overview updates after the image stops changing."));
     m_chkOverviewLiveUpdate->setChecked(cfg.readEntry<bool>("Solstice/OverviewLiveUpdate", true));
     formLayout->addRow(m_chkOverviewLiveUpdate);
+    {
+        // Solstice: interface scale, a multiplier on top of the system's
+        // display scaling. Qt reads it at startup (QT_SCALE_FACTOR in main.cc),
+        // so it applies after a restart. Stored in kritadisplayrc next to the
+        // high-DPI settings.
+        auto *scaleRow = new QWidget(this);
+        auto *scaleLayout = new QHBoxLayout(scaleRow);
+        scaleLayout->setContentsMargins(0, 0, 0, 0);
+        auto *slider = new QSlider(Qt::Horizontal, scaleRow);
+        slider->setRange(75 / 5, 200 / 5);
+        slider->setPageStep(5);
+        m_spnInterfaceScale = new QSpinBox(scaleRow);
+        m_spnInterfaceScale->setRange(75, 200);
+        m_spnInterfaceScale->setSingleStep(5);
+        m_spnInterfaceScale->setSuffix(i18nc("percent suffix", "%"));
+        m_spnInterfaceScale->setCorrectionMode(QAbstractSpinBox::CorrectToNearestValue);
+        auto *restartNote = new QLabel(i18n("(requires restart)"), scaleRow);
+        scaleLayout->addWidget(slider, 1);
+        scaleLayout->addWidget(m_spnInterfaceScale);
+        scaleLayout->addWidget(restartNote);
+        connect(slider, &QSlider::valueChanged, m_spnInterfaceScale, [this](int value) {
+            m_spnInterfaceScale->setValue(value * 5);
+        });
+        connect(m_spnInterfaceScale, QOverload<int>::of(&QSpinBox::valueChanged), slider, [slider](int value) {
+            QSignalBlocker blocker(slider);
+            slider->setValue(qRound(value / 5.0));
+        });
+        const QString displayConfigPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+        QSettings displayrc(displayConfigPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
+        m_spnInterfaceScale->setValue(qBound(75, displayrc.value("SolsticeInterfaceScale", 100).toInt(), 200));
+        slider->setValue(m_spnInterfaceScale->value() / 5);
+        scaleRow->setToolTip(
+            i18n("Scales the whole interface, on top of the system's display scaling. "
+                 "Values other than 100%, 150% and 200% can make thin lines and icons slightly blurry."));
+        formLayout->addRow(i18n("Interface scale:"), scaleRow);
+    }
 
     chkUseCustomFont->setChecked(cfg.readEntry<bool>("use_custom_system_font", false));
     cmbCustomFont->findChild <QComboBox*>("stylesComboBox")->setVisible(false);
@@ -842,6 +878,7 @@ void GeneralTab::setDefault()
     chkUseCustomFont->setChecked(false);
     m_chkSolsticeInterface->setChecked(false);
     m_chkOverviewLiveUpdate->setChecked(true);
+    m_spnInterfaceScale->setValue(100);
     cmbCustomFont->setCurrentFont(qApp->font());
     intFontSize->setValue(qApp->font().pointSize());
 
@@ -3000,6 +3037,8 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
         kritarc.setValue("EnableHiDPIFractionalScaling", m_general->m_chkHiDPIFractionalScaling->isChecked());
 #endif
         kritarc.setValue("LogUsage", m_general->chkUsageLogging->isChecked());
+        // Solstice: interface scale in steps of 5%, read by main.cc at startup.
+        kritarc.setValue("SolsticeInterfaceScale", qRound(m_general->m_spnInterfaceScale->value() / 5.0) * 5);
 
         cfg.setToolOptionsInDocker(m_general->toolOptionsInDocker());
 
