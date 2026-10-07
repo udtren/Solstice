@@ -7,6 +7,7 @@
 
 #include <QAbstractSpinBox>
 #include <QApplication>
+#include <QMenu>
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyleFactory>
@@ -85,6 +86,37 @@ void KisSolsticeStyle::drawPrimitive(PrimitiveElement element,
     const bool enabled = option->state & State_Enabled;
     const bool hover = enabled && (option->state & State_MouseOver);
     const QColor highlight = palette.color(QPalette::Highlight);
+
+    if ((element == PE_IndicatorCheckBox || element == PE_IndicatorRadioButton)
+        && qobject_cast<const QMenu *>(widget)) {
+        // In menus only the mark, in the item's text color (the
+        // highlighted text color on the highlighted item), like a menu
+        // check mark rather than a check box.
+        if (!(option->state & (State_On | State_NoChange))) {
+            return;
+        }
+        const QRectF box = indicatorRect(option->rect).adjusted(1.5, 1.5, -1.5, -1.5);
+        const QColor mark = palette.color(QPalette::Text);
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing, true);
+        if (element == PE_IndicatorRadioButton) {
+            const qreal dot = box.width() * 0.45;
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(mark);
+            painter->drawEllipse(QRectF(box.center() - QPointF(dot, dot) / 2.0, QSizeF(dot, dot)));
+        } else {
+            painter->setPen(
+                QPen(mark, qMax<qreal>(1.5, box.width() / 7.0), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter->setBrush(Qt::NoBrush);
+            QPainterPath path;
+            path.moveTo(box.left() + box.width() * 0.18, box.top() + box.height() * 0.52);
+            path.lineTo(box.left() + box.width() * 0.40, box.top() + box.height() * 0.74);
+            path.lineTo(box.left() + box.width() * 0.82, box.top() + box.height() * 0.28);
+            painter->drawPath(path);
+        }
+        painter->restore();
+        return;
+    }
 
     switch (element) {
     case PE_PanelButtonCommand: {

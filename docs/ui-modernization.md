@@ -47,7 +47,8 @@ the theme's colors, on top of the Fusion style:
 - Input fields and spin boxes (including the slider spin boxes) get a
   rounded frame that turns to the selection color when focused; the step
   buttons are flat inside the frame.
-- Menus show the highlighted item as a rounded block.
+- Menus show the highlighted item as a rounded block; checked items show a
+  plain check mark (or a dot for choices), highlighted or not.
 - Scroll bars have a flat track and a rounded handle.
 - Tabs in dialogs and docker groups are flat, with a line under the current
   tab.

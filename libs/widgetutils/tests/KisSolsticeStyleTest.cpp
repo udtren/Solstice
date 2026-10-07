@@ -11,12 +11,14 @@
 #include <QGridLayout>
 #include <QLineEdit>
 #include <QMenu>
+#include <QPainter>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QScopedPointer>
 #include <QScrollBar>
 #include <QSpinBox>
 #include <QStyleFactory>
+#include <QStyleOptionMenuItem>
 #include <QTabBar>
 #include <QToolButton>
 
@@ -173,6 +175,50 @@ private Q_SLOTS:
             QVERIFY(!image.isNull());
             if (qEnvironmentVariableIsSet("SOLSTICE_STYLE_DUMP")) {
                 const QString name = style == &solstice ? QStringLiteral("solstice") : QStringLiteral("fusion");
+                image.save(QString::fromLocal8Bit(qgetenv("SOLSTICE_STYLE_DUMP")) + QLatin1Char('/') + name
+                           + QStringLiteral(".png"));
+            }
+        }
+    }
+
+    void testRendersMenuItems()
+    {
+        // Checkable menu items, highlighted and not, drawn as a menu does;
+        // SOLSTICE_STYLE_DUMP=<dir> saves menu-fusion.png and
+        // menu-solstice.png.
+        QScopedPointer<QStyle> fusion(QStyleFactory::create(QStringLiteral("fusion")));
+        KisSolsticeStyle solstice;
+        for (QStyle *style : {fusion.data(), static_cast<QStyle *>(&solstice)}) {
+            QMenu menu;
+            menu.setStyle(style);
+            menu.setPalette(darkPalette());
+            QImage image(QSize(260, 4 * 26), QImage::Format_ARGB32_Premultiplied);
+            image.fill(darkPalette().color(QPalette::Window));
+            QPainter painter(&image);
+            int row = 0;
+            for (bool selected : {false, true}) {
+                for (bool checked : {true, false}) {
+                    QStyleOptionMenuItem item;
+                    item.initFrom(&menu);
+                    item.palette = darkPalette();
+                    item.rect = QRect(0, row * 26, image.width(), 26);
+                    item.text = checked ? QStringLiteral("Checked") : QStringLiteral("Unchecked");
+                    item.menuItemType = QStyleOptionMenuItem::Normal;
+                    item.checkType = QStyleOptionMenuItem::NonExclusive;
+                    item.checked = checked;
+                    item.menuHasCheckableItems = true;
+                    item.maxIconWidth = 20;
+                    item.state = QStyle::State_Enabled;
+                    if (selected)
+                        item.state |= QStyle::State_Selected;
+                    style->drawControl(QStyle::CE_MenuItem, &item, &painter, &menu);
+                    ++row;
+                }
+            }
+            painter.end();
+            if (qEnvironmentVariableIsSet("SOLSTICE_STYLE_DUMP")) {
+                const QString name =
+                    style == &solstice ? QStringLiteral("menu-solstice") : QStringLiteral("menu-fusion");
                 image.save(QString::fromLocal8Bit(qgetenv("SOLSTICE_STYLE_DUMP")) + QLatin1Char('/') + name
                            + QStringLiteral(".png"));
             }
