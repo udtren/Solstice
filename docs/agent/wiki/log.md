@@ -251,3 +251,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   asserting on it.
 - `todo.md` (new): the user's task backlog; first entry, ABR import
   improvements with storytold/photocraft as a reference.
+
+## 2026-10-08 query: missing .kra thumbnails
+
+- New .kra files saved by Solstice showed no Explorer thumbnail. The files
+  were fine (valid `preview.png` and `mergedimage.png`); no `.kra`
+  thumbnail handler was registered, because Krita's shell extension comes
+  with Krita's installer and Krita was no longer installed. Older files
+  showed thumbnails from the Windows thumbnail cache only. Bundling the
+  extension is recorded in `todo.md`.
