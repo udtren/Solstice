@@ -64,6 +64,9 @@ QList<QPointer<QWidget> > KisToolRectangleBase::createOptionWidgets()
         widgetsList.append(widget);
     }
 
+    // Solstice: the Brush section stays below the tool's options
+    moveBrushSectionLast(widgetsList);
+
     return widgetsList;
 }
 

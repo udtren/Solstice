@@ -237,7 +237,7 @@ KisBrushOpSettingsWidget::KisBrushOpSettingsWidget(QWidget *parent,
     addPaintOpOption(withToolOptionsId(
         kposu::createOptionWidget<KisPaintingModeOptionWidget>(paintingMode,
                                                                maskingOption->maskingBrushEnabledReader()),
-        QStringLiteral("MaskingBrush")));
+        QStringLiteral("PaintingMode")));
 
     addPaintOpOption(withToolOptionsId(
         kposu::createOptionWidget<KisTextureOptionWidget>(texture,
@@ -266,6 +266,9 @@ KisBrushOpSettingsWidget::KisBrushOpSettingsWidget(QWidget *parent,
     addPaintOpOption(withToolOptionsId(
         kposu::createOptionWidget<KisScatterOptionWidget>(maskingScatter, KisPaintOpOption::MASKING_BRUSH),
         QStringLiteral("MaskingScatter")));
+
+    // the brush tip page's parameters can be shown in Tool Options
+    brushOptionWidget()->setToolOptionsId(QStringLiteral("BrushTip"));
 
     setOptionsModel(model);
 }

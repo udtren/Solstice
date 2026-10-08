@@ -48,6 +48,10 @@ KisCompositeOpOptionWidget::KisCompositeOpOptionWidget(lager::cursor<KisComposit
     connectControl(ui.list, &m_d->model, "compositeOpId");
 
     setConfigurationPage(widget);
+
+    // Solstice: can be shown in Tool Options (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("BlendingMode"), i18n("Blending Mode"), ui.list, ui.label_2);
+
     m_d->model.optionData.bind(std::bind(&KisCompositeOpOptionWidget::emitSettingChanged, this));
 }
 

@@ -36,6 +36,11 @@ public:
 
 protected:
     void finishRect(const QRectF& rect, qreal roundCornersX, qreal roundCornersY) override;
+    /// Solstice: the shape is painted with the brush preset
+    bool showsBrushOptions() const override
+    {
+        return true;
+    }
 
 protected Q_SLOTS:
     void resetCursorStyle() override;

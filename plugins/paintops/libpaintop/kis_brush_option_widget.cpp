@@ -10,6 +10,8 @@
 #include <kis_image_config.h>
 
 #include "kis_brush_selection_widget.h"
+#include "kis_auto_brush_widget.h"
+#include "kis_predefined_brush_chooser.h"
 #include "kis_brush.h"
 
 #include <lager/state.hpp>
@@ -87,6 +89,56 @@ KisBrushOptionWidget::KisBrushOptionWidget(Private *d)
     setConfigurationPage(m_brushSelectionWidget);
 
     setObjectName("KisBrushOptionWidget");
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md, phase 3b); each tip type's
+    // parameters only while that tip type is selected
+    QWidget *autoTip = m_brushSelectionWidget->findChild<KisAutoBrushWidget *>();
+    QWidget *predefinedTip = m_brushSelectionWidget->findChild<KisPredefinedBrushChooser *>();
+    auto addParameter = [this](const QString &id,
+                               const QString &label,
+                               const char *controlName,
+                               const char *labelName,
+                               QWidget *modeWidget) {
+        QWidget *control = m_brushSelectionWidget->findChild<QWidget *>(QLatin1String(controlName));
+        QWidget *labelWidget =
+            labelName ? m_brushSelectionWidget->findChild<QWidget *>(QLatin1String(labelName)) : nullptr;
+        if (control) {
+            addToolOptionsParameter(id, label, control, labelWidget, modeWidget);
+        }
+    };
+    if (autoTip) {
+        addParameter(QStringLiteral("Diameter"), i18n("Diameter"), "inputRadius", "lblDiameter", autoTip);
+        addParameter(QStringLiteral("Ratio"), i18n("Ratio"), "inputRatio", "lblRatio", autoTip);
+        addParameter(QStringLiteral("Angle"), i18n("Angle"), "inputAngle", "lblAngle", autoTip);
+        addParameter(QStringLiteral("Density"), i18n("Density"), "density", "lblDensity", autoTip);
+        addParameter(QStringLiteral("Spacing"), i18n("Spacing"), "spacingWidget", "lblSpacing", autoTip);
+    }
+    if (predefinedTip) {
+        addParameter(QStringLiteral("PredefinedSize"),
+                     i18n("Size"),
+                     "brushSizeSpinBox",
+                     "brushSizeLabel",
+                     predefinedTip);
+        addParameter(QStringLiteral("PredefinedAngle"),
+                     i18n("Angle"),
+                     "brushRotationAngleSelector",
+                     "brushRotationLabel",
+                     predefinedTip);
+        addParameter(QStringLiteral("PredefinedSpacing"),
+                     i18n("Spacing"),
+                     "brushSpacingSelectionWidget",
+                     "brushSpacingLabel",
+                     predefinedTip);
+    }
+    if (m_d->flags & KisBrushOptionWidgetFlag::SupportsPrecision) {
+        addParameter(QStringLiteral("Precision"), i18n("Precision"), "sliderPrecision", "lblPrecision", nullptr);
+        addParameter(QStringLiteral("AutoPrecision"),
+                     i18n("Auto Precision"),
+                     "autoPrecisionCheckBox",
+                     nullptr,
+                     nullptr);
+    }
 
     lager::watch(m_d->data, std::bind(&KisBrushOptionWidget::emitSettingChanged, this));
 }

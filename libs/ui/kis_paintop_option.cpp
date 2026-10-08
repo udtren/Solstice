@@ -7,6 +7,7 @@
 #include "kis_paintop_option.h"
 
 
+#include <QToolButton>
 #include <QWidget>
 
 #include <klocalizedstring.h>
@@ -17,6 +18,7 @@
 #include <lager/constant.hpp>
 #include <lager/state.hpp>
 #include <kis_paintop_lod_limitations.h>
+#include "KisToolOptionsParameters.h"
 
 struct KisPaintOpOption::Private
 {
@@ -41,6 +43,7 @@ public:
     // Solstice: Tool Options exposure
     QString toolOptionsId;
     bool shownInToolOptions{false};
+    QList<KisPaintOpOption::ToolOptionsParameter> toolOptionsParameters;
 };
 
 KisPaintOpOption::KisPaintOpOption(const QString &label, PaintopCategory category, bool checked)
@@ -272,4 +275,30 @@ void KisPaintOpOption::setShownInToolOptions(bool shown)
 bool KisPaintOpOption::isShownInToolOptions() const
 {
     return m_d->shownInToolOptions;
+}
+
+void KisPaintOpOption::addToolOptionsParameter(const QString &id,
+                                               const QString &label,
+                                               QWidget *control,
+                                               QWidget *labelWidget,
+                                               QWidget *modeWidget)
+{
+    KIS_SAFE_ASSERT_RECOVER_RETURN(control);
+    KIS_SAFE_ASSERT_RECOVER_RETURN(KisToolOptionsParameters::canMirror(control));
+
+    ToolOptionsParameter parameter;
+    parameter.id = id;
+    parameter.label = label;
+    parameter.control = control;
+    parameter.modeWidget = modeWidget;
+    parameter.eye = KisToolOptionsParameters::createEyeButton(control->parentWidget());
+    if (!KisToolOptionsParameters::placeEyeButton(parameter.eye, control, labelWidget)) {
+        delete parameter.eye;
+    }
+    m_d->toolOptionsParameters << parameter;
+}
+
+QList<KisPaintOpOption::ToolOptionsParameter> KisPaintOpOption::toolOptionsParameters() const
+{
+    return m_d->toolOptionsParameters;
 }

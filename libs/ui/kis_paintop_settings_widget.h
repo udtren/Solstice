@@ -54,8 +54,13 @@ public:
     void setPaintOpId(const QString &paintOpId);
     QString paintOpId() const;
 
-    /// The options that can be shown in Tool Options, in the editor's order
+    /// The options that can be shown in Tool Options (their checkbox or
+    /// page parameters), in the editor's order
     QList<KisPaintOpOption *> toolOptionsOptions() const;
+
+    /// The id under which a page parameter's eye is stored: "<option>/<parameter>"
+    static QString toolOptionsParameterId(const KisPaintOpOption *option,
+                                          const KisPaintOpOption::ToolOptionsParameter &parameter);
 
     /// Reimplemented
     void setConfiguration(const KisPropertiesConfigurationSP  config) override;

@@ -4,21 +4,36 @@
  */
 
 #include <QCheckBox>
+#include <QDir>
 #include <QLabel>
+#include <QRadioButton>
 #include <QTest>
+#include <QToolButton>
 
 #include "KisBrushTestMain.h"
 
+#include <KisBrushBasedOptionStates.h>
+#include <KisCompositeOpOptionData.h>
 #include <KisGlobalResourcesInterface.h>
 #include <KisPaintOpOptionsModel.h>
+#include <KisPaintingModeOptionData.h>
+#include <KisResourceModel.h>
+#include <KisResourceModelProvider.h>
+#include <KisResourceTypes.h>
 #include <KisSizeOptionData.h>
+#include <KisTextureOptionData.h>
 #include <KisToolOptionsBrushItems.h>
+#include <KoCompositeOpRegistry.h>
+#include <brushengine/kis_paintop_preset.h>
 #include <kis_categorized_list_model.h>
 #include <kis_config.h>
 #include <kis_paintop_option.h>
 #include <kis_paintop_options_model.h>
+#include <kis_slider_spin_box.h>
+#include <kis_spacing_selection_widget.h>
 #include <tool/KisToolOptionsBrushSection.h>
 #include <widgets/kis_categorized_list_view.h>
+#include <widgets/kis_cmb_composite.h>
 
 #include "../kis_brushop_settings_widget.h"
 
@@ -36,6 +51,11 @@ private Q_SLOTS:
     void testEyeIsKeptPerEngine();
     void testEyeClickInList();
     void testSectionFollowsOptions();
+    void testParametersRegistered();
+    void testDiameterMirror();
+    void testTipTypeVisibility();
+    void testOtherMirrors();
+    void testPresetPreview();
 };
 
 namespace
@@ -118,9 +138,16 @@ void KisToolOptionsBrushTest::testShowableOptions()
                               QStringLiteral("MaskingSize")}) {
         QVERIFY2(ids.contains(id), qPrintable(id));
     }
-    for (const QString &id : {QStringLiteral("BrushTip"), QStringLiteral("Opacity"), QStringLiteral("CompositeOp")}) {
-        QVERIFY2(!ids.contains(id), qPrintable(id));
-    }
+    // the ids are unique within the engine
+    QCOMPARE(QSet<QString>(ids.begin(), ids.end()).size(), ids.size());
+    QVERIFY(ids.contains(QStringLiteral("PaintingMode")));
+
+    // no checkbox and no page parameters
+    QVERIFY(!ids.contains(QStringLiteral("Opacity")));
+    // page parameters only (phase 3b), no row eye
+    QVERIFY(ids.contains(QStringLiteral("BrushTip")));
+    QVERIFY(
+        !editor.row(QStringLiteral("BrushTip")).data(__CategorizedListModelBase::isShowableInToolOptionsRole).toBool());
 
     QVERIFY(editor.row(QStringLiteral("Size")).data(__CategorizedListModelBase::isShowableInToolOptionsRole).toBool());
 
@@ -255,6 +282,255 @@ void KisToolOptionsBrushTest::testSectionFollowsOptions()
     // hidden again: Masked Brush Size and Lightness Strength remain
     size->setShownInToolOptions(false);
     QCOMPARE(checkBoxLabels(&section).size(), 2);
+}
+
+namespace
+{
+KisPaintOpOption::ToolOptionsParameter parameter(KisPaintOpOption *option, const QString &id)
+{
+    Q_FOREACH (const KisPaintOpOption::ToolOptionsParameter &parameter, option->toolOptionsParameters()) {
+        if (parameter.id == id) {
+            return parameter;
+        }
+    }
+    return KisPaintOpOption::ToolOptionsParameter();
+}
+
+/// Shows the parameter in Tool Options with its eye in the editor.
+void showParameter(Editor &editor, const QString &optionId, const QString &parameterId)
+{
+    KisPaintOpOption::ToolOptionsParameter p = parameter(editor.option(optionId), parameterId);
+    QVERIFY2(p.eye, qPrintable(optionId + "/" + parameterId));
+    p.eye->setChecked(true);
+}
+
+template<typename Widget>
+Widget *mirrorWidget(QWidget *section, const QString &parameterId)
+{
+    return section->findChild<Widget *>(QStringLiteral("ToolOptionsParameter_") + parameterId);
+}
+
+/// the queued updates of the mirrors
+void settle()
+{
+    QTest::qWait(20);
+}
+
+template<typename Data>
+KisPaintOpOptionState<Data> *typedOption(KisPaintOpOptionsModel *model, const QString &id)
+{
+    return dynamic_cast<KisPaintOpOptionState<Data> *>(model->option(id));
+}
+
+void loadPreset(Editor &editor, const QString &fileName)
+{
+    KisPaintOpPresetSP preset(new KisPaintOpPreset(QDir(QString(FILES_DATA_DIR)).filePath("brushtip/" + fileName)));
+    QVERIFY(preset->load(KisGlobalResourcesInterface::instance()));
+    editor.widget.setConfigurationSafe(preset->settings());
+}
+} // namespace
+
+/// The main page parameters have an eye once the engine supports Tool
+/// Options; the eye is kept per engine as "<option>/<parameter>".
+void KisToolOptionsBrushTest::testParametersRegistered()
+{
+    Editor editor;
+    const QMap<QString, QStringList> expected{
+        {QStringLiteral("BrushTip"),
+         {QStringLiteral("Diameter"),
+          QStringLiteral("Ratio"),
+          QStringLiteral("Angle"),
+          QStringLiteral("Density"),
+          QStringLiteral("Spacing"),
+          QStringLiteral("PredefinedSize"),
+          QStringLiteral("PredefinedAngle"),
+          QStringLiteral("PredefinedSpacing"),
+          QStringLiteral("Precision"),
+          QStringLiteral("AutoPrecision")}},
+        {QStringLiteral("CompositeOp"), {QStringLiteral("BlendingMode")}},
+        {QStringLiteral("PaintingMode"), {QStringLiteral("PaintingMode")}},
+        {QStringLiteral("Texture"), {QStringLiteral("Scale")}},
+    };
+    for (auto it = expected.constBegin(); it != expected.constEnd(); ++it) {
+        KisPaintOpOption *option = editor.option(it.key());
+        QVERIFY2(option, qPrintable(it.key()));
+        for (const QString &id : it.value()) {
+            const KisPaintOpOption::ToolOptionsParameter p = parameter(option, id);
+            QVERIFY2(p.control && p.eye, qPrintable(it.key() + "/" + id));
+            QVERIFY2(!p.eye->isHidden(), qPrintable(it.key() + "/" + id));
+        }
+    }
+
+    showParameter(editor, QStringLiteral("BrushTip"), QStringLiteral("Diameter"));
+    QVERIFY(KisToolOptionsBrushItems::instance()->isShown(paintbrush, QStringLiteral("BrushTip/Diameter")));
+
+    // an editor without Tool Options support keeps the eyes hidden
+    KisBrushOpSettingsWidget unsupported(nullptr,
+                                         KisGlobalResourcesInterface::instance(),
+                                         KoCanvasResourcesInterfaceSP());
+    QToolButton *eye = unsupported.findChild<QToolButton *>(QStringLiteral("ToolOptionsEye"));
+    QVERIFY(eye);
+    QVERIFY(eye->isHidden());
+}
+
+/// The copy of a slider writes through the editor to the options model and
+/// follows changes of the model.
+void KisToolOptionsBrushTest::testDiameterMirror()
+{
+    Editor editor;
+    loadPreset(editor, QStringLiteral("b_Basic-5_Size_Opacity.kpp"));
+    showParameter(editor, QStringLiteral("BrushTip"), QStringLiteral("Diameter"));
+
+    KisToolOptionsBrushSection section(nullptr);
+    section.setSettingsWidget(&editor.widget);
+    settle();
+
+    auto *source = qobject_cast<KisDoubleSliderSpinBox *>(
+        parameter(editor.option(QStringLiteral("BrushTip")), QStringLiteral("Diameter")).control.data());
+    auto *copy = mirrorWidget<KisDoubleSliderSpinBox>(&section, QStringLiteral("Diameter"));
+    QVERIFY(source && copy);
+    QCOMPARE(copy->value(), source->value());
+    QCOMPARE(copy->maximum(), source->maximum());
+    QCOMPARE(copy->exponentRatio(), source->exponentRatio());
+
+    auto *brushTip =
+        dynamic_cast<KisBrushTipOptionState *>(editor.widget.optionsModel()->option(QStringLiteral("BrushTip")));
+    QVERIFY(brushTip);
+    copy->setValue(42.0);
+    QCOMPARE(brushTip->data().commonBrushSize, 42.0);
+    QCOMPARE(source->value(), 42.0);
+
+    KisBrushTipOptionData data = brushTip->data();
+    data.commonBrushSize = 30.0;
+    brushTip->cursor().set(data);
+    settle();
+    QCOMPARE(copy->value(), 30.0);
+}
+
+/// Auto tip parameters are shown only for an auto tip, predefined tip
+/// parameters only for a predefined tip.
+void KisToolOptionsBrushTest::testTipTypeVisibility()
+{
+    Editor editor;
+    showParameter(editor, QStringLiteral("BrushTip"), QStringLiteral("Diameter"));
+    showParameter(editor, QStringLiteral("BrushTip"), QStringLiteral("PredefinedSize"));
+    showParameter(editor, QStringLiteral("Texture"), QStringLiteral("Scale"));
+
+    KisToolOptionsBrushSection section(nullptr);
+    section.setSettingsWidget(&editor.widget);
+
+    loadPreset(editor, QStringLiteral("b_Basic-5_Size_Opacity.kpp"));
+    settle();
+    QVERIFY(!mirrorWidget<QWidget>(&section, QStringLiteral("Diameter"))->isHidden());
+    QVERIFY(mirrorWidget<QWidget>(&section, QStringLiteral("PredefinedSize"))->isHidden());
+
+    loadPreset(editor, QStringLiteral("b_Basic-6_Details.kpp"));
+    settle();
+    QVERIFY(mirrorWidget<QWidget>(&section, QStringLiteral("Diameter"))->isHidden());
+    QVERIFY(!mirrorWidget<QWidget>(&section, QStringLiteral("PredefinedSize"))->isHidden());
+
+    // a page's own tabs do not hide a parameter
+    QVERIFY(!mirrorWidget<QWidget>(&section, QStringLiteral("Scale"))->isHidden());
+}
+
+/// Spacing, blending mode, painting mode and texture scale write through to
+/// the options model.
+void KisToolOptionsBrushTest::testOtherMirrors()
+{
+    Editor editor;
+    loadPreset(editor, QStringLiteral("h_Charcoal_Pencil_Medium.kpp"));
+    showParameter(editor, QStringLiteral("BrushTip"), QStringLiteral("Spacing"));
+    showParameter(editor, QStringLiteral("CompositeOp"), QStringLiteral("BlendingMode"));
+    showParameter(editor, QStringLiteral("PaintingMode"), QStringLiteral("PaintingMode"));
+    showParameter(editor, QStringLiteral("Texture"), QStringLiteral("Scale"));
+
+    KisToolOptionsBrushSection section(nullptr);
+    section.setSettingsWidget(&editor.widget);
+    settle();
+    KisPaintOpOptionsModel *model = editor.widget.optionsModel();
+
+    // spacing: the spacing widget's signal is emitted for the editor
+    auto *brushTip = dynamic_cast<KisBrushTipOptionState *>(model->option(QStringLiteral("BrushTip")));
+    auto *spacing = mirrorWidget<KisSpacingSelectionWidget>(&section, QStringLiteral("Spacing"));
+    QVERIFY(spacing);
+    spacing->setSpacing(false, 0.7);
+    Q_EMIT spacing->sigSpacingChanged();
+    QCOMPARE(brushTip->data().brush.common.useAutoSpacing, false);
+    QCOMPARE(brushTip->data().brush.common.spacing, 0.7);
+
+    // blending mode: the list's click is emitted for the editor
+    auto *blending = mirrorWidget<KisCompositeOpComboBox>(&section, QStringLiteral("BlendingMode"));
+    QVERIFY(blending);
+    blending->selectCompositeOp(KoCompositeOpRegistry::instance().getKoID(COMPOSITE_MULT));
+    auto *compositeOp = typedOption<KisCompositeOpOptionData>(model, QStringLiteral("CompositeOp"));
+    QCOMPARE(compositeOp->data().compositeOpId, QString(COMPOSITE_MULT));
+
+    // painting mode: disabled while the masked brush is enabled, as in the
+    // editor
+    QWidget *paintingMode = mirrorWidget<QWidget>(&section, QStringLiteral("PaintingMode"));
+    QVERIFY(paintingMode);
+    QList<QRadioButton *> radios = paintingMode->findChildren<QRadioButton *>();
+    QCOMPARE(radios.size(), 2);
+    QVERIFY(!radios[0]->isEnabled());
+
+    auto *masking = dynamic_cast<KisMaskingBrushOptionState *>(model->option(QStringLiteral("MaskingBrush")));
+    KisMaskingBrushOptionData maskingData = masking->data();
+    maskingData.masking.isEnabled = false;
+    masking->cursor().set(maskingData);
+    settle();
+    QVERIFY(radios[0]->isEnabled());
+    auto *paintingModeState = typedOption<KisPaintingModeOptionData>(model, QStringLiteral("PaintingMode"));
+    radios[0]->click();
+    QCOMPARE(paintingModeState->data().paintingMode, enumPaintingMode::BUILDUP);
+    radios[1]->click();
+    QCOMPARE(paintingModeState->data().paintingMode, enumPaintingMode::WASH);
+
+    // texture scale
+    auto *scale = mirrorWidget<KisDoubleSliderSpinBox>(&section, QStringLiteral("Scale"));
+    QVERIFY(scale);
+    scale->setValue(0.5);
+    auto *texture = typedOption<KisTextureOptionData>(model, QStringLiteral("Texture"));
+    QCOMPARE(texture->data().scale, 0.5);
+}
+
+/// The current preset's stroke preview and name are at the top of the
+/// section, from the stroke preview cache.
+void KisToolOptionsBrushTest::testPresetPreview()
+{
+    // a preset of the resource database (the cache keys its previews by it)
+    KisAllResourcesModel *presets = KisResourceModelProvider::resourceModel(ResourceType::PaintOpPresets);
+    KisPaintOpPresetSP preset;
+    for (int row = 0; row < presets->rowCount() && !preset; row++) {
+        KisPaintOpPresetSP candidate =
+            presets->resourceForIndex(presets->index(row, 0)).dynamicCast<KisPaintOpPreset>();
+        if (candidate && candidate->paintOp().id() == paintbrush) {
+            preset = candidate;
+        }
+    }
+    QVERIFY(preset);
+
+    KisToolOptionsBrushSection section(nullptr);
+    section.resize(300, 400);
+    section.setPreset(preset);
+    section.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&section));
+
+    auto *preview = section.findChild<KisToolOptionsBrushPreview *>();
+    QVERIFY(preview);
+    QVERIFY(!preview->isHidden());
+    QCOMPARE(preview->text(), preset->name().replace(QLatin1Char('_'), QLatin1Char(' ')));
+    QTRY_VERIFY_WITH_TIMEOUT(preview->hasImage(), 20000);
+
+    // the modified mark, as in the Brush Presets docker
+    preset->setDirty(true);
+    QVERIFY(preview->text().endsWith(QLatin1Char('*')));
+    preset->setDirty(false);
+
+    // collapsing the section hides it
+    KisToolOptionsBrushItems::instance()->setSectionCollapsed(true);
+    QVERIFY(preview->isHidden());
+    KisToolOptionsBrushItems::instance()->setSectionCollapsed(false);
+    QVERIFY(!preview->isHidden());
 }
 
 SOLSTICE_BRUSH_TEST_MAIN(KisToolOptionsBrushTest)

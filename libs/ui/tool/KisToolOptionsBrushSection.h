@@ -9,12 +9,53 @@
 #include <QPointer>
 #include <QWidget>
 
-#include "kritaui_export.h"
+#include <kis_types.h>
 
+#include "kritaui_export.h"
+#include "widgets/KisBrushStrokePreviewCache.h"
+
+class KisCanvasResourceProvider;
 class KisPaintopBox;
 class KisPaintOpSettingsWidget;
 class QToolButton;
 class QVBoxLayout;
+
+/**
+ * The current brush preset's stroke preview with its name, at the top of the
+ * Brush section (as in Clip Studio Paint's tool property palette). The image
+ * comes from KisBrushStrokePreviewCache, so it shows the saved preset, as the
+ * Brush Presets docker does; a modified preset gets a "*" after its name.
+ */
+class KRITAUI_EXPORT KisToolOptionsBrushPreview : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit KisToolOptionsBrushPreview(QWidget *parent = nullptr);
+    ~KisToolOptionsBrushPreview() override;
+
+    void setPreset(KisPaintOpPresetSP preset);
+
+    /// The name shown over the image
+    QString text() const;
+    /// Whether the cache has the preview image of the preset
+    bool hasImage() const;
+
+    bool hasHeightForWidth() const override;
+    int heightForWidth(int width) const override;
+    QSize sizeHint() const override;
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+
+private:
+    void updateRequest();
+
+    KisPaintOpPresetSP m_preset;
+    KisBrushStrokePreviewCache::Request m_request;
+    bool m_hasRequest{false};
+};
 
 /**
  * The "Brush" section of a paint tool's Tool Options: the Brush Editor
@@ -25,12 +66,17 @@ class KRITAUI_EXPORT KisToolOptionsBrushSection : public QWidget
 {
     Q_OBJECT
 public:
-    /// Follows the current engine of @p paintopBox (may be null)
-    KisToolOptionsBrushSection(KisPaintopBox *paintopBox, QWidget *parent = nullptr);
+    /// Follows the current engine of @p paintopBox and the current preset of
+    /// @p resourceProvider (both may be null)
+    KisToolOptionsBrushSection(KisPaintopBox *paintopBox,
+                               KisCanvasResourceProvider *resourceProvider = nullptr,
+                               QWidget *parent = nullptr);
     ~KisToolOptionsBrushSection() override;
 
     /// The Brush Editor settings widget whose options are shown
     void setSettingsWidget(KisPaintOpSettingsWidget *settingsWidget);
+    /// The preset whose stroke preview is shown
+    void setPreset(KisPaintOpPresetSP preset);
 
 private Q_SLOTS:
     void rebuild();
@@ -39,6 +85,7 @@ private Q_SLOTS:
 private:
     QPointer<KisPaintOpSettingsWidget> m_settingsWidget;
     QToolButton *m_header{nullptr};
+    KisToolOptionsBrushPreview *m_preview{nullptr};
     QWidget *m_content{nullptr};
     QVBoxLayout *m_contentLayout{nullptr};
 };

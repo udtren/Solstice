@@ -114,6 +114,9 @@ protected:
         return false;
     }
 
+    /// Solstice: the Brush section, following the canvas's paintop box
+    QWidget *createBrushOptionsSection(QWidget *parent = nullptr);
+
 public Q_SLOTS:
     void activate(const QSet<KoShape*> &shapes) override;
     void deactivate() override;

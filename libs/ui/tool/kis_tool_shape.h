@@ -58,6 +58,12 @@ public Q_SLOTS:
 protected:
     QWidget* createOptionWidget() override;
 
+    /// Solstice (docs/agent/tool-options-brush.md): with showsBrushOptions(),
+    /// the Brush section follows the shape options as its own option widget
+    QList<QPointer<QWidget>> createOptionWidgets() override;
+    /// Moves the Brush section to the end, after options a subclass appended
+    static void moveBrushSectionLast(QList<QPointer<QWidget>> &widgets);
+
     KisToolShapeUtils::FillStyle fillStyle();
     KisToolShapeUtils::StrokeStyle strokeStyle();
     QTransform fillTransform();

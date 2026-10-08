@@ -419,13 +419,20 @@ QWidget *KisToolPaint::createOptionWidget()
     // Solstice: below the tool's own options, which subclasses add to
     // m_optionsWidgetLayout above
     if (showsBrushOptions()) {
-        KisCanvas2 *kisCanvas = qobject_cast<KisCanvas2 *>(canvas());
-        KisPaintopBox *paintopBox =
-            kisCanvas && kisCanvas->viewManager() ? kisCanvas->viewManager()->paintOpBox() : nullptr;
-        verticalLayout->addWidget(new KisToolOptionsBrushSection(paintopBox, optionWidget));
+        verticalLayout->addWidget(createBrushOptionsSection(optionWidget));
     }
 
     return optionWidget;
+}
+
+QWidget *KisToolPaint::createBrushOptionsSection(QWidget *parent)
+{
+    KisCanvas2 *kisCanvas = qobject_cast<KisCanvas2 *>(canvas());
+    KisPaintopBox *paintopBox =
+        kisCanvas && kisCanvas->viewManager() ? kisCanvas->viewManager()->paintOpBox() : nullptr;
+    KisCanvasResourceProvider *resourceProvider =
+        kisCanvas && kisCanvas->viewManager() ? kisCanvas->viewManager()->canvasResourceProvider() : nullptr;
+    return new KisToolOptionsBrushSection(paintopBox, resourceProvider, parent);
 }
 
 QWidget* findLabelWidget(QGridLayout *layout, QWidget *control)

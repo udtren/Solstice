@@ -136,6 +136,8 @@ public:
      * @param newExponentRatio the new exponent to be used by the power function
      */
     void setExponentRatio(qreal newExponentRatio);
+    /// Solstice: the exponent set by setExponentRatio(), e.g. to copy a slider
+    qreal exponentRatio() const;
     /**
      * @brief Set if the spinbox should not Q_EMIT signals when dragging the
      * slider.
@@ -240,6 +242,8 @@ public:
     void setMinimum(qreal newMinimum, bool computeNewFastSliderStep = true);
     void setMaximum(qreal newMaximum, bool computeNewFastSliderStep = true);
     void setExponentRatio(qreal newExponentRatio);
+    /// Solstice: the exponent set by setExponentRatio(), e.g. to copy a slider
+    qreal exponentRatio() const;
     void setBlockUpdateSignalOnDrag(bool newBlockUpdateSignalOnDrag);
     void setFastSliderStep(qreal newFastSliderStep);
     void setSoftRange(qreal newSoftMinimum, qreal newSoftMaximum);

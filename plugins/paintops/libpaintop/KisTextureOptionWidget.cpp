@@ -34,6 +34,9 @@ KisTextureOptionWidget::KisTextureOptionWidget(lager::cursor<KisTextureOptionDat
 
     setConfigurationPage(chooserWidget);
 
+    // Solstice: can be shown in Tool Options (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Scale"), i18n("Texture Scale"), chooserWidget->scaleSlider);
+
     connect(&m_d->model, &KisTextureOptionModel::textureResourceChanged,
             chooserWidget->textureSelectorWidget, &KisPatternChooser::setCurrentPattern);
     connect(chooserWidget->textureSelectorWidget, &KisPatternChooser::resourceSelected,

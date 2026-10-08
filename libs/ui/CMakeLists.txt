@@ -142,6 +142,7 @@ set(kritaui_LIB_SRCS
     kis_paintop_options_model.cpp
     KisPaintOpOptionsModel.cpp
     KisToolOptionsBrushItems.cpp
+    KisToolOptionsParameters.cpp
     kis_paintop_settings_widget.cpp
     kis_popup_palette.cpp
     kis_png_converter.cpp

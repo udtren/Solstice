@@ -365,6 +365,11 @@ public:
         m_lineEdit->update();
     }
 
+    double exponentRatio() const
+    {
+        return m_exponentRatio;
+    }
+
     void updateWidgetRangeToggleTooltip()
     {
         m_widgetRangeToggle->setToolTip(

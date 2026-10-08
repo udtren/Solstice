@@ -10,6 +10,8 @@
 #include "kis_paintop_options_model.h"
 #include "KisPaintOpOptionsModel.h"
 #include "KisToolOptionsBrushItems.h"
+#include <QSignalBlocker>
+#include <QToolButton>
 
 #include <QHBoxLayout>
 #include <QList>
@@ -142,7 +144,11 @@ void KisPaintOpSettingsWidget::setPaintOpId(const QString &paintOpId)
     m_d->paintOpId = paintOpId;
 
     const QList<KisPaintOpOption *> options = toolOptionsOptions();
-    m_d->delegate->setToolOptionsColumnVisible(!options.isEmpty());
+    bool hasCheckableOptions = false;
+    Q_FOREACH (KisPaintOpOption *option, options) {
+        hasCheckableOptions |= option->isCheckable();
+    }
+    m_d->delegate->setToolOptionsColumnVisible(hasCheckableOptions);
     if (options.isEmpty()) {
         return;
     }
@@ -151,7 +157,13 @@ void KisPaintOpSettingsWidget::setPaintOpId(const QString &paintOpId)
     auto syncFromItems = [this]() {
         const QSet<QString> shown = KisToolOptionsBrushItems::instance()->shownItems(m_d->paintOpId);
         Q_FOREACH (KisPaintOpOption *option, toolOptionsOptions()) {
-            option->setShownInToolOptions(shown.contains(option->toolOptionsId()));
+            option->setShownInToolOptions(option->isCheckable() && shown.contains(option->toolOptionsId()));
+            Q_FOREACH (const KisPaintOpOption::ToolOptionsParameter &parameter, option->toolOptionsParameters()) {
+                if (parameter.eye) {
+                    QSignalBlocker blocker(parameter.eye);
+                    parameter.eye->setChecked(shown.contains(toolOptionsParameterId(option, parameter)));
+                }
+            }
         }
     };
     syncFromItems();
@@ -160,6 +172,16 @@ void KisPaintOpSettingsWidget::setPaintOpId(const QString &paintOpId)
         connect(option, &KisPaintOpOption::sigShownInToolOptionsChanged, this, [this, option](bool shown) {
             KisToolOptionsBrushItems::instance()->setShown(m_d->paintOpId, option->toolOptionsId(), shown);
         });
+        Q_FOREACH (const KisPaintOpOption::ToolOptionsParameter &parameter, option->toolOptionsParameters()) {
+            if (!parameter.eye) {
+                continue;
+            }
+            parameter.eye->show();
+            const QString id = toolOptionsParameterId(option, parameter);
+            connect(parameter.eye, &QToolButton::toggled, this, [this, id](bool shown) {
+                KisToolOptionsBrushItems::instance()->setShown(m_d->paintOpId, id, shown);
+            });
+        }
     }
     // the same engine's editor in another window
     connect(items, &KisToolOptionsBrushItems::sigShownItemsChanged, this, [this, syncFromItems](const QString &id) {
@@ -178,11 +200,18 @@ QList<KisPaintOpOption *> KisPaintOpSettingsWidget::toolOptionsOptions() const
 {
     QList<KisPaintOpOption *> result;
     Q_FOREACH (KisPaintOpOption *option, m_d->paintOpOptions) {
-        if (option->isCheckable() && !option->toolOptionsId().isEmpty()) {
+        if (!option->toolOptionsId().isEmpty()
+            && (option->isCheckable() || !option->toolOptionsParameters().isEmpty())) {
             result << option;
         }
     }
     return result;
+}
+
+QString KisPaintOpSettingsWidget::toolOptionsParameterId(const KisPaintOpOption *option,
+                                                         const KisPaintOpOption::ToolOptionsParameter &parameter)
+{
+    return option->toolOptionsId() + QLatin1Char('/') + parameter.id;
 }
 
 void KisPaintOpSettingsWidget::setConfiguration(const KisPropertiesConfigurationSP  config)

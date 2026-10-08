@@ -36,6 +36,11 @@ protected Q_SLOTS:
 
 protected:
     void finishRect(const QRectF& rect, qreal roundCornersX, qreal roundCornersY) override;
+    /// Solstice: the shape is painted with the brush preset
+    bool showsBrushOptions() const override
+    {
+        return true;
+    }
 };
 
 class KisToolEllipseFactory : public KisToolPaintFactoryBase

@@ -182,3 +182,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   under the new column; a stable, untranslated id per option (the
   options-model id) is what kritarc stores, because labels repeat ("Size"
   in General and Masked Brush) and are translated.
+
+## 2026-10-08 ingest: brush options in Tool Options, phase 3b
+
+- Feature document `tool-options-brush.md` (page parameters, mirrors,
+  preset preview, shape tools). Lessons: a copy of a lager-bound control
+  must write through the control the way its connection listens
+  (`setSpacing()` and `setCompositeOp()` do not emit, so the copy emits the
+  signal) and read the control after the option's change signal, queued,
+  because the model updates some controls with blocked signals; a page's
+  own tabs must not hide a parameter, so only an explicit mode widget (the
+  Auto or Predefined tip page) does; a script that assigns ids from
+  variable names in a line can pick the wrong one (Painting Mode got the
+  masked brush's id), so tests check that ids are unique.

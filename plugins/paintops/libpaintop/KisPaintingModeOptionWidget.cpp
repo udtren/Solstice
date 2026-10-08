@@ -69,6 +69,9 @@ KisPaintingModeOptionWidget::KisPaintingModeOptionWidget(lager::cursor<KisPainti
 
     setConfigurationPage(widget);
 
+    // Solstice: can be shown in Tool Options (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("PaintingMode"), i18n("Painting Mode"), widget->grpIncremental);
+
     connectControlState(group, &m_d->model, "paintingModeState", "paintingMode");
     m_d->buttonGroupToolTip.bind(std::bind(&QWidget::setToolTip, widget->radioBuildup, std::placeholders::_1));
     m_d->buttonGroupToolTip.bind(std::bind(&QWidget::setToolTip, widget->radioWash, std::placeholders::_1));

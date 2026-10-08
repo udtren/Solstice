@@ -15,9 +15,11 @@
 
 #include <lager/reader.hpp>
 #include <lager/cursor.hpp>
+#include <QPointer>
 
 class QWidget;
 class QString;
+class QToolButton;
 class KisPaintopLodLimitations;
 
 
@@ -81,6 +83,34 @@ public:
     /// Whether the checkbox is shown in Tool Options (the eye in the editor)
     void setShownInToolOptions(bool shown);
     bool isShownInToolOptions() const;
+
+    /// Solstice (phase 3b): a control of the option's page that can be
+    /// shown in Tool Options, with its eye button in the page
+    struct ToolOptionsParameter {
+        QString id; ///< unique within the option, stable
+        QString label;
+        QPointer<QWidget> control;
+        QPointer<QToolButton> eye;
+        /// shown only in one mode of the page (e.g. the Auto tip), or null
+        QPointer<QWidget> modeWidget;
+    };
+
+    /**
+     * Registers @p control of the option's page as a Tool Options parameter
+     * and puts its eye button in front of @p labelWidget (or of the label in
+     * the control's layout row). The eye stays hidden unless the engine
+     * supports Tool Options (KisPaintOpSettingsWidget::setPaintOpId()).
+     * Only controls KisToolOptionsParameterMirror supports are registered.
+     * With @p modeWidget, Tool Options shows the parameter only while that
+     * widget is shown in the page (e.g. the Auto or Predefined tip page);
+     * other tabs of a page do not hide it.
+     */
+    void addToolOptionsParameter(const QString &id,
+                                 const QString &label,
+                                 QWidget *control,
+                                 QWidget *labelWidget = nullptr,
+                                 QWidget *modeWidget = nullptr);
+    QList<ToolOptionsParameter> toolOptionsParameters() const;
 
     /**
      * Reimplement this to use the image in the option widget

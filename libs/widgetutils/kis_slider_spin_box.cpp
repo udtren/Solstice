@@ -74,6 +74,11 @@ void KisSliderSpinBox::setExponentRatio(double newExponentRatio)
     d->setExponentRatio(newExponentRatio);
 }
 
+qreal KisSliderSpinBox::exponentRatio() const
+{
+    return d->exponentRatio();
+}
+
 void KisSliderSpinBox::setBlockUpdateSignalOnDrag(bool newBlockUpdateSignalOnDrag)
 {
     d->setBlockUpdateSignalOnDrag(newBlockUpdateSignalOnDrag);
@@ -176,6 +181,11 @@ void KisDoubleSliderSpinBox::setExponentRatio(double newExponentRatio)
 {
     Q_ASSERT(newExponentRatio > 0.0);
     d->setExponentRatio(newExponentRatio);
+}
+
+qreal KisDoubleSliderSpinBox::exponentRatio() const
+{
+    return d->exponentRatio();
 }
 
 void KisDoubleSliderSpinBox::setBlockUpdateSignalOnDrag(bool newBlockUpdateSignalOnDrag)

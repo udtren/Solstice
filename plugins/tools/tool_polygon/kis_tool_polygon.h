@@ -28,6 +28,11 @@ public:
 
 protected:
     void finishPolyline(const QVector<QPointF>& points) override;
+    /// Solstice: the shape is painted with the brush preset
+    bool showsBrushOptions() const override
+    {
+        return true;
+    }
 protected Q_SLOTS:
     void resetCursorStyle() override;
 };

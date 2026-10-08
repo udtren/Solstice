@@ -5,6 +5,7 @@
  */
 
 #include "kis_tool_shape.h"
+#include "KisToolOptionsBrushSection.h"
 
 #include <QWidget>
 #include <QLayout>
@@ -103,6 +104,36 @@ QWidget * KisToolShape::createOptionWidget()
     m_shapeOptionsWidget->gbPatternTransform->setEnabled(enablePatternTransform);
 
     return m_shapeOptionsWidget;
+}
+
+QList<QPointer<QWidget>> KisToolShape::createOptionWidgets()
+{
+    QList<QPointer<QWidget>> widgets = KisToolPaint::createOptionWidgets();
+    if (!showsBrushOptions()) {
+        return widgets;
+    }
+
+    // the Line tool's own option widget already holds the section
+    Q_FOREACH (const QPointer<QWidget> &widget, widgets) {
+        if (widget && widget->findChild<KisToolOptionsBrushSection *>()) {
+            return widgets;
+        }
+    }
+
+    QWidget *section = createBrushOptionsSection();
+    section->setContentsMargins(10, 0, 10, 10);
+    widgets.append(section);
+    return widgets;
+}
+
+void KisToolShape::moveBrushSectionLast(QList<QPointer<QWidget>> &widgets)
+{
+    for (int i = 0; i < widgets.size(); i++) {
+        if (qobject_cast<KisToolOptionsBrushSection *>(widgets[i].data())) {
+            widgets.append(widgets.takeAt(i));
+            return;
+        }
+    }
 }
 
 void KisToolShape::outlineSettingChanged(int value)
