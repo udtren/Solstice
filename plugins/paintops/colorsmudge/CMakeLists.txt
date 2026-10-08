@@ -29,9 +29,17 @@ set(kritacolorsmudgepaintop_SOURCES
     KisColorSmudgeStrategyStamp.cpp
     KisColorSmudgeStrategyMaskLegacy.cpp)
 
-kis_add_library(kritacolorsmudgepaintop MODULE ${kritacolorsmudgepaintop_SOURCES})
+# Solstice: a static library for the tests of the settings widget
+# (docs/agent/brush-option-shared-model-plan.md, phase 4)
+set(kritacolorsmudgepaintop_static_SOURCES ${kritacolorsmudgepaintop_SOURCES})
+list(REMOVE_ITEM kritacolorsmudgepaintop_static_SOURCES colorsmudge_paintop_plugin.cpp)
 
-target_link_libraries(kritacolorsmudgepaintop kritalibpaintop)
+kis_add_library(kritacolorsmudgepaintop_static STATIC ${kritacolorsmudgepaintop_static_SOURCES})
+target_link_libraries(kritacolorsmudgepaintop_static kritaui kritalibpaintop)
+
+kis_add_library(kritacolorsmudgepaintop MODULE colorsmudge_paintop_plugin.cpp)
+
+target_link_libraries(kritacolorsmudgepaintop kritacolorsmudgepaintop_static)
 
 install(TARGETS kritacolorsmudgepaintop DESTINATION ${KRITA_PLUGIN_INSTALL_DIR})
 install( FILES  krita-colorsmudge.png DESTINATION ${KDE_INSTALL_DATADIR}/krita/images)

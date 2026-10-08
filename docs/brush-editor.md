@@ -10,6 +10,7 @@ showing Brush Editor options in the Tool Options docker later.
 | Engine | Uses the shared model |
 | --- | --- |
 | Pixel Brush | Yes |
+| Color Smudge | Yes |
 | Deform | Yes |
 | Other engines | Not yet; they work as in Krita |
 
@@ -38,7 +39,7 @@ change the same values as before.
 
 ## Brush options in Tool Options
 
-The Pixel Brush and Deform pages of the Brush Editor have an eye column at
+The Pixel Brush, Color Smudge and Deform pages of the Brush Editor have an eye column at
 the left of the option list. Options with a checkbox (Size, Ratio, Spacing,
 Texture, Masked Brush and so on) have a box there: click it to show the eye.
 Those options then appear as checkboxes in the **Tool Options** docker of the
@@ -51,7 +52,8 @@ the Pixel Brush tip's Diameter, Ratio, Fade (both values with their link),
 Angle, Density and Spacing (or Size,
 Angle and Spacing for an image tip), Precision, the Blending Mode, the
 Painting Mode and the Texture Scale, and for Opacity and Flow the strength
-bar at the top of the page and **Enable Pen Settings**. With the eye on, the
+bar at the top of the page and **Enable Pen Settings** (in Tool Options both
+rows carry the option's name; the second is the checkbox). With the eye on, the
 setting appears in
 the **Brush** section with the same control, and changes in either place
 apply to both. Tip settings appear only for the kind of tip the brush uses.

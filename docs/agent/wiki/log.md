@@ -223,3 +223,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   color, which its scroll bars inherited (white while focused). Lesson: a
   palette role changed on a scroll area reaches its scroll bars; set the
   role back on the bars, and again on each PaletteChange.
+
+## 2026-10-08 ingest: Color Smudge on the shared model (phase 4)
+
+- `brush-option-shared-model-plan.md`: Color Smudge's 22 options live in
+  `KisPaintOpOptionsModel` with four dependencies (Smudge Length, Paint
+  Thickness and Overlay Mode on the brush tip; Smudge Radius on Smudge
+  Length). Lesson: the bundled presets use neither the new smudge engine nor
+  a lightness tip, so parity variants must force the dependent bakes
+  (`SmudgeRadiusVersion=2` with an out-of-range radius, a color tip from
+  `RGBA_brushes.bundle`); otherwise the references prove nothing.
+  `SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES` loads extra bundles in tests.
+- `tool-options-brush.md`: Opacity and Flow's Enable Pen Settings rows carry
+  only the option's name, keeping the label column narrow. README images
+  moved to a new Screenshots section; the Tool Options image was replaced.

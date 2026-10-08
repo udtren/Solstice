@@ -228,10 +228,8 @@ KisCurveOptionWidget::KisCurveOptionWidget(lager::cursor<KisCurveOptionDataCommo
     // Options (docs/agent/tool-options-brush.md)
     if (!isCheckable()) {
         addToolOptionsParameter(QStringLiteral("Strength"), label(), m_curveOptionWidget->strengthSlider);
-        addToolOptionsParameter(
-            QStringLiteral("PenSettings"),
-            i18nc("@option:check in Tool Options, %1 is an option such as Opacity", "%1 Pen Settings", label()),
-            m_curveOptionWidget->checkBoxUseCurve);
+        // the option's name alone keeps the label column of Tool Options narrow
+        addToolOptionsParameter(QStringLiteral("PenSettings"), label(), m_curveOptionWidget->checkBoxUseCurve);
     }
 
     m_d->model.optionData.bind(std::bind(&KisCurveOptionWidget::emitSettingChanged, this));

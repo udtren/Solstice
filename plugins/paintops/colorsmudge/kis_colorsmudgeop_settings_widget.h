@@ -9,6 +9,8 @@
 
 #include <kis_brush_based_paintop_options_widget.h>
 
+class KisPaintOpOptionsModel;
+
 class KisColorSmudgeOpSettingsWidget : public KisBrushBasedPaintopOptionWidget
 {
     Q_OBJECT
@@ -20,6 +22,13 @@ public:
     KisPropertiesConfigurationSP configuration() const override;
 
 private:
+    // Solstice: the option states live in @p model, which must exist before
+    // the base class creates the brush tip option
+    KisColorSmudgeOpSettingsWidget(QWidget *parent,
+                                   KisResourcesInterfaceSP resourcesInterface,
+                                   KoCanvasResourcesInterfaceSP canvasResourcesInterface,
+                                   KisPaintOpOptionsModel *model);
+
     struct Private;
     const QScopedPointer<Private> m_d;
 };

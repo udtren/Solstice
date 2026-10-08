@@ -19,11 +19,12 @@
 #include <KisResourceStorage.h>
 
 /**
- * KISTEST_MAIN, plus the bundle the test presets come from. The test resource
- * database has no brush tips or patterns; the bundle provides those of the
- * presets and the fallback brush and pattern.
+ * KISTEST_MAIN, plus the bundles the test presets come from (file names in
+ * krita/data/bundles, as string literals). The test resource database has no
+ * brush tips or patterns; the bundles provide those of the presets and the
+ * fallback brush and pattern.
  */
-#define SOLSTICE_BRUSH_TEST_MAIN(TestObject)                                                                           \
+#define SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(TestObject, ...)                                                         \
     int main(int argc, char *argv[])                                                                                   \
     {                                                                                                                  \
         qputenv("LANGUAGE", "en");                                                                                     \
@@ -38,7 +39,7 @@
                                                                                                                        \
         registerResources();                                                                                           \
                                                                                                                        \
-        /* Loading the presets of the bundle creates resource models. A model                                          \
+        /* Loading the presets of a bundle creates resource models. A model                                            \
            created between beginExternalResourceImport and                                                             \
            endExternalResourceImport crashes in endInsertRows, so create them                                          \
            all first. */                                                                                               \
@@ -46,15 +47,21 @@
             KisResourceModelProvider::resourceModel(type);                                                             \
         }                                                                                                              \
                                                                                                                        \
-        const QString bundle = QStringLiteral(SYSTEM_RESOURCES_DATA_DIR "bundles/Krita_4_Default_Resources.bundle");   \
-        if (!KisResourceLocator::instance()->addStorage(bundle,                                                        \
-                                                        KisResourceStorageSP(new KisResourceStorage(bundle)))) {       \
-            qFatal("Could not add %s", qPrintable(bundle));                                                            \
+        Q_FOREACH (const QString &name, QStringList({__VA_ARGS__})) {                                                  \
+            const QString bundle = QStringLiteral(SYSTEM_RESOURCES_DATA_DIR "bundles/") + name;                        \
+            if (!KisResourceLocator::instance()->addStorage(bundle,                                                    \
+                                                            KisResourceStorageSP(new KisResourceStorage(bundle)))) {   \
+                qFatal("Could not add %s", qPrintable(bundle));                                                        \
+            }                                                                                                          \
         }                                                                                                              \
                                                                                                                        \
         TestObject tc;                                                                                                 \
         QTEST_SET_MAIN_SOURCE_PATH                                                                                     \
         return QTest::qExec(&tc, argc, argv);                                                                          \
     }
+
+/// The Krita 4 default bundle, which the Pixel Brush test presets come from
+#define SOLSTICE_BRUSH_TEST_MAIN(TestObject)                                                                           \
+    SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(TestObject, QStringLiteral("Krita_4_Default_Resources.bundle"))
 
 #endif // KISBRUSHTESTMAIN_H

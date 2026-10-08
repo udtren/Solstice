@@ -39,6 +39,10 @@ Editor (F5) chooses which brush items appear in the Tool Options docker.
 - An option has an eye only when it is checkable and has a Tool Options id.
   Engines without ids (not migrated to the shared model) show no eye column
   and their Brush section shows a hint.
+- Engines with ids: Pixel Brush, Deform and Color Smudge (phase 4 of the
+  shared model plan). Color Smudge has no masked brush; its other page
+  parameters (Brush Tip, Blending Mode, Opacity, Texture Scale) come from the
+  shared option widgets.
 - The ids are the options-model ids, stable and untranslated. Renaming one
   drops it from users' kritarc lists.
 - The Brush section binds each checkbox to the editor's `KisPaintOpOption`
@@ -61,7 +65,7 @@ shows the control in the Brush section, as a copy kept in sync with it.
 | --- | --- |
 | Brush Tip (`BrushTip`, Pixel Brush) | Auto tip: `Diameter` (`inputRadius`), `Ratio` (`inputRatio`), `Fade` (`grpFade`: both values and their link, mode widget `PageFade`, hidden for the Soft mask type), `Angle` (`inputAngle`), `Density` (`density`), `Spacing` (`spacingWidget`, with Auto); Predefined tip: `PredefinedSize` (`brushSizeSpinBox`), `PredefinedAngle` (`brushRotationAngleSelector`), `PredefinedSpacing` (`brushSpacingSelectionWidget`); with SupportsPrecision: `Precision` (`sliderPrecision`), `AutoPrecision` (`autoPrecisionCheckBox`) |
 | Blending Mode (`CompositeOp`) | `BlendingMode` (the list, as a blending mode combo box) |
-| Curve options without a checkbox in the list (Pixel Brush Opacity, Flow, Masked Brush Opacity and Flow; Deform Opacity) | `Strength` (the strength bar at the top of the page, labeled with the option's name), `PenSettings` (Enable Pen Settings); registered by `KisCurveOptionWidget` when `isCheckable()` is false. A checkable curve option is switched by its row's checkbox instead (phase 3a) |
+| Curve options without a checkbox in the list (Pixel Brush Opacity, Flow, Masked Brush Opacity and Flow; Deform Opacity) | `Strength` (the strength bar at the top of the page, labeled with the option's name), `PenSettings` (Enable Pen Settings, also labeled with the option's name only, so the label column stays narrow); registered by `KisCurveOptionWidget` when `isCheckable()` is false. A checkable curve option is switched by its row's checkbox instead (phase 3a) |
 | Painting Mode (`PaintingMode`) | `PaintingMode` (the group box's radio buttons) |
 | Texture (`Texture`) | `Scale` (`scaleSlider`) |
 

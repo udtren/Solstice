@@ -13,7 +13,7 @@ Solstice is independently maintained and desktop-only. It is not an official
 Krita edition, and development no longer tracks upstream Krita. It is in
 testing; see [Versions](docs/versioning.md) for the version numbering.
 
-[Highlights](#highlights) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 
 ## Highlights
 
@@ -43,13 +43,15 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
   a grid that adapts to the docker's width, with multi-select engine and bundle
   filters alongside tags and search, and optional grouping by engine or
   bundle.
-- **[Brush Editor](docs/brush-editor.md)**: Pixel Brush and Deform options
-  live in a shared model, so one change updates only that option in the
-  preset.
+- **[Brush Editor](docs/brush-editor.md)**: Pixel Brush, Color Smudge and
+  Deform options live in a shared model, so one change updates only that
+  option in the preset.
 - **[Brush options in Tool Options](docs/brush-editor.md#brush-options-in-tool-options)**:
   as with Clip Studio Paint's eye marks, an eye next to a Brush Editor
   setting shows it in the Tool Options docker, under the current brush's
   stroke preview.
+
+## Screenshots
 
 <img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="480">
 
@@ -57,7 +59,7 @@ The Brush Presets docker grouped by bundle, with the Engines filter open. See
 the [Brush Presets guide](docs/brush-stroke-preview.md) for preview behavior,
 filters and grouping.
 
-<img src="docs/images/tool-options-brush.png" alt="Brush Editor with eyes on brush tip settings including Fade, and the Brush section of Tool Options showing them under the stroke preview" width="480">
+<img src="docs/images/tool-options-brush.png" alt="Brush Editor with eyes on brush tip settings, Blending Mode, Opacity and Flow, and the Brush section of Tool Options showing them under the stroke preview" width="480">
 
 Eyes in the Brush Editor choose the settings that the Tool Options docker
 shows in its Brush section. See

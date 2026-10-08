@@ -4,3 +4,8 @@ kis_add_test(
     TEST_NAME KisColorsmudgeOpTest
     LINK_LIBRARIES kritalibpaintop kritaimage kritatestsdk
     )
+
+kis_add_test(KisColorSmudgeParityTest.cpp
+    TEST_NAME KisColorSmudgeParityTest
+    LINK_LIBRARIES kritacolorsmudgepaintop_static kritalibpaintop kritaui kritatestsdk
+    )

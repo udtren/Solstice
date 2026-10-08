@@ -529,6 +529,8 @@ Tool Optionsではツール設定の下に置く。下記の「設定による�
 チェックボックスの外だし)は2026年10月8日に実装し、同日の手動確認で問題なし。
 フェーズ3b(ページ内の主要パラメータ、図形ツール、Brush欄先頭のストローク
 プレビュー)は同日に実装し、手動確認で問題なし。
+フェーズ4はColor Smudgeを同日に実装し、手動確認で問題なし(下記の
+「フェーズ4の実装結果: Color Smudge」)。
 
 本書の最終目的である3つの要件を実現する。
 
@@ -563,6 +565,66 @@ Tool Optionsへの外だしを無効にする。
 - Sprayは、SprayShapeが `lager::with` のレンズでSprayOpに書き戻す。
 - MyPaintは、すべてのオプションが共有のJSONキー `MyPaint/json` を読み書きする。
   JSONを1つの集約データとして扱う方式が決まるまで、従来の経路のままにする。
+
+#### フェーズ4の実装結果: Color Smudge(2026年10月8日)
+
+Color Smudge(`colorsmudge`)の設定画面を共有モデルのビューに置き換えた。
+全22オプションの状態をモデルが持ち、F5の目とTool Optionsの「Brush」欄も
+Pixel Brushと同じく使える(Tool Options用idはモデルのid)。
+
+**焼き込みとオプション間の依存**
+
+| オプション | 焼き込み | 依存先 |
+| --- | --- | --- |
+| SmudgeLength | カーブに加え、先端が画像として使われる(用途がAlpha mask以外)ときは新エンジンを強制(`KisSmudgeLengthOptionModel::backedOptionData()` と同じ) | BrushTip |
+| SmudgeRadius | 強さの範囲を、新エンジンなら0〜1、旧エンジンなら0〜3にして値を丸める(旧画面の `strengthRangeReader` と同じ) | SmudgeLength(推移的にBrushTip) |
+| PaintThickness | 先端が明度モードのときだけ有効 | BrushTip |
+| OverlayMode | 先端が明度モードのときは無効 | BrushTip |
+
+ColorRate、Gradient、Strength(ラベルWeak/Strong、分類Color)は旧画面と同じ
+ラベル・分類のカーブとして、モデルのカーソルで作る。Textureは旗なし。
+
+**変更したファイル**
+
+| 場所 | 内容 |
+| --- | --- |
+| `plugins/paintops/colorsmudge/kis_colorsmudgeop_settings_widget.{h,cpp}` | モデルを作り、全オプションを登録、依存を宣言、ウィジェットを結び付ける。非公開コンストラクタでモデルを受け取る(Pixel Brushと同じ) |
+| `plugins/paintops/colorsmudge/CMakeLists.txt` | テスト用の静的ライブラリ `kritacolorsmudgepaintop_static`(Deformと同じ構成) |
+| `plugins/paintops/colorsmudge/tests/`(追加) | `KisColorSmudgeParityTest`、Krita 3/4の同梱プリセット10件と基準ファイル30件 |
+| `plugins/paintops/defaultpaintops/brush/tests/KisBrushTestMain.h` | 読み込むバンドルを指定できる `SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES` |
+
+**テスト(`KisColorSmudgeParityTest`、34件すべて通過)**
+
+- **従来の全書き込みとの一致(30件):** Krita 3/4の同梱プリセット10件を、
+  そのまま、新エンジン+Overlay+Paint Thickness+範囲外のSmudge Radius
+  (バージョン2で2.5)、RGBAバンドルのカラー先端を明度モードで使う変種の
+  3通りで読み込み、全書き込みの結果を移行前のコードで記録した基準と
+  比較する。同梱プリセットには新エンジンや明度モードを使うものがないため、
+  変種で依存する焼き込み(新エンジンの強制、範囲の丸め、Overlayの無効化、
+  Paint Thicknessの有効化)を通す。移行前のコードでも自身の基準と一致する
+  ことを確認した。
+- **モデルでの編集:** 編集のたびにプリセットがモデルの全書き込みと一致する。
+  新エンジンの切り替えでSmudge Radiusが2.5と1を行き来し、明度モードの
+  カラー先端で新エンジン強制・Paint Thickness有効・Overlay無効になる。
+  4つの依存を1つずつ外すと、それぞれ失敗することを確認した。
+- **Tool Options:** idが一意で、主なオプションに目が付く。
+
+関連する既存のテスト(`KisColorsmudgeOpTest`、`KisToolOptionsBrushTest`、
+`KisBrushTipOptionParityTest`、`KisPaintOpOptionsModelTest`、
+`KisBrushStrokePreviewTest`、`KisPaintOpPresetTest`)もすべて通過した。
+全体をビルドしてインストールした。
+
+手動確認の項目(Color Smudge):
+
+1. F5で各ページを変更し、描画、アウトライン、プレビュー、変更済み表示が
+   従来どおり更新される。プリセットの切り替え・保存で値が保たれる。
+2. 先端の用途をColor imageやLightness mapにすると、Smudge Lengthの新エンジンが
+   強制され(チェックが外せない)、Smudge Radiusの範囲が0〜100%になる。
+   Alpha maskに戻すと元の設定に戻る。
+3. Lightness mapのときだけPaint Thicknessが有効、Overlay Modeが無効になる。
+4. 目を入れた項目がTool Optionsに出て、そこでの変更が描画とF5に反映される。
+5. ロックの破棄で元の値に戻り、LOD設定だけの変更では変更済みにならない
+   (承認済みの挙動変更)。
 
 ### フェーズ5: 旧経路の整理
 

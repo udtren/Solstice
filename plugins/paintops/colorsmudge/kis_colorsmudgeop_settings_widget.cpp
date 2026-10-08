@@ -28,6 +28,12 @@
 #include <KisColorSmudgeStandardOptionData.h>
 #include <KisSmudgeRadiusOptionData.h>
 #include <KisZug.h>
+#include <KisBrushBasedOptionStates.h>
+#include <KisCurveOptionModel.h>
+#include <KisCurveOptionWidget.h>
+#include <KisPaintOpOptionStateUtils.h>
+#include <KisPaintOpOptionsModel.h>
+#include <lager/constant.hpp>
 
 
 struct KisColorSmudgeOpSettingsWidget::Private
@@ -41,33 +47,174 @@ struct KisColorSmudgeOpSettingsWidget::Private
     KisBrushPropertiesModel brushPropertiesModel;
 };
 
+namespace
+{
+const KisBrushOptionWidgetFlags colorSmudgeFlags =
+    KisBrushOptionWidgetFlag::SupportsPrecision | KisBrushOptionWidgetFlag::SupportsHSLBrushMode;
+
+KisBrushTipOptionState *addBrushTipOption(KisPaintOpOptionsModel *model)
+{
+    KisBrushTipOptionState *state = new KisBrushTipOptionState(QStringLiteral("BrushTip"), colorSmudgeFlags);
+    model->addOption(state);
+    return state;
+}
+
+/// Solstice: the option's checkbox and page parameters can be shown in Tool
+/// Options under @p id, the option's id in the options model
+/// (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
+
+/// A tip used as an image (color, lightness or gradient map) needs the new
+/// smudge engine, as KisBrushPropertiesModel::brushApplication tells the
+/// Smudge Length option
+bool forcesNewSmudgeEngine(const KisBrushTipOptionState *brushTip)
+{
+    const KisBrushModel::BrushData brush = brushTip->data().bakedBrushData(brushTip->flags());
+    const enumBrushApplication application =
+        brush.type == KisBrushModel::Predefined ? brush.predefinedBrush.application : ALPHAMASK;
+    return application > ALPHAMASK;
+}
+} // namespace
+
 KisColorSmudgeOpSettingsWidget::KisColorSmudgeOpSettingsWidget(QWidget* parent, KisResourcesInterfaceSP resourcesInterface, KoCanvasResourcesInterfaceSP canvasResourcesInterface)
-    : KisBrushBasedPaintopOptionWidget(KisBrushOptionWidgetFlag::SupportsPrecision |
-                                       KisBrushOptionWidgetFlag::SupportsHSLBrushMode,
-                                       parent)
+    : KisColorSmudgeOpSettingsWidget(parent, resourcesInterface, canvasResourcesInterface, new KisPaintOpOptionsModel())
+{
+}
+
+KisColorSmudgeOpSettingsWidget::KisColorSmudgeOpSettingsWidget(QWidget *parent,
+                                                               KisResourcesInterfaceSP resourcesInterface,
+                                                               KoCanvasResourcesInterfaceSP canvasResourcesInterface,
+                                                               KisPaintOpOptionsModel *model)
+    : KisBrushBasedPaintopOptionWidget(colorSmudgeFlags, addBrushTipOption(model)->cursor(), parent)
     , m_d(new Private(brushOptionWidget()->bakedBrushData(), resourcesInterface))
 {
     Q_UNUSED(canvasResourcesInterface)
     namespace kpowu = KisPaintOpOptionWidgetUtils;
+    namespace kposu = KisPaintOpOptionStateUtils;
+    namespace kbbos = KisBrushBasedOptionStates;
 
     setObjectName("brush option widget");
 
-    addPaintOpOption(kpowu::createOptionWidget<KisCompositeOpOptionWidget>());
-    addPaintOpOption(kpowu::createOpacityOptionWidget());
-    addPaintOpOption(kpowu::createOptionWidget<KisSizeOptionWidget>());
-    addPaintOpOption(kpowu::createRatioOptionWidget());
-    addPaintOpOption(kpowu::createOptionWidget<KisSpacingOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisMirrorOptionWidget>());
+    // Solstice: the option states live in a shared model, so that one option
+    // change writes only that option (docs/agent/brush-option-shared-model-plan.md,
+    // phase 4)
+    model->setParent(this);
 
+    KisBrushTipOptionState *brushTip = static_cast<KisBrushTipOptionState *>(model->option(QStringLiteral("BrushTip")));
+    brushTip->setResourcesInterfaceGetter([this]() {
+        return this->resourcesInterface();
+    });
 
-    KisSmudgeLengthOptionWidget *smudgeLengthWidget =
-        kpowu::createOptionWidget<KisSmudgeLengthOptionWidget>
-            (KisSmudgeLengthOptionData(),
-             m_d->brushPropertiesModel.isBrushPierced,
-             m_d->brushPropertiesModel.brushApplication
-                 .xform(kiszug::map_greater<int>(ALPHAMASK)));
+    auto *compositeOp = model->addOption(QStringLiteral("CompositeOp"), KisCompositeOpOptionData());
+    auto *opacity = model->addOption(QStringLiteral("Opacity"),
+                                     KisOpacityOptionData(),
+                                     &kposu::bakeCurveOption<KisOpacityOptionData>);
+    auto *size =
+        model->addOption(QStringLiteral("Size"), KisSizeOptionData(), &kposu::bakeCurveOption<KisSizeOptionData>);
+    auto *ratio =
+        model->addOption(QStringLiteral("Ratio"), KisRatioOptionData(), &kposu::bakeCurveOption<KisRatioOptionData>);
+    auto *spacing = model->addOption(QStringLiteral("Spacing"),
+                                     KisSpacingOptionData(),
+                                     &kposu::bakeCurveOption<KisSpacingOptionData>);
+    auto *mirror =
+        model->addOption(QStringLiteral("Mirror"), KisMirrorOptionData(), &kposu::bakeCurveOption<KisMirrorOptionData>);
 
-    addPaintOpOption(smudgeLengthWidget);
+    // written with the new engine when the tip requires it
+    auto *smudgeLength = model->addOption(QStringLiteral("SmudgeLength"),
+                                          KisSmudgeLengthOptionData(),
+                                          [brushTip](const KisSmudgeLengthOptionData &data) {
+                                              KisSmudgeLengthOptionData result = kposu::bakeCurveOption(data);
+                                              result.useNewEngine =
+                                                  data.useNewEngine || forcesNewSmudgeEngine(brushTip);
+                                              return result;
+                                          });
+    // its strength range is 0..1 with the new engine, 0..3 with the old one
+    auto *smudgeRadius = model->addOption(
+        QStringLiteral("SmudgeRadius"),
+        KisSmudgeRadiusOptionData(),
+        [brushTip, smudgeLength](const KisSmudgeRadiusOptionData &data) {
+            const bool useNewEngine = smudgeLength->data().useNewEngine || forcesNewSmudgeEngine(brushTip);
+            KisSmudgeRadiusOptionData result = data;
+            static_cast<KisCurveOptionDataCommon &>(result) =
+                KisCurveOptionModel::bakeOptionData(data, true, std::make_tuple(0.0, useNewEngine ? 1.0 : 3.0));
+            return result;
+        });
+    auto *colorRate = model->addOption(QStringLiteral("ColorRate"),
+                                       KisColorRateOptionData(),
+                                       &kposu::bakeCurveOption<KisColorRateOptionData>);
+    // only in the tip's lightness mode
+    auto *paintThickness = model->addOption(
+        QStringLiteral("PaintThickness"),
+        KisPaintThicknessOptionData(),
+        [brushTip](const KisPaintThicknessOptionData &data) {
+            return kposu::bakeLinkedCurveOption(data, brushTip->data().lightnessModeEnabled(brushTip->flags()));
+        });
+    auto *rotation = model->addOption(QStringLiteral("Rotation"),
+                                      KisRotationOptionData(),
+                                      &kposu::bakeCurveOption<KisRotationOptionData>);
+    auto *scatter = model->addOption(QStringLiteral("Scatter"),
+                                     KisScatterOptionData(),
+                                     &kposu::bakeCurveOption<KisScatterOptionData>);
+    // not in the tip's lightness mode
+    auto *overlayMode = model->addOption(QStringLiteral("OverlayMode"),
+                                         KisSmudgeOverlayModeOptionData(),
+                                         [brushTip](const KisSmudgeOverlayModeOptionData &data) {
+                                             KisSmudgeOverlayModeOptionData result = data;
+                                             result.isChecked &=
+                                                 !brushTip->data().lightnessModeEnabled(brushTip->flags());
+                                             return result;
+                                         });
+    auto *gradient = model->addOption(QStringLiteral("Gradient"),
+                                      KisGradientOptionData(),
+                                      &kposu::bakeCurveOption<KisGradientOptionData>);
+    auto *hue = model->addOption(QStringLiteral("Hue"), KisHueOptionData(), &kposu::bakeCurveOption<KisHueOptionData>);
+    auto *saturation = model->addOption(QStringLiteral("Saturation"),
+                                        KisSaturationOptionData(),
+                                        &kposu::bakeCurveOption<KisSaturationOptionData>);
+    auto *value =
+        model->addOption(QStringLiteral("Value"), KisValueOptionData(), &kposu::bakeCurveOption<KisValueOptionData>);
+    auto *airbrush = model->addOption(QStringLiteral("Airbrush"), KisAirbrushOptionData());
+    auto *rate =
+        model->addOption(QStringLiteral("Rate"), KisRateOptionData(), &kposu::bakeCurveOption<KisRateOptionData>);
+    auto *texture = model->addOption(QStringLiteral("Texture"),
+                                     KisTextureOptionData(),
+                                     [resourcesInterface](const KisTextureOptionData &data) {
+                                         return kbbos::bakeTextureOption(data, resourcesInterface);
+                                     });
+    auto *strength = model->addOption(QStringLiteral("Strength"),
+                                      KisStrengthOptionData(),
+                                      &kposu::bakeCurveOption<KisStrengthOptionData>);
+
+    // written (baked) data that depends on another option
+    model->addDependency(QStringLiteral("SmudgeLength"), QStringLiteral("BrushTip"));
+    model->addDependency(QStringLiteral("SmudgeRadius"), QStringLiteral("SmudgeLength"));
+    model->addDependency(QStringLiteral("PaintThickness"), QStringLiteral("BrushTip"));
+    model->addDependency(QStringLiteral("OverlayMode"), QStringLiteral("BrushTip"));
+
+    brushOptionWidget()->setToolOptionsId(QStringLiteral("BrushTip"));
+
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createOpacityOptionWidget(kposu::curveCursor(opacity)), QStringLiteral("Opacity")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisSizeOptionWidget>(size), QStringLiteral("Size")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRatioOptionWidget(kposu::curveCursor(ratio)), QStringLiteral("Ratio")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisSpacingOptionWidget>(spacing), QStringLiteral("Spacing")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisMirrorOptionWidget>(mirror), QStringLiteral("Mirror")));
+
+    KisSmudgeLengthOptionWidget *smudgeLengthWidget = kposu::createOptionWidget<KisSmudgeLengthOptionWidget>(
+        smudgeLength,
+        m_d->brushPropertiesModel.isBrushPierced,
+        m_d->brushPropertiesModel.brushApplication.xform(kiszug::map_greater<int>(ALPHAMASK)));
+
+    addPaintOpOption(withToolOptionsId(smudgeLengthWidget, QStringLiteral("SmudgeLength")));
 
     lager::reader<std::tuple<qreal, qreal>> rangeReader =
         smudgeLengthWidget->useNewEngine()
@@ -76,38 +223,54 @@ KisColorSmudgeOpSettingsWidget::KisColorSmudgeOpSettingsWidget(QWidget* parent, 
                                        useNewEngine ? 1.0 : 3.0);
             });
 
-    KisCurveOptionWidget *smudgeRadiusWidget =
-        kpowu::createCurveOptionWidget(KisSmudgeRadiusOptionData(),
-                                      KisPaintOpOption::GENERAL,
-                                      lager::make_constant(true),
-                                      rangeReader);
+    KisCurveOptionWidget *smudgeRadiusWidget = new KisCurveOptionWidget(kposu::curveCursor(smudgeRadius),
+                                                                        KisPaintOpOption::GENERAL,
+                                                                        lager::make_constant(true),
+                                                                        rangeReader);
 
-    addPaintOpOption(smudgeRadiusWidget);
+    addPaintOpOption(withToolOptionsId(smudgeRadiusWidget, QStringLiteral("SmudgeRadius")));
 
-    addPaintOpOption(kpowu::createCurveOptionWidget(KisColorRateOptionData(), KisPaintOpOption::GENERAL));
+    addPaintOpOption(
+        withToolOptionsId(new KisCurveOptionWidget(kposu::curveCursor(colorRate), KisPaintOpOption::GENERAL),
+                          QStringLiteral("ColorRate")));
 
-    addPaintOpOption(kpowu::createOptionWidget<KisPaintThicknessOptionWidget>(KisPaintThicknessOptionData(), brushOptionWidget()->lightnessModeEnabled()));
+    addPaintOpOption(withToolOptionsId(
+        kposu::createOptionWidget<KisPaintThicknessOptionWidget>(paintThickness,
+                                                                 brushOptionWidget()->lightnessModeEnabled()),
+        QStringLiteral("PaintThickness")));
 
-    addPaintOpOption(kpowu::createRotationOptionWidget());
-    addPaintOpOption(kpowu::createOptionWidget<KisScatterOptionWidget>());
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRotationOptionWidget(kposu::curveCursor(rotation)), QStringLiteral("Rotation")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisScatterOptionWidget>(scatter), QStringLiteral("Scatter")));
 
-    addPaintOpOption(kpowu::createOptionWidget<KisSmudgeOverlayModeOptionWidget>(
-                         KisSmudgeOverlayModeOptionData(),
-                         brushOptionWidget()->
-                             lightnessModeEnabled()
-                             .map(std::logical_not{})));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisSmudgeOverlayModeOptionWidget>(
+                                           overlayMode,
+                                           brushOptionWidget()->lightnessModeEnabled().map(std::logical_not{})),
+                                       QStringLiteral("OverlayMode")));
 
-    addPaintOpOption(kpowu::createCurveOptionWidget(KisGradientOptionData(), KisPaintOpOption::GENERAL));
+    addPaintOpOption(
+        withToolOptionsId(new KisCurveOptionWidget(kposu::curveCursor(gradient), KisPaintOpOption::GENERAL),
+                          QStringLiteral("Gradient")));
 
-    addPaintOpOption(kpowu::createHueOptionWidget());
-    addPaintOpOption(kpowu::createSaturationOptionWidget());
-    addPaintOpOption(kpowu::createValueOptionWidget());
+    addPaintOpOption(withToolOptionsId(kpowu::createHueOptionWidget(kposu::curveCursor(hue)), QStringLiteral("Hue")));
+    addPaintOpOption(withToolOptionsId(kpowu::createSaturationOptionWidget(kposu::curveCursor(saturation)),
+                                       QStringLiteral("Saturation")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createValueOptionWidget(kposu::curveCursor(value)), QStringLiteral("Value")));
 
-    addPaintOpOption(kpowu::createOptionWidget<KisAirbrushOptionWidget>());
-    addPaintOpOption(kpowu::createRateOptionWidget());
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisAirbrushOptionWidget>(airbrush), QStringLiteral("Airbrush")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRateOptionWidget(kposu::curveCursor(rate)), QStringLiteral("Rate")));
 
-    addPaintOpOption(kpowu::createOptionWidget<KisTextureOptionWidget>(KisTextureOptionData(), resourcesInterface));
-    addPaintOpOption(kpowu::createCurveOptionWidget(KisStrengthOptionData(), KisPaintOpOption::COLOR, i18n("Weak"), i18n("Strong")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisTextureOptionWidget>(texture, resourcesInterface),
+                                       QStringLiteral("Texture")));
+    addPaintOpOption(withToolOptionsId(
+        new KisCurveOptionWidget(kposu::curveCursor(strength), KisPaintOpOption::COLOR, i18n("Weak"), i18n("Strong")),
+        QStringLiteral("Strength")));
+
+    setOptionsModel(model);
 }
 
 KisColorSmudgeOpSettingsWidget::~KisColorSmudgeOpSettingsWidget() { }
