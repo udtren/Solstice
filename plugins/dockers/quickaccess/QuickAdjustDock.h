@@ -16,14 +16,15 @@
 #include <QList>
 #include <QPointer>
 
+class KisAngleSelector;
 class KisCanvas2;
 class KisCanvasResourceProvider;
+class KisDoubleSliderSpinBox;
+class KisSliderSpinBox;
 class QComboBox;
 class QLabel;
-class QSlider;
 class QTimer;
 class QToolButton;
-class QuickRotationDial;
 
 class QuickAdjustDock : public QDockWidget, public KoCanvasObserverBase
 {
@@ -38,10 +39,10 @@ public:
 
 private Q_SLOTS:
     void syncFromCanvas();
-    void slotBrushSizeChanged(int value);
+    void slotBrushSizeChanged(qreal size);
     void slotBrushOpacityChanged(int value);
     void slotBrushFlowChanged(int value);
-    void slotBrushRotationChanged(int value);
+    void slotBrushRotationChanged(qreal angle);
     void slotBrushBlendChanged(int index);
     void slotLayerOpacityChanged(int value);
     void slotLayerBlendChanged(int index);
@@ -50,7 +51,7 @@ private Q_SLOTS:
     void slotBrushPresetChanged(const KisPaintOpPresetSP preset);
 
 private:
-    QSlider *createSliderRow(const QString &label, int minimum, int maximum, QLabel **valueLabel);
+    KisSliderSpinBox *createPercentSlider(const QString &prefix);
     void populateBlendModes(QComboBox *combo);
     QWidget *createColorHistoryWidget();
     QWidget *createBrushHistoryWidget();
@@ -69,8 +70,6 @@ private:
     void resizeToolOptionsPad();
     void positionToolOptionsPad();
     void returnToolOptionsDocker();
-    static int brushSizeToSlider(qreal size);
-    static qreal sliderToBrushSize(int value);
 
 protected:
     void moveEvent(QMoveEvent *event) override;
@@ -82,18 +81,12 @@ private:
     QPointer<KisCanvas2> m_canvas;
     KisCanvasResourceProvider *m_resourceProvider{nullptr};
     QTimer *m_syncTimer{nullptr};
-    QSlider *m_brushSize{nullptr};
-    QSlider *m_brushOpacity{nullptr};
-    QSlider *m_brushFlow{nullptr};
-    QSlider *m_brushRotation{nullptr};
+    KisDoubleSliderSpinBox *m_brushSize{nullptr};
+    KisSliderSpinBox *m_brushOpacity{nullptr};
+    KisSliderSpinBox *m_brushFlow{nullptr};
+    KisAngleSelector *m_brushRotation{nullptr};
     QWidget *m_brushRotationRow{nullptr};
-    QuickRotationDial *m_rotationDial{nullptr};
-    QSlider *m_layerOpacity{nullptr};
-    QLabel *m_brushSizeValue{nullptr};
-    QLabel *m_brushOpacityValue{nullptr};
-    QLabel *m_brushFlowValue{nullptr};
-    QLabel *m_brushRotationValue{nullptr};
-    QLabel *m_layerOpacityValue{nullptr};
+    KisSliderSpinBox *m_layerOpacity{nullptr};
     QComboBox *m_brushBlend{nullptr};
     QComboBox *m_layerBlend{nullptr};
     QWidget *m_colorHistoryGroup{nullptr};

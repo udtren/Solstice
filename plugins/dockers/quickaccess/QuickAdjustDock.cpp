@@ -7,6 +7,7 @@
 
 #include "QuickAdjustKeyController.h"
 
+#include <KisAngleSelector.h>
 #include <KisMainWindow.h>
 #include <KisViewManager.h>
 #include <KoColorSpace.h>
@@ -20,9 +21,11 @@
 #include <kis_canvas_resource_provider.h>
 #include <kis_config.h>
 #include <kis_image.h>
+#include <kis_image_config.h>
 #include <kis_node.h>
 #include <kis_node_manager.h>
 #include <kis_paint_device.h>
+#include <kis_slider_spin_box.h>
 #include <klocalizedstring.h>
 #include <ksharedconfig.h>
 
@@ -33,107 +36,21 @@
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QMouseEvent>
-#include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
 #include <QScreen>
 #include <QScrollArea>
 #include <QSignalBlocker>
 #include <QSizePolicy>
-#include <QSlider>
 #include <QStyle>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
-#include <QtMath>
-
-#include <cmath>
-#include <functional>
 
 namespace
 {
 bool colorHistoryResetForSession = false;
 }
-
-class QuickRotationDial : public QWidget
-{
-public:
-    explicit QuickRotationDial(QWidget *parent = nullptr)
-        : QWidget(parent)
-    {
-        setFixedSize(60, 60);
-    }
-
-    void setValue(int value)
-    {
-        value = qBound(0, value, 360);
-        if (m_value == value)
-            return;
-        m_value = value;
-        update();
-    }
-
-    std::function<void(int)> valueChanged;
-
-protected:
-    void paintEvent(QPaintEvent *) override
-    {
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing);
-        const QPointF center = rect().center();
-        const qreal radius = qMin(width(), height()) / 2.0 - 5.0;
-        painter.setPen(QPen(palette().mid().color(), 2));
-        painter.setBrush(palette().button());
-        painter.drawEllipse(center, radius, radius);
-        const qreal angle = qDegreesToRadians(qreal(m_value));
-        const QPointF endpoint(center.x() + (radius - 10.0) * std::sin(angle),
-                               center.y() - (radius - 10.0) * std::cos(angle));
-        painter.setPen(QPen(palette().highlight().color(), 3));
-        painter.drawLine(center, endpoint);
-        painter.setBrush(palette().highlight());
-        painter.drawEllipse(center, 3, 3);
-    }
-
-    void mousePressEvent(QMouseEvent *event) override
-    {
-        if (event->button() == Qt::LeftButton) {
-            m_dragging = true;
-            updateFromPosition(event->position());
-        }
-    }
-
-    void mouseMoveEvent(QMouseEvent *event) override
-    {
-        if (m_dragging)
-            updateFromPosition(event->position());
-    }
-
-    void mouseReleaseEvent(QMouseEvent *event) override
-    {
-        if (event->button() == Qt::LeftButton)
-            m_dragging = false;
-    }
-
-private:
-    void updateFromPosition(const QPointF &position)
-    {
-        const QPointF center = rect().center();
-        qreal angle = qRadiansToDegrees(std::atan2(position.x() - center.x(), center.y() - position.y()));
-        if (angle < 0)
-            angle += 360.0;
-        const int newValue = qRound(angle);
-        if (newValue == m_value)
-            return;
-        m_value = newValue;
-        update();
-        if (valueChanged)
-            valueChanged(m_value);
-    }
-
-    int m_value{0};
-    bool m_dragging{false};
-};
 
 namespace
 {
@@ -186,20 +103,31 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     auto *brushLayout = new QVBoxLayout(brushGroup);
     brushLayout->setContentsMargins(0, 0, 0, 0);
     brushLayout->setSpacing(4);
-    m_brushSize = createSliderRow(i18nc("@label", "Size"), 0, 100, &m_brushSizeValue);
-    m_brushOpacity = createSliderRow(i18nc("@label", "Opacity"), 0, 100, &m_brushOpacityValue);
-    m_brushFlow = createSliderRow(i18nc("@label", "Flow"), 0, 100, &m_brushFlowValue);
-    m_brushRotation = createSliderRow(i18nc("@label", "Rotation"), 0, 360, &m_brushRotationValue);
-    m_brushRotationRow = m_brushRotation->parentWidget();
-    m_rotationDial = new QuickRotationDial(m_brushRotationRow);
-    if (auto *rotationLayout = qobject_cast<QHBoxLayout *>(m_brushRotationRow->layout()))
-        rotationLayout->insertWidget(1, m_rotationDial);
-    m_rotationDial->valueChanged = [this](int value) {
-        m_brushRotation->setValue(value);
-    };
-    m_brushSize->parentWidget()->setVisible(adjustConfig.readEntry("SizeSliderEnabled", true));
-    m_brushOpacity->parentWidget()->setVisible(adjustConfig.readEntry("OpacitySliderEnabled", true));
-    m_brushFlow->parentWidget()->setVisible(adjustConfig.readEntry("FlowSliderEnabled", true));
+    // the same controls as Tool Options: the brush tip's diameter slider,
+    // value bars and the angle selector
+    m_brushSize = new KisDoubleSliderSpinBox(this);
+    m_brushSize->setRange(1.0, KisImageConfig(true).maxBrushSize(), 2);
+    m_brushSize->setExponentRatio(3.0);
+    m_brushSize->setSingleStep(1);
+    m_brushSize->setPrefix(i18nc("@label:slider, followed by the brush size", "Size: "));
+    m_brushSize->setSuffix(i18n(" px"));
+    m_brushOpacity = createPercentSlider(i18nc("@label:slider, followed by a percentage", "Opacity: "));
+    m_brushFlow = createPercentSlider(i18nc("@label:slider, followed by a percentage", "Flow: "));
+    m_brushRotationRow = new QWidget(this);
+    auto *rotationLayout = new QHBoxLayout(m_brushRotationRow);
+    rotationLayout->setContentsMargins(0, 0, 0, 0);
+    rotationLayout->setSpacing(4);
+    m_brushRotation = new KisAngleSelector(m_brushRotationRow);
+    m_brushRotation->setRange(0.0, 360.0);
+    m_brushRotation->setDecimals(0);
+    // one flip menu button instead of three keeps the row within the popup's
+    // width
+    m_brushRotation->setFlipOptionsMode(KisAngleSelector::FlipOptionsMode_MenuButton);
+    m_brushRotation->setToolTip(i18nc("@info:tooltip", "Brush rotation"));
+    rotationLayout->addWidget(m_brushRotation, 1);
+    m_brushSize->setVisible(adjustConfig.readEntry("SizeSliderEnabled", true));
+    m_brushOpacity->setVisible(adjustConfig.readEntry("OpacitySliderEnabled", true));
+    m_brushFlow->setVisible(adjustConfig.readEntry("FlowSliderEnabled", true));
 
     m_brushBlend = new QComboBox(brushGroup);
     populateBlendModes(m_brushBlend);
@@ -210,32 +138,32 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     auto *layerLayout = new QVBoxLayout(layerGroup);
     layerLayout->setContentsMargins(0, 0, 0, 0);
     layerLayout->setSpacing(4);
-    m_layerOpacity = createSliderRow(i18nc("@label", "Opacity"), 0, 100, &m_layerOpacityValue);
-    m_layerOpacity->parentWidget()->setVisible(adjustConfig.readEntry("LayerOpacitySliderEnabled", true));
+    m_layerOpacity = createPercentSlider(i18nc("@label:slider, followed by a percentage", "Layer Opacity: "));
+    m_layerOpacity->setVisible(adjustConfig.readEntry("LayerOpacitySliderEnabled", true));
     m_layerBlend = new QComboBox(layerGroup);
     populateBlendModes(m_layerBlend);
     if (compactPopup) {
-        layout->addWidget(m_brushSize->parentWidget());
-        layout->addWidget(m_brushOpacity->parentWidget());
-        layout->addWidget(m_brushFlow->parentWidget());
+        // the docker's brush and layer columns are not used here; left shown,
+        // they would cover the top of the panel and catch its mouse events
+        brushGroup->hide();
+        layerGroup->hide();
+        layout->addWidget(m_brushSize);
+        layout->addWidget(m_brushOpacity);
+        layout->addWidget(m_brushFlow);
         layout->addWidget(m_brushBlend);
-        m_brushRotation->hide();
-        if (auto *rotationLayout = qobject_cast<QHBoxLayout *>(m_brushRotationRow->layout())) {
-            rotationLayout->addStretch();
-            rotationLayout->addWidget(reset);
-        }
+        rotationLayout->addWidget(reset);
         layout->addWidget(m_brushRotationRow);
-        layout->addWidget(m_layerOpacity->parentWidget());
+        layout->addWidget(m_layerOpacity);
         layout->addWidget(m_layerBlend);
     } else {
-        layout->addWidget(m_brushSize->parentWidget());
-        brushLayout->addWidget(m_brushOpacity->parentWidget());
-        brushLayout->addWidget(m_brushFlow->parentWidget());
+        layout->addWidget(m_brushSize);
+        brushLayout->addWidget(m_brushOpacity);
+        brushLayout->addWidget(m_brushFlow);
         auto *brushFooter = new QHBoxLayout;
         brushFooter->addWidget(m_brushBlend, 1);
         brushFooter->addWidget(reset);
         brushLayout->addLayout(brushFooter);
-        layerLayout->addWidget(m_layerOpacity->parentWidget());
+        layerLayout->addWidget(m_layerOpacity);
         layerLayout->addWidget(m_layerBlend);
         auto *brushAndLayer = new QHBoxLayout;
         brushAndLayer->setSpacing(8);
@@ -318,15 +246,24 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
         triggerAction(QStringLiteral("toggle_gesture_recognition"));
     });
 
-    connect(m_brushSize, &QSlider::valueChanged, this, &QuickAdjustDock::slotBrushSizeChanged);
-    connect(m_brushOpacity, &QSlider::valueChanged, this, &QuickAdjustDock::slotBrushOpacityChanged);
-    connect(m_brushFlow, &QSlider::valueChanged, this, &QuickAdjustDock::slotBrushFlowChanged);
-    connect(m_brushRotation, &QSlider::valueChanged, this, &QuickAdjustDock::slotBrushRotationChanged);
+    connect(m_brushSize,
+            qOverload<double>(&KisDoubleSliderSpinBox::valueChanged),
+            this,
+            &QuickAdjustDock::slotBrushSizeChanged);
+    connect(m_brushOpacity,
+            qOverload<int>(&KisSliderSpinBox::valueChanged),
+            this,
+            &QuickAdjustDock::slotBrushOpacityChanged);
+    connect(m_brushFlow, qOverload<int>(&KisSliderSpinBox::valueChanged), this, &QuickAdjustDock::slotBrushFlowChanged);
+    connect(m_brushRotation, &KisAngleSelector::angleChanged, this, &QuickAdjustDock::slotBrushRotationChanged);
     connect(m_brushBlend,
             qOverload<int>(&QComboBox::currentIndexChanged),
             this,
             &QuickAdjustDock::slotBrushBlendChanged);
-    connect(m_layerOpacity, &QSlider::valueChanged, this, &QuickAdjustDock::slotLayerOpacityChanged);
+    connect(m_layerOpacity,
+            qOverload<int>(&KisSliderSpinBox::valueChanged),
+            this,
+            &QuickAdjustDock::slotLayerOpacityChanged);
     connect(m_layerBlend,
             qOverload<int>(&QComboBox::currentIndexChanged),
             this,
@@ -390,22 +327,15 @@ void QuickAdjustDock::unsetCanvas()
     setControlsEnabled(false);
 }
 
-QSlider *QuickAdjustDock::createSliderRow(const QString &label, int minimum, int maximum, QLabel **valueLabel)
+KisSliderSpinBox *QuickAdjustDock::createPercentSlider(const QString &prefix)
 {
-    auto *row = new QWidget(this);
-    auto *layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(6);
-    auto *name = new QLabel(label, row);
-    name->hide();
-    auto *slider = new QSlider(Qt::Horizontal, row);
-    slider->setRange(minimum, maximum);
-    *valueLabel = new QLabel(row);
-    (*valueLabel)->setAlignment(Qt::AlignCenter);
-    (*valueLabel)->setMinimumWidth(fontMetrics().horizontalAdvance(QStringLiteral("1000%")));
-    layout->addWidget(name);
-    layout->addWidget(slider, 1);
-    layout->addWidget(*valueLabel);
+    auto *slider = new KisSliderSpinBox(this);
+    // the width comes from the layout, not the text, so that the brush and
+    // layer columns of the docker are equally wide
+    slider->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+    slider->setRange(0, 100);
+    slider->setPrefix(prefix);
+    slider->setSuffix(QStringLiteral("%"));
     return slider;
 }
 
@@ -826,17 +756,6 @@ void QuickAdjustDock::setControlsEnabled(bool enabled)
         widget()->setEnabled(enabled);
 }
 
-int QuickAdjustDock::brushSizeToSlider(qreal size)
-{
-    size = qBound<qreal>(1.0, size, 1000.0);
-    return size <= 100.0 ? qRound((size - 1.0) * 70.0 / 100.0) : qRound(70.0 + (size - 100.0) * 30.0 / 900.0);
-}
-
-qreal QuickAdjustDock::sliderToBrushSize(int value)
-{
-    return value <= 70 ? qreal(1 + value * 100 / 70) : qreal(100 + (value - 70) * 900 / 30);
-}
-
 void QuickAdjustDock::syncFromCanvas()
 {
     if (!m_canvas || !m_canvas->viewManager())
@@ -852,16 +771,16 @@ void QuickAdjustDock::syncFromCanvas()
         const QSignalBlocker flowBlocker(m_brushFlow);
         const QSignalBlocker rotationBlocker(m_brushRotation);
         const QSignalBlocker brushBlendBlocker(m_brushBlend);
-        m_brushSize->setValue(brushSizeToSlider(provider->size()));
-        m_brushOpacity->setValue(qRound(provider->opacity() * 100.0));
-        m_brushFlow->setValue(qRound(provider->flow() * 100.0));
-        m_brushRotation->setValue(qRound(provider->brushRotation()));
-        m_rotationDial->setValue(m_brushRotation->value());
+        // set only changed values: the timer must not reset a value being typed
+        if (qAbs(m_brushSize->value() - provider->size()) >= 0.005)
+            m_brushSize->setValue(provider->size());
+        if (m_brushOpacity->value() != qRound(provider->opacity() * 100.0))
+            m_brushOpacity->setValue(qRound(provider->opacity() * 100.0));
+        if (m_brushFlow->value() != qRound(provider->flow() * 100.0))
+            m_brushFlow->setValue(qRound(provider->flow() * 100.0));
+        if (qRound(m_brushRotation->angle()) != qRound(provider->brushRotation()))
+            m_brushRotation->setAngle(qRound(provider->brushRotation()));
         selectBlendMode(m_brushBlend, provider->currentCompositeOp());
-        m_brushSizeValue->setText(QString::number(qRound(provider->size())));
-        m_brushOpacityValue->setText(QStringLiteral("%1%").arg(m_brushOpacity->value()));
-        m_brushFlowValue->setText(QStringLiteral("%1%").arg(m_brushFlow->value()));
-        m_brushRotationValue->setText(QStringLiteral("%1°").arg(m_brushRotation->value()));
     }
 
     const KisNodeSP node = m_canvas->viewManager()->activeNode();
@@ -870,8 +789,8 @@ void QuickAdjustDock::syncFromCanvas()
     if (node) {
         const QSignalBlocker opacityBlocker(m_layerOpacity);
         const QSignalBlocker blendBlocker(m_layerBlend);
-        m_layerOpacity->setValue(qRound(node->opacity() * 100.0 / 255.0));
-        m_layerOpacityValue->setText(QStringLiteral("%1%").arg(m_layerOpacity->value()));
+        if (m_layerOpacity->value() != qRound(node->opacity() * 100.0 / 255.0))
+            m_layerOpacity->setValue(qRound(node->opacity() * 100.0 / 255.0));
         selectBlendMode(m_layerBlend, node->compositeOpId());
     }
     updateStatusButtons();
@@ -879,33 +798,28 @@ void QuickAdjustDock::syncFromCanvas()
     m_syncing = false;
 }
 
-void QuickAdjustDock::slotBrushSizeChanged(int value)
+void QuickAdjustDock::slotBrushSizeChanged(qreal size)
 {
-    const qreal size = sliderToBrushSize(value);
-    m_brushSizeValue->setText(QString::number(qRound(size)));
     if (!m_syncing && m_canvas)
         m_canvas->viewManager()->canvasResourceProvider()->setSize(size);
 }
 
 void QuickAdjustDock::slotBrushOpacityChanged(int value)
 {
-    m_brushOpacityValue->setText(QStringLiteral("%1%").arg(value));
     if (!m_syncing && m_canvas)
         m_canvas->viewManager()->canvasResourceProvider()->setOpacity(value / 100.0);
 }
 
 void QuickAdjustDock::slotBrushFlowChanged(int value)
 {
-    m_brushFlowValue->setText(QStringLiteral("%1%").arg(value));
     if (!m_syncing && m_canvas)
         m_canvas->viewManager()->canvasResourceProvider()->setFlow(value / 100.0);
 }
 
-void QuickAdjustDock::slotBrushRotationChanged(int value)
+void QuickAdjustDock::slotBrushRotationChanged(qreal angle)
 {
-    m_brushRotationValue->setText(QStringLiteral("%1°").arg(value));
     if (!m_syncing && m_canvas)
-        m_canvas->viewManager()->canvasResourceProvider()->setBrushRotation(value);
+        m_canvas->viewManager()->canvasResourceProvider()->setBrushRotation(qRound(angle));
 }
 
 void QuickAdjustDock::slotBrushBlendChanged(int index)
@@ -917,7 +831,6 @@ void QuickAdjustDock::slotBrushBlendChanged(int index)
 
 void QuickAdjustDock::slotLayerOpacityChanged(int value)
 {
-    m_layerOpacityValue->setText(QStringLiteral("%1%").arg(value));
     if (!m_syncing && m_canvas && m_canvas->viewManager()->activeNode())
         m_canvas->viewManager()->nodeManager()->setNodeOpacity(m_canvas->viewManager()->activeNode(),
                                                                qRound(value * 255.0 / 100.0));

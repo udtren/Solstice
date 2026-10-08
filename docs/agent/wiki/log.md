@@ -273,3 +273,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Pitfall: clang-format re-sorts include blocks and rewraps the public
   constructor of upstream files; `restore_upstream`-style fixes put the HEAD
   include order back and append new includes.
+
+## 2026-10-08 ingest: Quick Adjust controls as in Tool Options
+
+- `quick-access.md`: the HueSVC popup and Quick Brush Adjustments use
+  `KisDoubleSliderSpinBox`, `KisSliderSpinBox` and `KisAngleSelector`
+  instead of `QSlider` rows and a custom dial; rotation still drives the
+  `brushRotation` resource. README main image replaced.
+- Pitfall: a child widget left out of a layout keeps the default geometry
+  (0, 0, 100 × 30) and stays shown with its parent, above earlier siblings.
+  The popup's unused docker columns covered the Size bar's left part and
+  took its clicks; hide such widgets. An offscreen probe test (widget
+  geometry, simulated clicks, `grab()`) separated this from the slider's own
+  behavior before the fix.
+- A long prefix in a value bar widens its layout column; give such bars a
+  horizontal `QSizePolicy::Ignored` when columns must stay equal.

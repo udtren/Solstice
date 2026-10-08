@@ -13,6 +13,13 @@ buttons and their separators are omitted from the popup. Opening either brush
 or layer blending-mode list keeps the HueSVC popup open while the list is in
 use.
 
+The popup and the Quick Brush Adjustments docker use the same controls as Tool
+Options: value bars that show their name and value (double-click to type a
+value, Shift + drag for fine steps) for size, opacity, flow and layer opacity,
+and in the popup the angle dial and value of Tool Options for brush rotation,
+with its flip options in one menu button so the row fits the panel. The size bar covers the full brush size range and moves
+in finer steps at small sizes, like the brush tip's Diameter.
+
 ## Arranging items
 
 - **Ctrl + drag** an item to move it to another cell of the palette without

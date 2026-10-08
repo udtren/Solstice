@@ -147,10 +147,25 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   the rotation toggle or startup setting back to the standalone Quick Brush
   Adjustments docker unless explicitly requested. The popup adjustment panel
   is a fixed-width single column ordered as brush size, opacity, flow, blend
-  mode, rotation dial/value/reset, layer opacity, layer blend mode, and the
-  2×2 pressure toggles. Do not reuse the standalone docker's two-column
+  mode, rotation and reset, layer opacity, layer blend mode, and the 2×2
+  pressure toggles. Do not reuse the standalone docker's two-column
   brush/layer layout there, and do not add its status-button strip or separator
   frames to the popup.
+- The adjustment controls are the Tool Options widgets (user request
+  2026-10-08): size is a `KisDoubleSliderSpinBox` set up like the auto tip's
+  Diameter (1 to `KisImageConfig::maxBrushSize()`, exponent 3, " px");
+  opacity, flow and layer opacity are `KisSliderSpinBox` 0–100 % with the
+  name as prefix (the panel has no labels); rotation is a `KisAngleSelector`
+  (0–360°, whole degrees, `FlipOptionsMode_MenuButton`: with three flip
+  buttons and the reset button the row needs 216–233 px, more than the
+  default 210 px of the panel) that still drives the canvas resource
+  `brushRotation`, not the tip's Angle. The percent bars have a horizontal
+  `QSizePolicy::Ignored`, so their prefix text does not widen a column (the
+  docker's brush and layer columns stay equal). In the popup the docker's
+  `brushGroup` and `layerGroup` are hidden: unused but shown, they sit at
+  the panel's top-left (100 × 30 px) above the Size bar and took its clicks. `syncFromCanvas()` runs every
+  200 ms, so it sets a control only when its value differs; otherwise it
+  would reset a value being typed.
 - Match the original HueSVC popup lifecycle: the parent is a frameless,
   always-on-top `Qt::Tool`, not a `Qt::Popup`, and closes when the pointer
   leaves it. A combo-box drop-down is a separate `Qt::Popup`; keep HueSVC open
