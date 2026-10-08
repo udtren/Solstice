@@ -871,8 +871,10 @@ JPEGXLImport::convert(KisDocument *document, QIODevice *io, KisPropertiesConfigu
                         errFile << "JxlDecoderGetFrameName failed";
                         break;
                     }
-                    dbgFile << "\tlayer name:" << QString(layerNameRaw);
-                    layerName = QString(layerNameRaw);
+                    // Solstice: the buffer holds the UTF-8 name plus its NUL
+                    // terminator; Qt 6's QString(QByteArray) keeps the NUL.
+                    layerName = QString::fromUtf8(layerNameRaw.constData(), int(d.m_header.name_length));
+                    dbgFile << "\tlayer name:" << layerName;
                 } else {
                     layerName = QString("Layer");
                 }

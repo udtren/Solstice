@@ -1203,6 +1203,9 @@ void StoryboardModel::slotFrameRenderCancelled(int frame)
 
 void StoryboardModel::slotCommentDataChanged()
 {
+    // Solstice: layoutChanged() must follow layoutAboutToBeChanged() (Qt 6's
+    // QAbstractItemModelTester reports the unpaired signal).
+    emit(layoutAboutToBeChanged());
     m_commentList = m_commentModel->m_commentList;
     emit(layoutChanged());
 }

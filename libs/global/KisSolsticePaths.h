@@ -28,7 +28,7 @@
  * profile folder), SOLSTICE_LEGACY_CONFIG_DIR and SOLSTICE_LEGACY_RESOURCE_DIR
  * (the Krita profile to import). In test mode
  * (QStandardPaths::setTestModeEnabled) the default profile is
- * %APPDATA%\qttest\Solstice.
+ * %APPDATA%\qttest\<test program>\Solstice, one per test program.
  *
  * Usable before any QCoreApplication exists.
  */

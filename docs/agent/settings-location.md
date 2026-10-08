@@ -184,8 +184,9 @@ application object):
 
 - `root()`: `%APPDATA%\Solstice`, from `SHGetKnownFolderPath(
   FOLDERID_RoamingAppData)`. It needs no Qt application. In test mode
-  (`QStandardPaths::isTestModeEnabled()`) it is a `qttest` subfolder, so tests
-  never touch real data. A development override, `SOLSTICE_PROFILE_ROOT`,
+  (`QStandardPaths::isTestModeEnabled()`) it is `qttest\<test program>\Solstice`
+  (since 2026-10-08; before, one `qttest\Solstice` shared by all tests), so
+  tests never touch real data or each other's resources. A development override, `SOLSTICE_PROFILE_ROOT`,
   allows manual trials in a scratch folder.
 - `configDir()`, `logDir()`, `resourceDir()`, `cacheDir()`, and
   `configFile(name)` for absolute rc paths.
@@ -295,7 +296,10 @@ Overrides for trials and tests:
 - `SOLSTICE_LEGACY_CONFIG_DIR` and `SOLSTICE_LEGACY_RESOURCE_DIR` (the
   Krita profile to import).
 
-In test mode the profile is `%APPDATA%\qttest\Solstice`.
+In test mode the profile is `%APPDATA%\qttest\<test program>\Solstice`. A shared
+`qttest\Solstice` (until 2026-10-08) let tests inherit each other's resource
+folders and database: `KisBrushModelTest` failed because an earlier test had
+created the resource folder without `brushes\`.
 
 **kritarc defaults.**
 

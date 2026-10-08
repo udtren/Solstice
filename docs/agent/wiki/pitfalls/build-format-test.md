@@ -89,20 +89,46 @@ wrong anyway.
     `QFileInfo("")` as the current directory (`autoDetectStorageType()` in
     `KisResourceStorage.cpp`). `TestResourceStorage` now expects the
     designed result, an invalid memory storage.
-- **Known failing tests (2026-10-07)**, from `ctest -j 12 -E
-  "libs-ui|kis_kra_saver_test|KisGpuSaveTest"` (291 tests, 13 failed). All of
-  these also fail without the MIME change:
-  - `TestSvgParser`, `TestSvgParserCloned`, `TestSvgParserRoundTrip`: mesh
-    gradient renders differ from the reference images (5 each);
-  - `KisBrushModelTest` (initTestCase);
-  - `psd_cos_parser_test` (map and string round trips);
-  - `kis_cage_transform_worker_test` (2 image comparisons);
-  - `kis_transform_mask_test` (two rects one pixel off);
-  - `StoryboardModelTest` (7);
-  - `kis_tiff_test` (`testFiles`);
-  - `kis_jpegxl_test` (CMYK with layers, multipage).
-  - `TestFallBackColorTransformation` and `TestKisSwatchGroup` pass alone
-    but fail in the parallel run (120-150 s each).
+- **Known failing tests (2026-10-08)**, from `ctest -j 12 -E
+  "libs-ui|kis_kra_saver_test|KisGpuSaveTest"` (291 tests): 5 failed, down
+  from 13 on 2026-10-07. Remaining, not investigated further:
+  - `TestSvgParser`, `TestSvgParserCloned`, `TestSvgParserRoundTrip`: 5 mesh
+    gradient renders each, 7-17 levels off the reference images (the
+    rasterization approximates; the references were made elsewhere);
+  - `kis_cage_transform_worker_test`: the two unity cages produce one more
+    opaque pixel at the right edge (x = 299) than the reference;
+  - `kis_tiff_test` (`testFiles`): `quad-strip-jpeg.tif` and
+    `quad-tile-jpeg.tif` differ in one pixel each by a few levels (the JPEG
+    decoder build).
+
+  Fixed on 2026-10-08 (cause, fix):
+  - `KisBrushModelTest` (initTestCase): all tests shared one test profile,
+    `qttest\Solstice`; now one per test program
+    (`KisSolsticePaths::profileRoot()`, `docs/agent/settings-location.md`).
+  - `psd_cos_parser_test` (string round trips): Qt 6's UTF-16BE codec writes
+    no byte order mark, which PSD text engine strings need and the parser
+    requires; `KisCosWriter` (`writeString()`) now writes FE FF and the
+    UTF-16BE bytes itself. This also affected PSD export of text.
+  - `kis_jpegxl_test` (CMYK with layers, multipage): JXL frame names kept
+    their NUL terminator, because Qt 6's `QString(QByteArray)` does not stop
+    at NUL; `JPEGXLImport.cpp` decodes the name with its length.
+  - `StoryboardModelTest`: `QAbstractItemModelTester` reported
+    `layoutChanged()` without `layoutAboutToBeChanged()`
+    (`StoryboardModel::slotCommentDataChanged()`), and comment insertion and
+    removal that returned between `begin...Rows()` and `end...Rows()` for an
+    invalid position (`CommentModel.cpp`).
+  - `kis_transform_mask_test`: Qt 6's `QRectF::toRect()` rounds origin and
+    size, Qt 5 rounded the corners; the test compares with Qt 5's rounding.
+  - `TestKisSwatchGroup`, `TestFallBackColorTransformation`: 134 s and 108 s
+    alone, time-outs in parallel. Their `QTEST_GUILESS_MAIN` did not set
+    `KRITA_PLUGIN_PATH`; `KoJsonTrader` then found no plugin folder and
+    `QDirIterator` scanned the working directory recursively, loading every
+    `krita*` file in `_build/bin` as a plugin. With `SIMPLE_TEST_MAIN`: 1 s
+    and 0 s. Any test main must set `KRITA_PLUGIN_PATH`.
+  - `kis_linked_pattern_manager_test` failed once in the parallel run (no
+    output) and passed alone; it shared the test profile too.
+  - `TestCompositeOpInversion` (598 cases) takes about 200 s alone and 270-290
+    s in the parallel run, close to the 300 s limit.
 
   With the MIME database, `TestSvgParserRoundTrip` went from 8 failures to 5
   and `kis_jpegxl_test` from 3 to 2. Fontconfig warned "Cannot load default

@@ -27,6 +27,18 @@
 #include "KisDumbTransformMaskParams.h"
 #include "config-limit-long-tests.h"
 
+namespace
+{
+/// QRectF::toRect() as in Qt 5: the top-left and bottom-right corners rounded.
+/// Qt 6 rounds the origin and the size instead, so the reference rects of
+/// these tests (made with Qt 5) differed by a pixel.
+QRect roundedRect(const QRectF &rect)
+{
+    return QRect(QPoint(qRound(rect.x()), qRound(rect.y())),
+                 QPoint(qRound(rect.x() + rect.width()) - 1, qRound(rect.y() + rect.height()) - 1));
+}
+} // namespace
+
 void KisTransformMaskTest::initTestCase()
 {
     TestUtil::registerTransformMaskStubs();
@@ -67,7 +79,7 @@ void KisTransformMaskTest::testSafeTransform()
     ref << QPoint(236, 403);
     ref << QPoint(284, 410);
     QCOMPARE(fwdPoly.toPolygon(), ref);
-    QCOMPARE(fwdRect.toRect(), QRect(10,403,274,210));
+    QCOMPARE(roundedRect(fwdRect), QRect(10,403,274,210));
 
     ref.clear();
     ref << QPoint(512, 1024);
@@ -76,7 +88,7 @@ void KisTransformMaskTest::testSafeTransform()
     ref << QPoint(0, 1024);
     ref << QPoint(512, 1024);
     QCOMPARE(bwdPoly.toPolygon(), ref);
-    QCOMPARE(bwdRect.toRect(), QRect(0, 994, 1198, 584));
+    QCOMPARE(roundedRect(bwdRect), QRect(0, 994, 1198, 584));
 
 /*
     QImage image(2500, 2500, QImage::Format_ARGB32);
@@ -179,7 +191,7 @@ void KisTransformMaskTest::testSafeTransformSingleVanishingPoint()
     ref << QPoint(629, 847);
     ref << QPoint(765, 648);
     QCOMPARE(fwdPoly.toPolygon(), ref);
-    QCOMPARE(fwdRect.toRect(), QRect(629,648,972,199));
+    QCOMPARE(roundedRect(fwdRect), QRect(629,648,972,199));
 
     ref.clear();
     ref << QPoint(1536,1024);
@@ -188,9 +200,9 @@ void KisTransformMaskTest::testSafeTransformSingleVanishingPoint()
     ref << QPoint(1536,1536);
     ref << QPoint(1536,1024);
     QCOMPARE(bwdPoly.toPolygon(), ref);
-    QCOMPARE(bwdRect.toRect(), QRect(1398,1024,650,512));
+    QCOMPARE(roundedRect(bwdRect), QRect(1398,1024,650,512));
 
-    QCOMPARE(bwdNastyRect.toRect(), QRect(1463,0,585,1232));
+    QCOMPARE(roundedRect(bwdNastyRect), QRect(1463,0,585,1232));
 }
 
 bool doPartialTests(const QString &prefix, KisImageSP image, KisLayerSP paintLayer,

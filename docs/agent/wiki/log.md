@@ -133,3 +133,10 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 - `pitfalls/build-format-test.md`: why tests warned "Cannot load default
   config file" and how the test mains now find the installed `fonts.conf`.
+
+## 2026-10-08 ingest: known failing tests 13 -> 5
+
+- `pitfalls/build-format-test.md`: the remaining failures, and the causes
+  and fixes of eight others (shared test profile, Qt 6 UTF-16 byte order
+  mark and NUL handling, model signal pairing, `QRectF::toRect()`, test mains
+  without `KRITA_PLUGIN_PATH`).

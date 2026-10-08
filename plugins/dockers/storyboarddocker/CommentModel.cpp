@@ -101,16 +101,17 @@ Qt::ItemFlags StoryboardCommentModel::flags(const QModelIndex & index) const
 
 bool StoryboardCommentModel::insertRows(int position, int rows, const QModelIndex &/*parent*/)
 {
+    // Solstice: validate before beginInsertRows(); returning between begin and
+    // end left the model's insertion in flight.
+    if (rows <= 0 || position < 0 || position > m_commentList.size()) {
+        return false;
+    }
     beginInsertRows(QModelIndex(), position, position+rows-1);
 
     for (int row = 0; row < rows; ++row) {
         StoryboardComment newcomment;
         newcomment.name = "Comment";
         newcomment.visibility = true;
-
-        if (position < 0 || position > m_commentList.size()) {
-            return false;
-        }
         m_commentList.insert(position, newcomment);
     }
 
@@ -121,15 +122,13 @@ bool StoryboardCommentModel::insertRows(int position, int rows, const QModelInde
 
 bool StoryboardCommentModel::removeRows(int position, int rows, const QModelIndex &/*parent*/)
 {
-    if (rows <= 0) {
+    // Solstice: validate before beginRemoveRows() (see insertRows()).
+    if (rows <= 0 || position < 0 || position + rows > m_commentList.size()) {
         return false;
     }
     beginRemoveRows(QModelIndex(), position, position+rows-1);
 
     for (int row = 0; row < rows; ++row) {
-        if (position < 0 || position >= m_commentList.size()) {
-            return false;
-        }
         m_commentList.removeAt(position);
     }
     endRemoveRows();

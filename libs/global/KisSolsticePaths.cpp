@@ -5,6 +5,7 @@
 
 #include "KisSolsticePaths.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -39,6 +40,23 @@ QString join(const QString &dir, const QString &fileName)
     return QDir(dir).filePath(fileName);
 }
 
+/// The running executable's name without extension, also before a
+/// QCoreApplication exists (Windows).
+QString executableBaseName()
+{
+    if (QCoreApplication::instance()) {
+        return QFileInfo(QCoreApplication::applicationFilePath()).completeBaseName();
+    }
+#ifdef Q_OS_WIN
+    wchar_t buffer[MAX_PATH];
+    const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+    if (length > 0 && length < MAX_PATH) {
+        return QFileInfo(QString::fromWCharArray(buffer, int(length))).completeBaseName();
+    }
+#endif
+    return QStringLiteral("test");
+}
+
 QString environmentPath(const char *name)
 {
     const QString value = qEnvironmentVariable(name);
@@ -64,7 +82,11 @@ QString KisSolsticePaths::profileRoot()
     }
     QString root = roamingAppData();
     if (QStandardPaths::isTestModeEnabled()) {
-        root = join(root, QStringLiteral("qttest"));
+        // One profile per test program, inside its own test data folder
+        // (like Krita's AppDataLocation in test mode): tests running in
+        // parallel or one after another must not share resources, the
+        // resource database or kritarc.
+        root = join(join(root, QStringLiteral("qttest")), executableBaseName());
     }
     return join(root, QStringLiteral("Solstice"));
 }

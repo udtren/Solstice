@@ -39,9 +39,18 @@ void writeString(QIODevice &dev, const QVariant val, const QString name) {
         dev.write((name+" "+newString).toLatin1());
     } else {
         newString.replace(QChar(0x0a), QChar(0x0d));
-        QTextCodec *Utf16Codec = QTextCodec::codecForName("UTF-16BE");
         dev.write((name+" (").toLatin1());
-        QByteArray unicode = Utf16Codec->fromUnicode(newString);
+        // Solstice: text engine strings are UTF-16BE with a byte order mark,
+        // which the parser requires. Qt 5's UTF-16BE codec wrote the mark;
+        // the Qt 6 compatibility codec does not, so build the bytes here.
+        QByteArray unicode;
+        unicode.reserve(2 + 2 * newString.size());
+        unicode.append(char(0xFE));
+        unicode.append(char(0xFF));
+        for (const QChar ch : std::as_const(newString)) {
+            unicode.append(char(ch.unicode() >> 8));
+            unicode.append(char(ch.unicode() & 0xFF));
+        }
         QByteArray escaped = QByteArray();
 
         char *c = unicode.begin();

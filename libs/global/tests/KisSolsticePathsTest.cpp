@@ -38,7 +38,7 @@ void KisSolsticePathsTest::testProfileLayout()
 {
     // docs/agent/settings-location.md: %APPDATA%\Solstice\{config,logs,resources,cache}
     const QString root = KisSolsticePaths::profileRoot();
-    QVERIFY(root.endsWith(QStringLiteral("qttest/Solstice")));
+    QVERIFY2(root.endsWith(QStringLiteral("qttest/KisSolsticePathsTest/Solstice")), qPrintable(root));
     QCOMPARE(KisSolsticePaths::configDir(), root + QStringLiteral("/config"));
     QCOMPARE(KisSolsticePaths::configFilePath("kritadisplayrc"), root + QStringLiteral("/config/kritadisplayrc"));
     QCOMPARE(KisSolsticePaths::logDir(), root + QStringLiteral("/logs"));
