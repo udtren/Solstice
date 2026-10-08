@@ -223,6 +223,17 @@ KisCurveOptionWidget::KisCurveOptionWidget(lager::cursor<KisCurveOptionDataCommo
         m_curveOptionWidget->lblCurveMode->setVisible(false);
     }
 
+    // Solstice: an option without a checkbox in the editor's list (Opacity,
+    // Flow) has its strength value and Enable Pen Settings shown in Tool
+    // Options (docs/agent/tool-options-brush.md)
+    if (!isCheckable()) {
+        addToolOptionsParameter(QStringLiteral("Strength"), label(), m_curveOptionWidget->strengthSlider);
+        addToolOptionsParameter(
+            QStringLiteral("PenSettings"),
+            i18nc("@option:check in Tool Options, %1 is an option such as Opacity", "%1 Pen Settings", label()),
+            m_curveOptionWidget->checkBoxUseCurve);
+    }
+
     m_d->model.optionData.bind(std::bind(&KisCurveOptionWidget::emitSettingChanged, this));
 }
 

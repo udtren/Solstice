@@ -46,12 +46,22 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 - **[Brush Editor](docs/brush-editor.md)**: Pixel Brush and Deform options
   live in a shared model, so one change updates only that option in the
   preset.
+- **[Brush options in Tool Options](docs/brush-editor.md#brush-options-in-tool-options)**:
+  as with Clip Studio Paint's eye marks, an eye next to a Brush Editor
+  setting shows it in the Tool Options docker, under the current brush's
+  stroke preview.
 
 <img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="480">
 
 The Brush Presets docker grouped by bundle, with the Engines filter open. See
 the [Brush Presets guide](docs/brush-stroke-preview.md) for preview behavior,
 filters and grouping.
+
+<img src="docs/images/tool-options-brush.png" alt="Brush Editor with eyes on brush tip settings, and the Brush section of Tool Options showing them under the stroke preview" width="480">
+
+Eyes in the Brush Editor choose the settings that the Tool Options docker
+shows in its Brush section. See
+[Brush options in Tool Options](docs/brush-editor.md#brush-options-in-tool-options).
 
 ## Development and downloads
 

@@ -61,6 +61,7 @@ shows the control in the Brush section, as a copy kept in sync with it.
 | --- | --- |
 | Brush Tip (`BrushTip`, Pixel Brush) | Auto tip: `Diameter` (`inputRadius`), `Ratio` (`inputRatio`), `Angle` (`inputAngle`), `Density` (`density`), `Spacing` (`spacingWidget`, with Auto); Predefined tip: `PredefinedSize` (`brushSizeSpinBox`), `PredefinedAngle` (`brushRotationAngleSelector`), `PredefinedSpacing` (`brushSpacingSelectionWidget`); with SupportsPrecision: `Precision` (`sliderPrecision`), `AutoPrecision` (`autoPrecisionCheckBox`) |
 | Blending Mode (`CompositeOp`) | `BlendingMode` (the list, as a blending mode combo box) |
+| Curve options without a checkbox in the list (Pixel Brush Opacity, Flow, Masked Brush Opacity and Flow; Deform Opacity) | `Strength` (the strength bar at the top of the page, labeled with the option's name), `PenSettings` (Enable Pen Settings); registered by `KisCurveOptionWidget` when `isCheckable()` is false. A checkable curve option is switched by its row's checkbox instead (phase 3a) |
 | Painting Mode (`PaintingMode`) | `PaintingMode` (the group box's radio buttons) |
 | Texture (`Texture`) | `Scale` (`scaleSlider`) |
 
@@ -144,7 +145,9 @@ checks that the ids are unique.
 5. Rectangle, Ellipse, Polygon and Polyline tools show the Brush section at
    the end of their options.
 6. Eyes survive a restart.
-7. The section starts with the current brush's stroke preview and name;
+7. Opacity and Flow have eyes on their strength bar and on Enable Pen
+   Settings; both work from Tool Options (2026-10-08, user request).
+8. The section starts with the current brush's stroke preview and name;
    switching brushes updates it, a modified brush shows "*", and it
    collapses with the section.
 

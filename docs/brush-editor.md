@@ -44,7 +44,9 @@ Brush Editor; the curves and other details stay in the Brush Editor.
 Some settings inside the pages have an eye too, in front of their label:
 the Pixel Brush tip's Diameter, Ratio, Angle, Density and Spacing (or Size,
 Angle and Spacing for an image tip), Precision, the Blending Mode, the
-Painting Mode and the Texture Scale. With the eye on, the setting appears in
+Painting Mode and the Texture Scale, and for Opacity and Flow the strength
+bar at the top of the page and **Enable Pen Settings**. With the eye on, the
+setting appears in
 the **Brush** section with the same control, and changes in either place
 apply to both. Tip settings appear only for the kind of tip the brush uses.
 The Rectangle, Ellipse, Polygon and Polyline tools show the section too, at

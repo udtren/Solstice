@@ -21,6 +21,7 @@
 #include <KisResourceModelProvider.h>
 #include <KisResourceTypes.h>
 #include <KisSizeOptionData.h>
+#include <KisStandardOptionData.h>
 #include <KisTextureOptionData.h>
 #include <KisToolOptionsBrushItems.h>
 #include <KoCompositeOpRegistry.h>
@@ -142,8 +143,15 @@ void KisToolOptionsBrushTest::testShowableOptions()
     QCOMPARE(QSet<QString>(ids.begin(), ids.end()).size(), ids.size());
     QVERIFY(ids.contains(QStringLiteral("PaintingMode")));
 
-    // no checkbox and no page parameters
-    QVERIFY(!ids.contains(QStringLiteral("Opacity")));
+    // Opacity has no checkbox; its Enable Pen Settings is a page parameter
+    QVERIFY(ids.contains(QStringLiteral("Opacity")));
+    QVERIFY(
+        !editor.row(QStringLiteral("Opacity")).data(__CategorizedListModelBase::isShowableInToolOptionsRole).toBool());
+    // a checkable curve option is switched by its row's checkbox instead
+    Q_FOREACH (const KisPaintOpOption::ToolOptionsParameter &p,
+               editor.option(QStringLiteral("Size"))->toolOptionsParameters()) {
+        QVERIFY(p.id != QStringLiteral("PenSettings"));
+    }
     // page parameters only (phase 3b), no row eye
     QVERIFY(ids.contains(QStringLiteral("BrushTip")));
     QVERIFY(
@@ -348,6 +356,9 @@ void KisToolOptionsBrushTest::testParametersRegistered()
           QStringLiteral("Precision"),
           QStringLiteral("AutoPrecision")}},
         {QStringLiteral("CompositeOp"), {QStringLiteral("BlendingMode")}},
+        {QStringLiteral("Opacity"), {QStringLiteral("Strength"), QStringLiteral("PenSettings")}},
+        {QStringLiteral("Flow"), {QStringLiteral("Strength"), QStringLiteral("PenSettings")}},
+        {QStringLiteral("MaskingOpacity"), {QStringLiteral("Strength"), QStringLiteral("PenSettings")}},
         {QStringLiteral("PaintingMode"), {QStringLiteral("PaintingMode")}},
         {QStringLiteral("Texture"), {QStringLiteral("Scale")}},
     };
@@ -484,6 +495,35 @@ void KisToolOptionsBrushTest::testOtherMirrors()
     QCOMPARE(paintingModeState->data().paintingMode, enumPaintingMode::BUILDUP);
     radios[1]->click();
     QCOMPARE(paintingModeState->data().paintingMode, enumPaintingMode::WASH);
+
+    // Opacity's Enable Pen Settings
+    showParameter(editor, QStringLiteral("Opacity"), QStringLiteral("PenSettings"));
+    settle();
+    auto *penSettings = mirrorWidget<QCheckBox>(&section, QStringLiteral("PenSettings"));
+    QVERIFY(penSettings);
+    auto *opacity = typedOption<KisOpacityOptionData>(model, QStringLiteral("Opacity"));
+    const bool useCurve = opacity->data().useCurve;
+    QCOMPARE(penSettings->isChecked(), useCurve);
+    penSettings->setChecked(!useCurve);
+    QCOMPARE(opacity->data().useCurve, !useCurve);
+    KisOpacityOptionData opacityData = opacity->data();
+    opacityData.useCurve = useCurve;
+    opacity->cursor().set(opacityData);
+    settle();
+    QCOMPARE(penSettings->isChecked(), useCurve);
+
+    // Opacity's strength value (the bar at the top of its page)
+    showParameter(editor, QStringLiteral("Opacity"), QStringLiteral("Strength"));
+    settle();
+    auto *strength = mirrorWidget<KisDoubleSliderSpinBox>(&section, QStringLiteral("Strength"));
+    QVERIFY(strength);
+    strength->setValue(40);
+    QCOMPARE(opacity->data().strengthValue, 0.4);
+    opacityData = opacity->data();
+    opacityData.strengthValue = 0.75;
+    opacity->cursor().set(opacityData);
+    settle();
+    QCOMPARE(strength->value(), 75.0);
 
     // texture scale
     auto *scale = mirrorWidget<KisDoubleSliderSpinBox>(&section, QStringLiteral("Scale"));

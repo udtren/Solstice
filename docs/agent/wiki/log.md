@@ -195,3 +195,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   Auto or Predefined tip page) does; a script that assigns ids from
   variable names in a line can pick the wrong one (Painting Mode got the
   masked brush's id), so tests check that ids are unique.
+
+## 2026-10-08 ingest: Opacity and Flow strength in Tool Options
+
+- `tool-options-brush.md`: curve options without a row checkbox (Opacity,
+  Flow) register their strength bar and Enable Pen Settings as page
+  parameters in `KisCurveOptionWidget`; checkable curve options keep the
+  row checkbox. README highlight with a screenshot
+  (`docs/images/tool-options-brush.png`, shown at the Brush Presets image's
+  width of 480).
