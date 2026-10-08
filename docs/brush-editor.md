@@ -27,6 +27,11 @@ These apply to the engines that use the shared model:
   Brush Editor no longer adds the modified mark to the preset. In Krita, any
   edit in the Brush Editor did.
 
+For every engine, the Brush Editor follows every brush switch: switching
+back to the previous brush (Q) or between pen and eraser updates its brush
+name and thumbnail too. In Krita they kept showing the previous brush while
+the settings changed.
+
 Everything else works as in Krita: presets are saved in the same format, and
 the toolbar, the On-Canvas Brush Editor and resizing the brush on the canvas
 change the same values as before.

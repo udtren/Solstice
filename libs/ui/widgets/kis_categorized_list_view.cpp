@@ -15,6 +15,7 @@
 #include <kis_icon.h>
 #include "kis_debug.h"
 #include <KisKineticScroller.h>
+#include <QScrollBar>
 
 KisCategorizedListView::KisCategorizedListView(QWidget* parent):
     QListView(parent)
@@ -26,6 +27,7 @@ KisCategorizedListView::KisCategorizedListView(QWidget* parent):
     QPalette newPall = palette();
     newPall.setColor(QPalette::Active, QPalette::Window, palette().text().color() );
     setPalette(newPall);
+    updateScrollBarPalettes();
 
     {
         QScroller *scroller = KisKineticScroller::createPreconfiguredScroller(this);
@@ -112,6 +114,30 @@ void KisCategorizedListView::rowsAboutToBeRemoved(const QModelIndex &parent, int
 {
     QListView::rowsAboutToBeRemoved(parent, start, end);
     model()->sort(0);
+}
+
+void KisCategorizedListView::updateScrollBarPalettes()
+{
+    // Solstice: the view's active Window color is replaced by the text color
+    // for its checkboxes (see the constructor). The scroll bars inherited it
+    // and turned white while the window had focus; they keep the window
+    // color of the inactive group, which is not replaced.
+    const QColor window = palette().color(QPalette::Inactive, QPalette::Window);
+    for (QScrollBar *bar : {verticalScrollBar(), horizontalScrollBar()}) {
+        if (bar && bar->palette().color(QPalette::Active, QPalette::Window) != window) {
+            QPalette barPalette = bar->palette();
+            barPalette.setColor(QPalette::Active, QPalette::Window, window);
+            bar->setPalette(barPalette);
+        }
+    }
+}
+
+void KisCategorizedListView::changeEvent(QEvent *event)
+{
+    QListView::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange) {
+        updateScrollBarPalettes();
+    }
 }
 
 void KisCategorizedListView::mousePressEvent(QMouseEvent* event)

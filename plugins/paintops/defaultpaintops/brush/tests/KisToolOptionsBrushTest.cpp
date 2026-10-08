@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QLabel>
 #include <QRadioButton>
+#include <QScrollBar>
 #include <QTest>
 #include <QToolButton>
 
@@ -59,6 +60,7 @@ private Q_SLOTS:
     void testOtherMirrors();
     void testPresetPreview();
     void testFadeGroup();
+    void testOptionListScrollBarColor();
 };
 
 namespace
@@ -631,6 +633,25 @@ void KisToolOptionsBrushTest::testFadeGroup()
     brushTip->cursor().set(data);
     settle();
     QVERIFY(!fade->isHidden());
+}
+
+/// The option list replaces its active window color with the text color for
+/// its checkboxes; its scroll bars keep the window color (they turned white
+/// while the Brush Editor had focus).
+void KisToolOptionsBrushTest::testOptionListScrollBarColor()
+{
+    Editor editor;
+    QScrollBar *bar = editor.view->verticalScrollBar();
+    const QColor window = editor.view->palette().color(QPalette::Inactive, QPalette::Window);
+    QCOMPARE(bar->palette().color(QPalette::Active, QPalette::Window), window);
+    QVERIFY(bar->palette().color(QPalette::Active, QPalette::Window)
+            != editor.view->palette().color(QPalette::Active, QPalette::Text));
+
+    // a theme change (palette change) keeps it
+    QPalette palette = editor.view->palette();
+    palette.setColor(QPalette::Inactive, QPalette::Window, QColor(10, 20, 30));
+    editor.view->setPalette(palette);
+    QCOMPARE(bar->palette().color(QPalette::Active, QPalette::Window), QColor(10, 20, 30));
 }
 
 SOLSTICE_BRUSH_TEST_MAIN(KisToolOptionsBrushTest)

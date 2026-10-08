@@ -1,6 +1,6 @@
 # Solstice
 
-![Solstice main window with the Brush Presets docker grouped by bundle, the Quick Access Palette and HueSVC](docs/images/solstice-main-window.webp)
+![Solstice main window with the Brush Presets docker grouped by bundle, the Quick Access Palette, HueSVC and the Brush section of Tool Options](docs/images/solstice-main-window.webp)
 
 **Solstice is an open-source, GPU-focused digital painting application derived
 from the Krita 6 codebase.**

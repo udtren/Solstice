@@ -39,8 +39,12 @@ protected Q_SLOTS:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void slotScrollerStateChange(QScroller::State state);
 
+protected:
+    void changeEvent(QEvent *event) override;
+
 private:
     void updateRows(int begin, int end);    
+    void updateScrollBarPalettes();
     bool isCompositeBoxControl = false;
 };
 

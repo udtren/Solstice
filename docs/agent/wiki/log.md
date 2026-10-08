@@ -211,3 +211,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   is mirrored cell by cell; the auto tip's Fade (two values and the link
   button) is one parameter, hidden for the Soft mask type through its mode
   widget `PageFade`. The README screenshot was replaced.
+
+## 2026-10-08 ingest: Brush Editor fixes (previous preset, scroll bar color)
+
+- Two Krita bugs, recorded in `feature-inventory.md`:
+  `KisPaintopBox::slotSwitchToPreviousPreset()` (Q) and
+  `slotInputDeviceChanged()` (pen/eraser) changed the settings but not the
+  Brush Editor's name and thumbnail, because only `resourceSelected()` and
+  `restoreResource()` called `m_presetsEditor->resourceSelected()`;
+  `KisCategorizedListView` replaces its active Window color with the text
+  color, which its scroll bars inherited (white while focused). Lesson: a
+  palette role changed on a scroll area reaches its scroll bars; set the
+  role back on the bars, and again on each PaletteChange.

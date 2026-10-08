@@ -996,6 +996,12 @@ void KisPaintopBox::slotInputDeviceChanged(const KoInputDevice& inputDevice)
             setCurrentPaintop(toolData->paintOpID);
         }
     }
+
+    // Solstice: the Brush Editor's name and thumbnail follow the switch, as
+    // in resourceSelected()
+    if (m_resourceProvider->currentPreset()) {
+        m_presetsEditor->resourceSelected(m_resourceProvider->currentPreset());
+    }
 }
 
 void KisPaintopBox::slotToggleEraserPreset(bool usingEraser)
@@ -1410,6 +1416,9 @@ void KisPaintopBox::slotSwitchToPreviousPreset()
 {
     if (m_resourceProvider->previousPreset()) {
         setCurrentPaintop(m_resourceProvider->previousPreset());
+        // Solstice: the Brush Editor's name and thumbnail follow the switch,
+        // as in resourceSelected() (Krita updated only the settings)
+        m_presetsEditor->resourceSelected(m_resourceProvider->currentPreset());
         m_viewManager->showFloatingMessage(
                     i18n("%1\nselected",
                          m_resourceProvider->currentPreset()->name()),
