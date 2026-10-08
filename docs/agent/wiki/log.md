@@ -153,3 +153,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   notified the end of its preserve mode while the editor was reading the
   brush tip, which started a full rewrite inside the read (safe asserts on
   Shift + drag resize).
+
+## 2026-10-08 ingest: brush option shared model phase 2b
+
+- Lesson recorded in `brush-option-shared-model-plan.md` (phase 2b): with
+  per-option writes, an option whose written data is baked from another
+  option's state (painting mode, Lightness Strength, the masking size
+  coefficient) must be written again when that option changes;
+  `KisPaintOpOptionsModel::addDependency()` declares it. Each dependency is
+  covered by a test that fails without it.
+- `KisLockedPropertiesProxy::setProperty()` writes nothing to settings
+  without an update listener, so a test that needs a full write of a model
+  writes the options directly instead of `writeAll()`.

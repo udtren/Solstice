@@ -13,6 +13,7 @@
 
 #include <kis_brush_based_paintop_options_widget.h>
 
+class KisPaintOpOptionsModel;
 
 class KisBrushOpSettingsWidget : public KisBrushBasedPaintopOptionWidget
 {
@@ -27,6 +28,13 @@ public:
 
     KisPropertiesConfigurationSP configuration() const override;
 
+private:
+    // Solstice: the option states live in @p model, which must exist before
+    // the base class creates the brush tip option
+    KisBrushOpSettingsWidget(QWidget *parent,
+                             KisResourcesInterfaceSP resourcesInterface,
+                             KoCanvasResourcesInterfaceSP canvasResourcesInterface,
+                             KisPaintOpOptionsModel *model);
 };
 
 

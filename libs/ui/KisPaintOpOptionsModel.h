@@ -168,6 +168,14 @@ public:
      */
     void addOption(KisPaintOpOptionStateBase *state);
 
+    /**
+     * Declares that the written (baked) data of option \p dependentId depends
+     * on the state of option \p sourceId, e.g. the painting mode on the
+     * masking brush. A change of the source then writes the dependent option
+     * too. Dependencies are followed transitively.
+     */
+    void addDependency(const QString &dependentId, const QString &sourceId);
+
     QList<KisPaintOpOptionStateBase *> options() const;
     KisPaintOpOptionStateBase *option(const QString &id) const;
 
@@ -220,6 +228,7 @@ private Q_SLOTS:
 
 private:
     void slotOptionChanged(int index);
+    void writeOption(int index, KisPaintOpSettings *settings);
     void readOptions(const QList<int> &indexes);
     void updateOptionKeys(int index);
 

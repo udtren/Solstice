@@ -150,6 +150,22 @@ PAINTOP_EXPORT KisCurveOptionWidget* createStrengthOptionWidget();
 PAINTOP_EXPORT KisCurveOptionWidget *createOpacityOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
 PAINTOP_EXPORT KisCurveOptionWidget *createRotationOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
 PAINTOP_EXPORT KisCurveOptionWidget *createRateOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createFlowOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createRatioOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createSoftnessOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createDarkenOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createMixOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createHueOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createSaturationOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createValueOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createStrengthOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+// the data of the masking variants carries the MaskingBrush/Preset/ prefix
+PAINTOP_EXPORT KisCurveOptionWidget *
+createMaskingOpacityOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createMaskingFlowOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *createMaskingRatioOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
+PAINTOP_EXPORT KisCurveOptionWidget *
+createMaskingRotationOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData);
 
 PAINTOP_EXPORT KisCurveOptionWidget* createMaskingOpacityOptionWidget();
 PAINTOP_EXPORT KisCurveOptionWidget* createMaskingSizeOptionWidget();

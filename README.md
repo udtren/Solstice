@@ -43,6 +43,9 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
   a grid that adapts to the docker's width, with multi-select engine and bundle
   filters alongside tags and search, and optional grouping by engine or
   bundle.
+- **[Brush Editor](docs/brush-editor.md)**: Pixel Brush and Deform options
+  live in a shared model, so one change updates only that option in the
+  preset.
 
 <img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="480">
 

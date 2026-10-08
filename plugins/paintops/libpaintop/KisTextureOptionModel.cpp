@@ -74,6 +74,15 @@ KisTextureOptionData KisTextureOptionModel::bakedOptionData() const
     return data;
 }
 
+KisTextureOptionData KisTextureOptionModel::bakedOptionData(const KisTextureOptionData &data,
+                                                            KisResourcesInterfaceSP resourcesInterface)
+{
+    KisTextureOptionData result = data;
+    const KoResourceSP resource = lager::view(patternResourceLens(resourcesInterface), data.textureData);
+    result.textureData = KisEmbeddedTextureData::fromPattern(resource.dynamicCast<KoPattern>());
+    return result;
+}
+
 void KisTextureOptionModel::updateOffsetLimits(KoResourceSP resource)
 {
     KoPatternSP pattern = resource.dynamicCast<KoPattern>();

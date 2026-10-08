@@ -16,6 +16,15 @@ KisBrushBasedPaintopOptionWidget::KisBrushBasedPaintopOptionWidget(KisBrushOptio
     addPaintOpOption(m_brushOption);
 }
 
+KisBrushBasedPaintopOptionWidget::KisBrushBasedPaintopOptionWidget(KisBrushOptionWidgetFlags flags,
+                                                                   lager::cursor<KisBrushTipOptionData> brushTipData,
+                                                                   QWidget *parent)
+    : KisPaintOpSettingsWidget(parent)
+{
+    m_brushOption = new KisBrushOptionWidget(flags, brushTipData);
+    addPaintOpOption(m_brushOption);
+}
+
 KisBrushBasedPaintopOptionWidget::~KisBrushBasedPaintopOptionWidget()
 {
 }

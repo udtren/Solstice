@@ -12,6 +12,8 @@
 #include "kis_brush.h"
 #include <kritapaintop_export.h>
 #include "KisBrushOptionWidgetFlags.h"
+#include "KisBrushTipOptionData.h"
+#include <lager/cursor.hpp>
 
 class KisBrushOptionWidget;
 
@@ -19,6 +21,11 @@ class PAINTOP_EXPORT KisBrushBasedPaintopOptionWidget : public KisPaintOpSetting
 {
 public:
     KisBrushBasedPaintopOptionWidget(KisBrushOptionWidgetFlags flags, QWidget* parent = 0);
+    /// Solstice: the brush tip's state lives in @p brushTipData, e.g. a
+    /// shared options model (docs/agent/brush-option-shared-model-plan.md).
+    KisBrushBasedPaintopOptionWidget(KisBrushOptionWidgetFlags flags,
+                                     lager::cursor<KisBrushTipOptionData> brushTipData,
+                                     QWidget *parent = 0);
     ~KisBrushBasedPaintopOptionWidget() override;
 
     KisBrushSP brush();

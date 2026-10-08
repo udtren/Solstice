@@ -34,6 +34,7 @@ struct KisPaintOpOptionsModel::Private {
     std::vector<std::unique_ptr<KisPaintOpOptionStateBase>> options;
     std::vector<QSet<QString>> optionKeys;
     QHash<QString, int> indexById;
+    QMultiHash<int, int> dependentsBySource;
     QStringList preservedKeys;
 
     KisPaintOpPresetSP preset;
@@ -82,6 +83,17 @@ void KisPaintOpOptionsModel::addOption(KisPaintOpOptionStateBase *state)
     state->watch([this, index]() {
         slotOptionChanged(index);
     });
+}
+
+void KisPaintOpOptionsModel::addDependency(const QString &dependentId, const QString &sourceId)
+{
+    const int dependent = m_d->indexById.value(dependentId, -1);
+    const int source = m_d->indexById.value(sourceId, -1);
+    KIS_SAFE_ASSERT_RECOVER_RETURN(dependent >= 0 && source >= 0 && dependent != source);
+
+    if (!m_d->dependentsBySource.contains(source, dependent)) {
+        m_d->dependentsBySource.insert(source, dependent);
+    }
 }
 
 QList<KisPaintOpOptionStateBase *> KisPaintOpOptionsModel::options() const
@@ -214,30 +226,47 @@ void KisPaintOpOptionsModel::slotOptionChanged(int index)
             }
             m_d->needsFullRewrite = false;
         } else {
-            KisPaintOpOptionStateBase *option = m_d->options[size_t(index)].get();
-
-            KisPropertiesConfigurationSP scratch = new KisPropertiesConfiguration();
-            option->write(scratch.data());
-            const QList<QString> newKeyList = scratch->getPropertiesKeys();
-            const QSet<QString> newKeys(newKeyList.begin(), newKeyList.end());
-
-            Q_FOREACH (const QString &key, m_d->optionKeys[size_t(index)] - newKeys) {
-                settings->removeProperty(key);
+            // the changed option and, transitively, the options whose baked
+            // data depends on it
+            QList<int> indexes{index};
+            for (int i = 0; i < indexes.size(); i++) {
+                Q_FOREACH (int dependent, m_d->dependentsBySource.values(indexes[i])) {
+                    if (!indexes.contains(dependent)) {
+                        indexes << dependent;
+                    }
+                }
             }
 
-            KisLockedPropertiesProxySP proxy =
-                KisLockedPropertiesServer::instance()->createLockedPropertiesProxy(settings.data());
-            const QMap<QString, QVariant> values = scratch->getProperties();
-            for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
-                proxy->setProperty(it.key(), it.value());
+            Q_FOREACH (int i, indexes) {
+                writeOption(i, settings.data());
             }
-
-            m_d->optionKeys[size_t(index)] = newKeys;
         }
     }
     m_d->isWriting = false;
 
     Q_EMIT sigPresetSettingsWritten();
+}
+
+void KisPaintOpOptionsModel::writeOption(int index, KisPaintOpSettings *settings)
+{
+    KisPaintOpOptionStateBase *option = m_d->options[size_t(index)].get();
+
+    KisPropertiesConfigurationSP scratch = new KisPropertiesConfiguration();
+    option->write(scratch.data());
+    const QList<QString> newKeyList = scratch->getPropertiesKeys();
+    const QSet<QString> newKeys(newKeyList.begin(), newKeyList.end());
+
+    Q_FOREACH (const QString &key, m_d->optionKeys[size_t(index)] - newKeys) {
+        settings->removeProperty(key);
+    }
+
+    KisLockedPropertiesProxySP proxy = KisLockedPropertiesServer::instance()->createLockedPropertiesProxy(settings);
+    const QMap<QString, QVariant> values = scratch->getProperties();
+    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+        proxy->setProperty(it.key(), it.value());
+    }
+
+    m_d->optionKeys[size_t(index)] = newKeys;
 }
 
 void KisPaintOpOptionsModel::readOptions(const QList<int> &indexes)

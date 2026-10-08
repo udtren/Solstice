@@ -105,6 +105,22 @@ Data bakeCurveOption(const Data &data)
     return result;
 }
 
+/**
+ * Bake for a curve option created with an enabled link, e.g. Lightness
+ * Strength, which applies only in the brush tip's lightness mode. The option
+ * is written disabled while \p externallyEnabled is false.
+ */
+template<typename Data>
+Data bakeLinkedCurveOption(const Data &data, bool externallyEnabled)
+{
+    Data result = data;
+    static_cast<KisCurveOptionDataCommon &>(result) =
+        KisCurveOptionModel::bakeOptionData(data,
+                                            externallyEnabled,
+                                            std::make_tuple(data.strengthMinValue, data.strengthMaxValue));
+    return result;
+}
+
 } // namespace KisPaintOpOptionStateUtils
 
 #endif // KISPAINTOPOPTIONSTATEUTILS_H

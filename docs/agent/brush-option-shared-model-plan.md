@@ -17,6 +17,10 @@
 ユーザー報告で問題なし(下記の「フェーズ2aの実装結果」)。確認中に見つかった
 Shift+ドラッグでの安全アサートは修正済み。
 
+フェーズ2b(Pixel Brushの共有モデルへの移行)を2026年10月8日に実装した。
+自動テストは通過し、実アプリでの手動確認も同日にユーザー報告で問題なし
+(下記の「フェーズ2bの実装結果」)。次はフェーズ3(Tool Optionsへの外だし)。
+
 ブラシエディタ(F5)が持つオプションの状態を画面から切り離し、プリセットごとの
 1つのモデルに集約する。F5画面とTool Optionsドッカーなど複数の画面が同じ状態を
 参照し、1つのパラメータの変更がそのオプション分の書き込みだけで済むようにする。
@@ -436,6 +440,82 @@ LOD設定だけの変更で変更済みにならない)は、Deformと同じく�
    どおり動く。Color Smudgeでは、画像の先端をLightness mapにしたときだけ
    Paint Thicknessが有効になることも確認する(マスクブラシを持つのは
    Pixel Brushだけ)。
+
+#### フェーズ2bの実装結果(2026年10月8日)
+
+Pixel Brush(`paintbrush`)の設定画面を共有モデルのビューに置き換えた。
+全32オプションの状態をモデルが持ち、1つのオプションの変更はそのオプションの
+キーだけを書く。Deformと同じく、承認済みの2つの挙動変更(ロックの破棄で
+元の値に戻る、LOD設定だけの変更で変更済みにならない)が有効になる。
+ユーザー向けの説明は `docs/brush-editor.md`。
+
+**変更したファイル**
+
+| 場所 | 内容 |
+| --- | --- |
+| `libs/ui/KisPaintOpOptionsModel.{h,cpp}` | オプション間の依存 `addDependency(dependent, source)` を追加。部分書き込みでは、変更されたオプションと、それに(推移的に)依存するオプションを書く。1オプションの書き込みを `writeOption()` に分けた |
+| `plugins/paintops/libpaintop/KisBrushBasedOptionStates.{h,cpp}`(新規) | `KisBrushTipOptionState` と `KisMaskingBrushOptionState`(読み込みにリソースやブラシ先端のサイズが要るため、`KisPaintOpOptionState<Data>` ではなく基底クラスから実装)。Textureと Painting Modeの焼き込み関数 |
+| `plugins/paintops/libpaintop/KisStandardOptionData.{h,cpp}` | Flow、Ratio、Softness、Darken、Mix、Hue、Saturation、Value、Strength、マスク用のOpacity・Flow・Ratio・Rotationのカーソル版作成関数。ラベルと分類は既存版と同じ |
+| `plugins/paintops/libpaintop/KisTextureOptionModel.{h,cpp}` | 焼き込みを静的関数 `bakedOptionData(data, resourcesInterface)` として追加(このクラスはエクスポートされないため、外からは `KisBrushBasedOptionStates::bakeTextureOption()` を使う) |
+| `plugins/paintops/libpaintop/KisPaintOpOptionStateUtils.h` | 有効リンク付きカーブの焼き込み `bakeLinkedCurveOption()` |
+| `plugins/paintops/libpaintop/kis_brush_based_paintop_options_widget.{h,cpp}` | ブラシ先端のカーソルを受け取るコンストラクタ |
+| `plugins/paintops/defaultpaintops/brush/kis_brushop_settings_widget.{h,cpp}` | モデルを作り、全オプションを登録してウィジェットを結び付ける。モデルは基底クラスがブラシ先端を作る前に必要なため、非公開のコンストラクタで受け取る |
+
+**オプション間の依存**
+
+| 依存するオプション | 依存先 | 理由 |
+| --- | --- | --- |
+| MaskingBrush | BrushTip | 保持モードの外では、サイズ係数を両方のサイズから計算する |
+| LightnessStrength | BrushTip | 明度モードでないときは無効として書く |
+| PaintingMode | MaskingBrush | マスクブラシが有効ならWASHとして書く |
+
+読み込みは登録順に行う。ブラシ先端を最初に登録し、マスクブラシはその後に
+読む(マスクブラシの読み込みはブラシ先端のサイズを使う)。外部からの読み直し
+(ツールバー、Shift+ドラッグなど)では書き戻さない。これは従来のF5画面と同じ
+動作である。
+
+**テスト(`KisBrushTipOptionParityTest`、44件すべて通過)**
+
+- 16プリセットの基準ファイルとの一致は、モデルの全読み込み・全書き込みでも
+  そのまま通る(`testLegacyRewrite` はPixel Brushの設定画面を使うため、
+  2b以降はモデルの経路を検証している)。
+- **モデルでの編集:** 最初の編集で全書き込み、2回目以降は変更したオプションの
+  キーだけが変わる。編集のたびに、プリセットの内容がモデルの全書き込みと
+  一致する。マスクブラシの有効・無効によるPainting Mode、ブラシ先端の
+  サイズ変更(保持モードの終了後も)によるマスクの係数、ブラシ先端の明度
+  モードによるLightness Strengthを確認する。
+- **Shift+ドラッグの再現:** `KisPaintopBox` と同じ配線(モデル接続時は
+  全消去しない)で、サイズを20回書き換えても安全アサートが出ず、モデルが
+  サイズに追従し、マスクの係数は書き換わらない。
+- **依存のテストの有効性:** 3つの依存を外すと該当のテストが失敗することを、
+  依存ごとに確認した。
+
+関連する既存のテスト(`KisPaintOpOptionsModelTest`、`KisBrushOpTest`、
+`KisColorsmudgeOpTest`、`KisDabRenderingQueueTest`、`KisGpuBrushJobsTest`、
+`KisGpuStrokeTest`、`KisMyPaintOpTest`、`KisBrushModelTest`、
+`KisBrushStrokePreviewTest`、`KisPaintOpPresetTest`、
+`KisCurveOptionDataTest`、`KisCurveOptionModelTest`)もすべて通過した。
+全体をビルドしてインストールした。
+
+手動確認の項目(フェーズ2b、Pixel Brush):
+
+1. F5画面で各ページ(ブラシ先端、Opacity・Flow・Sizeなどのカーブ、
+   Spacing、Mirror、Sharpness、Scatter、色、Airbrush、Painting Mode、
+   Texture、Masked Brush以下)を変更し、描画、アウトライン、プレビュー、
+   変更済み表示が従来どおり更新される。
+2. ツールバーのサイズ・不透明度・フロー・ブレンドモード、On-Canvas Brush
+   Editor、Shift+ドラッグでのサイズ変更が、F5画面に追従する(エラーが出ない)。
+3. プリセットの切り替え、再読み込み、上書き保存、新規保存で値が保たれる。
+   マスクブラシやテクスチャを使うプリセットでも同様。
+4. マスクブラシを有効にするとPainting ModeがWashに固定され、無効に戻すと元の
+   モードに戻る。保存したプリセットにもそれが反映される。
+5. 画像の先端をLightness mapにするとLightness Strengthが有効になり、他の用途
+   に戻すと無効になる。
+6. オプションをロックして別のプリセットに切り替え、ロックを「破棄」で解除
+   すると元の値に戻る(承認済みの挙動変更)。
+7. F5画面のLOD設定だけを変更しても、プリセットが変更済みにならない(承認済みの
+   挙動変更)。
+8. Color Smudgeなど未移行のエンジンが従来どおり動作する。
 
 ### フェーズ3: Tool Optionsへの外だし
 

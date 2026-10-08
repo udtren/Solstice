@@ -44,6 +44,12 @@ public:
 
     KisTextureOptionData bakedOptionData() const;
 
+    /// Solstice: the data bakedOptionData() writes, as a pure function: the
+    /// pattern is resolved through \p resourcesInterface (or replaced by the
+    /// fallback pattern) and embedded.
+    static KisTextureOptionData bakedOptionData(const KisTextureOptionData &data,
+                                                KisResourcesInterfaceSP resourcesInterface);
+
 private:
     void updateOffsetLimits(KoResourceSP resource);
 };

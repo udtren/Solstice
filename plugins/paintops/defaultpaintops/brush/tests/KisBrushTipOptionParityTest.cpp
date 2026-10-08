@@ -27,7 +27,11 @@
 #include <brushengine/kis_paintop_settings.h>
 #include <brushengine/kis_uniform_paintop_property.h>
 
+#include <KisBrushBasedOptionStates.h>
 #include <KisMaskingBrushOption.h>
+#include <KisPaintOpOptionsModel.h>
+#include <KisPaintingModeOptionData.h>
+#include <KisStandardOptionData.h>
 #include <kis_brush_option_widget.h>
 #include <lager/state.hpp>
 
@@ -58,6 +62,8 @@ private Q_SLOTS:
     void testMaskingPreserveMode();
     void testLightnessMode();
     void testResizeWhileEditorOpen();
+    void testModelEditsKeepPresetConsistent();
+    void testModelLightnessStrengthFollowsBrushTip();
 };
 
 namespace
@@ -371,17 +377,179 @@ void countSafeAsserts(QtMsgType type, const QMessageLogContext &context, const Q
 }
 } // namespace
 
-/// Resizing the brush on the canvas (Shift + drag) while the Brush Editor is
-/// open: the tool writes the size, the editor reads the preset again and
-/// writes everything back, as KisPaintopBox does.
-void KisBrushTipOptionParityTest::testResizeWhileEditorOpen()
+namespace
 {
-    KisPaintOpPresetSP preset = loadPreset(QStringLiteral("b_Basic-5_Size_Opacity.kpp"));
+/// Every key of the preset, except those the options do not own.
+QStringList presetOptionProperties(KisPaintOpSettingsSP settings)
+{
+    QMap<QString, QVariant> properties = settings->getProperties();
+    properties.remove(QStringLiteral("paintop"));
+    properties.remove(QStringLiteral("lodUserAllowed"));
+    properties.remove(QStringLiteral("lodSizeThreshold"));
+    return serialize(properties);
+}
+
+QStringList fullModelWrite(KisPaintOpOptionsModel *model)
+{
+    // writeAll() goes through the locked-properties proxy, which writes only
+    // to settings with an update listener; no option is locked here
+    KisPropertiesConfigurationSP config(new KisPropertiesConfiguration());
+    Q_FOREACH (KisPaintOpOptionStateBase *option, model->options()) {
+        option->write(config.data());
+    }
+    return serialize(config->getProperties());
+}
+
+template<typename Data>
+KisPaintOpOptionState<Data> *typedOption(KisPaintOpOptionsModel *model, const QString &id)
+{
+    return dynamic_cast<KisPaintOpOptionState<Data> *>(model->option(id));
+}
+
+QSet<QString> changedKeys(const QMap<QString, QVariant> &before, const QMap<QString, QVariant> &after)
+{
+    QSet<QString> keys;
+    for (auto it = before.constBegin(); it != before.constEnd(); ++it) {
+        if (!after.contains(it.key()) || after.value(it.key()) != it.value()) {
+            keys << it.key();
+        }
+    }
+    for (auto it = after.constBegin(); it != after.constEnd(); ++it) {
+        if (!before.contains(it.key())) {
+            keys << it.key();
+        }
+    }
+    return keys;
+}
+} // namespace
+
+/// Pixel Brush on the shared model: after every edit the preset holds what a
+/// full write of the model writes, including the options whose written data
+/// depends on the edited one (painting mode on the masking brush, the masking
+/// size coefficient and Lightness Strength on the brush tip).
+void KisBrushTipOptionParityTest::testModelEditsKeepPresetConsistent()
+{
+    KisPaintOpPresetSP preset = loadPreset(QStringLiteral("h_Charcoal_Pencil_Medium.kpp"));
     QVERIFY(preset);
     KisPaintOpSettingsSP settings = preset->settings();
 
     KisBrushOpSettingsWidget widget(nullptr, KisGlobalResourcesInterface::instance(), KoCanvasResourcesInterfaceSP());
     widget.setResourcesInterface(KisGlobalResourcesInterface::instance());
+    KisPaintOpOptionsModel *model = widget.optionsModel();
+    QVERIFY(model);
+    model->attachPreset(preset);
+
+    // the first edit rewrites everything
+    auto *opacity = typedOption<KisOpacityOptionData>(model, QStringLiteral("Opacity"));
+    QVERIFY(opacity);
+    KisOpacityOptionData opacityData = opacity->data();
+    opacityData.strengthValue = 0.5;
+    opacity->cursor().set(opacityData);
+    QCOMPARE(presetOptionProperties(settings), fullModelWrite(model));
+
+    // later edits write only their option
+    auto *flow = typedOption<KisFlowOptionData>(model, QStringLiteral("Flow"));
+    QVERIFY(flow);
+    const QMap<QString, QVariant> beforeFlow = settings->getProperties();
+    KisFlowOptionData flowData = flow->data();
+    flowData.strengthValue = 0.25;
+    flow->cursor().set(flowData);
+    const QSet<QString> flowKeys = changedKeys(beforeFlow, settings->getProperties());
+    QVERIFY(!flowKeys.isEmpty());
+    QVERIFY(model->optionKeys(QStringLiteral("Flow")).contains(flowKeys));
+    QCOMPARE(presetOptionProperties(settings), fullModelWrite(model));
+
+    // the painting mode is wash while the masking brush is enabled
+    auto *paintingMode = typedOption<KisPaintingModeOptionData>(model, QStringLiteral("PaintingMode"));
+    QVERIFY(paintingMode);
+    KisPaintingModeOptionData paintingModeData = paintingMode->data();
+    paintingModeData.paintingMode = enumPaintingMode::BUILDUP;
+    paintingMode->cursor().set(paintingModeData);
+    const QVariant washAction = settings->getProperty(QStringLiteral("PaintOpAction"));
+
+    auto *masking = dynamic_cast<KisMaskingBrushOptionState *>(model->option(QStringLiteral("MaskingBrush")));
+    QVERIFY(masking);
+    QVERIFY(masking->data().masking.isEnabled);
+    KisMaskingBrushOptionData maskingData = masking->data();
+    maskingData.masking.isEnabled = false;
+    masking->cursor().set(maskingData);
+    QVERIFY(settings->getProperty(QStringLiteral("PaintOpAction")) != washAction);
+    QCOMPARE(presetOptionProperties(settings), fullModelWrite(model));
+    maskingData = masking->data();
+    maskingData.masking.isEnabled = true;
+    masking->cursor().set(maskingData);
+    QCOMPARE(presetOptionProperties(settings), fullModelWrite(model));
+
+    // a new brush tip size ends the preserve mode and changes the coefficient
+    auto *brushTip = dynamic_cast<KisBrushTipOptionState *>(model->option(QStringLiteral("BrushTip")));
+    QVERIFY(brushTip);
+    const QVariant coefficient = settings->getProperty(QStringLiteral("MaskingBrush/MasterSizeCoeff"));
+    KisBrushTipOptionData tipData = brushTip->data();
+    tipData.commonBrushSize *= 1.5;
+    brushTip->cursor().set(tipData);
+    QVERIFY(settings->getProperty(QStringLiteral("MaskingBrush/MasterSizeCoeff")) != coefficient);
+    QCOMPARE(presetOptionProperties(settings), fullModelWrite(model));
+
+    // outside the preserve mode only the brush tip changes; the masking
+    // brush writes the new coefficient as a dependent option
+    QVERIFY(!masking->data().preserveMode);
+    const QVariant secondCoefficient = settings->getProperty(QStringLiteral("MaskingBrush/MasterSizeCoeff"));
+    tipData = brushTip->data();
+    tipData.commonBrushSize *= 1.5;
+    brushTip->cursor().set(tipData);
+    QVERIFY(settings->getProperty(QStringLiteral("MaskingBrush/MasterSizeCoeff")) != secondCoefficient);
+    QCOMPARE(presetOptionProperties(settings), fullModelWrite(model));
+}
+
+/// Lightness Strength is written enabled only while the brush tip is in the
+/// lightness mode; switching the tip rewrites it.
+void KisBrushTipOptionParityTest::testModelLightnessStrengthFollowsBrushTip()
+{
+    KisPaintOpPresetSP preset = loadPreset(QStringLiteral("b_Basic-6_Details.kpp"));
+    QVERIFY(preset);
+    KisPaintOpSettingsSP settings = preset->settings();
+
+    KisBrushOpSettingsWidget widget(nullptr, KisGlobalResourcesInterface::instance(), KoCanvasResourcesInterfaceSP());
+    widget.setResourcesInterface(KisGlobalResourcesInterface::instance());
+    KisPaintOpOptionsModel *model = widget.optionsModel();
+    QVERIFY(model);
+    model->attachPreset(preset);
+
+    auto *brushTip = dynamic_cast<KisBrushTipOptionState *>(model->option(QStringLiteral("BrushTip")));
+    auto *lightness = typedOption<KisLightnessStrengthOptionData>(model, QStringLiteral("LightnessStrength"));
+    QVERIFY(brushTip && lightness);
+    QCOMPARE(brushTip->data().brush.type, KisBrushModel::Predefined);
+
+    KisLightnessStrengthOptionData lightnessData = lightness->data();
+    lightnessData.isChecked = true;
+    lightness->cursor().set(lightnessData);
+    QVERIFY(!brushTip->data().lightnessModeEnabled(brushTip->flags()));
+    QCOMPARE(settings->getBool(QStringLiteral("PressureLightnessStrength")), false);
+
+    KisBrushTipOptionData tipData = brushTip->data();
+    tipData.brush.predefinedBrush.brushType = IMAGE;
+    tipData.brush.predefinedBrush.application = LIGHTNESSMAP;
+    brushTip->cursor().set(tipData);
+    QVERIFY(brushTip->data().lightnessModeEnabled(brushTip->flags()));
+    QCOMPARE(settings->getBool(QStringLiteral("PressureLightnessStrength")), true);
+    QCOMPARE(presetOptionProperties(settings), fullModelWrite(model));
+}
+
+/// Resizing the brush on the canvas (Shift + drag) while the Brush Editor is
+/// open, wired as KisPaintopBox does: the tool writes the size through the
+/// settings, the options model reads the changed keys, and an editor change
+/// writes back (a full rewrite only without an attached model).
+void KisBrushTipOptionParityTest::testResizeWhileEditorOpen()
+{
+    KisPaintOpPresetSP preset = loadPreset(QStringLiteral("h_Charcoal_Pencil_Medium.kpp"));
+    QVERIFY(preset);
+    KisPaintOpSettingsSP settings = preset->settings();
+
+    KisBrushOpSettingsWidget widget(nullptr, KisGlobalResourcesInterface::instance(), KoCanvasResourcesInterfaceSP());
+    widget.setResourcesInterface(KisGlobalResourcesInterface::instance());
+    KisPaintOpOptionsModel *model = widget.optionsModel();
+    QVERIFY(model);
+    model->attachPreset(preset);
     widget.setConfigurationSafe(settings);
 
     bool insideRead = false;
@@ -392,7 +560,9 @@ void KisBrushTipOptionParityTest::testResizeWhileEditorOpen()
         insideWrite = true;
         {
             KisPaintOpPreset::UpdatedPostponer postponer(preset);
-            settings->resetSettings();
+            if (!model->isAttachedTo(settings.data())) {
+                settings->resetSettings();
+            }
             widget.writeConfigurationSafe(settings);
         }
         insideWrite = false;
@@ -405,21 +575,12 @@ void KisBrushTipOptionParityTest::testResizeWhileEditorOpen()
         insideRead = false;
     });
 
-    // Reading the preset into the editor must not report a change of the
-    // editor: in the application that starts a full rewrite of the preset
-    // while it is being read (the masking brush did so when its preserve mode
-    // ended, which caused safe asserts on Shift + drag).
-    int changesWhileReading = 0;
-    connect(&widget, &KisConfigWidget::sigConfigurationItemChanged, this, [&]() {
-        if (insideRead)
-            changesWhileReading++;
-    });
-
     QList<KisUniformPaintOpPropertySP> properties = settings->uniformProperties(settings, preset->updateProxy());
     QVERIFY(!properties.isEmpty());
 
     s_safeAsserts = 0;
     s_previousHandler = qInstallMessageHandler(countSafeAsserts);
+    const QVariant coefficient = settings->getProperty(QStringLiteral("MaskingBrush/MasterSizeCoeff"));
     qreal size = settings->paintOpSize();
     for (int i = 0; i < 20; i++) {
         size += 3.0;
@@ -429,10 +590,15 @@ void KisBrushTipOptionParityTest::testResizeWhileEditorOpen()
     QTest::qWait(500);
     qInstallMessageHandler(s_previousHandler);
 
-    QCOMPARE(changesWhileReading, 0);
     QCOMPARE(s_safeAsserts, 0);
     QVERIFY(settings->hasProperty(QStringLiteral("brush_definition")));
     QCOMPARE(settings->paintOpSize(), size);
+
+    // the model followed the size, and the masking brush still writes the
+    // coefficient of the preset (nothing was edited in the editor)
+    KisBrushTipOptionState *brushTip = static_cast<KisBrushTipOptionState *>(model->option(QStringLiteral("BrushTip")));
+    QCOMPARE(brushTip->data().commonBrushSize, size);
+    QCOMPARE(settings->getProperty(QStringLiteral("MaskingBrush/MasterSizeCoeff")), coefficient);
 }
 
 /**

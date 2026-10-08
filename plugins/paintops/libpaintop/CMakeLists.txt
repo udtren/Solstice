@@ -92,6 +92,7 @@ set(kritalibpaintop_LIB_SRCS
     KisMaskingBrushOption.cpp
     KisMaskingBrushOptionProperties.cpp
     KisBrushTipOptionData.cpp
+    KisBrushBasedOptionStates.cpp
     sensors/KisDynamicSensor.cpp
     sensors/KisDynamicSensors.cpp
     sensors/KisDynamicSensorDrawingAngle.cpp

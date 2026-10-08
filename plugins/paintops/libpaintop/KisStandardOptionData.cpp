@@ -237,4 +237,100 @@ KisCurveOptionWidget *createMaskingRotationOptionWidget()
     return detail::createRotationOptionWidgetImpl(KisPaintOpOption::MASKING_BRUSH, KisPaintOpUtils::MaskingBrushPresetPrefix);
 }
 
+// Solstice: variants bound to a state owned by KisPaintOpOptionsModel, with
+// the same categories and labels as the variants above
+// (docs/agent/brush-option-shared-model-plan.md, phase 2b)
+
+KisCurveOptionWidget *createFlowOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData, KisPaintOpOption::GENERAL);
+}
+
+KisCurveOptionWidget *createRatioOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData, KisPaintOpOption::GENERAL);
+}
+
+KisCurveOptionWidget *createSoftnessOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData, KisPaintOpOption::GENERAL, i18n("Soft"), i18n("Hard"));
+}
+
+KisCurveOptionWidget *createDarkenOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData, KisPaintOpOption::COLOR, i18n("0.0"), i18n("1.0"));
+}
+
+KisCurveOptionWidget *createMixOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData,
+                                    KisPaintOpOption::COLOR,
+                                    i18nc("Background painting color", "Background"),
+                                    i18nc("Foreground painting color", "Foreground"));
+}
+
+KisCurveOptionWidget *createHueOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData,
+                                    KisPaintOpOption::COLOR,
+                                    detail::hueMinLabel(),
+                                    detail::hueMaxLabel(),
+                                    -180,
+                                    180,
+                                    i18n("°"));
+}
+
+KisCurveOptionWidget *createSaturationOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData,
+                                    KisPaintOpOption::COLOR,
+                                    detail::saturationMinLabel(),
+                                    detail::saturationMaxLabel(),
+                                    -100,
+                                    100,
+                                    i18n("%"));
+}
+
+KisCurveOptionWidget *createValueOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData,
+                                    KisPaintOpOption::COLOR,
+                                    detail::valueMinLabel(),
+                                    detail::valueMaxLabel(),
+                                    -100,
+                                    100,
+                                    i18n("%"));
+}
+
+KisCurveOptionWidget *createStrengthOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData, KisPaintOpOption::TEXTURE);
+}
+
+KisCurveOptionWidget *createMaskingOpacityOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData,
+                                    KisPaintOpOption::MASKING_BRUSH,
+                                    detail::opacityMinLabel(),
+                                    detail::opacityMaxLabel());
+}
+
+KisCurveOptionWidget *createMaskingFlowOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData, KisPaintOpOption::MASKING_BRUSH);
+}
+
+KisCurveOptionWidget *createMaskingRatioOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData, KisPaintOpOption::MASKING_BRUSH);
+}
+
+KisCurveOptionWidget *createMaskingRotationOptionWidget(lager::cursor<KisCurveOptionDataCommon> optionData)
+{
+    return new KisCurveOptionWidget(optionData,
+                                    KisPaintOpOption::MASKING_BRUSH,
+                                    detail::rotationMinLabel(),
+                                    detail::rotationMaxLabel());
+}
+
 }
