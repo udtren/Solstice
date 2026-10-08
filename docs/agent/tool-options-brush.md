@@ -59,7 +59,7 @@ shows the control in the Brush section, as a copy kept in sync with it.
 
 | Option (id) | Parameters (id, control) |
 | --- | --- |
-| Brush Tip (`BrushTip`, Pixel Brush) | Auto tip: `Diameter` (`inputRadius`), `Ratio` (`inputRatio`), `Angle` (`inputAngle`), `Density` (`density`), `Spacing` (`spacingWidget`, with Auto); Predefined tip: `PredefinedSize` (`brushSizeSpinBox`), `PredefinedAngle` (`brushRotationAngleSelector`), `PredefinedSpacing` (`brushSpacingSelectionWidget`); with SupportsPrecision: `Precision` (`sliderPrecision`), `AutoPrecision` (`autoPrecisionCheckBox`) |
+| Brush Tip (`BrushTip`, Pixel Brush) | Auto tip: `Diameter` (`inputRadius`), `Ratio` (`inputRatio`), `Fade` (`grpFade`: both values and their link, mode widget `PageFade`, hidden for the Soft mask type), `Angle` (`inputAngle`), `Density` (`density`), `Spacing` (`spacingWidget`, with Auto); Predefined tip: `PredefinedSize` (`brushSizeSpinBox`), `PredefinedAngle` (`brushRotationAngleSelector`), `PredefinedSpacing` (`brushSpacingSelectionWidget`); with SupportsPrecision: `Precision` (`sliderPrecision`), `AutoPrecision` (`autoPrecisionCheckBox`) |
 | Blending Mode (`CompositeOp`) | `BlendingMode` (the list, as a blending mode combo box) |
 | Curve options without a checkbox in the list (Pixel Brush Opacity, Flow, Masked Brush Opacity and Flow; Deform Opacity) | `Strength` (the strength bar at the top of the page, labeled with the option's name), `PenSettings` (Enable Pen Settings); registered by `KisCurveOptionWidget` when `isCheckable()` is false. A checkable curve option is switched by its row's checkbox instead (phase 3a) |
 | Painting Mode (`PaintingMode`) | `PaintingMode` (the group box's radio buttons) |
@@ -112,6 +112,12 @@ stroke preview and name, as Clip Studio Paint's tool property palette does.
 - Enabled state: as in the editor, including the page (a Texture page is
   disabled while Pattern is unchecked); radio buttons one by one (only Wash
   while a masked brush is enabled).
+- A group box whose grid holds mirrorable controls (Fade) is one parameter:
+  the copy repeats its grid cell by cell, labels as text, each control with
+  its own mirror, and a `KoAspectButton` that writes through
+  `setKeepAspectRatio()` (the editor's `KisAspectRatioLocker` listens to its
+  button and keeps the ratio, so a linked copy follows). The eye of a group
+  box is aligned with its title.
 - Visibility: only a parameter registered with a mode widget is hidden when
   that widget is not shown in its page (the Auto tip parameters while the
   tip is predefined, and the reverse). Tabs of a page (Texture's Options and
@@ -145,9 +151,12 @@ checks that the ids are unique.
 5. Rectangle, Ellipse, Polygon and Polyline tools show the Brush section at
    the end of their options.
 6. Eyes survive a restart.
-7. Opacity and Flow have eyes on their strength bar and on Enable Pen
+7. The auto tip's Fade has one eye; Tool Options shows Horizontal,
+   Vertical and the link; with the link on, moving one moves the other; it
+   is hidden for the Soft mask type.
+8. Opacity and Flow have eyes on their strength bar and on Enable Pen
    Settings; both work from Tool Options (2026-10-08, user request).
-8. The section starts with the current brush's stroke preview and name;
+9. The section starts with the current brush's stroke preview and name;
    switching brushes updates it, a modified brush shows "*", and it
    collapses with the section.
 

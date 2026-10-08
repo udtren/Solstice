@@ -110,6 +110,11 @@ KisBrushOptionWidget::KisBrushOptionWidget(Private *d)
     if (autoTip) {
         addParameter(QStringLiteral("Diameter"), i18n("Diameter"), "inputRadius", "lblDiameter", autoTip);
         addParameter(QStringLiteral("Ratio"), i18n("Ratio"), "inputRatio", "lblRatio", autoTip);
+        // both fade values and their link as one parameter; the Soft mask
+        // type replaces the Fade page with a curve
+        if (QWidget *fadePage = autoTip->findChild<QWidget *>(QStringLiteral("PageFade"))) {
+            addParameter(QStringLiteral("Fade"), i18n("Fade"), "grpFade", nullptr, fadePage);
+        }
         addParameter(QStringLiteral("Angle"), i18n("Angle"), "inputAngle", "lblAngle", autoTip);
         addParameter(QStringLiteral("Density"), i18n("Density"), "density", "lblDensity", autoTip);
         addParameter(QStringLiteral("Spacing"), i18n("Spacing"), "spacingWidget", "lblSpacing", autoTip);

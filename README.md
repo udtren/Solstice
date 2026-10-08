@@ -57,7 +57,7 @@ The Brush Presets docker grouped by bundle, with the Engines filter open. See
 the [Brush Presets guide](docs/brush-stroke-preview.md) for preview behavior,
 filters and grouping.
 
-<img src="docs/images/tool-options-brush.png" alt="Brush Editor with eyes on brush tip settings, and the Brush section of Tool Options showing them under the stroke preview" width="480">
+<img src="docs/images/tool-options-brush.png" alt="Brush Editor with eyes on brush tip settings including Fade, and the Brush section of Tool Options showing them under the stroke preview" width="480">
 
 Eyes in the Brush Editor choose the settings that the Tool Options docker
 shows in its Brush section. See

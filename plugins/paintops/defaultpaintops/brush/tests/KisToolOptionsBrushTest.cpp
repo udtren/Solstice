@@ -24,6 +24,7 @@
 #include <KisStandardOptionData.h>
 #include <KisTextureOptionData.h>
 #include <KisToolOptionsBrushItems.h>
+#include <KoAspectButton.h>
 #include <KoCompositeOpRegistry.h>
 #include <brushengine/kis_paintop_preset.h>
 #include <kis_categorized_list_model.h>
@@ -57,6 +58,7 @@ private Q_SLOTS:
     void testTipTypeVisibility();
     void testOtherMirrors();
     void testPresetPreview();
+    void testFadeGroup();
 };
 
 namespace
@@ -347,6 +349,7 @@ void KisToolOptionsBrushTest::testParametersRegistered()
         {QStringLiteral("BrushTip"),
          {QStringLiteral("Diameter"),
           QStringLiteral("Ratio"),
+          QStringLiteral("Fade"),
           QStringLiteral("Angle"),
           QStringLiteral("Density"),
           QStringLiteral("Spacing"),
@@ -571,6 +574,63 @@ void KisToolOptionsBrushTest::testPresetPreview()
     QVERIFY(preview->isHidden());
     KisToolOptionsBrushItems::instance()->setSectionCollapsed(false);
     QVERIFY(!preview->isHidden());
+}
+
+/// The auto tip's Fade is one parameter: both values and their link, shown
+/// only while the mask type has a Fade page (not Soft).
+void KisToolOptionsBrushTest::testFadeGroup()
+{
+    Editor editor;
+    loadPreset(editor, QStringLiteral("b_Basic-5_Size_Opacity.kpp"));
+    showParameter(editor, QStringLiteral("BrushTip"), QStringLiteral("Fade"));
+
+    KisToolOptionsBrushSection section(nullptr);
+    section.setSettingsWidget(&editor.widget);
+    settle();
+
+    QWidget *fade = mirrorWidget<QWidget>(&section, QStringLiteral("Fade"));
+    QVERIFY(fade);
+    QVERIFY(!fade->isHidden());
+    const QList<KisDoubleSliderSpinBox *> sliders = fade->findChildren<KisDoubleSliderSpinBox *>();
+    KoAspectButton *link = fade->findChild<KoAspectButton *>();
+    QCOMPARE(sliders.size(), 2);
+    QVERIFY(link);
+
+    auto *brushTip =
+        dynamic_cast<KisBrushTipOptionState *>(editor.widget.optionsModel()->option(QStringLiteral("BrushTip")));
+    KisBrushTipOptionData data = brushTip->data();
+    data.brush.autoBrush.generator.horizontalFade = 1.0;
+    data.brush.autoBrush.generator.verticalFade = 1.0;
+    data.brush.autoBrush.generator.type = KisBrushModel::Default;
+    brushTip->cursor().set(data);
+    settle();
+
+    // linked: the editor's locker keeps the ratio
+    link->setKeepAspectRatio(true);
+    settle();
+    sliders[0]->setValue(0.5);
+    settle();
+    QCOMPARE(brushTip->data().brush.autoBrush.generator.horizontalFade, 0.5);
+    QCOMPARE(brushTip->data().brush.autoBrush.generator.verticalFade, 0.5);
+    QCOMPARE(sliders[1]->value(), 0.5);
+
+    // unlinked: one value only
+    link->setKeepAspectRatio(false);
+    settle();
+    sliders[1]->setValue(0.8);
+    QCOMPARE(brushTip->data().brush.autoBrush.generator.verticalFade, 0.8);
+    QCOMPARE(brushTip->data().brush.autoBrush.generator.horizontalFade, 0.5);
+
+    // the Soft mask type has a curve instead of Fade
+    data = brushTip->data();
+    data.brush.autoBrush.generator.type = KisBrushModel::Soft;
+    brushTip->cursor().set(data);
+    settle();
+    QVERIFY(fade->isHidden());
+    data.brush.autoBrush.generator.type = KisBrushModel::Gaussian;
+    brushTip->cursor().set(data);
+    settle();
+    QVERIFY(!fade->isHidden());
 }
 
 SOLSTICE_BRUSH_TEST_MAIN(KisToolOptionsBrushTest)

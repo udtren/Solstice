@@ -44,8 +44,9 @@ KRITAUI_EXPORT bool canMirror(QWidget *control);
  *
  * Supported controls: KisDoubleSliderSpinBox, KisSliderSpinBox,
  * KisMultipliersDoubleSliderSpinBox, QCheckBox, KisAngleSelector,
- * KisSpacingSelectionWidget, KisCompositeOpListWidget, and a widget holding
- * radio buttons (e.g. a group box).
+ * KisSpacingSelectionWidget, KisCompositeOpListWidget, a widget holding
+ * radio buttons (e.g. a group box), and a group box whose grid holds such
+ * controls, labels and a KoAspectButton (the auto tip's Fade).
  *
  * The copy writes through the editor control in the way the control's own
  * connection to its option listens to (setValue(), click(), the spacing

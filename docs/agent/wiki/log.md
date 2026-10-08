@@ -204,3 +204,10 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   row checkbox. README highlight with a screenshot
   (`docs/images/tool-options-brush.png`, shown at the Brush Presets image's
   width of 480).
+
+## 2026-10-08 ingest: Fade as one Tool Options parameter
+
+- `tool-options-brush.md`: a group box whose grid holds mirrorable controls
+  is mirrored cell by cell; the auto tip's Fade (two values and the link
+  button) is one parameter, hidden for the Soft mask type through its mode
+  widget `PageFade`. The README screenshot was replaced.

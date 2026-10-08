@@ -11,6 +11,7 @@
 #include <QEvent>
 #include <QFormLayout>
 #include <QGridLayout>
+#include <QGroupBox>
 #include <QIcon>
 #include <QLabel>
 #include <QPainter>
@@ -22,6 +23,7 @@
 #include <klocalizedstring.h>
 
 #include <KisAngleSelector.h>
+#include <KoAspectButton.h>
 #include <kis_icon.h>
 #include <kis_multipliers_double_slider_spinbox.h>
 #include <kis_slider_spin_box.h>
@@ -125,6 +127,35 @@ QList<QRadioButton *> radioButtons(QWidget *control)
 {
     return control->findChildren<QRadioButton *>();
 }
+
+bool canMirrorSingle(QWidget *control);
+
+/// a group box whose grid holds controls, e.g. the auto tip's Fade
+QGridLayout *mirrorableGroupGrid(QWidget *control)
+{
+    QGroupBox *group = qobject_cast<QGroupBox *>(control);
+    if (!group || radioButtons(group).size() >= 2) {
+        return nullptr;
+    }
+    QGridLayout *grid = group->findChild<QGridLayout *>();
+    if (!grid) {
+        return nullptr;
+    }
+    for (int i = 0; i < grid->count(); i++) {
+        if (grid->itemAt(i)->widget() && canMirrorSingle(grid->itemAt(i)->widget())) {
+            return grid;
+        }
+    }
+    return nullptr;
+}
+
+bool canMirrorSingle(QWidget *control)
+{
+    return qobject_cast<KisMultipliersDoubleSliderSpinBox *>(control) || qobject_cast<KisDoubleSliderSpinBox *>(control)
+        || qobject_cast<KisSliderSpinBox *>(control) || qobject_cast<QCheckBox *>(control)
+        || qobject_cast<KisAngleSelector *>(control) || qobject_cast<KisSpacingSelectionWidget *>(control)
+        || qobject_cast<KisCompositeOpListWidget *>(control) || radioButtons(control).size() >= 2;
+}
 } // namespace
 
 namespace KisToolOptionsParameters
@@ -157,6 +188,9 @@ bool placeEyeButton(QToolButton *eye, QWidget *control, QWidget *label)
         return false;
     }
 
+    // a group box's eye goes next to its title
+    const Qt::Alignment eyeAlignment = qobject_cast<QGroupBox *>(target) ? Qt::AlignTop : Qt::AlignVCenter;
+
     QWidget *row = new QWidget(target->parentWidget());
     row->setObjectName(QStringLiteral("ToolOptionsEyeRow"));
     QHBoxLayout *rowLayout = new QHBoxLayout(row);
@@ -169,7 +203,7 @@ bool placeEyeButton(QToolButton *eye, QWidget *control, QWidget *label)
         QLayoutItem *item = grid->takeAt(index);
         const Qt::Alignment alignment = item->alignment();
         delete item;
-        rowLayout->addWidget(eye, 0, Qt::AlignVCenter);
+        rowLayout->addWidget(eye, 0, eyeAlignment);
         rowLayout->addWidget(target, 1);
         grid->addWidget(row, r, c, rowSpan, columnSpan, alignment);
     } else if (QBoxLayout *box = qobject_cast<QBoxLayout *>(layout)) {
@@ -199,10 +233,7 @@ bool placeEyeButton(QToolButton *eye, QWidget *control, QWidget *label)
 
 bool canMirror(QWidget *control)
 {
-    return qobject_cast<KisMultipliersDoubleSliderSpinBox *>(control) || qobject_cast<KisDoubleSliderSpinBox *>(control)
-        || qobject_cast<KisSliderSpinBox *>(control) || qobject_cast<QCheckBox *>(control)
-        || qobject_cast<KisAngleSelector *>(control) || qobject_cast<KisSpacingSelectionWidget *>(control)
-        || qobject_cast<KisCompositeOpListWidget *>(control) || radioButtons(control).size() >= 2;
+    return canMirrorSingle(control) || mirrorableGroupGrid(control);
 }
 } // namespace KisToolOptionsParameters
 
@@ -321,6 +352,53 @@ KisToolOptionsParameterMirror::KisToolOptionsParameterMirror(QWidget *control,
             // the option listens to clicks in the list
             Q_EMIT source->clicked(source->currentIndex());
         });
+    } else if (QGridLayout *sourceGrid = mirrorableGroupGrid(control)) {
+        // the group's grid, its labels and controls copied cell by cell; each
+        // control has its own mirror, a link button (Fade) follows its source
+        QWidget *copy = new QWidget(parent);
+        QGridLayout *grid = new QGridLayout(copy);
+        grid->setContentsMargins(0, 0, 0, 0);
+        grid->setHorizontalSpacing(4);
+        grid->setVerticalSpacing(2);
+        grid->setColumnStretch(1, 1);
+        QList<std::function<void()>> pulls;
+        for (int i = 0; i < sourceGrid->count(); i++) {
+            QWidget *source = sourceGrid->itemAt(i)->widget();
+            if (!source) {
+                continue;
+            }
+            int row, column, rowSpan, columnSpan;
+            sourceGrid->getItemPosition(i, &row, &column, &rowSpan, &columnSpan);
+            if (QLabel *label = qobject_cast<QLabel *>(source)) {
+                grid->addWidget(new QLabel(label->text(), copy), row, column, rowSpan, columnSpan);
+            } else if (KoAspectButton *sourceButton = qobject_cast<KoAspectButton *>(source)) {
+                KoAspectButton *button = new KoAspectButton(copy);
+                grid->addWidget(button, row, column, rowSpan, columnSpan);
+                pulls << [sourceButton, button]() {
+                    QSignalBlocker blocker(button);
+                    button->setKeepAspectRatio(sourceButton->keepAspectRatio());
+                };
+                connect(button, &KoAspectButton::keepAspectRatioChanged, sourceButton, [sourceButton](bool keep) {
+                    // the editor's aspect ratio locker listens to its button
+                    sourceButton->setKeepAspectRatio(keep);
+                });
+                connect(sourceButton,
+                        &KoAspectButton::keepAspectRatioChanged,
+                        this,
+                        &KisToolOptionsParameterMirror::schedulePull);
+            } else if (canMirrorSingle(source)) {
+                auto *mirror = new KisToolOptionsParameterMirror(source, option, nullptr, copy);
+                if (mirror->widget()) {
+                    grid->addWidget(mirror->widget(), row, column, rowSpan, columnSpan);
+                }
+            }
+        }
+        m_widget = copy;
+        m_pullValue = [pulls]() {
+            Q_FOREACH (const std::function<void()> &pull, pulls) {
+                pull();
+            }
+        };
     } else if (radioButtons(control).size() >= 2) {
         const QList<QRadioButton *> sources = radioButtons(control);
         QWidget *copy = new QWidget(parent);
