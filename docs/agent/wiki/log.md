@@ -140,3 +140,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   and fixes of eight others (shared test profile, Qt 6 UTF-16 byte order
   mark and NUL handling, model signal pairing, `QRectF::toRect()`, test mains
   without `KRITA_PLUGIN_PATH`).
+
+## 2026-10-08 ingest: brush option shared model phase 2a
+
+- `pitfalls/build-format-test.md`: the test resource database has no brush
+  tips or patterns (a bundle is added in the test `main()`), resource models
+  must exist before `addStorage()`, parity references are checked against
+  the old code, a brush tip option created alone leaks its page, and
+  `Copy-Item` keeps the old modification time.
+- Lesson recorded in `brush-option-shared-model-plan.md` (phase 2a): an
+  option must notify only changes of what it writes. The masking brush
+  notified the end of its preserve mode while the editor was reading the
+  brush tip, which started a full rewrite inside the read (safe asserts on
+  Shift + drag resize).

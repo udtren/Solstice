@@ -44,7 +44,11 @@ KisAutoBrushModel::KisAutoBrushModel(lager::cursor<CommonData> commonData, lager
 
 AutoBrushData KisAutoBrushModel::bakedOptionData() const
 {
-    AutoBrushData data = m_autoBrushData.get();
-    data.generator.diameter = m_commonBrushSizeData.get();
+    return bakedOptionData(m_autoBrushData.get(), m_commonBrushSizeData.get());
+}
+
+AutoBrushData KisAutoBrushModel::bakedOptionData(AutoBrushData data, qreal commonBrushSize)
+{
+    data.generator.diameter = commonBrushSize;
     return data;
 }

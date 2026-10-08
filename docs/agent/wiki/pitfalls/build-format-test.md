@@ -165,6 +165,36 @@ wrong anyway.
   `cmake --build` into `... | Select-Object -First 30` in PowerShell ended
   the build early once 30 lines matched. Redirect the build to a log file and
   filter the file instead.
+- **The test resource database has no brush tips or patterns.** `kistest.h`
+  (`registerResources()`) deletes the test profile and starts the resource
+  locator on `<application root>/share/krita`, which does not exist for
+  `_build/bin`. A brush editor widget then hits the safe asserts for the
+  fallback brush (`KisPredefinedBrushModel.cpp`) and pattern
+  (`KisTextureOptionModel.cpp`). A safe assert opens a modal dialog, so the
+  test hangs until its time-out unless `KRITA_NO_ASSERT_MSG=1` is set in the
+  environment (`qputenv` inside the test was not enough). Found with
+  `lldb -p <pid>` on the hung test. `KisBrushTipOptionParityTest` has its own
+  `main()` that adds `krita/data/bundles/Krita_4_Default_Resources.bundle`
+  with `KisResourceLocator::addStorage()` after `registerResources()`.
+- **Create the resource models before `addStorage()`.** Adding a bundle
+  loads its presets, which can create a `KisAllResourcesModel` between the
+  locator's `beginExternalResourceImport` and `endExternalResourceImport`.
+  That model gets the end without the begin and crashes in
+  `endInsertRows()`. Call `KisResourceModelProvider::resourceModel()` for
+  every type of `KisResourceLoaderRegistry` first.
+- **A parity reference must be checked against the old code too.** For
+  phase 2a of the brush option shared model, the references were written by
+  the old code (with the change set aside as a patch) and compared with the
+  old code again: the first serialization split multi-line values into
+  lines and did not reproduce. Escape line breaks in values.
+- **A brush tip option created alone leaks its configuration page.**
+  `KisBrushOptionWidget` does not own its page (the editor's page stack
+  does). In a test the page outlives the option, and its preview timer
+  crashes in the next `QTest::qWait()`. Delete the page with the option.
+- **Restoring a file from a backup copy can skip the rebuild.**
+  PowerShell `Copy-Item` keeps the copy's modification time, older than
+  the object file, so ninja did not recompile the restored source and the
+  tests ran the previous build. Touch the file after restoring it.
 - Test executables are named after their source files
   (`kis_liquify_transform_worker_test`, `KisGpuPaintDeviceTest`). Check
   `_build/bin` when a CMake target name is not found.

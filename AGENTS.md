@@ -107,7 +107,8 @@ Read these before adding or updating any feature:
   `docs/agent/brush-preset-grouping.md`
 - Solstice visual branding checklist:
   `docs/agent/solstice-visual-branding-todo.md`
-- Brush option shared model (phase 1 done for Deform, manually checked 2026-10-08):
+- Brush option shared model (phase 1 done for Deform; phase 2a brush tip and
+  masking brush done and manually checked 2026-10-08):
   `docs/agent/brush-option-shared-model-plan.md`, findings in
   `docs/agent/brush-option-shared-model-phase0.md`
 - UI modernization (phases 0-3 done; phase 4 first part done):

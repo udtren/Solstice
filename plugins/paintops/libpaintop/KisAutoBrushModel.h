@@ -49,6 +49,10 @@ public:
     LAGER_QT_CURSOR(SpacingState, aggregatedSpacing);
 
     AutoBrushData bakedOptionData() const;
+
+    /// The data bakedOptionData() writes, as a pure function: the generator
+    /// diameter is the brush tip's common size (shared by all tip types).
+    static AutoBrushData bakedOptionData(AutoBrushData data, qreal commonBrushSize);
 };
 
 #endif // KISAUTOBRUSHMODEL_H

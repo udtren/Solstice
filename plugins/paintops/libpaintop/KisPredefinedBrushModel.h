@@ -61,6 +61,17 @@ public:
 
     PredefinedBrushData bakedOptionData() const;
 
+    /**
+     * The data bakedOptionData() writes, as a pure function: the resource
+     * (the fallback brush when none is set), the application clamped to the
+     * modes the brush type supports, and the scale from the brush tip's common
+     * size.
+     */
+    static PredefinedBrushData
+    bakedOptionData(const PredefinedBrushData &data, qreal commonBrushSize, bool supportsHSLBrushTips);
+    /// The data with the fallback brush resource when no resource is set.
+    static PredefinedBrushData effectiveResourceData(const PredefinedBrushData &data);
+
     static enumBrushApplication effectiveBrushApplication(PredefinedBrushData predefinedData, bool supportsHSLBrushTips);
     static qreal effectiveBrushSize(PredefinedBrushData predefinedData);
     static void  setEffectiveBrushSize(PredefinedBrushData &predefinedData, qreal value);

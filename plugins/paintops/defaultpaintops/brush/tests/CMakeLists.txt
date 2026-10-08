@@ -4,6 +4,11 @@ kis_add_test(KisDabRenderingQueueTest.cpp
     LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaimage kritatestsdk
     )
 
+kis_add_test(KisBrushTipOptionParityTest.cpp
+    TEST_NAME KisBrushTipOptionParityTest
+    LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
+    )
+
 if(HAVE_KRITA_GPU_ENGINE)
     kis_add_test(KisGpuBrushJobsTest.cpp
         TEST_NAME KisGpuBrushJobsTest

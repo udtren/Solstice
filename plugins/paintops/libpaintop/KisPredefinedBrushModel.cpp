@@ -69,32 +69,9 @@ QString calcBrushDetails(PredefinedBrushData data)
     return brushDetailsText;
 }
 
-auto effectiveResourceData = lager::lenses::getset(
+auto effectiveResourceDataLens = lager::lenses::getset(
     [](const PredefinedBrushData &predefinedDataArg) {
-        if (predefinedDataArg.resourceSignature != KoResourceSignature()) {
-            return predefinedDataArg;
-        }
-
-        CommonData commonData;
-
-        /// NOTE: we cannot just pass the data by value because of the
-        /// bug in lager: https://github.com/arximboldi/lager/issues/160
-        PredefinedBrushData predefinedData = predefinedDataArg;
-
-        auto source = KisGlobalResourcesInterface::instance()->source<KisBrush>(ResourceType::Brushes);
-
-        KisBrushSP fallbackResource = source.fallbackResource();
-        KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(fallbackResource, predefinedData);
-
-        KisPredefinedBrushFactory::loadFromBrushResource(commonData, predefinedData, fallbackResource);
-
-        /// NOTE: we discard `commonData` returned from the loaded brush, because
-        /// we expect spacing and size information to be shared between auto and
-        /// predefined brushes. If the user wants to load the settings embedded
-        /// into the brush itself he/she should reset it explicitly via the GUI
-        /// controls.
-
-        return predefinedData;
+        return KisPredefinedBrushModel::effectiveResourceData(predefinedDataArg);
     },
     [](const PredefinedBrushData&,
        const PredefinedBrushData &y) {
@@ -113,7 +90,7 @@ KisPredefinedBrushModel::KisPredefinedBrushModel(lager::cursor<CommonData> commo
       m_predefinedBrushData(predefinedBrushData),
       m_supportsHSLBrushTips(supportsHSLBrushTips),
       m_commonBrushSizeData(commonBrushSizeData),
-      m_effectivePredefinedData(m_predefinedBrushData.zoom(effectiveResourceData)),
+      m_effectivePredefinedData(m_predefinedBrushData.zoom(effectiveResourceDataLens)),
       LAGER_QT(resourceSignature) {m_effectivePredefinedData[&PredefinedBrushData::resourceSignature]},
       LAGER_QT(baseSize) {m_effectivePredefinedData[&PredefinedBrushData::baseSize]},
       LAGER_QT(brushSize) {m_commonBrushSizeData},
@@ -158,14 +135,45 @@ KisPredefinedBrushModel::KisPredefinedBrushModel(lager::cursor<CommonData> commo
 
 PredefinedBrushData KisPredefinedBrushModel::bakedOptionData() const
 {
-    PredefinedBrushData data = m_effectivePredefinedData.get();
-    data.application =
-        static_cast<enumBrushApplication>(
-            LAGER_QT(applicationSwitchState)->currentIndex);
-    data.scale = m_commonBrushSizeData.get() / data.baseSize.width();
+    return bakedOptionData(m_predefinedBrushData.get(), m_commonBrushSizeData.get(), m_supportsHSLBrushTips.get());
+}
 
-    return data;
+PredefinedBrushData KisPredefinedBrushModel::effectiveResourceData(const PredefinedBrushData &predefinedDataArg)
+{
+    if (predefinedDataArg.resourceSignature != KoResourceSignature()) {
+        return predefinedDataArg;
+    }
 
+    CommonData commonData;
+
+    /// NOTE: we cannot just pass the data by value because of the
+    /// bug in lager: https://github.com/arximboldi/lager/issues/160
+    PredefinedBrushData predefinedData = predefinedDataArg;
+
+    auto source = KisGlobalResourcesInterface::instance()->source<KisBrush>(ResourceType::Brushes);
+
+    KisBrushSP fallbackResource = source.fallbackResource();
+    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(fallbackResource, predefinedData);
+
+    KisPredefinedBrushFactory::loadFromBrushResource(commonData, predefinedData, fallbackResource);
+
+    /// NOTE: we discard `commonData` returned from the loaded brush, because
+    /// we expect spacing and size information to be shared between auto and
+    /// predefined brushes. If the user wants to load the settings embedded
+    /// into the brush itself he/she should reset it explicitly via the GUI
+    /// controls.
+
+    return predefinedData;
+}
+
+PredefinedBrushData KisPredefinedBrushModel::bakedOptionData(const PredefinedBrushData &data,
+                                                             qreal commonBrushSize,
+                                                             bool supportsHSLBrushTips)
+{
+    PredefinedBrushData baked = effectiveResourceData(data);
+    baked.application = effectiveBrushApplication(baked, supportsHSLBrushTips);
+    baked.scale = commonBrushSize / baked.baseSize.width();
+    return baked;
 }
 
 enumBrushApplication KisPredefinedBrushModel::effectiveBrushApplication(PredefinedBrushData predefinedData, bool supportsHSLBrushTips)

@@ -13,12 +13,20 @@
 #include <kis_types.h>
 #include "kis_paintop_option.h"
 #include <lager/reader.hpp>
+#include <lager/cursor.hpp>
+
+struct KisMaskingBrushOptionData;
 
 class PAINTOP_EXPORT KisMaskingBrushOption : public KisPaintOpOption
 {
     Q_OBJECT
 public:
+    /// The option owns its state.
     KisMaskingBrushOption(lager::reader<qreal> effectiveBrushSize);
+    /// Solstice: the state lives in @p optionData, e.g. a shared options
+    /// model (docs/agent/brush-option-shared-model-plan.md, phase 2a).
+    KisMaskingBrushOption(lager::cursor<KisMaskingBrushOptionData> optionData,
+                          lager::reader<qreal> effectiveBrushSize);
     ~KisMaskingBrushOption() override;
 
     void writeOptionSetting(KisPropertiesConfigurationSP setting) const override;
@@ -36,6 +44,10 @@ private Q_SLOTS:
 
 private:
     struct Private;
+    // Takes the private data, so that a lager::state argument does not make
+    // the public constructors ambiguous.
+    KisMaskingBrushOption(Private *d);
+
     const QScopedPointer<Private> m_d;
 };
 

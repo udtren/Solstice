@@ -13,7 +13,9 @@
 #include "kis_brush.h"
 #include <KisBrushOptionWidgetFlags.h>
 #include <lager/reader.hpp>
+#include <lager/cursor.hpp>
 #include <KisBrushModel.h>
+#include "KisBrushTipOptionData.h"
 
 class KisBrushSelectionWidget;
 
@@ -26,7 +28,11 @@ class PAINTOP_EXPORT KisBrushOptionWidget : public KisPaintOpOption
     Q_OBJECT
 public:
 
+    /// The widget owns its state.
     KisBrushOptionWidget(KisBrushOptionWidgetFlags flags);
+    /// Solstice: the state lives in @p optionData, e.g. a shared options
+    /// model (docs/agent/brush-option-shared-model-plan.md, phase 2a).
+    KisBrushOptionWidget(KisBrushOptionWidgetFlags flags, lager::cursor<KisBrushTipOptionData> optionData);
 
     ~KisBrushOptionWidget() override;
 
@@ -50,10 +56,13 @@ protected:
     OptionalLodLimitationsReader lodLimitationsReader() const override;
 
 private:
+    struct Private;
+    // Takes the private data, so that a lager::state argument does not make
+    // the public constructors ambiguous.
+    KisBrushOptionWidget(Private *d);
 
     KisBrushSelectionWidget * m_brushSelectionWidget;
 
-    struct Private;
     const QScopedPointer<Private> m_d;
 };
 

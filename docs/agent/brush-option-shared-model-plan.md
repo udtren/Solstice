@@ -12,6 +12,11 @@
 なかった)ため、下端に余白を追加した。フェーズ0の調査結果は
 `docs/agent/brush-option-shared-model-phase0.md`。
 
+フェーズ2a(ブラシ先端とマスクブラシの状態の値への集約)を2026年10月8日に
+実装した。自動テストは通過し、実アプリでの手動確認も2026年10月8日に
+ユーザー報告で問題なし(下記の「フェーズ2aの実装結果」)。確認中に見つかった
+Shift+ドラッグでの安全アサートは修正済み。
+
 ブラシエディタ(F5)が持つオプションの状態を画面から切り離し、プリセットごとの
 1つのモデルに集約する。F5画面とTool Optionsドッカーなど複数の画面が同じ状態を
 参照し、1つのパラメータの変更がそのオプション分の書き込みだけで済むようにする。
@@ -328,6 +333,109 @@ cmd.exe /d /s /c "call <krita-dev-root>\env.bat && ctest --test-dir <krita-dev-r
   テストで確認する。
 - ロックされた設定、プリセットの再読み込み、汚れ表示(dirty)、Uniform
   Property、ツールバーのサイズ・不透明度との相互作用を手動で確認する。
+
+#### フェーズ2aの実装結果(2026年10月8日)
+
+ブラシ先端とマスクブラシの状態を、それぞれ1つの値の型にまとめた。ウィジェットは
+その値を外部のカーソルとして受け取れる。既定のコンストラクタは従来どおり自分で
+状態を持つため、どのブラシエンジンの設定画面も、この時点では従来の経路のまま
+動く。モデルへの接続はフェーズ2b(Pixel Brush)で行う。ユーザーに見える挙動の
+変更は意図していない。承認済みの2つの挙動変更(ロックの破棄で元の値に戻る、
+LOD設定だけの変更で変更済みにならない)は、Deformと同じくモデルに接続した
+エンジンでだけ有効になるため、2bで適用される。
+
+**変更したファイル**
+
+| 場所 | 内容 |
+| --- | --- |
+| `plugins/paintops/libpaintop/KisBrushTipOptionData.{h,cpp}`(新規) | `KisBrushTipOptionData`(`BrushData`、`PrecisionData`、共通サイズ)と `KisMaskingBrushOptionData`(`MaskingBrushData`、共通サイズ、保持モードの状態)。読み書き、焼き込み、`lightnessModeEnabled` を純粋な関数として持つ |
+| `plugins/paintops/libpaintop/KisAutoBrushModel.{h,cpp}` | 焼き込みを静的関数 `bakedOptionData(data, commonBrushSize)` として追加。メンバー版はそれを呼ぶ |
+| `plugins/paintops/libpaintop/KisPredefinedBrushModel.{h,cpp}` | 焼き込みを静的関数 `bakedOptionData(data, commonBrushSize, supportsHSLBrushTips)` として追加。予備のブラシ(fallback)を補う処理を `effectiveResourceData()` に切り出した |
+| `plugins/paintops/libpaintop/kis_brush_option_widget.{h,cpp}` | 状態を `KisBrushTipOptionData` 1つにまとめ、外部カーソルを受け取るコンストラクタを追加。`lightnessModeEnabled()`、`bakedBrushData()`、`effectiveBrushSize()` は値から導出する |
+| `plugins/paintops/libpaintop/KisMaskingBrushOption.{h,cpp}` | 状態を `KisMaskingBrushOptionData` 1つにまとめ、外部カーソルを受け取るコンストラクタを追加。保持モードは値の一部になった |
+| `plugins/paintops/defaultpaintops/brush/tests/`(追加) | `KisBrushTipOptionParityTest` と、標準バンドルから取り出したPixel Brushプリセット16件、その基準ファイル |
+
+**設計上の注意**
+
+- **保持モード。** 読み込んだ直後は、保存されていたサイズ係数
+  (`MaskingBrush/MasterSizeCoeff`)をそのまま書き戻す。マスクブラシ、
+  ブラシ先端のサイズ(マスター)、マスクブラシの共通サイズのどれかが読み込み時
+  から変わると終わる。モデルの監視がマスターの変化で保持モードを終えるので、
+  値に残った状態と実際の書き込みが一致する。
+- **保持モードはUIが落ち着いてから開始する。** サイズの入力欄は受け取った
+  共通サイズを丸めて書き戻す(例: 5.96591を5.97)。値に読み込んだ時点の
+  サイズを記録すると、この丸めで保持モードが終わり、係数が再計算されて
+  しまう。旧コードは丸めの後に保持モードを開始していたため、
+  `KisMaskingBrushOption::readOptionSetting()` は値を設定した後に
+  `startPreserveMode()` で記録し直す。パリティテストで見つかった差分である。
+- **保持モードの終了は変更として通知しない。** マスクブラシが変更を通知する
+  のは、書き出す値(`masking` と共通サイズ)が変わったときだけ(旧コードと
+  同じ)。値全体を監視すると、ブラシ先端の読み込みでマスターのサイズが
+  変わったときに保持モードの終了が通知される。F5画面がプリセットを読み込んで
+  いる最中にこの通知が出ると、`KisPaintopBox` が読み込み中のプリセットを
+  全消去して全書き込みする。キャンバス上のShift+ドラッグでサイズを変えた
+  ときに、`kis_brush_based_paintop_settings.cpp` の `this->brush()` と
+  `kis_signal_compressor.cpp` の `!m_sanityIsStarting` の安全アサートが出た
+  (ユーザー報告、2026年10月8日)。
+- **非公開のコンストラクタは `Private *` を受け取る。** `std::optional` の
+  カーソルを受け取る形にすると、`lager::state` を渡したときに公開の
+  コンストラクタと曖昧になる。
+- **比較演算子はcpp側のメンバー関数。** ヘッダーに `inline` で書くと、
+  エクスポートされていない `PrecisionData`/`MaskingBrushData` の比較を
+  呼ぶため、ライブラリの外で `lager::state` を使うとリンクできない。
+
+**テスト(`KisBrushTipOptionParityTest`、42件すべて通過)**
+
+- **従来の全書き込みとの一致(16件):** 標準のPixel Brushプリセット16件
+  (Auto 5件、PNG 6件、GBR 5件、マスクブラシ有効4件)について、F5画面が
+  読み込んで全書き込みした結果のキーと値が、変更前のコードで記録した基準
+  ファイル(`data/brushtip/*.properties`)と一致する。基準は
+  `SOLSTICE_WRITE_REFERENCES=1` で書き直せる。変更前のコードでも自身の基準と
+  一致することを確認した(結果が決定的であること)。
+- **外部カーソル(16件+4件):** 外部カーソル版と従来版のブラシ先端・
+  マスクブラシが同じ値を書く。マスクブラシは、マスターのサイズを変えて保持
+  モードが終わった後も一致する。
+- **読み込み中の通知:** マスターのサイズの変更だけではマスクブラシが変更を
+  通知しない。F5画面相当のウィジェットがプリセットを読み込む間に、編集の
+  変更(`sigConfigurationItemChanged`)が出ない(Shift+ドラッグの再現。
+  ツールが20回サイズを書き、`KisPaintopBox` と同じく読み込みと全書き込みを
+  つなぐ)。修正前のコードでは、この2つのテストが失敗することを確認した。
+- **カーソルからの変更:** カーソル経由で共通サイズを変えると、ウィジェットの
+  実効サイズ、書き込み結果、`sigSettingChanged` に反映される。
+- **保持モード:** 保存された係数の書き戻し、マスターまたは共通サイズの変更で
+  の終了、`startPreserveMode()` による再開。
+- **Lightness Map:** 画像の先端とHSL対応のエンジンでだけ有効になり、それ
+  以外では表示と同じ用途に置き換わる。
+
+テストのリソースデータベースにはブラシ先端とパターンがないため、テストの
+`main()` で標準バンドル `Krita_4_Default_Resources.bundle` をストレージとして
+追加している(理由は `docs/agent/wiki/pitfalls/build-format-test.md`)。
+
+関連する既存のテスト(`KisPaintOpOptionsModelTest`、`KisBrushOpTest`、
+`KisColorsmudgeOpTest`、`KisDabRenderingQueueTest`、`KisGpuBrushJobsTest`、
+`KisGpuStrokeTest`、`KisMyPaintOpTest`、`KisBrushModelTest`、
+`KisBrushStrokePreviewTest`、`KisPaintOpPresetTest`、
+`KisCurveOptionDataTest`、`KisCurveOptionModelTest`)もすべて通過した。
+全体をビルドしてインストールした。
+
+手動確認の項目(フェーズ2a):
+
+1. Pixel Brushで、Auto・画像(PNG/GBR)・アニメーション(GIH)・テキストの
+   各ブラシ先端を選び、サイズ、角度、間隔、比率などを変更すると、描画と
+   アウトラインが従来どおり更新される。
+2. 画像の先端で、用途(Alpha mask、Color image、Lightness map、Gradient map)
+   を切り替えられ、Lightness mapのときだけLightness Strengthが有効になる。
+3. Precisionの設定(自動を含む)が保存され、読み込み直しても保たれる。
+4. マスクブラシを有効にしたプリセット(`h)_Charcoal_Pencil_Medium`、
+   `j)_Waterpaint_Soft_Edges` など)を選んでも変更済みにならない。
+   ブラシのサイズを変えると、マスクブラシも比率を保って拡大縮小する。
+5. プリセットの切り替え、再読み込み、上書き保存、新規保存で、ブラシ先端と
+   マスクブラシの値が保たれる。
+6. ブラシ先端を使う他のエンジン(Color Smudge、Clone、Filter、Hairy、
+   Hatching、Sketch、Spray、Tangent Normal)でも、ブラシ先端の編集が従来
+   どおり動く。Color Smudgeでは、画像の先端をLightness mapにしたときだけ
+   Paint Thicknessが有効になることも確認する(マスクブラシを持つのは
+   Pixel Brushだけ)。
 
 ### フェーズ3: Tool Optionsへの外だし
 
