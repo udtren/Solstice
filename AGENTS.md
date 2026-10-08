@@ -114,6 +114,8 @@ Read these before adding or updating any feature:
   2026-10-08):
   `docs/agent/brush-option-shared-model-plan.md`, findings in
   `docs/agent/brush-option-shared-model-phase0.md`
+- Brush options in Tool Options (eyes in the Brush Editor; phase 3a done and
+  manually checked 2026-10-08): `docs/agent/tool-options-brush.md`
 - UI modernization (phases 0-3 done; phase 4 first part done):
   `docs/agent/ui-modernization-plan.md`
 - GitHub Actions Windows trial builds: `docs/agent/github-actions.md`

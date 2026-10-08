@@ -45,6 +45,18 @@ public:
     void setOptionsModel(KisPaintOpOptionsModel *model);
     KisPaintOpOptionsModel *optionsModel() const;
 
+    /**
+     * Solstice (docs/agent/tool-options-brush.md): the paintop id of the
+     * engine, set by KisPaintopBox after creating the widget. Options with a
+     * KisPaintOpOption::toolOptionsId() then get an eye in the option list;
+     * the shown options are kept per engine in KisToolOptionsBrushItems.
+     */
+    void setPaintOpId(const QString &paintOpId);
+    QString paintOpId() const;
+
+    /// The options that can be shown in Tool Options, in the editor's order
+    QList<KisPaintOpOption *> toolOptionsOptions() const;
+
     /// Reimplemented
     void setConfiguration(const KisPropertiesConfigurationSP  config) override;
 

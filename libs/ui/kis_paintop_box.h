@@ -43,6 +43,7 @@ class KisToolOptionsPopup;
 class KisPaintOpPresetsEditor;
 class KisPaintOpPresetsChooserPopup;
 class KisPaintOpConfigWidget;
+class KisPaintOpSettingsWidget;
 class KisCompositeOpComboBox;
 class KisWidgetChooser;
 class KisFavoriteResourceManager;
@@ -104,6 +105,14 @@ public:
     void newOptionWidgets(const QList<QPointer<QWidget> > & optionWidgetList);
 
     KisFavoriteResourceManager *favoriteResourcesManager() { return m_favoriteResourceManager; }
+
+    /// Solstice: the current engine's Brush Editor settings widget
+    /// (docs/agent/tool-options-brush.md), or null
+    KisPaintOpSettingsWidget *currentSettingsWidget() const;
+
+Q_SIGNALS:
+    /// Solstice: the current engine's settings widget changed (engine switch)
+    void sigCurrentSettingsWidgetChanged();
 
 public Q_SLOTS:
 

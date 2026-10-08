@@ -173,3 +173,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   hidden view is shown, so turning it off around a programmatic
   `setCurrentIndex()` keeps the position without affecting drag auto scroll.
   Manually checked 2026-10-08.
+
+## 2026-10-08 ingest: brush options in Tool Options, phase 3a
+
+- Feature document `tool-options-brush.md`. Lessons: a delegate that draws
+  an extra column must shift the rectangle it passes to
+  `QStyledItemDelegate::editorEvent()` too, or the checkbox hit area stays
+  under the new column; a stable, untranslated id per option (the
+  options-model id) is what kritarc stores, because labels repeat ("Size"
+  in General and Masked Brush) and are translated.

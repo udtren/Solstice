@@ -22,7 +22,10 @@ public:
         SortRole           = Qt::UserRole + 3,
         isLockedRole       = Qt::UserRole + 4,
         isLockableRole     = Qt::UserRole + 5,
-        isToggledRole      = Qt::UserRole + 6
+        isToggledRole      = Qt::UserRole + 6,
+        // Solstice (docs/agent/tool-options-brush.md): the eye column
+        isShowableInToolOptionsRole = Qt::UserRole + 7,
+        isShownInToolOptionsRole    = Qt::UserRole + 8
     };
 
 public:

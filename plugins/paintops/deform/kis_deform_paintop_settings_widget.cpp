@@ -17,6 +17,17 @@
 #include <KisCompositeOpOptionWidget.h>
 #include <KisCurveOptionWidget.h>
 
+namespace
+{
+/// Solstice: the option's checkbox can be shown in Tool Options under @p id,
+/// the option's id in the options model (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
+} // namespace
+
 KisDeformPaintOpSettingsWidget::KisDeformPaintOpSettingsWidget(QWidget* parent)
     : KisPaintOpSettingsWidget(parent)
 {
@@ -42,14 +53,21 @@ KisDeformPaintOpSettingsWidget::KisDeformPaintOpSettingsWidget(QWidget* parent)
     auto *rate =
         model->addOption(QStringLiteral("Rate"), KisRateOptionData(), &kposu::bakeCurveOption<KisRateOptionData>);
 
-    addPaintOpOption(kposu::createOptionWidget<KisBrushSizeOptionWidget>(brushSize));
-    addPaintOpOption(kposu::createOptionWidgetWithLodLimitations<KisDeformOptionWidget>(deform));
-    addPaintOpOption(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp));
-    addPaintOpOption(kpowu::createOpacityOptionWidget(kposu::curveCursor(opacity)));
-    addPaintOpOption(kposu::createOptionWidget<KisSizeOptionWidget>(size));
-    addPaintOpOption(kpowu::createRotationOptionWidget(kposu::curveCursor(rotation)));
-    addPaintOpOption(kposu::createOptionWidget<KisAirbrushOptionWidget>(airbrush));
-    addPaintOpOption(kpowu::createRateOptionWidget(kposu::curveCursor(rate)));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisBrushSizeOptionWidget>(brushSize), QStringLiteral("BrushSize")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidgetWithLodLimitations<KisDeformOptionWidget>(deform),
+                                       QStringLiteral("Deform")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createOpacityOptionWidget(kposu::curveCursor(opacity)), QStringLiteral("Opacity")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisSizeOptionWidget>(size), QStringLiteral("Size")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRotationOptionWidget(kposu::curveCursor(rotation)), QStringLiteral("Rotation")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisAirbrushOptionWidget>(airbrush), QStringLiteral("Airbrush")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRateOptionWidget(kposu::curveCursor(rate)), QStringLiteral("Rate")));
 
     setOptionsModel(model);
 }

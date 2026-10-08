@@ -75,6 +75,11 @@ private:
     void showSize();
     void updatePreviewTimer(bool showGuide);
     QWidget* createOptionWidget() override;
+    /// Solstice: the line is painted with the brush preset
+    bool showsBrushOptions() const override
+    {
+        return true;
+    }
 
     void endStroke();
     void cancelStroke();

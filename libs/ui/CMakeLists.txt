@@ -141,6 +141,7 @@ set(kritaui_LIB_SRCS
     kis_paintop_option.cpp
     kis_paintop_options_model.cpp
     KisPaintOpOptionsModel.cpp
+    KisToolOptionsBrushItems.cpp
     kis_paintop_settings_widget.cpp
     kis_popup_palette.cpp
     kis_png_converter.cpp
@@ -205,6 +206,7 @@ set(kritaui_LIB_SRCS
     tool/kis_figure_painting_tool_helper.cpp
     tool/KisAsynchronousStrokeUpdateHelper.cpp
     tool/kis_tool_paint.cc
+    tool/KisToolOptionsBrushSection.cpp
     tool/kis_tool_shape.cc
     tool/kis_tool_ellipse_base.cpp
     tool/kis_tool_rectangle_base.cpp

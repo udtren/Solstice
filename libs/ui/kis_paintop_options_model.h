@@ -58,6 +58,7 @@ public:
 
 private Q_SLOTS:
     void slotCheckedEnabledStateChanged(int row);
+    void slotShownInToolOptionsChanged();
 
 private:
     QSignalMapper m_stateSignalsMapper;

@@ -54,6 +54,10 @@ void KisPaintOpOptionListModel::addPaintOpOption(KisPaintOpOption *option, int w
     item->setEnabled(option->isEnabled());
     connect(option, &KisPaintOpOption::sigEnabledChanged,
             &m_stateSignalsMapper, qOverload<>(&QSignalMapper::map));
+    connect(option,
+            &KisPaintOpOption::sigShownInToolOptionsChanged,
+            this,
+            &KisPaintOpOptionListModel::slotShownInToolOptionsChanged);
     m_stateSignalsMapper.setMapping(option, categoriesMapper()->rowFromItem(item));
 
     categoriesMapper()->expandAllCategories();
@@ -61,6 +65,17 @@ void KisPaintOpOptionListModel::addPaintOpOption(KisPaintOpOption *option, int w
 
 QVariant KisPaintOpOptionListModel::data(const QModelIndex& idx, int role) const
 {
+    // Solstice: the eye column (docs/agent/tool-options-brush.md)
+    if (role == isShowableInToolOptionsRole || role == isShownInToolOptionsRole) {
+        DataItem *item = idx.isValid() ? categoriesMapper()->itemFromRow(idx.row()) : nullptr;
+        if (!item || item->isCategory() || !item->data() || !item->data()->option) {
+            return QVariant();
+        }
+        const KisPaintOpOption *option = item->data()->option;
+        const bool showable = option->isCheckable() && !option->toolOptionsId().isEmpty();
+        return role == isShowableInToolOptionsRole ? showable : showable && option->isShownInToolOptions();
+    }
+
     return BaseOptionCategorizedListModel::data(idx, role);
 }
 
@@ -73,6 +88,15 @@ bool KisPaintOpOptionListModel::setData(const QModelIndex& idx, const QVariant& 
 
     if (role == Qt::CheckStateRole && item->isCheckable()) {
         item->data()->option->setChecked(value.toInt() == Qt::Checked);
+    }
+
+    if (role == isShownInToolOptionsRole) {
+        if (item->isCategory() || !data(idx, isShowableInToolOptionsRole).toBool()) {
+            return false;
+        }
+        // the option notifies the change, see slotShownInToolOptionsChanged()
+        item->data()->option->setShownInToolOptions(value.toBool());
+        return true;
     }
 
     return BaseOptionCategorizedListModel::setData(idx, value, role);
@@ -90,6 +114,19 @@ bool operator==(const KisOptionInfo& a, const KisOptionInfo& b)
 void KisPaintOpOptionListModel::signalDataChanged(const QModelIndex& index)
 {
     Q_EMIT dataChanged(index,index);
+}
+
+void KisPaintOpOptionListModel::slotShownInToolOptionsChanged()
+{
+    const KisPaintOpOption *option = qobject_cast<const KisPaintOpOption *>(sender());
+    for (int row = 0; row < rowCount(QModelIndex()); row++) {
+        DataItem *item = categoriesMapper()->itemFromRow(row);
+        if (item && !item->isCategory() && item->data() && item->data()->option == option) {
+            const QModelIndex idx = index(row);
+            Q_EMIT dataChanged(idx, idx, {isShownInToolOptionsRole});
+            return;
+        }
+    }
 }
 
 void KisPaintOpOptionListModel::slotCheckedEnabledStateChanged(int row)

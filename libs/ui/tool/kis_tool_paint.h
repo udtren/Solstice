@@ -104,6 +104,16 @@ protected:
         return QString();
     }
 
+    /**
+     * Solstice (docs/agent/tool-options-brush.md): true for tools that paint
+     * with the brush preset; createOptionWidget() then ends with the Brush
+     * section (the Brush Editor options whose eye is on).
+     */
+    virtual bool showsBrushOptions() const
+    {
+        return false;
+    }
+
 public Q_SLOTS:
     void activate(const QSet<KoShape*> &shapes) override;
     void deactivate() override;

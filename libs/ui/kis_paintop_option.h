@@ -71,6 +71,18 @@ public:
     QString label() const;
 
     /**
+     * Solstice (docs/agent/tool-options-brush.md): a non-empty id lets the
+     * option's checkbox be shown in the Tool Options docker. The id is stable
+     * (not translated) and unique within the brush engine.
+     */
+    void setToolOptionsId(const QString &id);
+    QString toolOptionsId() const;
+
+    /// Whether the checkbox is shown in Tool Options (the eye in the editor)
+    void setShownInToolOptions(bool shown);
+    bool isShownInToolOptions() const;
+
+    /**
      * Reimplement this to use the image in the option widget
      */
     virtual void setImage(KisImageWSP image);
@@ -126,6 +138,7 @@ Q_SIGNALS:
      */
     void sigCheckedChanged(bool value);
     void sigEnabledChanged(bool value);
+    void sigShownInToolOptionsChanged(bool shown);
 
 private:
     void slotEnablePageWidget(bool value);

@@ -46,6 +46,12 @@ public Q_SLOTS:
 protected:
     bool trySampleByPaintOp(KoPointerEvent *event, AlternateAction action);
 
+    /// Solstice: the freehand tools paint with the brush preset
+    bool showsBrushOptions() const override
+    {
+        return true;
+    }
+
     bool primaryActionSupportsHiResEvents() const override;
     void beginPrimaryAction(KoPointerEvent *event) override;
     void continuePrimaryAction(KoPointerEvent *event) override;

@@ -37,6 +37,10 @@ public:
 
     KisResourcesInterfaceSP resourcesInterface;
     KoCanvasResourcesInterfaceSP canvasResourcesInterface;
+
+    // Solstice: Tool Options exposure
+    QString toolOptionsId;
+    bool shownInToolOptions{false};
 };
 
 KisPaintOpOption::KisPaintOpOption(const QString &label, PaintopCategory category, bool checked)
@@ -244,4 +248,28 @@ bool KisPaintOpOption::isLocked ()const
 QString KisPaintOpOption::label() const
 {
     return m_d->label;
+}
+
+void KisPaintOpOption::setToolOptionsId(const QString &id)
+{
+    m_d->toolOptionsId = id;
+}
+
+QString KisPaintOpOption::toolOptionsId() const
+{
+    return m_d->toolOptionsId;
+}
+
+void KisPaintOpOption::setShownInToolOptions(bool shown)
+{
+    if (m_d->shownInToolOptions == shown) {
+        return;
+    }
+    m_d->shownInToolOptions = shown;
+    Q_EMIT sigShownInToolOptionsChanged(shown);
+}
+
+bool KisPaintOpOption::isShownInToolOptions() const
+{
+    return m_d->shownInToolOptions;
 }

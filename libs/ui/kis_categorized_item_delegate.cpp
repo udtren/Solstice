@@ -14,6 +14,7 @@
 #include <QStyleOptionMenuItem>
 #include <QStyleOptionViewItem>
 #include <QApplication>
+#include <QMouseEvent>
 #include <QTransform>
 
 #include <KoIcon.h>
@@ -33,6 +34,32 @@ void KisCategorizedItemDelegate::paint(QPainter* painter, const QStyleOptionView
 
     if(!index.data(__CategorizedListModelBase::IsHeaderRole).toBool()) {
         QStyleOptionViewItem sovi(option);
+
+        // Solstice: the eye column, see setToolOptionsColumnVisible()
+        if (m_toolOptionsColumnVisible) {
+            const QRect eyeRect = toolOptionsRect(option.rect);
+            if (index.data(__CategorizedListModelBase::isShowableInToolOptionsRole).toBool()) {
+                const bool shown = index.data(__CategorizedListModelBase::isShownInToolOptionsRole).toBool();
+                QPalette palette = QApplication::palette();
+                const QRect box = eyeRect.adjusted(1, 1, -2, -2);
+                painter->save();
+                painter->setRenderHint(QPainter::Antialiasing, false);
+                if (shown) {
+                    painter->fillRect(box, palette.highlight());
+                    const int iconSize = qMax(10, box.height() - 4);
+                    const QPixmap eye = KisIconUtils::loadIcon("visible").pixmap(iconSize, iconSize);
+                    painter->drawPixmap(box.center().x() - iconSize / 2 + 1, box.center().y() - iconSize / 2 + 1, eye);
+                } else {
+                    QColor frame = palette.color(QPalette::Text);
+                    frame.setAlphaF(0.25);
+                    painter->setPen(frame);
+                    painter->setBrush(Qt::NoBrush);
+                    painter->drawRect(box);
+                }
+                painter->restore();
+            }
+            sovi.rect.setLeft(eyeRect.right() + 1);
+        }
 
         if (index.data(__CategorizedListModelBase::isLockableRole).toBool()) {
 
@@ -123,7 +150,62 @@ QSize KisCategorizedItemDelegate::sizeHint(const QStyleOptionViewItem& option, c
         width += m_minimumItemHeight;
     }
 
+    if (m_toolOptionsColumnVisible && !index.data(__CategorizedListModelBase::IsHeaderRole).toBool()) {
+        width += toolOptionsColumnWidth();
+    }
+
     return QSize(width, m_minimumItemHeight);
+}
+
+void KisCategorizedItemDelegate::setToolOptionsColumnVisible(bool visible)
+{
+    m_toolOptionsColumnVisible = visible;
+}
+
+bool KisCategorizedItemDelegate::isToolOptionsColumnVisible() const
+{
+    return m_toolOptionsColumnVisible;
+}
+
+int KisCategorizedItemDelegate::toolOptionsColumnWidth() const
+{
+    return qMax(18, int(m_minimumItemHeight)) + 2;
+}
+
+QRect KisCategorizedItemDelegate::toolOptionsRect(const QRect &rowRect) const
+{
+    const int width = toolOptionsColumnWidth();
+    return QRect(rowRect.left(), rowRect.top(), width, rowRect.height());
+}
+
+bool KisCategorizedItemDelegate::editorEvent(QEvent *event,
+                                             QAbstractItemModel *model,
+                                             const QStyleOptionViewItem &option,
+                                             const QModelIndex &index)
+{
+    if (!m_toolOptionsColumnVisible || index.data(__CategorizedListModelBase::IsHeaderRole).toBool()) {
+        return QStyledItemDelegate::editorEvent(event, model, option, index);
+    }
+
+    const QRect eyeRect = toolOptionsRect(option.rect);
+    if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease
+        || event->type() == QEvent::MouseButtonDblClick) {
+        const QMouseEvent *mouse = static_cast<QMouseEvent *>(event);
+        if (eyeRect.contains(mouse->position().toPoint())) {
+            if (event->type() == QEvent::MouseButtonRelease && mouse->button() == Qt::LeftButton
+                && index.data(__CategorizedListModelBase::isShowableInToolOptionsRole).toBool()) {
+                const bool shown = index.data(__CategorizedListModelBase::isShownInToolOptionsRole).toBool();
+                model->setData(index, !shown, __CategorizedListModelBase::isShownInToolOptionsRole);
+            }
+            // the eye column never toggles the checkbox
+            return true;
+        }
+    }
+
+    // the checkbox and the label start after the eye column, as painted
+    QStyleOptionViewItem shifted(option);
+    shifted.rect.setLeft(eyeRect.right() + 1);
+    return QStyledItemDelegate::editorEvent(event, model, shifted, index);
 }
 
 void KisCategorizedItemDelegate::paintTriangle(QPainter* painter, qint32 x, qint32 y, qint32 size, bool rotate) const

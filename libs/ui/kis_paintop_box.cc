@@ -679,6 +679,7 @@ void KisPaintopBox::setCurrentPaintop(KisPaintOpPresetSP preset)
     Q_ASSERT(preset);
     const KoID& paintop = preset->paintOp();
     m_presetConnections.clear();
+    const KisPaintOpConfigWidget *previousOptionWidget = m_optionWidget;
 
     if (m_resourceProvider->currentPreset()) {
         m_resourceProvider->setPreviousPaintOpPreset(m_resourceProvider->currentPreset());
@@ -699,6 +700,12 @@ void KisPaintopBox::setCurrentPaintop(KisPaintOpPresetSP preset)
                 ->createConfigWidget(this,
                                      KisGlobalResourcesInterface::instance(),
                                      m_viewManager->canvasResourceProvider()->resourceManager()->canvasResourcesInterface());
+
+        // Solstice: options shown in Tool Options are kept per engine
+        if (KisPaintOpSettingsWidget *settingsWidget =
+                dynamic_cast<KisPaintOpSettingsWidget *>(m_paintopOptionWidgets[paintop])) {
+            settingsWidget->setPaintOpId(paintop.id());
+        }
     }
 
     m_optionWidget = m_paintopOptionWidgets[paintop];
@@ -769,6 +776,15 @@ void KisPaintopBox::setCurrentPaintop(KisPaintOpPresetSP preset)
     else {
         setWidgetState(ENABLE_COMPOSITEOP);
     }
+
+    if (m_optionWidget != previousOptionWidget) {
+        Q_EMIT sigCurrentSettingsWidgetChanged();
+    }
+}
+
+KisPaintOpSettingsWidget *KisPaintopBox::currentSettingsWidget() const
+{
+    return dynamic_cast<KisPaintOpSettingsWidget *>(m_optionWidget);
 }
 
 void KisPaintopBox::slotUpdateOptionsWidgetPopup()

@@ -22,9 +22,27 @@ public:
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
+    /**
+     * Solstice (docs/agent/tool-options-brush.md): shows an eye column at the
+     * left of the rows. Rows with isShowableInToolOptionsRole get a toggle
+     * for isShownInToolOptionsRole; the column stays empty for other rows.
+     */
+    void setToolOptionsColumnVisible(bool visible);
+    bool isToolOptionsColumnVisible() const;
+
+protected:
+    bool editorEvent(QEvent *event,
+                     QAbstractItemModel *model,
+                     const QStyleOptionViewItem &option,
+                     const QModelIndex &index) override;
+
 private:
+    int toolOptionsColumnWidth() const;
+    QRect toolOptionsRect(const QRect &rowRect) const;
+
     void paintTriangle(QPainter* painter, qint32 x, qint32 y, qint32 size, bool rotate) const;
     mutable qint32 m_minimumItemHeight;
+    bool m_toolOptionsColumnVisible{false};
 };
 
 #endif // _KIS_CATEGORIZED_ITEM_DELEGATE_H_

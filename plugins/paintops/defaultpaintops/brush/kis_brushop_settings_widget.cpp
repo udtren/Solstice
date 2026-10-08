@@ -45,6 +45,14 @@ KisBrushTipOptionState *addBrushTipOption(KisPaintOpOptionsModel *model)
     model->addOption(state);
     return state;
 }
+
+/// Solstice: the option's checkbox can be shown in Tool Options under @p id,
+/// the option's id in the options model (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
 } // namespace
 
 KisBrushOpSettingsWidget::KisBrushOpSettingsWidget(QWidget* parent, KisResourcesInterfaceSP resourcesInterface, KoCanvasResourcesInterfaceSP canvasResourcesInterface)
@@ -178,56 +186,86 @@ KisBrushOpSettingsWidget::KisBrushOpSettingsWidget(QWidget *parent,
     model->addDependency(QStringLiteral("PaintingMode"), QStringLiteral("MaskingBrush"));
 
     // Brush tip options
-    addPaintOpOption(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp));
-    addPaintOpOption(kpowu::createOpacityOptionWidget(kposu::curveCursor(opacity)));
-    addPaintOpOption(kpowu::createFlowOptionWidget(kposu::curveCursor(flow)));
-    addPaintOpOption(kposu::createOptionWidget<KisSizeOptionWidget>(size));
-    addPaintOpOption(kpowu::createRatioOptionWidget(kposu::curveCursor(ratio)));
-    addPaintOpOption(kposu::createOptionWidget<KisSpacingOptionWidget>(spacing));
-    addPaintOpOption(kposu::createOptionWidget<KisMirrorOptionWidget>(mirror));
-
-    addPaintOpOption(kpowu::createSoftnessOptionWidget(kposu::curveCursor(softness)));
-    addPaintOpOption(kpowu::createRotationOptionWidget(kposu::curveCursor(rotation)));
-
-    addPaintOpOption(kposu::createOptionWidget<KisSharpnessOptionWidget>(sharpness));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
     addPaintOpOption(
-        kposu::createOptionWidget<KisLightnessStrengthOptionWidget>(lightnessStrength,
-                                                                    brushOptionWidget()->lightnessModeEnabled()));
+        withToolOptionsId(kpowu::createOpacityOptionWidget(kposu::curveCursor(opacity)), QStringLiteral("Opacity")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createFlowOptionWidget(kposu::curveCursor(flow)), QStringLiteral("Flow")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisSizeOptionWidget>(size), QStringLiteral("Size")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRatioOptionWidget(kposu::curveCursor(ratio)), QStringLiteral("Ratio")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisSpacingOptionWidget>(spacing), QStringLiteral("Spacing")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisMirrorOptionWidget>(mirror), QStringLiteral("Mirror")));
 
-    addPaintOpOption(kposu::createOptionWidget<KisScatterOptionWidget>(scatter));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createSoftnessOptionWidget(kposu::curveCursor(softness)), QStringLiteral("Softness")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRotationOptionWidget(kposu::curveCursor(rotation)), QStringLiteral("Rotation")));
+
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisSharpnessOptionWidget>(sharpness), QStringLiteral("Sharpness")));
+    addPaintOpOption(withToolOptionsId(
+        kposu::createOptionWidget<KisLightnessStrengthOptionWidget>(lightnessStrength,
+                                                                    brushOptionWidget()->lightnessModeEnabled()),
+        QStringLiteral("LightnessStrength")));
+
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisScatterOptionWidget>(scatter), QStringLiteral("Scatter")));
 
     // Colors options
-    addPaintOpOption(kposu::createOptionWidget<KisColorSourceOptionWidget>(colorSource));
-    addPaintOpOption(kpowu::createDarkenOptionWidget(kposu::curveCursor(darken)));
-    addPaintOpOption(kpowu::createMixOptionWidget(kposu::curveCursor(mix)));
-    addPaintOpOption(kpowu::createHueOptionWidget(kposu::curveCursor(hue)));
-    addPaintOpOption(kpowu::createSaturationOptionWidget(kposu::curveCursor(saturation)));
-    addPaintOpOption(kpowu::createValueOptionWidget(kposu::curveCursor(value)));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisColorSourceOptionWidget>(colorSource),
+                                       QStringLiteral("ColorSource")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createDarkenOptionWidget(kposu::curveCursor(darken)), QStringLiteral("Darken")));
+    addPaintOpOption(withToolOptionsId(kpowu::createMixOptionWidget(kposu::curveCursor(mix)), QStringLiteral("Mix")));
+    addPaintOpOption(withToolOptionsId(kpowu::createHueOptionWidget(kposu::curveCursor(hue)), QStringLiteral("Hue")));
+    addPaintOpOption(withToolOptionsId(kpowu::createSaturationOptionWidget(kposu::curveCursor(saturation)),
+                                       QStringLiteral("Saturation")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createValueOptionWidget(kposu::curveCursor(value)), QStringLiteral("Value")));
 
-    addPaintOpOption(kposu::createOptionWidget<KisAirbrushOptionWidget>(airbrush));
-    addPaintOpOption(kpowu::createRateOptionWidget(kposu::curveCursor(rate)));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisAirbrushOptionWidget>(airbrush), QStringLiteral("Airbrush")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRateOptionWidget(kposu::curveCursor(rate)), QStringLiteral("Rate")));
 
     KisMaskingBrushOption *maskingOption =
         new KisMaskingBrushOption(masking->cursor(), brushOptionWidget()->effectiveBrushSize());
-    addPaintOpOption(
+    addPaintOpOption(withToolOptionsId(
         kposu::createOptionWidget<KisPaintingModeOptionWidget>(paintingMode,
-                                                               maskingOption->maskingBrushEnabledReader()));
+                                                               maskingOption->maskingBrushEnabledReader()),
+        QStringLiteral("MaskingBrush")));
 
-    addPaintOpOption(kposu::createOptionWidget<KisTextureOptionWidget>(texture,
-                                                                       resourcesInterface,
-                                                                       SupportsLightnessMode | SupportsGradientMode));
-    addPaintOpOption(kpowu::createStrengthOptionWidget(kposu::curveCursor(strength)));
-
-    addPaintOpOption(maskingOption);
-
-    addPaintOpOption(kpowu::createMaskingOpacityOptionWidget(kposu::curveCursor(maskingOpacity)));
-    addPaintOpOption(kpowu::createMaskingFlowOptionWidget(kposu::curveCursor(maskingFlow)));
-    addPaintOpOption(kposu::createOptionWidget<KisSizeOptionWidget>(maskingSize, KisPaintOpOption::MASKING_BRUSH));
-    addPaintOpOption(kpowu::createMaskingRatioOptionWidget(kposu::curveCursor(maskingRatio)));
-    addPaintOpOption(kpowu::createMaskingRotationOptionWidget(kposu::curveCursor(maskingRotation)));
-    addPaintOpOption(kposu::createOptionWidget<KisMirrorOptionWidget>(maskingMirror, KisPaintOpOption::MASKING_BRUSH));
+    addPaintOpOption(withToolOptionsId(
+        kposu::createOptionWidget<KisTextureOptionWidget>(texture,
+                                                          resourcesInterface,
+                                                          SupportsLightnessMode | SupportsGradientMode),
+        QStringLiteral("Texture")));
     addPaintOpOption(
-        kposu::createOptionWidget<KisScatterOptionWidget>(maskingScatter, KisPaintOpOption::MASKING_BRUSH));
+        withToolOptionsId(kpowu::createStrengthOptionWidget(kposu::curveCursor(strength)), QStringLiteral("Strength")));
+
+    addPaintOpOption(withToolOptionsId(maskingOption, QStringLiteral("MaskingBrush")));
+
+    addPaintOpOption(withToolOptionsId(kpowu::createMaskingOpacityOptionWidget(kposu::curveCursor(maskingOpacity)),
+                                       QStringLiteral("MaskingOpacity")));
+    addPaintOpOption(withToolOptionsId(kpowu::createMaskingFlowOptionWidget(kposu::curveCursor(maskingFlow)),
+                                       QStringLiteral("MaskingFlow")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisSizeOptionWidget>(maskingSize, KisPaintOpOption::MASKING_BRUSH),
+                          QStringLiteral("MaskingSize")));
+    addPaintOpOption(withToolOptionsId(kpowu::createMaskingRatioOptionWidget(kposu::curveCursor(maskingRatio)),
+                                       QStringLiteral("MaskingRatio")));
+    addPaintOpOption(withToolOptionsId(kpowu::createMaskingRotationOptionWidget(kposu::curveCursor(maskingRotation)),
+                                       QStringLiteral("MaskingRotation")));
+    addPaintOpOption(withToolOptionsId(
+        kposu::createOptionWidget<KisMirrorOptionWidget>(maskingMirror, KisPaintOpOption::MASKING_BRUSH),
+        QStringLiteral("MaskingMirror")));
+    addPaintOpOption(withToolOptionsId(
+        kposu::createOptionWidget<KisScatterOptionWidget>(maskingScatter, KisPaintOpOption::MASKING_BRUSH),
+        QStringLiteral("MaskingScatter")));
 
     setOptionsModel(model);
 }

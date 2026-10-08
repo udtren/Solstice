@@ -4,6 +4,11 @@ kis_add_test(KisDabRenderingQueueTest.cpp
     LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaimage kritatestsdk
     )
 
+kis_add_test(KisToolOptionsBrushTest.cpp
+    TEST_NAME KisToolOptionsBrushTest
+    LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
+    )
+
 kis_add_test(KisBrushTipOptionParityTest.cpp
     TEST_NAME KisBrushTipOptionParityTest
     LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk

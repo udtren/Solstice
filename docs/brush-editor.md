@@ -31,6 +31,19 @@ Everything else works as in Krita: presets are saved in the same format, and
 the toolbar, the On-Canvas Brush Editor and resizing the brush on the canvas
 change the same values as before.
 
+## Brush options in Tool Options
+
+The Pixel Brush and Deform pages of the Brush Editor have an eye column at
+the left of the option list. Options with a checkbox (Size, Ratio, Spacing,
+Texture, Masked Brush and so on) have a box there: click it to show the eye.
+Those options then appear as checkboxes in the **Tool Options** docker of the
+Freehand Brush, Line and other brush tools, under **Brush** below the tool's
+own settings. Turning a checkbox on or off there does the same as in the
+Brush Editor; the curves and other details stay in the Brush Editor.
+
+The choice is remembered for each brush engine, so every Pixel Brush preset
+shows the same options. The **Brush** heading collapses the section.
+
 ## Options that depend on others
 
 Some Pixel Brush options save a value that depends on another option:

@@ -9,6 +9,7 @@
 #include "kis_paintop_option.h"
 #include "kis_paintop_options_model.h"
 #include "KisPaintOpOptionsModel.h"
+#include "KisToolOptionsBrushItems.h"
 
 #include <QHBoxLayout>
 #include <QList>
@@ -44,6 +45,10 @@ struct KisPaintOpSettingsWidget::Private
     QStackedWidget*             optionsStack;
     std::optional<lager::reader<KisPaintopLodLimitations>> lodLimitations;
     QPointer<KisPaintOpOptionsModel> optionsModel;
+
+    // Solstice: Tool Options exposure
+    KisCategorizedItemDelegate *delegate{nullptr};
+    QString paintOpId;
 };
 
 KisPaintOpSettingsWidget::KisPaintOpSettingsWidget(QWidget * parent)
@@ -55,7 +60,8 @@ KisPaintOpSettingsWidget::KisPaintOpSettingsWidget(QWidget * parent)
     m_d->model       = new KisPaintOpOptionListModel(this);
     m_d->optionsList = new KisCategorizedListView(this);
     m_d->optionsList->setModel(m_d->model);
-    m_d->optionsList->setItemDelegate(new KisCategorizedItemDelegate(m_d->optionsList));
+    m_d->delegate = new KisCategorizedItemDelegate(m_d->optionsList);
+    m_d->optionsList->setItemDelegate(m_d->delegate);
     m_d->optionsList->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     m_d->optionsList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
@@ -126,6 +132,57 @@ void KisPaintOpSettingsWidget::setOptionsModel(KisPaintOpOptionsModel *model)
 KisPaintOpOptionsModel *KisPaintOpSettingsWidget::optionsModel() const
 {
     return m_d->optionsModel;
+}
+
+void KisPaintOpSettingsWidget::setPaintOpId(const QString &paintOpId)
+{
+    if (m_d->paintOpId == paintOpId) {
+        return;
+    }
+    m_d->paintOpId = paintOpId;
+
+    const QList<KisPaintOpOption *> options = toolOptionsOptions();
+    m_d->delegate->setToolOptionsColumnVisible(!options.isEmpty());
+    if (options.isEmpty()) {
+        return;
+    }
+
+    KisToolOptionsBrushItems *items = KisToolOptionsBrushItems::instance();
+    auto syncFromItems = [this]() {
+        const QSet<QString> shown = KisToolOptionsBrushItems::instance()->shownItems(m_d->paintOpId);
+        Q_FOREACH (KisPaintOpOption *option, toolOptionsOptions()) {
+            option->setShownInToolOptions(shown.contains(option->toolOptionsId()));
+        }
+    };
+    syncFromItems();
+
+    Q_FOREACH (KisPaintOpOption *option, options) {
+        connect(option, &KisPaintOpOption::sigShownInToolOptionsChanged, this, [this, option](bool shown) {
+            KisToolOptionsBrushItems::instance()->setShown(m_d->paintOpId, option->toolOptionsId(), shown);
+        });
+    }
+    // the same engine's editor in another window
+    connect(items, &KisToolOptionsBrushItems::sigShownItemsChanged, this, [this, syncFromItems](const QString &id) {
+        if (id == m_d->paintOpId) {
+            syncFromItems();
+        }
+    });
+}
+
+QString KisPaintOpSettingsWidget::paintOpId() const
+{
+    return m_d->paintOpId;
+}
+
+QList<KisPaintOpOption *> KisPaintOpSettingsWidget::toolOptionsOptions() const
+{
+    QList<KisPaintOpOption *> result;
+    Q_FOREACH (KisPaintOpOption *option, m_d->paintOpOptions) {
+        if (option->isCheckable() && !option->toolOptionsId().isEmpty()) {
+            result << option;
+        }
+    }
+    return result;
 }
 
 void KisPaintOpSettingsWidget::setConfiguration(const KisPropertiesConfigurationSP  config)

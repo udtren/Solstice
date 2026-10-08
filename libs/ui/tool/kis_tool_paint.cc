@@ -44,6 +44,8 @@
 #include <kis_layer.h>
 #include <KisViewManager.h>
 #include <kis_canvas2.h>
+#include "KisToolOptionsBrushSection.h"
+#include "kis_paintop_box.h"
 #include <kis_cubic_curve.h>
 #include "kis_display_color_converter.h"
 #include <KisDocument.h>
@@ -412,6 +414,15 @@ QWidget *KisToolPaint::createOptionWidget()
         hLayout->addWidget(push);
         hLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Fixed));
         verticalLayout->addLayout(hLayout);
+    }
+
+    // Solstice: below the tool's own options, which subclasses add to
+    // m_optionsWidgetLayout above
+    if (showsBrushOptions()) {
+        KisCanvas2 *kisCanvas = qobject_cast<KisCanvas2 *>(canvas());
+        KisPaintopBox *paintopBox =
+            kisCanvas && kisCanvas->viewManager() ? kisCanvas->viewManager()->paintOpBox() : nullptr;
+        verticalLayout->addWidget(new KisToolOptionsBrushSection(paintopBox, optionWidget));
     }
 
     return optionWidget;
