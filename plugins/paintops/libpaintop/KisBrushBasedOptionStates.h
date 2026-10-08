@@ -16,6 +16,7 @@
 #include <kritapaintop_export.h>
 
 #include "KisBrushTipOptionData.h"
+#include "KisFilterOptionData.h"
 #include "KisPaintingModeOptionData.h"
 #include "KisTextureOptionData.h"
 
@@ -89,6 +90,9 @@ namespace KisBrushBasedOptionStates
 /// What KisTextureOptionWidget writes: the pattern embedded.
 PAINTOP_EXPORT KisTextureOptionData bakeTextureOption(const KisTextureOptionData &data,
                                                       KisResourcesInterfaceSP resourcesInterface);
+
+/// What KisFilterOptionWidget writes: the fallback filter while none is set.
+PAINTOP_EXPORT KisFilterOptionData bakeFilterOption(const KisFilterOptionData &data);
 
 /// What KisPaintingModeOptionWidget writes: wash while the masking brush is
 /// enabled.

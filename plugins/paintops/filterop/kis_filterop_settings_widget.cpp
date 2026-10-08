@@ -19,21 +19,85 @@
 #include <KisSizeOptionWidget.h>
 #include <KisMirrorOptionWidget.h>
 #include <KisFilterOptionWidget.h>
+#include <KisBrushBasedOptionStates.h>
+#include <KisPaintOpOptionStateUtils.h>
+#include <KisPaintOpOptionsModel.h>
+#include <kis_brush_option_widget.h>
+
+namespace
+{
+KisBrushTipOptionState *addBrushTipOption(KisPaintOpOptionsModel *model, KisBrushOptionWidgetFlags flags)
+{
+    KisBrushTipOptionState *state = new KisBrushTipOptionState(QStringLiteral("BrushTip"), flags);
+    model->addOption(state);
+    return state;
+}
+
+/// Solstice: the option's checkbox and page parameters can be shown in Tool
+/// Options under @p id, the option's id in the options model
+/// (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
+} // namespace
 
 KisFilterOpSettingsWidget::KisFilterOpSettingsWidget(QWidget* parent)
-    : KisBrushBasedPaintopOptionWidget(KisBrushOptionWidgetFlag::SupportsPrecision, parent)
+    : KisFilterOpSettingsWidget(parent, new KisPaintOpOptionsModel())
+{
+}
+
+KisFilterOpSettingsWidget::KisFilterOpSettingsWidget(QWidget *parent, KisPaintOpOptionsModel *model)
+    : KisBrushBasedPaintopOptionWidget(KisBrushOptionWidgetFlag::SupportsPrecision,
+                                       addBrushTipOption(model, KisBrushOptionWidgetFlag::SupportsPrecision)->cursor(),
+                                       parent)
 {
     namespace kpowu = KisPaintOpOptionWidgetUtils;
-
+    namespace kposu = KisPaintOpOptionStateUtils;
 
     setObjectName("filter option widget");
 
-    addPaintOpOption(kpowu::createOptionWidget<KisCompositeOpOptionWidget>());
-    addPaintOpOption(kpowu::createOpacityOptionWidget());
-    addPaintOpOption(kpowu::createOptionWidget<KisSizeOptionWidget>());
-    addPaintOpOption(kpowu::createRotationOptionWidget());
-    addPaintOpOption(kpowu::createOptionWidget<KisMirrorOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisFilterOptionWidget>());
+    // Solstice: the option states live in a shared model, so that one option
+    // change writes only that option (docs/agent/brush-option-shared-model-plan.md,
+    // phase 4); no option's written data depends on another
+    model->setParent(this);
+
+    KisBrushTipOptionState *brushTip = static_cast<KisBrushTipOptionState *>(model->option(QStringLiteral("BrushTip")));
+    brushTip->setResourcesInterfaceGetter([this]() {
+        return this->resourcesInterface();
+    });
+
+    auto *compositeOp = model->addOption(QStringLiteral("CompositeOp"), KisCompositeOpOptionData());
+    auto *opacity = model->addOption(QStringLiteral("Opacity"),
+                                     KisOpacityOptionData(),
+                                     &kposu::bakeCurveOption<KisOpacityOptionData>);
+    auto *size =
+        model->addOption(QStringLiteral("Size"), KisSizeOptionData(), &kposu::bakeCurveOption<KisSizeOptionData>);
+    auto *rotation = model->addOption(QStringLiteral("Rotation"),
+                                      KisRotationOptionData(),
+                                      &kposu::bakeCurveOption<KisRotationOptionData>);
+    auto *mirror =
+        model->addOption(QStringLiteral("Mirror"), KisMirrorOptionData(), &kposu::bakeCurveOption<KisMirrorOptionData>);
+    // written with the fallback filter while none is chosen
+    auto *filter =
+        model->addOption(QStringLiteral("Filter"), KisFilterOptionData(), &KisBrushBasedOptionStates::bakeFilterOption);
+
+    brushOptionWidget()->setToolOptionsId(QStringLiteral("BrushTip"));
+
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createOpacityOptionWidget(kposu::curveCursor(opacity)), QStringLiteral("Opacity")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisSizeOptionWidget>(size), QStringLiteral("Size")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRotationOptionWidget(kposu::curveCursor(rotation)), QStringLiteral("Rotation")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisMirrorOptionWidget>(mirror), QStringLiteral("Mirror")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisFilterOptionWidget>(filter), QStringLiteral("Filter")));
+
+    setOptionsModel(model);
 }
 
 KisFilterOpSettingsWidget::~KisFilterOpSettingsWidget()

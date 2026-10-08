@@ -15,7 +15,21 @@
 #include <KisCompositeOpOptionWidget.h>
 #include "KisSizeOptionWidget.h"
 #include "KisSpacingOptionWidget.h"
+#include <KisPaintOpOptionStateUtils.h>
+#include <KisPaintOpOptionsModel.h>
+#include <KisStandardOptionData.h>
 
+namespace
+{
+/// Solstice: the option's checkbox and page parameters can be shown in Tool
+/// Options under @p id, the option's id in the options model
+/// (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
+} // namespace
 
 KisRoundMarkerOpSettingsWidget::KisRoundMarkerOpSettingsWidget(QWidget* parent)
     : KisPaintOpSettingsWidget(parent)
@@ -25,10 +39,30 @@ KisRoundMarkerOpSettingsWidget::KisRoundMarkerOpSettingsWidget(QWidget* parent)
     setObjectName("roundmarker option widget");
     //setPrecisionEnabled(true);
 
-    addPaintOpOption(kpowu::createOptionWidget<KisRoundMarkerOpOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisCompositeOpOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisSizeOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisSpacingOptionWidget>());
+    namespace kposu = KisPaintOpOptionStateUtils;
+
+    // Solstice: the option states live in a shared model, so that one option
+    // change writes only that option (docs/agent/brush-option-shared-model-plan.md,
+    // phase 4); no option's written data depends on another
+    KisPaintOpOptionsModel *model = new KisPaintOpOptionsModel(this);
+
+    auto *roundMarker = model->addOption(QStringLiteral("RoundMarker"), KisRoundMarkerOpOptionData());
+    auto *compositeOp = model->addOption(QStringLiteral("CompositeOp"), KisCompositeOpOptionData());
+    auto *size =
+        model->addOption(QStringLiteral("Size"), KisSizeOptionData(), &kposu::bakeCurveOption<KisSizeOptionData>);
+    auto *spacing = model->addOption(QStringLiteral("Spacing"),
+                                     KisSpacingOptionData(),
+                                     &kposu::bakeCurveOption<KisSpacingOptionData>);
+
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisRoundMarkerOpOptionWidget>(roundMarker),
+                                       QStringLiteral("RoundMarker")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisSizeOptionWidget>(size), QStringLiteral("Size")));
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisSpacingOptionWidget>(spacing), QStringLiteral("Spacing")));
+
+    setOptionsModel(model);
 }
 
 KisRoundMarkerOpSettingsWidget::~KisRoundMarkerOpSettingsWidget() { }

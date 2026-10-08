@@ -117,7 +117,8 @@ Read these before adding or updating any feature:
 - Brush option shared model (phase 1 done for Deform; phase 2a brush tip and
   masking brush and phase 2b Pixel Brush done and manually checked
   2026-10-08; phase 4 Color Smudge done and manually checked 2026-10-08; Sketch and
-  Bristle done and manually checked 2026-10-08):
+  Bristle done and manually checked 2026-10-08; Tangent Normal, Hatching,
+  Filter and Quick Brush done and manually checked 2026-10-08):
   `docs/agent/brush-option-shared-model-plan.md`, findings in
   `docs/agent/brush-option-shared-model-phase0.md`
 - Brush options in Tool Options (eyes in the Brush Editor; phases 3a and 3b

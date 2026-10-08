@@ -15,6 +15,7 @@
 #include <kis_image.h>
 
 class KisFilterOption;
+class KisPaintOpOptionsModel;
 
 class KisFilterOpSettingsWidget : public KisBrushBasedPaintopOptionWidget
 {
@@ -28,6 +29,11 @@ public:
     ~KisFilterOpSettingsWidget() override;
 
     KisPropertiesConfigurationSP configuration() const override;
+
+private:
+    // Solstice: the option states live in @p model, which must exist before
+    // the base class creates the brush tip option
+    KisFilterOpSettingsWidget(QWidget *parent, KisPaintOpOptionsModel *model);
 };
 
 #endif // KIS_FILTEROP_SETTINGS_WIDGET_H_

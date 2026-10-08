@@ -532,6 +532,8 @@ Tool Optionsではツール設定の下に置く。下記の「設定による�
 フェーズ4はColor Smudgeを同日に実装し、手動確認で問題なし(下記の
 「フェーズ4の実装結果: Color Smudge」)。SketchとBristleも同日に実装し、
 手動確認で問題なし(「フェーズ4の実装結果: SketchとBristle(Hairy)」)。
+Tangent Normal、Hatching、Filter、Quick Brushも同日に実装し、手動確認で
+問題なし。残りはCurve、Grid、Particle、Experiment、Spray、MyPaint。
 
 本書の最終目的である3つの要件を実現する。
 
@@ -684,6 +686,53 @@ Sketch(`sketchbrush`)とBristle(`hairybrush`)の設定画面を共有モデル�
    描画とF5に反映される。
 4. Ink depletionなどチェックボックスのあるオプションは、行の目で
    Tool Optionsにチェックボックスとして出る。
+
+#### フェーズ4の実装結果: Tangent Normal、Hatching、Filter、Quick Brush(2026年10月8日)
+
+4つの設定画面を共有モデルのビューに置き換えた。オプション間の依存はない。
+F5の目とTool Optionsの「Brush」欄も使える。
+
+| エンジン(paintop) | オプション(モデルのid)と焼き込み |
+| --- | --- |
+| Tangent Normal(`tangentnormal`) | BrushTip(精度・HSL)、CompositeOp、Opacity、Flow、Size、TangentTilt、Spacing、Mirror、Softness、Sharpness、Scatter、Rotation、Airbrush、Rate、PaintingMode、Texture(パターン埋め込み)、Strength |
+| Hatching(`hatchingbrush`) | BrushTip(精度)、HatchingOptions、HatchingPreferences、CompositeOp、Separation、Thickness、Angle、Crosshatching、Opacity、Size、Mirror、PaintingMode、Texture、Strength |
+| Filter(`filter`) | BrushTip(精度)、CompositeOp、Opacity、Size、Rotation、Mirror、Filter(フィルタ未設定なら予備のフィルタと既定の設定を書く。`KisBrushBasedOptionStates::bakeFilterOption()` が `KisFilterOptionModel::bakeOptionData()` を呼ぶ) |
+| Quick Brush(`roundmarker`) | RoundMarker、CompositeOp、Size、Spacing(ブラシ先端なし、Deformと同じ構成) |
+
+エンジン固有ページのTool Options項目: TangentTiltのElevation Sensitivityと
+Direction/Tilt Mix Value、HatchingOptionsのAngle・Separation・Thickness、
+HatchingPreferencesの3つのチェックボックス、FilterのSmudge Mode、
+RoundMarkerのDiameterとSpacing。フィルタの選択(`KisCmbIDList`)、
+Tangent Normalの方向の種類、Hatchingの交差の種類は対象外。
+
+**変更したファイル**
+
+| 場所 | 内容 |
+| --- | --- |
+| `plugins/paintops/{tangentnormal,hatching,filterop,roundmarker}/` の設定ウィジェット | モデルを作り、全オプションを登録し、ウィジェットを結び付ける |
+| `KisTangentTiltOptionWidget.cpp`、`KisHatchingOptionsWidget.cpp`、`KisHatchingPreferencesWidget.cpp`、`KisRoundMarkerOpOptionWidget.cpp`、`libpaintop/KisFilterOptionWidget.cpp` | ページのパラメータ |
+| `libpaintop/KisFilterOptionModel.*`、`KisBrushBasedOptionStates.*` | Filterの静的な焼き込み |
+| 4エンジンの `CMakeLists.txt` と `tests/`(追加) | テスト用の静的ライブラリ、パリティテスト、同梱プリセット(6、8、3、4件)と基準ファイル |
+
+**テスト(すべて通過)**
+
+- `KisTangentNormalParityTest` 16件、`KisHatchingParityTest` 20件、
+  `KisFilterOpParityTest` 11件、`KisRoundMarkerParityTest` 8件。
+- 同梱プリセットを、そのままと、ブラシ先端のあるエンジンではRGBAバンドルの
+  カラー先端を明度モードにした変種で読み込み、移行前のコードで記録した
+  基準と比較する(移行前のコードでも一致を確認)。
+- 編集のたびにプリセットがモデルの全書き込みと一致する(合成モードとSize)。
+- Filter: フィルタを消したプリセットでは、予備のフィルタが書かれる
+  (同梱プリセットはすべてフィルタを持つため、別のテストで確認)。
+
+手動確認の項目:
+
+1. 4エンジンでF5の各ページを変更し、描画、プレビュー、変更済み表示が従来どおり
+   更新される。プリセットの切り替え・保存で値が保たれる。
+2. Filterでフィルタを切り替えると、フィルタの設定ページが切り替わり、描画に
+   反映される。
+3. 上のページ項目に目を入れるとTool Optionsに出て、そこでの変更が描画とF5に
+   反映される。
 
 ### フェーズ5: 旧経路の整理
 

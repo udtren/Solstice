@@ -28,6 +28,10 @@ public:
     LAGER_QT_CURSOR(bool, smudgeMode);
 
     KisFilterOptionData bakedOptionData() const;
+
+    /// Solstice: bakedOptionData() of @p data, for options whose state lives
+    /// in KisPaintOpOptionsModel (docs/agent/brush-option-shared-model-plan.md)
+    static KisFilterOptionData bakeOptionData(const KisFilterOptionData &data);
 };
 
 #endif // KISFILTEROPTIONMODEL_H

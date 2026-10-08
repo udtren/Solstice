@@ -84,6 +84,13 @@ KisTangentTiltOptionWidget::KisTangentTiltOptionWidget(lager::cursor<KisTangentT
     m_d->model.optionData.bind(std::bind(&KisTangentTiltOptionWidget::emitSettingChanged, this));
     
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("ElevationSensitivity"),
+                            i18n("Elevation Sensitivity"),
+                            widget->sliderElevationSensitivity);
+    addToolOptionsParameter(QStringLiteral("MixValue"), i18n("Direction/Tilt Mix Value"), widget->sliderMixValue);
 }
 
 KisTangentTiltOptionWidget::~KisTangentTiltOptionWidget()

@@ -7,6 +7,7 @@
 
 #include <KisGlobalResourcesInterface.h>
 
+#include "KisFilterOptionModel.h"
 #include "KisTextureOptionModel.h"
 
 namespace
@@ -148,6 +149,11 @@ namespace KisBrushBasedOptionStates
 KisTextureOptionData bakeTextureOption(const KisTextureOptionData &data, KisResourcesInterfaceSP resourcesInterface)
 {
     return KisTextureOptionModel::bakedOptionData(data, resourcesInterface);
+}
+
+KisFilterOptionData bakeFilterOption(const KisFilterOptionData &data)
+{
+    return KisFilterOptionModel::bakeOptionData(data);
 }
 
 KisPaintingModeOptionData bakePaintingModeOption(const KisPaintingModeOptionData &data, bool maskingBrushEnabled)

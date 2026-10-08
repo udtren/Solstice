@@ -12,9 +12,21 @@ set(kritatangentnormalpaintop_SOURCES
 
 ki18n_wrap_ui(kritatangentnormalpaintop_SOURCES wdgtangenttiltoption.ui )
 
-kis_add_library(kritatangentnormalpaintop MODULE ${kritatangentnormalpaintop_SOURCES})
+# Solstice: a static library for the tests of the settings widget
+# (docs/agent/brush-option-shared-model-plan.md, phase 4)
+set(kritatangentnormalpaintop_static_SOURCES ${kritatangentnormalpaintop_SOURCES})
+list(REMOVE_ITEM kritatangentnormalpaintop_static_SOURCES kis_tangent_normal_paintop_plugin.cpp)
 
-target_link_libraries(kritatangentnormalpaintop kritalibpaintop)
+kis_add_library(kritatangentnormalpaintop_static STATIC ${kritatangentnormalpaintop_static_SOURCES})
+target_link_libraries(kritatangentnormalpaintop_static kritaui kritalibpaintop)
+
+kis_add_library(kritatangentnormalpaintop MODULE kis_tangent_normal_paintop_plugin.cpp)
+
+target_link_libraries(kritatangentnormalpaintop kritatangentnormalpaintop_static)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 install(TARGETS kritatangentnormalpaintop  DESTINATION ${KRITA_PLUGIN_INSTALL_DIR})
 ########### install files ###############

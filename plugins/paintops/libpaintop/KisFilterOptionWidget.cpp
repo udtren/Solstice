@@ -92,6 +92,10 @@ KisFilterOptionWidget::KisFilterOptionWidget(lager::cursor<KisFilterOptionData> 
 
     connectControl(m_d->page->checkBoxSmudgeMode, &m_d->model, "smudgeMode");
 
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("SmudgeMode"), i18n("Smudge Mode"), m_d->page->checkBoxSmudgeMode);
+
     m_d->model.optionData.bind(std::bind(&KisFilterOptionWidget::emitSettingChanged, this));
 }
 

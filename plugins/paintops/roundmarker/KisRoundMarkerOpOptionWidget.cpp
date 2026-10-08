@@ -63,6 +63,11 @@ KisRoundMarkerOpOptionWidget::KisRoundMarkerOpOptionWidget(lager::cursor<KisRoun
     m_d->model.optionData.bind(std::bind(&KisRoundMarkerOpOptionWidget::emitSettingChanged, this));
     
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Diameter"), i18n("Diameter"), widget->dblDiameter);
+    addToolOptionsParameter(QStringLiteral("Spacing"), i18n("Spacing"), widget->spacingWidget);
 }
 
 KisRoundMarkerOpOptionWidget::~KisRoundMarkerOpOptionWidget()

@@ -260,3 +260,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   with Krita's installer and Krita was no longer installed. Older files
   showed thumbnails from the Windows thumbnail cache only. Bundling the
   extension is recorded in `todo.md`.
+
+## 2026-10-08 ingest: Tangent Normal, Hatching, Filter, Quick Brush (phase 4)
+
+- `brush-option-shared-model-plan.md`: four more engines on the shared
+  model, without dependencies. Filter's bake (fallback filter while none is
+  set) is `KisFilterOptionModel::bakeOptionData()`, reached through the
+  exported `KisBrushBasedOptionStates::bakeFilterOption()`. Lesson: libpaintop
+  model classes are not exported; a plugin can only call libpaintop code
+  marked `PAINTOP_EXPORT`, so bakes go through `KisBrushBasedOptionStates`.
+  Bundled presets never lack a filter, so the fallback has its own test.
+- Pitfall: clang-format re-sorts include blocks and rewraps the public
+  constructor of upstream files; `restore_upstream`-style fixes put the HEAD
+  include order back and append new includes.

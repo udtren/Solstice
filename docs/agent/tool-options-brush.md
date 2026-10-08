@@ -39,8 +39,9 @@ Editor (F5) chooses which brush items appear in the Tool Options docker.
 - An option has an eye only when it is checkable and has a Tool Options id.
   Engines without ids (not migrated to the shared model) show no eye column
   and their Brush section shows a hint.
-- Engines with ids: Pixel Brush, Deform, Color Smudge, Sketch and Bristle
-  (phase 4 of the shared model plan). Color Smudge has no masked brush; its other page
+- Engines with ids: Pixel Brush, Deform, Color Smudge, Sketch, Bristle,
+  Tangent Normal, Hatching, Filter and Quick Brush (phase 4 of the shared
+  model plan). Color Smudge has no masked brush; its other page
   parameters (Brush Tip, Blending Mode, Opacity, Texture Scale) come from the
   shared option widgets.
 - The ids are the options-model ids, stable and untranslated. Renaming one
@@ -70,6 +71,11 @@ shows the control in the Brush section, as a copy kept in sync with it.
 | Texture (`Texture`) | `Scale` (`scaleSlider`) |
 | Sketch (`Sketch`, Sketch engine page) | `LineWidth` (`lineWidthSPBox`), `Offset` (`offsetSPBox`), `Density` (`densitySPBox`) |
 | Bristle (`Bristle`, Bristle engine page) | `Scale` (`scaleBox`), `RandomOffset` (`rndBox`), `Shear` (`shearBox`), `Density` (`densityBox`) |
+| Tangent Tilt (`TangentTilt`, Tangent Normal) | `ElevationSensitivity` (`sliderElevationSensitivity`), `MixValue` (`sliderMixValue`) |
+| Hatching options (`HatchingOptions`) | `Angle` (`angleKisAngleSelector`), `Separation`, `Thickness` (their `KisDoubleSliderSpinBox`) |
+| Hatching preferences (`HatchingPreferences`) | `Antialias`, `SubpixelPrecision`, `ColorBackground` (check boxes) |
+| Filter (`Filter`) | `SmudgeMode` (`checkBoxSmudgeMode`); the filter list (`KisCmbIDList`) cannot be mirrored |
+| Quick Brush (`RoundMarker`) | `Diameter` (`dblDiameter`), `Spacing` (`spacingWidget`) |
 
 A tip control that an engine hides with `KisBrushOptionWidget::hideOptions()`
 (Bristle: the auto tip's Fade, Density and Spacing) loses its parameter and

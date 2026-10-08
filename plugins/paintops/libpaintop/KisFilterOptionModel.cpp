@@ -50,5 +50,10 @@ KisFilterOptionData KisFilterOptionModel::bakedOptionData() const
     return data;
 }
 
-
-
+KisFilterOptionData KisFilterOptionModel::bakeOptionData(const KisFilterOptionData &data)
+{
+    KisFilterOptionData result = data;
+    std::tie(result.filterId, result.filterConfig) =
+        lager::view(effectiveFilterStateLens, std::make_tuple(data.filterId, data.filterConfig));
+    return result;
+}

@@ -93,6 +93,12 @@ KisHatchingOptionsWidget::KisHatchingOptionsWidget(lager::cursor<KisHatchingOpti
     m_d->model.optionData.bind(std::bind(&KisHatchingOptionsWidget::emitSettingChanged, this));
 
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Angle"), i18n("Angle"), widget->angleKisAngleSelector);
+    addToolOptionsParameter(QStringLiteral("Separation"), i18n("Separation"), widget->separationKisDoubleSliderSpinBox);
+    addToolOptionsParameter(QStringLiteral("Thickness"), i18n("Thickness"), widget->thicknessKisDoubleSliderSpinBox);
 }
 
 KisHatchingOptionsWidget::~KisHatchingOptionsWidget()

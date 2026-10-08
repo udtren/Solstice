@@ -58,6 +58,16 @@ KisHatchingPreferencesWidget::KisHatchingPreferencesWidget(lager::cursor<KisHatc
     m_d->model.optionData.bind(std::bind(&KisHatchingPreferencesWidget::emitSettingChanged, this));
 
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Antialias"), i18n("Antialiased lines"), widget->antialiasCheckBox);
+    addToolOptionsParameter(QStringLiteral("SubpixelPrecision"),
+                            i18n("Subpixel precision"),
+                            widget->subpixelPrecisionCheckBox);
+    addToolOptionsParameter(QStringLiteral("ColorBackground"),
+                            i18n("Color background"),
+                            widget->opaqueBackgroundCheckBox);
 }
 
 KisHatchingPreferencesWidget::~KisHatchingPreferencesWidget()

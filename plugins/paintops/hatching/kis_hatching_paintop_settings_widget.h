@@ -14,6 +14,7 @@
 #include "ui_wdghatchingoptions.h"
 #include "ui_wdghatchingpreferences.h"
 
+class KisPaintOpOptionsModel;
 
 class KisHatchingPaintOpSettingsWidget : public KisBrushBasedPaintopOptionWidget
 {
@@ -24,6 +25,14 @@ public:
     ~KisHatchingPaintOpSettingsWidget() override;
 
     KisPropertiesConfigurationSP configuration() const override;
+
+private:
+    // Solstice: the option states live in @p model, which must exist before
+    // the base class creates the brush tip option
+    KisHatchingPaintOpSettingsWidget(QWidget *parent,
+                                     KisResourcesInterfaceSP resourcesInterface,
+                                     KoCanvasResourcesInterfaceSP canvasResourcesInterface,
+                                     KisPaintOpOptionsModel *model);
 };
 
 #endif
