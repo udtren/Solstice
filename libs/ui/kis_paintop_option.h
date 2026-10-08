@@ -111,6 +111,9 @@ public:
                                  QWidget *labelWidget = nullptr,
                                  QWidget *modeWidget = nullptr);
     QList<ToolOptionsParameter> toolOptionsParameters() const;
+    /// Unregisters the parameter @p id and deletes its eye button, e.g. for
+    /// a control that the engine hides from the page
+    void removeToolOptionsParameter(const QString &id);
 
     /**
      * Reimplement this to use the image in the option widget

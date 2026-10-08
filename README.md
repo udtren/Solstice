@@ -43,9 +43,9 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
   a grid that adapts to the docker's width, with multi-select engine and bundle
   filters alongside tags and search, and optional grouping by engine or
   bundle.
-- **[Brush Editor](docs/brush-editor.md)**: Pixel Brush, Color Smudge and
-  Deform options live in a shared model, so one change updates only that
-  option in the preset.
+- **[Brush Editor](docs/brush-editor.md)**: Pixel Brush, Color Smudge,
+  Sketch, Bristle and Deform options live in a shared model, so one change
+  updates only that option in the preset.
 - **[Brush options in Tool Options](docs/brush-editor.md#brush-options-in-tool-options)**:
   as with Clip Studio Paint's eye marks, an eye next to a Brush Editor
   setting shows it in the Tool Options docker, under the current brush's

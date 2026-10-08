@@ -76,6 +76,13 @@ KisHairyBristleOptionWidget::KisHairyBristleOptionWidget(lager::cursor<KisHairyB
     m_d->model.optionData.bind(std::bind(&KisHairyBristleOptionWidget::emitSettingChanged, this));
 
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Scale"), i18n("Scale"), widget->scaleBox);
+    addToolOptionsParameter(QStringLiteral("RandomOffset"), i18n("Random offset"), widget->rndBox);
+    addToolOptionsParameter(QStringLiteral("Shear"), i18n("Shear"), widget->shearBox);
+    addToolOptionsParameter(QStringLiteral("Density"), i18n("Density"), widget->densityBox);
 }
 
 KisHairyBristleOptionWidget::~KisHairyBristleOptionWidget()

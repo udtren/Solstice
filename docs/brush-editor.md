@@ -11,6 +11,8 @@ showing Brush Editor options in the Tool Options docker later.
 | --- | --- |
 | Pixel Brush | Yes |
 | Color Smudge | Yes |
+| Sketch | Yes |
+| Bristle | Yes |
 | Deform | Yes |
 | Other engines | Not yet; they work as in Krita |
 
@@ -39,8 +41,8 @@ change the same values as before.
 
 ## Brush options in Tool Options
 
-The Pixel Brush, Color Smudge and Deform pages of the Brush Editor have an eye column at
-the left of the option list. Options with a checkbox (Size, Ratio, Spacing,
+The Pixel Brush, Color Smudge, Sketch, Bristle and Deform pages of the Brush
+Editor have an eye column at the left of the option list. Options with a checkbox (Size, Ratio, Spacing,
 Texture, Masked Brush and so on) have a box there: click it to show the eye.
 Those options then appear as checkboxes in the **Tool Options** docker of the
 Freehand Brush, Line and other brush tools, under **Brush** below the tool's
@@ -57,6 +59,9 @@ rows carry the option's name; the second is the checkbox). With the eye on, the
 setting appears in
 the **Brush** section with the same control, and changes in either place
 apply to both. Tip settings appear only for the kind of tip the brush uses.
+Sketch has eyes on Line width, Offset scale and Density, and Bristle on
+Scale, Random offset, Shear and Density; tip settings that Bristle hides
+have no eye.
 The Rectangle, Ellipse, Polygon and Polyline tools show the section too, at
 the end of their options.
 

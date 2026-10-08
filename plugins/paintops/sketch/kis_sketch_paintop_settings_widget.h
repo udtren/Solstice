@@ -14,6 +14,7 @@
 
 class KisPaintActionTypeOption;
 class KisSketchOpOption;
+class KisPaintOpOptionsModel;
 
 class KisSketchPaintOpSettingsWidget : public KisBrushBasedPaintopOptionWidget
 {
@@ -24,6 +25,11 @@ public:
     ~KisSketchPaintOpSettingsWidget() override;
 
     KisPropertiesConfigurationSP configuration() const override;
+
+private:
+    // Solstice: the option states live in @p model, which must exist before
+    // the base class creates the brush tip option
+    KisSketchPaintOpSettingsWidget(QWidget *parent, KisPaintOpOptionsModel *model);
 };
 
 #endif

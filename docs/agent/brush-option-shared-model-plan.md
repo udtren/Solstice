@@ -530,7 +530,8 @@ Tool Optionsではツール設定の下に置く。下記の「設定による�
 フェーズ3b(ページ内の主要パラメータ、図形ツール、Brush欄先頭のストローク
 プレビュー)は同日に実装し、手動確認で問題なし。
 フェーズ4はColor Smudgeを同日に実装し、手動確認で問題なし(下記の
-「フェーズ4の実装結果: Color Smudge」)。
+「フェーズ4の実装結果: Color Smudge」)。SketchとBristleも同日に実装し、
+手動確認で問題なし(「フェーズ4の実装結果: SketchとBristle(Hairy)」)。
 
 本書の最終目的である3つの要件を実現する。
 
@@ -625,6 +626,64 @@ ColorRate、Gradient、Strength(ラベルWeak/Strong、分類Color)は旧画面�
 4. 目を入れた項目がTool Optionsに出て、そこでの変更が描画とF5に反映される。
 5. ロックの破棄で元の値に戻り、LOD設定だけの変更では変更済みにならない
    (承認済みの挙動変更)。
+
+#### フェーズ4の実装結果: SketchとBristle(Hairy)(2026年10月8日)
+
+Sketch(`sketchbrush`)とBristle(`hairybrush`)の設定画面を共有モデルの
+ビューに置き換えた。どちらもオプション間の依存はなく、焼き込みはカーブの
+標準の焼き込みだけ。F5の目とTool Optionsの「Brush」欄も使える。
+
+| エンジン | オプション(モデルのid) |
+| --- | --- |
+| Sketch | BrushTip、Sketch、CompositeOp、Opacity、Size、Rotation、LineWidth、OffsetScale、Density、Airbrush(間隔を無視する設定なし)、Rate、PaintingMode(初期値Build up) |
+| Bristle | BrushTip、Bristle、Ink、CompositeOp、Opacity、Size、Rotation、PaintingMode |
+
+あわせて次を変更した。
+
+- **エンジン固有ページのTool Options項目:** SketchページのLine width、
+  Offset scale、Density、BristleページのScale、Random offset、Shear、
+  Densityを、ページのパラメータとして目を付けた。Ink depletionは
+  チェックボックスのオプションなので、行の目で出せる(Ink Amountは
+  `KisIntParseSpinBox` で写せないため対象外)。
+- **隠した先端の設定:** Bristleは自動先端のFade、Density、Spacingを
+  `hideOptions()` で隠す。`KisBrushOptionWidget::hideOptions()` が、
+  隠れたコントロールのパラメータを `KisPaintOpOption::removeToolOptionsParameter()`
+  で外し、目を出さないようにした。Bristleが隠そうとする事前定義先端の
+  Spacing(`KisBrushChooser/Spacing`)は、該当するオブジェクト名がなく
+  もともと表示されているため、目が付く。
+
+**変更したファイル**
+
+| 場所 | 内容 |
+| --- | --- |
+| `plugins/paintops/sketch/kis_sketch_paintop_settings_widget.{h,cpp}`、`plugins/paintops/hairy/kis_hairy_paintop_settings_widget.{h,cpp}` | モデルを作り、全オプションを登録し、ウィジェットを結び付ける |
+| `plugins/paintops/sketch/KisSketchOpOptionWidget.cpp`、`plugins/paintops/hairy/KisHairyBristleOptionWidget.cpp` | ページのパラメータ |
+| `plugins/paintops/{sketch,hairy}/CMakeLists.txt` | テスト用の静的ライブラリ |
+| `plugins/paintops/libpaintop/kis_brush_option_widget.cpp`、`libs/ui/kis_paintop_option.{h,cpp}` | 隠した先端の設定の目を外す |
+| `plugins/paintops/{sketch,hairy}/tests/`(追加) | `KisSketchParityTest`、`KisHairyParityTest`、Krita 3/4の同梱プリセット(Sketch 13件、Bristle 7件)と基準ファイル |
+| `plugins/paintops/defaultpaintops/brush/tests/KisPaintOpParityTestUtils.h`(追加) | パリティテストの共通処理(プリセットの読み込み、全書き込み、基準との比較、Tool Optionsのid確認) |
+
+**テスト(Sketch 30件、Bristle 18件、すべて通過)**
+
+- **従来の全書き込みとの一致:** 同梱プリセットを、そのままと、RGBAバンドルの
+  カラー先端を明度モードにした変種(両エンジンとも明度モードを持たない)で
+  読み込み、移行前のコードで記録した基準と比較する。移行前のコードでも
+  自身の基準と一致することを確認した。
+- **モデルでの編集:** エンジン固有オプションとカーブを編集するたびに、
+  プリセットがモデルの全書き込みと一致する。
+- **Tool Options:** idが一意で、主なオプションに目が付く。Bristleでは
+  隠した先端の設定に目がない(外す処理を無効にすると失敗することを確認)。
+
+手動確認の項目(SketchとBristle):
+
+1. F5で各ページを変更し、描画、プレビュー、変更済み表示が従来どおり
+   更新される。プリセットの切り替え・保存で値が保たれる。
+2. Bristleの自動先端にFade、Density、Spacingが出ず、目もない。
+3. SketchのLine width・Offset scale・Density、BristleのScale・Random
+   offset・Shear・Densityに目を入れるとTool Optionsに出て、そこでの変更が
+   描画とF5に反映される。
+4. Ink depletionなどチェックボックスのあるオプションは、行の目で
+   Tool Optionsにチェックボックスとして出る。
 
 ### フェーズ5: 旧経路の整理
 

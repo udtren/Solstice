@@ -39,8 +39,8 @@ Editor (F5) chooses which brush items appear in the Tool Options docker.
 - An option has an eye only when it is checkable and has a Tool Options id.
   Engines without ids (not migrated to the shared model) show no eye column
   and their Brush section shows a hint.
-- Engines with ids: Pixel Brush, Deform and Color Smudge (phase 4 of the
-  shared model plan). Color Smudge has no masked brush; its other page
+- Engines with ids: Pixel Brush, Deform, Color Smudge, Sketch and Bristle
+  (phase 4 of the shared model plan). Color Smudge has no masked brush; its other page
   parameters (Brush Tip, Blending Mode, Opacity, Texture Scale) come from the
   shared option widgets.
 - The ids are the options-model ids, stable and untranslated. Renaming one
@@ -68,6 +68,13 @@ shows the control in the Brush section, as a copy kept in sync with it.
 | Curve options without a checkbox in the list (Pixel Brush Opacity, Flow, Masked Brush Opacity and Flow; Deform Opacity) | `Strength` (the strength bar at the top of the page, labeled with the option's name), `PenSettings` (Enable Pen Settings, also labeled with the option's name only, so the label column stays narrow); registered by `KisCurveOptionWidget` when `isCheckable()` is false. A checkable curve option is switched by its row's checkbox instead (phase 3a) |
 | Painting Mode (`PaintingMode`) | `PaintingMode` (the group box's radio buttons) |
 | Texture (`Texture`) | `Scale` (`scaleSlider`) |
+| Sketch (`Sketch`, Sketch engine page) | `LineWidth` (`lineWidthSPBox`), `Offset` (`offsetSPBox`), `Density` (`densitySPBox`) |
+| Bristle (`Bristle`, Bristle engine page) | `Scale` (`scaleBox`), `RandomOffset` (`rndBox`), `Shear` (`shearBox`), `Density` (`densityBox`) |
+
+A tip control that an engine hides with `KisBrushOptionWidget::hideOptions()`
+(Bristle: the auto tip's Fade, Density and Spacing) loses its parameter and
+eye (`KisPaintOpOption::removeToolOptionsParameter()`), so Tool Options never
+shows a setting the editor hides.
 
 The kritarc list stores a parameter as `<option id>/<parameter id>`, e.g.
 `BrushTip/Diameter` (`KisPaintOpSettingsWidget::toolOptionsParameterId()`).

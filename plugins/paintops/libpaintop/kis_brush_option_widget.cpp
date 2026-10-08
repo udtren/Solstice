@@ -177,6 +177,14 @@ void KisBrushOptionWidget::readOptionSetting(const KisPropertiesConfigurationSP 
 void KisBrushOptionWidget::hideOptions(const QStringList &options)
 {
     m_brushSelectionWidget->hideOptions(options);
+
+    // Solstice: a tip setting the engine hides gets no eye and is not shown
+    // in Tool Options (docs/agent/tool-options-brush.md)
+    Q_FOREACH (const ToolOptionsParameter &parameter, toolOptionsParameters()) {
+        if (parameter.control && parameter.control->isHidden()) {
+            removeToolOptionsParameter(parameter.id);
+        }
+    }
 }
 
 lager::reader<bool> KisBrushOptionWidget::lightnessModeEnabled() const

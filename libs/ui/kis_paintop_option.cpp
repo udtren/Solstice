@@ -302,3 +302,13 @@ QList<KisPaintOpOption::ToolOptionsParameter> KisPaintOpOption::toolOptionsParam
 {
     return m_d->toolOptionsParameters;
 }
+
+void KisPaintOpOption::removeToolOptionsParameter(const QString &id)
+{
+    for (int i = m_d->toolOptionsParameters.size() - 1; i >= 0; --i) {
+        if (m_d->toolOptionsParameters[i].id == id) {
+            delete m_d->toolOptionsParameters[i].eye;
+            m_d->toolOptionsParameters.removeAt(i);
+        }
+    }
+}

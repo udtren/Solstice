@@ -237,3 +237,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - `tool-options-brush.md`: Opacity and Flow's Enable Pen Settings rows carry
   only the option's name, keeping the label column narrow. README images
   moved to a new Screenshots section; the Tool Options image was replaced.
+
+## 2026-10-08 ingest: Sketch and Bristle on the shared model (phase 4)
+
+- `brush-option-shared-model-plan.md`: Sketch and Bristle (Hairy) options
+  live in `KisPaintOpOptionsModel`, without dependencies. Their engine pages
+  register their main sliders as Tool Options parameters. Parity helpers
+  moved to `KisPaintOpParityTestUtils.h` for the next engines.
+- `tool-options-brush.md`: `KisBrushOptionWidget::hideOptions()` drops the
+  parameters of hidden tip controls. Lesson: Bristle's hide list names
+  `KisBrushChooser/Spacing`, which no longer exists, so the predefined tip's
+  spacing stays visible; check what a hide list really hides before
+  asserting on it.
+- `todo.md` (new): the user's task backlog; first entry, ABR import
+  improvements with storytold/photocraft as a reference.

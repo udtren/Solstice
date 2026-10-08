@@ -16,9 +16,21 @@ set(kritahairypaintop_SOURCES
 
 ki18n_wrap_ui(kritahairypaintop_SOURCES wdgInkOptions.ui  wdghairyshapeoptions.ui wdgbristleoptions.ui)
 
-kis_add_library(kritahairypaintop MODULE ${kritahairypaintop_SOURCES})
+# Solstice: a static library for the tests of the settings widget
+# (docs/agent/brush-option-shared-model-plan.md, phase 4)
+set(kritahairypaintop_static_SOURCES ${kritahairypaintop_SOURCES})
+list(REMOVE_ITEM kritahairypaintop_static_SOURCES hairy_paintop_plugin.cpp)
 
-target_link_libraries(kritahairypaintop kritalibpaintop)
+kis_add_library(kritahairypaintop_static STATIC ${kritahairypaintop_static_SOURCES})
+target_link_libraries(kritahairypaintop_static kritaui kritalibpaintop)
+
+kis_add_library(kritahairypaintop MODULE hairy_paintop_plugin.cpp)
+
+target_link_libraries(kritahairypaintop kritahairypaintop_static)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 install(TARGETS kritahairypaintop  DESTINATION ${KRITA_PLUGIN_INSTALL_DIR})
 install( FILES

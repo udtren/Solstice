@@ -16,18 +16,79 @@
 #include <KisSizeOptionWidget.h>
 #include <KisPaintingModeOptionWidget.h>
 #include <kis_brush_option_widget.h>
+#include <KisBrushBasedOptionStates.h>
+#include <KisPaintOpOptionStateUtils.h>
+#include <KisPaintOpOptionsModel.h>
+
+namespace
+{
+KisBrushTipOptionState *addBrushTipOption(KisPaintOpOptionsModel *model)
+{
+    KisBrushTipOptionState *state =
+        new KisBrushTipOptionState(QStringLiteral("BrushTip"), KisBrushOptionWidgetFlag::None);
+    model->addOption(state);
+    return state;
+}
+
+/// Solstice: the option's checkbox and page parameters can be shown in Tool
+/// Options under @p id, the option's id in the options model
+/// (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
+} // namespace
 
 KisHairyPaintOpSettingsWidget:: KisHairyPaintOpSettingsWidget(QWidget* parent)
-    : KisBrushBasedPaintopOptionWidget(KisBrushOptionWidgetFlag::None, parent)
+    : KisHairyPaintOpSettingsWidget(parent, new KisPaintOpOptionsModel())
+{
+}
+
+KisHairyPaintOpSettingsWidget::KisHairyPaintOpSettingsWidget(QWidget *parent, KisPaintOpOptionsModel *model)
+    : KisBrushBasedPaintopOptionWidget(KisBrushOptionWidgetFlag::None, addBrushTipOption(model)->cursor(), parent)
 {
     namespace kpowu = KisPaintOpOptionWidgetUtils;
-    addPaintOpOption(kpowu::createOptionWidgetWithLodLimitations<KisHairyBristleOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisHairyInkOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisCompositeOpOptionWidget>());
-    addPaintOpOption(kpowu::createOpacityOptionWidget());
-    addPaintOpOption(kpowu::createOptionWidget<KisSizeOptionWidget>());
-    addPaintOpOption(kpowu::createRotationOptionWidget());
-    addPaintOpOption(kpowu::createOptionWidget<KisPaintingModeOptionWidget>());
+    namespace kposu = KisPaintOpOptionStateUtils;
+
+    // Solstice: the option states live in a shared model, so that one option
+    // change writes only that option (docs/agent/brush-option-shared-model-plan.md,
+    // phase 4); no option's written data depends on another
+    model->setParent(this);
+
+    KisBrushTipOptionState *brushTip = static_cast<KisBrushTipOptionState *>(model->option(QStringLiteral("BrushTip")));
+    brushTip->setResourcesInterfaceGetter([this]() {
+        return this->resourcesInterface();
+    });
+
+    auto *bristle = model->addOption(QStringLiteral("Bristle"), KisHairyBristleOptionData());
+    auto *ink = model->addOption(QStringLiteral("Ink"), KisHairyInkOptionData());
+    auto *compositeOp = model->addOption(QStringLiteral("CompositeOp"), KisCompositeOpOptionData());
+    auto *opacity = model->addOption(QStringLiteral("Opacity"),
+                                     KisOpacityOptionData(),
+                                     &kposu::bakeCurveOption<KisOpacityOptionData>);
+    auto *size =
+        model->addOption(QStringLiteral("Size"), KisSizeOptionData(), &kposu::bakeCurveOption<KisSizeOptionData>);
+    auto *rotation = model->addOption(QStringLiteral("Rotation"),
+                                      KisRotationOptionData(),
+                                      &kposu::bakeCurveOption<KisRotationOptionData>);
+    auto *paintingMode = model->addOption(QStringLiteral("PaintingMode"), KisPaintingModeOptionData());
+
+    brushOptionWidget()->setToolOptionsId(QStringLiteral("BrushTip"));
+
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidgetWithLodLimitations<KisHairyBristleOptionWidget>(bristle),
+                          QStringLiteral("Bristle")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisHairyInkOptionWidget>(ink), QStringLiteral("Ink")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createOpacityOptionWidget(kposu::curveCursor(opacity)), QStringLiteral("Opacity")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisSizeOptionWidget>(size), QStringLiteral("Size")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRotationOptionWidget(kposu::curveCursor(rotation)), QStringLiteral("Rotation")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisPaintingModeOptionWidget>(paintingMode),
+                                       QStringLiteral("PaintingMode")));
 
     KisBrushOptionWidget *brushWidget = brushOptionWidget();
     QStringList hiddenOptions;
@@ -44,6 +105,8 @@ KisHairyPaintOpSettingsWidget:: KisHairyPaintOpSettingsWidget(QWidget* parent)
                   << "KisAutoBrushWidget/inputRandomness"
                      ;
     brushWidget->hideOptions(hiddenOptions);
+
+    setOptionsModel(model);
 }
 
 KisHairyPaintOpSettingsWidget::~ KisHairyPaintOpSettingsWidget()

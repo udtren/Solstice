@@ -76,6 +76,12 @@ KisSketchOpOptionWidget::KisSketchOpOptionWidget(lager::cursor<KisSketchOpOption
     m_d->model.optionData.bind(std::bind(&KisSketchOpOptionWidget::emitSettingChanged, this));
 
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("LineWidth"), i18n("Line width"), widget->lineWidthSPBox);
+    addToolOptionsParameter(QStringLiteral("Offset"), i18n("Offset scale"), widget->offsetSPBox);
+    addToolOptionsParameter(QStringLiteral("Density"), i18n("Density"), widget->densitySPBox);
 }
 
 KisSketchOpOptionWidget::~KisSketchOpOptionWidget()

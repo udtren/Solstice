@@ -10,9 +10,21 @@ set(kritasketchpaintop_SOURCES
 
 ki18n_wrap_ui(kritasketchpaintop_SOURCES wdgsketchoptions.ui )
 
-kis_add_library(kritasketchpaintop MODULE ${kritasketchpaintop_SOURCES})
+# Solstice: a static library for the tests of the settings widget
+# (docs/agent/brush-option-shared-model-plan.md, phase 4)
+set(kritasketchpaintop_static_SOURCES ${kritasketchpaintop_SOURCES})
+list(REMOVE_ITEM kritasketchpaintop_static_SOURCES sketch_paintop_plugin.cpp)
 
-target_link_libraries(kritasketchpaintop kritalibpaintop)
+kis_add_library(kritasketchpaintop_static STATIC ${kritasketchpaintop_static_SOURCES})
+target_link_libraries(kritasketchpaintop_static kritaui kritalibpaintop)
+
+kis_add_library(kritasketchpaintop MODULE sketch_paintop_plugin.cpp)
+
+target_link_libraries(kritasketchpaintop kritasketchpaintop_static)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 install(TARGETS kritasketchpaintop  DESTINATION ${KRITA_PLUGIN_INSTALL_DIR})
 
