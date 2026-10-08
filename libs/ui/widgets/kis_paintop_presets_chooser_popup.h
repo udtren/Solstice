@@ -26,6 +26,11 @@ public:
     void setResponsiveness(bool value);
     /// Exposes the docker-only setting; toolbar/editor instances do not call this.
     void enableStrokePreviewSetting();
+    /// Solstice (docs/agent/brush-preset-scroll.md): adds "Scroll to Selected
+    /// Preset" to the display menu. Off, a preset selected elsewhere (brush
+    /// switch, shortcut, toolbar) is highlighted without scrolling the list.
+    /// The Brush Presets docker uses it; the toolbar popup keeps scrolling.
+    void enableScrollToSelectionSetting();
 public Q_SLOTS:
     void canvasResourceChanged(KisPaintOpPresetSP  preset);
     void slotThemeChanged();

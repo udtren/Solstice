@@ -105,6 +105,8 @@ Read these before adding or updating any feature:
   `docs/agent/brush-stroke-preview.md`
 - Brush preset grouping:
   `docs/agent/brush-preset-grouping.md`
+- Brush Presets scroll to the selected preset (setting):
+  `docs/agent/brush-preset-scroll.md`
 - Solstice visual branding checklist:
   `docs/agent/solstice-visual-branding-todo.md`
 - Brush option shared model (phase 1 done for Deform; phase 2a brush tip and

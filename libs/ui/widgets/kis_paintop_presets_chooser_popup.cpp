@@ -15,6 +15,7 @@
 
 #include <KoResource.h>
 #include <KisResourceItemChooser.h>
+#include <KisResourceItemListView.h>
 
 #include <ui_wdgpaintoppresets.h>
 #include <kis_config.h>
@@ -36,7 +37,26 @@ public:
     QAction *displaySection{nullptr};
     QAction *sizeSection{nullptr};
     bool strokePreviewOnly{false};
+    QAction *scrollToSelectionAction{nullptr};
+
+    void applyScrollToSelection();
 };
+
+namespace
+{
+const QString scrollToSelectionKey = QStringLiteral("Solstice/BrushPresetScrollToSelection");
+}
+
+void KisPaintOpPresetsChooserPopup::Private::applyScrollToSelection()
+{
+    if (!scrollToSelectionAction) {
+        return;
+    }
+    // read every time: another Brush Presets docker may have changed it
+    const bool follow = KisConfig(true).readEntry<bool>(scrollToSelectionKey, false);
+    scrollToSelectionAction->setChecked(follow);
+    uiWdgPaintOpPresets.wdgPresetChooser->itemChooser()->itemView()->setFollowCurrentItem(follow);
+}
 
 KisPaintOpPresetsChooserPopup::KisPaintOpPresetsChooserPopup(QWidget * parent)
     : QWidget(parent)
@@ -128,6 +148,7 @@ void KisPaintOpPresetsChooserPopup::slotUpdateMenu()
 {
     QSignalBlocker b(m_d->iconSizeSlider);
     m_d->iconSizeSlider->setValue(m_d->uiWdgPaintOpPresets.wdgPresetChooser->iconSize());
+    m_d->applyScrollToSelection();
 }
 
 void KisPaintOpPresetsChooserPopup::paintEvent(QPaintEvent* event)
@@ -143,6 +164,7 @@ void KisPaintOpPresetsChooserPopup::paintEvent(QPaintEvent* event)
 void KisPaintOpPresetsChooserPopup::canvasResourceChanged(KisPaintOpPresetSP  preset)
 {
     if (preset) {
+        m_d->applyScrollToSelection();
         blockSignals(true);
         m_d->uiWdgPaintOpPresets.wdgPresetChooser->setCurrentResource(preset);
         blockSignals(false);
@@ -181,4 +203,22 @@ void KisPaintOpPresetsChooserPopup::enableStrokePreviewSetting()
     m_d->displaySection->setVisible(false);
     m_d->sizeSection->setText(i18n("Preview Size"));
     slotUpdateMenu();
+}
+
+void KisPaintOpPresetsChooserPopup::enableScrollToSelectionSetting()
+{
+    if (m_d->scrollToSelectionAction) {
+        return;
+    }
+    m_d->menu->addSection(i18nc("@title Brush Presets docker display menu", "Selection"));
+    m_d->scrollToSelectionAction = m_d->menu->addAction(i18n("Scroll to Selected Preset"));
+    m_d->scrollToSelectionAction->setCheckable(true);
+    m_d->scrollToSelectionAction->setToolTip(
+        i18n("When a brush is selected elsewhere, scroll the list to show it. "
+             "Otherwise the list keeps its position and only the highlight moves."));
+    connect(m_d->scrollToSelectionAction, &QAction::toggled, this, [this](bool checked) {
+        KisConfig(false).writeEntry<bool>(scrollToSelectionKey, checked);
+        m_d->uiWdgPaintOpPresets.wdgPresetChooser->itemChooser()->itemView()->setFollowCurrentItem(checked);
+    });
+    m_d->applyScrollToSelection();
 }

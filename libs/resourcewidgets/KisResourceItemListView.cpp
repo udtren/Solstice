@@ -36,6 +36,9 @@ struct  Q_DECL_HIDDEN KisResourceItemListView::Private
     // Solstice grouping: header rects in contents coordinates.
     GroupFunction groupOf;
     QVector<QPair<QRect, QString>> groupHeaders;
+
+    // Solstice: scroll to the current item set by the program
+    bool followCurrentItem{true};
 };
 
 KisResourceItemListView::KisResourceItemListView(QWidget *parent)
@@ -339,5 +342,17 @@ void KisResourceItemListView::resizeEvent(QResizeEvent *event)
         break;
     }
     }
-    scrollTo(currentIndex(), QAbstractItemView::PositionAtCenter);
+    if (m_d->followCurrentItem) {
+        scrollTo(currentIndex(), QAbstractItemView::PositionAtCenter);
+    }
+}
+
+void KisResourceItemListView::setFollowCurrentItem(bool follow)
+{
+    m_d->followCurrentItem = follow;
+}
+
+bool KisResourceItemListView::followCurrentItem() const
+{
+    return m_d->followCurrentItem;
 }

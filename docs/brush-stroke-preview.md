@@ -28,7 +28,8 @@ docker instances start with all entries selected.
 
 The Brush Presets docker always shows stroke previews; the icon view and its
 Thumbnails/Details settings are not available there. The docker's display
-menu has one setting, **Preview Size**, which changes the stroke cells.
+menu (the ≡ button) has **Preview Size**, which changes the stroke cells, and
+**Scroll to Selected Preset** (see below).
 
 The other preset lists show stroke previews too, from the same cache, so a
 generated preview appears everywhere at once:
@@ -58,6 +59,17 @@ groups, each under a header:
 Within a group the presets keep their usual order. The tag, search, engine
 and bundle filters still apply, and groups without visible presets are not
 shown. The choice is remembered.
+
+## Selected preset
+
+When you switch brushes elsewhere (a shortcut, the toolbar, Quick Access),
+the Brush Presets docker highlights the new preset. By default it does not
+scroll: the list stays where you left it, and resizing the docker keeps the
+position too. Turn on **Scroll to Selected Preset** in the docker's display
+menu to scroll the list to the selected preset, as Krita does. The setting is
+remembered and applies to all Brush Presets dockers. Clicking presets and
+moving with the keyboard work as before, and the toolbar brush popup always
+shows the selected preset.
 
 ## Generating previews
 

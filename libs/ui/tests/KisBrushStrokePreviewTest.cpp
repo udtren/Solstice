@@ -26,6 +26,7 @@
 #include <QJsonObject>
 #include <QMenu>
 #include <QScopeGuard>
+#include <QScrollBar>
 #include <QSemaphore>
 #include <QSignalSpy>
 #include <QStandardItemModel>
@@ -33,6 +34,7 @@
 #include <QToolButton>
 #include <brushengine/kis_paintop_registry.h>
 #include <brushengine/kis_paintop_settings.h>
+#include <kis_config.h>
 #include <kis_canvas_resource_provider.h>
 #include <kis_simple_stroke_strategy.h>
 #include <numeric>
@@ -262,6 +264,56 @@ private Q_SLOTS:
         QVERIFY(docker.itemChooser()->itemView()->gridSize().height() < 210);
         docker.setStrokePreviewMode(false);
         QCOMPARE(docker.iconSize(), original);
+    }
+    void testDockerScrollToSelection()
+    {
+        // Solstice (docs/agent/brush-preset-scroll.md): with "Scroll to
+        // Selected Preset" off, a brush selected elsewhere moves only the
+        // highlight; on, the list scrolls to it as in Krita.
+        const QString key = QStringLiteral("Solstice/BrushPresetScrollToSelection");
+        const auto restore = qScopeGuard([key]() {
+            KisConfig(false).writeEntry<bool>(key, false);
+        });
+        KisConfig(false).writeEntry<bool>(key, false);
+
+        KisPaintOpPresetsChooserPopup docker;
+        docker.enableStrokePreviewSetting();
+        docker.enableScrollToSelectionSetting();
+        docker.resize(260, 260);
+        docker.show();
+        auto *chooser = docker.findChild<KisPresetChooser *>();
+        QVERIFY(chooser);
+        auto *view = chooser->itemChooser()->itemView();
+        auto *model = chooser->itemChooser()->tagFilterModel();
+        QVERIFY(model->rowCount() > 2);
+        QTRY_VERIFY(view->verticalScrollBar()->maximum() > 0);
+        QVERIFY(!view->followCurrentItem());
+
+        auto presetAt = [model](int row) {
+            return model->resourceForIndex(model->index(row, 0)).dynamicCast<KisPaintOpPreset>();
+        };
+        const KisPaintOpPresetSP first = presetAt(0);
+        const KisPaintOpPresetSP last = presetAt(model->rowCount() - 1);
+        QVERIFY(first && last);
+
+        docker.canvasResourceChanged(first);
+        view->verticalScrollBar()->setValue(0);
+        docker.canvasResourceChanged(last);
+        QCOMPARE(chooser->currentResource(), KoResourceSP(last));
+        QCOMPARE(view->verticalScrollBar()->value(), 0);
+        docker.resize(260, 300);
+        QTest::qWait(50);
+        QCOMPARE(view->verticalScrollBar()->value(), 0);
+
+        // the setting is read on every selection, also when another docker
+        // changed it
+        KisConfig(false).writeEntry<bool>(key, true);
+        docker.canvasResourceChanged(first);
+        view->verticalScrollBar()->setValue(0);
+        docker.canvasResourceChanged(last);
+        QVERIFY(view->followCurrentItem());
+        QCOMPARE(chooser->currentResource(), KoResourceSP(last));
+        QVERIFY(view->verticalScrollBar()->value() > 0);
     }
     void testResponsiveDockerLayout()
     {

@@ -165,3 +165,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - `KisLockedPropertiesProxy::setProperty()` writes nothing to settings
   without an update listener, so a test that needs a full write of a model
   writes the options directly instead of `writeAll()`.
+
+## 2026-10-08 ingest: Brush Presets scroll to the selected preset
+
+- Feature document `brush-preset-scroll.md`. Lesson: `QAbstractItemView`
+  scrolls to a new current item only with `autoScroll` on, also later when a
+  hidden view is shown, so turning it off around a programmatic
+  `setCurrentIndex()` keeps the position without affecting drag auto scroll.
+  Manually checked 2026-10-08.

@@ -61,6 +61,16 @@ public:
     void setGrouping(const GroupFunction &groupOf);
     void doItemsLayout() override;
 
+    /**
+     * Solstice (docs/agent/brush-preset-scroll.md): when false, the view keeps
+     * its scroll position when the program sets the current item (see
+     * KisResourceItemChooser::setCurrentResource()) and when it is resized.
+     * Selecting an item with the mouse or the keyboard still scrolls to it.
+     * True (default) is Krita's behavior.
+     */
+    void setFollowCurrentItem(bool follow);
+    bool followCurrentItem() const;
+
 public Q_SLOTS:
     void slotScrollerStateChange(QScroller::State state){ KisKineticScroller::updateCursor(this, state); }
 

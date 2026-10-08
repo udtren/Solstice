@@ -463,7 +463,7 @@ void KisResourceItemChooser::setCurrentResource(KoResourceSP resource)
         return;
     }
     QModelIndex index = d->tagFilterProxyModel->indexForResource(resource);
-    d->view->setCurrentIndex(index);
+    setViewCurrentIndex(index);
 
     // The resource may currently be filtered out, but we want to be able
     // to select it if the filter changes and includes the resource.
@@ -487,7 +487,7 @@ void KisResourceItemChooser::setCurrentResource(QString resourceName)
             KoResourceSP resource = d->tagFilterProxyModel->resourceForIndex(index);
 
             if (resource->name() == resourceName) {
-                d->view->setCurrentIndex(index);
+                setViewCurrentIndex(index);
 
                 // The resource may currently be filtered out, but we want to be able
                 // to select it if the filter changes and includes the resource.
@@ -499,6 +499,19 @@ void KisResourceItemChooser::setCurrentResource(QString resourceName)
             }
         }
     }
+}
+
+void KisResourceItemChooser::setViewCurrentIndex(const QModelIndex &index)
+{
+    // Solstice: a view that does not follow the current item keeps its
+    // scroll position; Qt scrolls to the new current item only with auto
+    // scroll (also when the view is shown later)
+    const bool autoScroll = d->view->hasAutoScroll();
+    if (!d->view->followCurrentItem()) {
+        d->view->setAutoScroll(false);
+    }
+    d->view->setCurrentIndex(index);
+    d->view->setAutoScroll(autoScroll);
 }
 
 void KisResourceItemChooser::setPreviewOrientation(Qt::Orientation orientation)

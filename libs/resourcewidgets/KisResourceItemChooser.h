@@ -176,6 +176,7 @@ private:
     void updateBottomBarLayout();
     void updateButtonState();
     void updatePreview(const QModelIndex &idx);
+    void setViewCurrentIndex(const QModelIndex &index);
 
     void hideEverything();
     void applyVerticalLayout();

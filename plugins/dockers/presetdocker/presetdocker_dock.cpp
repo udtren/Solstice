@@ -29,6 +29,7 @@ PresetDockerDock::PresetDockerDock( )
     m_presetChooser->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     m_presetChooser->setResponsiveness(true);
     m_presetChooser->enableStrokePreviewSetting();
+    m_presetChooser->enableScrollToSelectionSetting();
     setWidget(m_presetChooser);
 }
 
