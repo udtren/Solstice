@@ -859,7 +859,9 @@ Ctrl+クリックでの複製元の指定とクローン描画が従来どおり
   `LegacyDeformSettingsWidget`(移行前の挙動を同じテスト内で計算する)の
   ために残す。各オプションの `readOptionSetting()`/`writeOptionSetting()`
   も上流のコードのまま残す。
-- **Uniform Propertyは作り直さない(判断):** On-Canvas Brush Editorの
+- **Uniform Propertyは作り直さない(判断):** (2026年10月9日、On-Canvas
+  Brush Editor自体を廃止したため、Uniform Propertyを使う画面はなくなった。
+  `docs/agent/popup-palette-removal.md`)On-Canvas Brush Editorの
   Uniform Propertyは、プリセットの設定のキーを直接読み書きする。モデルは
   更新プロキシの変更キー通知でその変更を読み込み、書き戻さないため、
   値の食い違いは起きない。モデルのカーソルの上に作り直すと、Tool Optionsの

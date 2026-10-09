@@ -46,7 +46,6 @@ class KisShapeController;
 class KisCoordinatesConverter;
 class KoViewConverter;
 class KisAbstractCanvasWidget;
-class KisPopupPalette;
 
 
 /**
@@ -211,8 +210,6 @@ public: // KisCanvas2 methods
      */
     QRect renderingLimit() const;
 
-    KisPopupPalette* popupPalette();
-
     /**
      * @return a reference to alter this canvas' input action groups mask
      */
@@ -262,7 +259,6 @@ public Q_SLOTS:
     void slotGamutCheck();
     void slotChangeGlobalProofingConfig();
     void slotChangeProofingConfig();
-    void slotPopupPaletteRequestedZoomChange(int zoom);
 
     void channelSelectionChanged();
 
@@ -319,8 +315,6 @@ public:
 
     void initializeImage();
     void disconnectImage();
-
-    void setFavoriteResourceManager(KisFavoriteResourceManager* favoriteResourceManager);
 
 private:
     Q_DISABLE_COPY(KisCanvas2)

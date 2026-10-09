@@ -100,6 +100,10 @@ for existing settings where practical. The Asset Library is also available
 from the welcome page, and Puppet Warp is integrated into the Transform Tool.
 
 Android support and its build and packaging infrastructure have been removed.
+The right-click Popup Palette and the On-Canvas Brush Editor have been removed
+as well; [Quick Access](docs/quick-access.md) provides a color selector, a
+brush grid and brush adjustments instead, and the tools' right-click menus
+remain.
 Upstream Krita synchronization has been discontinued; Solstice-specific
 changes and support are maintained in this repository.
 

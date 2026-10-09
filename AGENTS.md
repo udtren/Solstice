@@ -129,6 +129,8 @@ Read these before adding or updating any feature:
 - UI modernization (phases 0-3 done; phase 4 first part done):
   `docs/agent/ui-modernization-plan.md`
 - GitHub Actions Windows trial builds: `docs/agent/github-actions.md`
+- Removal of the right-click Popup Palette and the On-Canvas Brush Editor
+  (what was kept and why): `docs/agent/popup-palette-removal.md`
 
 Before changing a listed feature, read its complete agent document. When a new
 custom feature is added, create its `docs/agent/<feature>.md` technical document,

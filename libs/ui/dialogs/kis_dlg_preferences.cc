@@ -2377,76 +2377,6 @@ void FullscreenSettingsTab::setDefault()
 
 //---------------------------------------------------------------------------------------------------
 
-namespace PopupPaletteTabPrivate {
-static const QStringList allowedColorHistorySortingValues({"none", "hsv"});
-}
-
-PopupPaletteTab::PopupPaletteTab(QWidget *parent, const char *name)
-    : WdgPopupPaletteSettingsBase(parent, name)
-{
-    using namespace PopupPaletteTabPrivate;
-
-    load();
-
-    connect(chkShowColorHistory, SIGNAL(toggled(bool)), cmbColorHistorySorting, SLOT(setEnabled(bool)));
-    connect(chkShowColorHistory, SIGNAL(toggled(bool)), lblColorHistorySorting, SLOT(setEnabled(bool)));
-    KIS_SAFE_ASSERT_RECOVER_NOOP(cmbColorHistorySorting->count() == allowedColorHistorySortingValues.size());
-}
-
-void PopupPaletteTab::load()
-{
-    using namespace PopupPaletteTabPrivate;
-
-    KisConfig config(true);
-    sbNumPresets->setValue(config.favoritePresets());
-    sbPaletteSize->setValue(config.readEntry("popuppalette/size", 385));
-    sbSelectorSize->setValue(config.readEntry("popuppalette/selectorSize", 140));
-    cmbSelectorType->setCurrentIndex(config.readEntry<bool>("popuppalette/usevisualcolorselector", false) ? 1 : 0);
-    chkShowColorHistory->setChecked(config.readEntry("popuppalette/showColorHistory", true));
-    chkShowRotationTrack->setChecked(config.readEntry("popuppalette/showRotationTrack", true));
-    chkUseDynamicSlotCount->setChecked(config.readEntry("popuppalette/useDynamicSlotCount", true));
-
-    QString currentSorting = config.readEntry("popuppalette/colorHistorySorting", QString("hsv"));
-    if (!allowedColorHistorySortingValues.contains(currentSorting)) {
-        currentSorting = "hsv";
-    }
-    cmbColorHistorySorting->setCurrentIndex(allowedColorHistorySortingValues.indexOf(currentSorting));
-    cmbColorHistorySorting->setEnabled(chkShowColorHistory->isChecked());
-    lblColorHistorySorting->setEnabled(chkShowColorHistory->isChecked());
-}
-
-void PopupPaletteTab::save()
-{
-    using namespace PopupPaletteTabPrivate;
-
-    KisConfig config(true);
-    config.setFavoritePresets(sbNumPresets->value());
-    config.writeEntry("popuppalette/size", sbPaletteSize->value());
-    config.writeEntry("popuppalette/selectorSize", sbSelectorSize->value());
-    config.writeEntry<bool>("popuppalette/usevisualcolorselector", cmbSelectorType->currentIndex() > 0);
-    config.writeEntry<bool>("popuppalette/showColorHistory", chkShowColorHistory->isChecked());
-    config.writeEntry<bool>("popuppalette/showRotationTrack", chkShowRotationTrack->isChecked());
-    config.writeEntry<bool>("popuppalette/useDynamicSlotCount", chkUseDynamicSlotCount->isChecked());
-    config.writeEntry("popuppalette/colorHistorySorting",
-                      allowedColorHistorySortingValues[cmbColorHistorySorting->currentIndex()]);
-}
-
-void PopupPaletteTab::setDefault()
-{
-    KisConfig config(true);
-    sbNumPresets->setValue(config.favoritePresets(true));
-    sbPaletteSize->setValue(385);
-    sbSelectorSize->setValue(140);
-    cmbSelectorType->setCurrentIndex(0);
-    chkShowColorHistory->setChecked(true);
-    chkShowRotationTrack->setChecked(true);
-    chkUseDynamicSlotCount->setChecked(true);
-    cmbColorHistorySorting->setEnabled(chkShowColorHistory->isChecked());
-    lblColorHistorySorting->setEnabled(chkShowColorHistory->isChecked());
-}
-
-//---------------------------------------------------------------------------------------------------
-
 KisDlgPreferences::KisDlgPreferences(QWidget* parent, const char* name)
     : KPageDialog(parent)
 {
@@ -2538,16 +2468,6 @@ KisDlgPreferences::KisDlgPreferences(QWidget* parent, const char* name)
     m_pages << page;
     addPage(page);
     m_fullscreenSettings = new FullscreenSettingsTab(vbox);
-
-    // Pop-up Palette
-    vbox = new KoVBox();
-    page = new KPageWidgetItem(vbox, i18n("Pop-up Palette"));
-    page->setObjectName("popuppalette");
-    page->setHeader(i18n("Pop-up Palette"));
-    page->setIcon(KisIconUtils::loadIcon("config-popup-palette"));
-    m_pages << page;
-    addPage(page);
-    m_popupPaletteSettings = new PopupPaletteTab(vbox);
 
     // Author profiles
     m_authorPage = new KoConfigAuthorPage();
@@ -2668,9 +2588,6 @@ void KisDlgPreferences::slotDefault()
     }
     else if (currentPage()->objectName() == "canvasinput") {
         m_inputConfiguration->setDefaults();
-    }
-    else if (currentPage()->objectName() == "popuppalette") {
-        m_popupPaletteSettings->setDefault();
     }
 }
 
@@ -3051,7 +2968,6 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
         cfg.setPixelGridColor(m_displaySettings->pixelGridColorButton->color().toQColor());
         cfg.setPixelGridDrawingThreshold(m_displaySettings->pixelGridDrawingThresholdBox->value() / 100);
 
-        m_popupPaletteSettings->save();
         m_authorPage->apply();
 
         cfg.logImportantSettings();

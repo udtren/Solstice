@@ -5,6 +5,11 @@ provides configurable action, docker, and brush grids; editable profiles;
 gesture menus; Quick Brush Adjustments; a compact HueSVC selector; and
 hold-based temporary brush shortcuts.
 
+Solstice has no right-click Popup Palette or On-Canvas Brush Editor; the
+Quick Access palette, HueSVC popup and Quick Brush Adjustments take their
+place. Right-click with a brush tool does nothing; other tools keep their
+right-click menus.
+
 HueSVC places compact overlapping foreground and background color swatches at
 the selector's top-left. Clicking either swatch swaps the two colors.
 Its popup uses a fixed-width vertical adjustment panel so each brush and layer

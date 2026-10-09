@@ -79,7 +79,6 @@
 #include "KisProofingConfiguration.h"
 
 #include <kis_favorite_resource_manager.h>
-#include <kis_popup_palette.h>
 
 #include "input/kis_input_manager.h"
 #include "kis_painting_assistants_decoration.h"
@@ -240,7 +239,6 @@ public:
     KisProofingConfigurationSP proofingConfig;
     bool proofingConfigUpdated = false;
 
-    KisPopupPalette *popupPalette = 0;
     KisDisplayColorConverter displayColorConverter;
 
     KisCanvasUpdatesCompressor projectionUpdatesCompressor;
@@ -449,10 +447,6 @@ KisCanvas2::~KisCanvas2()
 
 void KisCanvas2::setCanvasWidget(KisAbstractCanvasWidget *widget)
 {
-    if (m_d->popupPalette) {
-        m_d->popupPalette->setParent(widget->widget());
-    }
-
     if (m_d->canvasWidget) {
         /**
          * We are switching the canvas type. We should reinitialize our
@@ -806,11 +800,6 @@ void KisCanvas2::createCanvas(bool useOpenGL)
 
     KIS_SAFE_ASSERT_RECOVER_RETURN(m_d->multiSurfaceState);
     m_d->displayColorConverter.setMultiSurfaceDisplayConfig(m_d->multiSurfaceState->multiConfig);
-
-    if (m_d->popupPalette) {
-        m_d->popupPalette->setParent(m_d->canvasWidget->widget());
-    }
-
 }
 
 void KisCanvas2::initializeImage()
@@ -1433,11 +1422,6 @@ QRect KisCanvas2::renderingLimit() const
     return m_d->renderingLimit;
 }
 
-KisPopupPalette *KisCanvas2::popupPalette()
-{
-    return m_d->popupPalette;
-}
-
 void KisCanvas2::slotTrySwitchShapeManager()
 {
     // Still needs to be recalculated in some cases, like when deleting vector layers
@@ -1639,19 +1623,6 @@ QPoint KisCanvas2::documentOrigin() const
 QPoint KisCanvas2::documentOffset() const
 {
     return m_d->coordinatesConverter->documentOffset();
-}
-
-void KisCanvas2::setFavoriteResourceManager(KisFavoriteResourceManager* favoriteResourceManager)
-{
-    m_d->popupPalette = new KisPopupPalette(viewManager(), m_d->coordinatesConverter, favoriteResourceManager, displayColorConverter()->displayRendererInterface(),
-                                            m_d->canvasWidget->widget());
-    connect(m_d->popupPalette, SIGNAL(zoomLevelChanged(int)), this, SLOT(slotPopupPaletteRequestedZoomChange(int)));
-    connect(m_d->popupPalette, SIGNAL(sigUpdateCanvas()), this, SLOT(updateCanvas()));
-    connect(m_d->view->mainWindow(), SIGNAL(themeChanged()), m_d->popupPalette, SLOT(slotUpdateIcons()));
-}
-
-void KisCanvas2::slotPopupPaletteRequestedZoomChange(int zoom ) {
-    m_d->view->canvasController()->setZoom(KoZoomMode::ZOOM_CONSTANT, (qreal)(zoom/100.0)); // 1.0 is 100% zoom
 }
 
 void KisCanvas2::setCursor(const QCursor &cursor)

@@ -336,3 +336,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   The formatting helper then formatted two upstream files whole; they were
   restored from HEAD and the edits reapplied. The helper now takes `-` for
   an empty list; never pass `""` positionally from PowerShell.
+
+## 2026-10-09 ingest: Popup Palette and On-Canvas Brush Editor removed
+
+- `popup-palette-removal.md` (new): what was removed and what was kept.
+  Lesson: Krita's right-click "Show Popup Widget" input action is shared
+  with the tools' context menus (`KoToolBase::popupActionsMenu()`); remove
+  the popup widget, never the action or its profile entries. A removed
+  plugin's DLL stays in the test installation until deleted by hand.

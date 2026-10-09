@@ -760,7 +760,6 @@ void KisMainWindow::showView(KisView *imageView, QMdiSubWindow *subwin)
         // XXX: find a better way to initialize this!
         imageView->setViewManager(d->viewManager);
 
-        imageView->canvasBase()->setFavoriteResourceManager(d->viewManager->paintOpBox()->favoriteResourcesManager());
         imageView->slotLoadingFinished();
 
         if (!subwin) {

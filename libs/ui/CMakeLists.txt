@@ -144,7 +144,6 @@ set(kritaui_LIB_SRCS
     KisToolOptionsBrushItems.cpp
     KisToolOptionsParameters.cpp
     kis_paintop_settings_widget.cpp
-    kis_popup_palette.cpp
     kis_png_converter.cpp
     kis_preference_set_registry.cpp
     KisResourceServerProvider.cpp
@@ -608,7 +607,6 @@ ki18n_wrap_ui(kritaui_LIB_SRCS
     forms/wdgchangeclonesource.ui
     forms/koDocumentInfoAboutWidget.ui
     forms/koDocumentInfoAuthorWidget.ui
-    forms/WdgPopupPaletteSettings.ui
     forms/wdgMissingColorProfile.ui
     forms/wdgPasteFormat.ui
     forms/wdgconvertcolorspace.ui

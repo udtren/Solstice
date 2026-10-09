@@ -14,7 +14,6 @@
 #include <KoID.h>
 #include <kconfig.h>
 #include "kis_favorite_resource_manager.h"
-#include "kis_popup_palette.h"
 #include "kis_paintop_box.h"
 #include "KisViewManager.h"
 #include "KisResourceServerProvider.h"

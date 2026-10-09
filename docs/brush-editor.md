@@ -46,8 +46,8 @@ name and thumbnail too. In Krita they kept showing the previous brush while
 the settings changed.
 
 Everything else works as in Krita: presets are saved in the same format, and
-the toolbar, the On-Canvas Brush Editor and resizing the brush on the canvas
-change the same values as before.
+the toolbar and resizing the brush on the canvas change the same values as
+before. (Solstice has no On-Canvas Brush Editor; see the README.)
 
 ## Brush options in Tool Options
 

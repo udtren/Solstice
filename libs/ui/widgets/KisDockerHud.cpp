@@ -236,7 +236,9 @@ void KisDockerHud::writeDockerList(QList<QVariant> currentList)
 void KisDockerHud::readDockerList()
 {
     m_d->dockerComboBox->clear();
-    const QList<QString> defaultDockers = QList<QString>({"BrushHudDocker", "KisLayerBox"});
+    // Solstice: the On-Canvas Brush Editor docker was removed
+    // (docs/agent/popup-palette-removal.md)
+    const QList<QString> defaultDockers = QList<QString>({"KisLayerBox"});
     const QList<QString> dockerList = KisConfig(true).readList(m_d->configId+"/dockerList", defaultDockers);
 
     KisMainWindow *mainWindow = KisPart::instance()->currentMainwindow();
@@ -255,7 +257,7 @@ void KisDockerHud::writeCurrentDocker()
 }
 QString KisDockerHud::readCurrentDocker()
 {
-    return KisConfig(true).readEntry(m_d->configId+"/currentDocker", QString("BrushHudDocker"));
+    return KisConfig(true).readEntry(m_d->configId+"/currentDocker", QString("KisLayerBox"));
 }
 
 

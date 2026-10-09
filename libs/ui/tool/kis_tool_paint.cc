@@ -65,7 +65,6 @@
 #include <kis_action_manager.h>
 #include <kis_action.h>
 #include "strokes/kis_color_sampler_stroke_strategy.h"
-#include "kis_popup_palette.h"
 #include "kis_paintop_utils.h"
 
 
@@ -362,18 +361,6 @@ void KisToolPaint::mouseMoveEvent(KoPointerEvent *event)
     if (mode() == KisTool::HOVER_MODE) {
         requestUpdateOutline(event->point, event);
     }
-}
-
-KisPopupWidgetInterface *KisToolPaint::popupWidget()
-{
-    KisCanvas2 *kisCanvas = dynamic_cast<KisCanvas2*>(canvas());
-
-    if (!kisCanvas) {
-        return nullptr;
-    }
-
-    KisPopupWidgetInterface* popupWidget = kisCanvas->popupPalette();
-    return popupWidget;
 }
 
 void KisToolPaint::mouseReleaseEvent(KoPointerEvent *event)
