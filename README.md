@@ -50,6 +50,10 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
   as with Clip Studio Paint's eye marks, an eye next to a Brush Editor
   setting shows it in the Tool Options docker, under the current brush's
   stroke preview.
+- **[Brush Stroke Layer](docs/brush-stroke-layer.md)**: a paint layer that
+  remembers its brush strokes; scaling the image or the layer draws them
+  again at the new size, so small line art enlarges without blurring. The
+  strokes are saved in `.kra`, and Krita opens the layer as a paint layer.
 
 ## Screenshots
 
@@ -64,6 +68,12 @@ filters and grouping.
 Eyes in the Brush Editor choose the settings that the Tool Options docker
 shows in its Brush section. See
 [Brush options in Tool Options](docs/brush-editor.md#brush-options-in-tool-options).
+
+<img src="docs/images/brush-stroke-layer.png" alt="A small drawing on a Brush Stroke Layer, including a blur brush stroke, and a copy enlarged with Scale Image that was drawn again at the new size" width="480">
+
+A Brush Stroke Layer and a copy of it enlarged with Image > Scale Image: the
+strokes, including the blur brush, are drawn again at the new size instead
+of being resampled. See the [Brush Stroke Layer guide](docs/brush-stroke-layer.md).
 
 ## Development and downloads
 

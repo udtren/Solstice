@@ -53,6 +53,7 @@
 #include <KoStoreDevice.h>
 #include "kis_colorize_dom_utils.h"
 #include "kis_dom_utils.h"
+#include <KisBrushStrokeLayer.h>
 
 
 using namespace KRA;
@@ -130,6 +131,10 @@ bool KisKraSaveVisitor::visit(KisPaintLayer *layer)
     }
     if (!saveMetaData(layer)) {
         m_errorMessages << i18n("Failed to save the metadata for layer %1.", layer->name());
+        return false;
+    }
+    if (!saveBrushStrokes(layer)) {
+        m_errorMessages << i18n("Failed to save the brush strokes for layer %1.", layer->name());
         return false;
     }
     return visitAllInverse(layer);
@@ -494,6 +499,31 @@ bool KisKraSaveVisitor::saveFilterConfiguration(KisNode* node)
         }
     }
     return retval;
+}
+
+bool KisKraSaveVisitor::saveBrushStrokes(KisPaintLayer *layer)
+{
+    KisBrushStrokeLayer *brushStrokeLayer = dynamic_cast<KisBrushStrokeLayer *>(layer);
+    if (!brushStrokeLayer) {
+        return true;
+    }
+    const QVector<KisRecordedBrushStrokeSP> strokes = brushStrokeLayer->strokes();
+    if (strokes.isEmpty()) {
+        return true;
+    }
+
+    QBuffer buffer;
+    buffer.open(QBuffer::WriteOnly);
+    if (!KisBrushStrokeLayer::saveStrokes(strokes, &buffer)) {
+        return false;
+    }
+    const QByteArray data = buffer.data();
+    if (!m_store->open(getLocation(layer, DOT_BRUSH_STROKES))) {
+        return false;
+    }
+    const bool result = m_store->write(data) == data.size();
+    m_store->close();
+    return result;
 }
 
 bool KisKraSaveVisitor::saveMetaData(KisNode* node)

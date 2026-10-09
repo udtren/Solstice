@@ -1,0 +1,349 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Solstice contributors
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+#include "KisBrushStrokeLayer.h"
+
+#include <QBuffer>
+#include <QDataStream>
+#include <QDomDocument>
+#include <QHash>
+
+#include <KisGlobalResourcesInterface.h>
+#include <KisResourceTypes.h>
+#include <KoCanvasResourceProvider.h>
+#include <KoColorProfile.h>
+#include <KoColorSpace.h>
+#include <KoColorSpaceRegistry.h>
+#include <KoLocalStrokeCanvasResources.h>
+#include <kis_debug.h>
+#include <kis_paintop_preset.h>
+#include <kis_paintop_settings.h>
+#include <resources/KoSegmentGradient.h>
+#include <resources/KoStopGradient.h>
+
+/**
+ * The brush stroke file of a layer (docs/agent/brush-stroke-layer-plan.md):
+ * a QDataStream of a header, the brush presets as XML, the patterns and
+ * gradients as their resource files, and the strokes, which refer to the
+ * presets and resources by index.
+ */
+namespace
+{
+const quint32 magic = 0x5342534c; // "SBSL"
+const quint32 version = 1;
+
+void prepare(QDataStream &stream)
+{
+    stream.setVersion(QDataStream::Qt_5_15);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    stream.setFloatingPointPrecision(QDataStream::DoublePrecision);
+}
+
+void writeColor(QDataStream &stream, const KoColor &color)
+{
+    const KoColorSpace *cs = color.colorSpace();
+    stream << cs->colorModelId().id() << cs->colorDepthId().id() << (cs->profile() ? cs->profile()->name() : QString())
+           << QByteArray(reinterpret_cast<const char *>(color.data()), int(cs->pixelSize()));
+}
+
+KoColor readColor(QDataStream &stream)
+{
+    QString model;
+    QString depth;
+    QString profile;
+    QByteArray data;
+    stream >> model >> depth >> profile >> data;
+
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->colorSpace(model, depth, profile);
+    if (!cs || data.size() != int(cs->pixelSize())) {
+        stream.setStatus(QDataStream::ReadCorruptData);
+        return KoColor();
+    }
+    return KoColor(reinterpret_cast<const quint8 *>(data.constData()), cs);
+}
+
+void writePaintInformation(QDataStream &stream, const KisPaintInformation &pi)
+{
+    stream << pi.pos() << pi.pressure() << pi.xTilt() << pi.yTilt() << pi.rotation() << pi.tangentialPressure()
+           << pi.perspective() << pi.currentTime() << pi.drawingSpeed() << pi.canvasRotation()
+           << pi.tiltDirectionOffset() << pi.canvasMirroredH() << pi.canvasMirroredV();
+}
+
+KisPaintInformation readPaintInformation(QDataStream &stream)
+{
+    QPointF pos;
+    qreal pressure, xTilt, yTilt, rotation, tangentialPressure, perspective, time, speed, canvasRotation,
+        tiltDirectionOffset;
+    bool mirroredH, mirroredV;
+    stream >> pos >> pressure >> xTilt >> yTilt >> rotation >> tangentialPressure >> perspective >> time >> speed
+        >> canvasRotation >> tiltDirectionOffset >> mirroredH >> mirroredV;
+
+    KisPaintInformation pi(pos, pressure, xTilt, yTilt, rotation, tangentialPressure, perspective, time, speed);
+    pi.setCanvasRotation(canvasRotation);
+    pi.setTiltDirectionOffset(tiltDirectionOffset);
+    pi.setCanvasMirroredH(mirroredH);
+    pi.setCanvasMirroredV(mirroredV);
+    return pi;
+}
+
+/// The preset's XML as KisPaintOpPreset::toXML() writes it, without the
+/// brush tips and other resources it embeds (they are looked up among the
+/// installed resources on loading). toXML() looks those up, which only the
+/// GUI thread may do, and a .kra is saved on another thread.
+QString presetXml(KisPaintOpPresetSP preset)
+{
+    QDomDocument doc;
+    QDomElement root = doc.createElement("Preset");
+    root.setAttribute("paintopid", preset->paintOp().id());
+    root.setAttribute("name", preset->name());
+    preset->settings()->toXML(doc, root);
+    doc.appendChild(root);
+    return doc.toString(-1);
+}
+
+KisPaintOpPresetSP presetFromXml(const QString &xml)
+{
+    QDomDocument doc;
+    if (!doc.setContent(xml)) {
+        return nullptr;
+    }
+    KisPaintOpPresetSP preset(new KisPaintOpPreset());
+    preset->fromXML(doc.documentElement(), KisGlobalResourcesInterface::instance());
+    return preset->valid() ? preset : nullptr;
+}
+
+/**
+ * The preset with a snapshot of the resources it uses, as a recorded preset
+ * has (a clone of the stroke's own): redrawing then needs no lookup in the
+ * global resources, which only the GUI thread may do, while redrawing runs
+ * in the image's processing. The canvas resources it needs come from the
+ * stroke.
+ */
+KisPaintOpPresetSP snapshotPreset(KisPaintOpPresetSP preset, const KisRecordedBrushStroke &stroke)
+{
+    KoLocalStrokeCanvasResourcesSP canvasResources(new KoLocalStrokeCanvasResources());
+    canvasResources->storeResource(KoCanvasResource::ForegroundColor, QVariant::fromValue(stroke.fgColor));
+    canvasResources->storeResource(KoCanvasResource::BackgroundColor, QVariant::fromValue(stroke.bgColor));
+    if (stroke.pattern) {
+        canvasResources->storeResource(KoCanvasResource::CurrentPattern, QVariant::fromValue(stroke.pattern));
+    }
+    if (stroke.gradient) {
+        canvasResources->storeResource(KoCanvasResource::CurrentGradient, QVariant::fromValue(stroke.gradient));
+    }
+    return preset->cloneWithResourcesSnapshot(KisGlobalResourcesInterface::instance(), canvasResources, nullptr);
+}
+
+/// A pattern or a gradient, with its file so that it loads where it is not
+/// installed
+void writeResource(QDataStream &stream, KoResourceSP resource)
+{
+    QBuffer buffer;
+    buffer.open(QBuffer::WriteOnly);
+    if (!resource->saveToDevice(&buffer)) {
+        buffer.buffer().clear();
+    }
+    stream << resource->resourceType().first << resource->resourceType().second << resource->md5Sum()
+           << resource->filename() << resource->name() << buffer.buffer();
+}
+
+KoResourceSP readResource(QDataStream &stream)
+{
+    QString type;
+    QString subType;
+    QString md5;
+    QString filename;
+    QString name;
+    QByteArray data;
+    stream >> type >> subType >> md5 >> filename >> name >> data;
+
+    KoResourceSP resource;
+    if (type == ResourceType::Patterns) {
+        resource.reset(new KoPattern(filename));
+    } else if (subType == ResourceSubType::StopGradients) {
+        resource.reset(new KoStopGradient(filename));
+    } else if (subType == ResourceSubType::SegmentedGradients) {
+        resource.reset(new KoSegmentGradient(filename));
+    }
+    if (resource && !data.isEmpty()) {
+        QBuffer buffer(&data);
+        buffer.open(QBuffer::ReadOnly);
+        if (resource->loadFromDevice(&buffer, KisGlobalResourcesInterface::instance())) {
+            resource->setName(name);
+            resource->setMD5Sum(md5);
+            resource->setValid(true);
+            return resource;
+        }
+    }
+
+    // not saved with its file: the installed one, if any
+    return KisGlobalResourcesInterface::instance()->source(type).bestMatch(md5, filename, name);
+}
+} // namespace
+
+bool KisBrushStrokeLayer::saveStrokes(const QVector<KisRecordedBrushStrokeSP> &strokes, QIODevice *device)
+{
+    QStringList presets;
+    QHash<const KisPaintOpPreset *, int> presetIndex;
+    QVector<KoResourceSP> resources;
+    QHash<QString, int> resourceIndex;
+
+    auto addResource = [&](KoResourceSP resource) {
+        if (!resource) {
+            return -1;
+        }
+        const QString key = resource->resourceType().first + resource->md5Sum() + resource->filename();
+        if (!resourceIndex.contains(key)) {
+            resourceIndex.insert(key, resources.size());
+            resources << resource;
+        }
+        return resourceIndex.value(key);
+    };
+
+    struct Indices {
+        int preset;
+        int pattern;
+        int gradient;
+    };
+    QVector<Indices> indices;
+    for (const KisRecordedBrushStrokeSP &stroke : strokes) {
+        Indices index;
+        // strokes usually share few presets: store each one once
+        const KisPaintOpPreset *key = stroke->preset.data();
+        if (!presetIndex.contains(key)) {
+            const QString xml = presetXml(stroke->preset);
+            int existing = presets.indexOf(xml);
+            if (existing < 0) {
+                existing = presets.size();
+                presets << xml;
+            }
+            presetIndex.insert(key, existing);
+        }
+        index.preset = presetIndex.value(key);
+        index.pattern = addResource(stroke->pattern);
+        index.gradient = addResource(stroke->gradient);
+        indices << index;
+    }
+
+    QDataStream stream(device);
+    prepare(stream);
+    stream << magic << version;
+
+    stream << quint32(presets.size());
+    for (const QString &xml : presets) {
+        stream << xml;
+    }
+    stream << quint32(resources.size());
+    for (KoResourceSP resource : resources) {
+        writeResource(stream, resource);
+    }
+
+    stream << quint32(strokes.size());
+    for (int i = 0; i < strokes.size(); i++) {
+        const KisRecordedBrushStroke &stroke = *strokes[i];
+        stream << qint32(indices[i].preset) << qint32(indices[i].pattern) << qint32(indices[i].gradient);
+        writeColor(stream, stroke.fgColor);
+        writeColor(stream, stroke.bgColor);
+        stream << stroke.compositeOpId << stroke.opacity << stroke.effectiveZoom << qint32(stroke.seed)
+               << qint32(stroke.strokeInfoCount) << stroke.deviceOffset;
+
+        stream << quint32(stroke.jobs.size());
+        for (const KisRecordedBrushStroke::Job &job : stroke.jobs) {
+            stream << qint32(job.type) << qint32(job.strokeInfoId);
+            writePaintInformation(stream, job.pi1);
+            writePaintInformation(stream, job.pi2);
+            stream << job.control1 << job.control2;
+        }
+    }
+    return stream.status() == QDataStream::Ok;
+}
+
+bool KisBrushStrokeLayer::loadStrokes(QIODevice *device, QVector<KisRecordedBrushStrokeSP> *strokes)
+{
+    QDataStream stream(device);
+    prepare(stream);
+
+    quint32 fileMagic = 0;
+    quint32 fileVersion = 0;
+    stream >> fileMagic >> fileVersion;
+    if (fileMagic != magic || fileVersion > version) {
+        warnKrita << "KisBrushStrokeLayer: unknown brush stroke data" << Qt::hex << fileMagic << Qt::dec << fileVersion;
+        return false;
+    }
+
+    quint32 count = 0;
+    stream >> count;
+    QVector<KisPaintOpPresetSP> presets;
+    for (quint32 i = 0; i < count && stream.status() == QDataStream::Ok; i++) {
+        QString xml;
+        stream >> xml;
+        presets << presetFromXml(xml);
+    }
+
+    stream >> count;
+    QVector<KoResourceSP> resources;
+    for (quint32 i = 0; i < count && stream.status() == QDataStream::Ok; i++) {
+        resources << readResource(stream);
+    }
+
+    // presets that need no canvas resources share one snapshot
+    QHash<int, KisPaintOpPresetSP> sharedSnapshots;
+
+    stream >> count;
+    QVector<KisRecordedBrushStrokeSP> result;
+    for (quint32 i = 0; i < count && stream.status() == QDataStream::Ok; i++) {
+        QSharedPointer<KisRecordedBrushStroke> stroke(new KisRecordedBrushStroke());
+        qint32 preset, pattern, gradient, seed, strokeInfoCount;
+        stream >> preset >> pattern >> gradient;
+        stroke->fgColor = readColor(stream);
+        stroke->bgColor = readColor(stream);
+        stream >> stroke->compositeOpId >> stroke->opacity >> stroke->effectiveZoom >> seed >> strokeInfoCount
+            >> stroke->deviceOffset;
+        stroke->seed = seed;
+        stroke->strokeInfoCount = strokeInfoCount;
+
+        quint32 jobCount = 0;
+        stream >> jobCount;
+        for (quint32 j = 0; j < jobCount && stream.status() == QDataStream::Ok; j++) {
+            KisRecordedBrushStroke::Job job;
+            qint32 type, strokeInfoId;
+            stream >> type >> strokeInfoId;
+            job.type = type;
+            job.strokeInfoId = strokeInfoId;
+            job.pi1 = readPaintInformation(stream);
+            job.pi2 = readPaintInformation(stream);
+            stream >> job.control1 >> job.control2;
+            stroke->jobs << job;
+        }
+
+        if (preset < 0 || preset >= presets.size() || pattern >= resources.size() || gradient >= resources.size()) {
+            stream.setStatus(QDataStream::ReadCorruptData);
+            break;
+        }
+        stroke->pattern = pattern >= 0 ? resources[pattern].dynamicCast<KoPattern>() : nullptr;
+        stroke->gradient = gradient >= 0 ? resources[gradient].dynamicCast<KoAbstractGradient>() : nullptr;
+        if (!presets[preset]) {
+            // the brush engine is missing: the layer keeps its pixels,
+            // and its record no longer matches them
+            warnKrita << "KisBrushStrokeLayer: a recorded brush preset could not be loaded";
+            continue;
+        }
+        if (!presets[preset]->requiredCanvasResources().isEmpty()) {
+            stroke->preset = snapshotPreset(presets[preset], *stroke);
+        } else {
+            if (!sharedSnapshots.contains(preset)) {
+                sharedSnapshots.insert(preset, snapshotPreset(presets[preset], *stroke));
+            }
+            stroke->preset = sharedSnapshots.value(preset);
+        }
+        result << stroke;
+    }
+
+    if (stream.status() != QDataStream::Ok) {
+        warnKrita << "KisBrushStrokeLayer: damaged brush stroke data";
+        return false;
+    }
+    *strokes = result;
+    return true;
+}

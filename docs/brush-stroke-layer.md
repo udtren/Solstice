@@ -26,6 +26,8 @@ Stroke Layer**. It appears below Paint Layer in the menu.
 
 ## Enlarging
 
+![A small drawing on a Brush Stroke Layer and an enlarged copy drawn again at the new size](images/brush-stroke-layer.png)
+
 **Image > Scale Image** and **Layer > Scale Layer** draw the remembered
 strokes again at the new size with the same brush, so enlarged line art
 stays sharp; the brush size grows with the scale. Undo returns the layer to
@@ -37,9 +39,19 @@ scaled like a paint layer instead, so no change is ever lost. Rotating or
 mirroring, scaling within a selection, and the Transform tool also scale
 the pixels as on a paint layer.
 
+## Saving
+
+Saving as `.kra` keeps the remembered strokes, so a reopened file can still
+be enlarged sharply. Original Krita opens the layer as a normal paint layer
+with the same pixels; saving the file again from Krita drops the remembered
+strokes.
+
+The file stores each stroke's brush settings, colors, pattern and gradient,
+but not the brush tip images. On a computer without the brush tip that a
+stroke used, the layer keeps its pixels and enlarges like a paint layer.
+Other formats (PSD, ORA, PNG and so on) store the pixels only.
+
 ## Current limitations
 
-- **Saving keeps the pixels only.** The file stores the layer as a paint
-  layer; the remembered strokes are not saved yet (a later stage).
 - Filters and other non-brush edits change the pixels but are not
   remembered.

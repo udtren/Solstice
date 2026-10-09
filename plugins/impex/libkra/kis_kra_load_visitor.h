@@ -68,6 +68,7 @@ private:
     const KoColorProfile* loadProfile(const QString& location, const QString &colorModelId, const QString &colorDepthId);
     void fixOldFilterConfigurations(KisFilterConfigurationSP kfc);
     bool loadMetaData(KisNode* node);
+    void loadBrushStrokes(KisPaintLayer *layer);
     void initSelectionForMask(KisMask *mask);
     bool loadSelection(const QString& location, KisSelectionSP dstSelection);
     QString getLocation(KisNode* node, const QString& suffix = QString());

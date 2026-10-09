@@ -57,6 +57,7 @@
 #include <kis_types.h>
 #include <lazybrush/kis_colorize_mask.h>
 #include <lazybrush/kis_lazy_fill_tools.h>
+#include <KisBrushStrokeLayer.h>
 
 using namespace KRA;
 
@@ -197,6 +198,7 @@ bool KisKraLoadVisitor::visit(KisPaintLayer *layer)
     if (!loadMetaData(layer)) {
         return false;
     }
+    loadBrushStrokes(layer);
 
     if (m_syntaxVersion == 1) {
         // Check whether there is a file with a .mask extension in the
@@ -700,6 +702,29 @@ void KisKraLoadVisitor::fixOldFilterConfigurations(KisFilterConfigurationSP kfc)
     }
 
     KIS_SAFE_ASSERT_RECOVER_NOOP(filter->configurationAllowedForMask(kfc));
+}
+
+void KisKraLoadVisitor::loadBrushStrokes(KisPaintLayer *layer)
+{
+    KisBrushStrokeLayer *brushStrokeLayer = dynamic_cast<KisBrushStrokeLayer *>(layer);
+    const QString location = getLocation(layer, DOT_BRUSH_STROKES);
+    if (!brushStrokeLayer || !m_store->hasFile(location)) {
+        return;
+    }
+
+    QByteArray data;
+    if (m_store->open(location)) {
+        data = m_store->read(m_store->size());
+        m_store->close();
+    }
+    QBuffer buffer(&data);
+    buffer.open(QBuffer::ReadOnly);
+    QVector<KisRecordedBrushStrokeSP> strokes;
+    if (KisBrushStrokeLayer::loadStrokes(&buffer, &strokes)) {
+        brushStrokeLayer->setStrokes(strokes);
+    } else {
+        m_warningMessages << i18n("Could not load the brush strokes of layer %1; its pixels are kept.", layer->name());
+    }
 }
 
 bool KisKraLoadVisitor::loadMetaData(KisNode* node)

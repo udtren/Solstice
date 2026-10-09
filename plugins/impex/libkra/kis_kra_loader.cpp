@@ -79,6 +79,7 @@
 #include "kis_node_view_color_scheme.h"
 #include "KisMirrorAxisConfig.h"
 #include <kis_cursor_override_hijacker.h>
+#include "KisBrushStrokeLayer.h"
 
 /*
   Color model id comparison through the ages:
@@ -1097,8 +1098,12 @@ KisNodeSP KisKraLoader::loadNode(const QDomElement& element, KisImageSP image)
 KisNodeSP KisKraLoader::loadPaintLayer(const QDomElement& element, KisImageSP image,
                                        const QString& name, const KoColorSpace* cs, quint32 opacity)
 {
-    Q_UNUSED(element);
     KisPaintLayer* layer;
+
+    // Solstice: a brush stroke layer; its strokes are loaded with its pixels
+    if (element.attribute(BRUSH_STROKE_LAYER) == "1") {
+        return new KisBrushStrokeLayer(image, name, opacity, cs);
+    }
 
     layer = new KisPaintLayer(image, name, opacity, cs);
     Q_CHECK_PTR(layer);

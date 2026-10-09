@@ -8,9 +8,14 @@
 
 #include "KisBrushTestMain.h"
 
+#include <QBuffer>
+#include <QTemporaryDir>
+
 #include <KisAsynchronousStrokeUpdateHelper.h>
 #include <KisBrushStrokeLayer.h>
+#include <KisDocument.h>
 #include <KisGlobalResourcesInterface.h>
+#include <KisPart.h>
 #include <KoCanvasResourceProvider.h>
 #include <KoColorSpaceRegistry.h>
 #include <KoCompositeOpRegistry.h>
@@ -18,6 +23,7 @@
 #include <brushengine/kis_paintop_settings.h>
 #include <kis_filter_strategy.h>
 #include <kis_image.h>
+#include <kis_layer_utils.h>
 #include <kis_paint_device.h>
 #include <kis_paint_information.h>
 #include <kis_resources_snapshot.h>
@@ -40,6 +46,10 @@ private Q_SLOTS:
     void testOnlyBrushStrokesOnPaintLayers();
     void testScaleImageRedraws();
     void testScaleFallsBackAfterOtherEdits();
+    void testStrokeDataRoundTrip();
+    void testKraRoundTrip();
+    void testSmudgeOverStroke();
+    void testTransparentColorsIgnored();
 };
 
 namespace
@@ -289,6 +299,164 @@ void KisBrushStrokeLayerTest::testScaleFallsBackAfterOtherEdits()
     QCOMPARE(layer->strokes().first()->jobs.first().pi1.pos(), firstPoint);
     QCOMPARE(toImage(layer->paintDevice(), large), toImage(reference->paintDevice(), large));
     QVERIFY(coveredPixels(toImage(layer->paintDevice(), QRect(600, 280, 120, 80))) > 5000);
+}
+
+/// Stage 2c: the stroke data written for a .kra reads back as strokes that
+/// draw the same pixels, with patterns carried in the data
+void KisBrushStrokeLayerTest::testStrokeDataRoundTrip()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisImageSP image = new KisImage(new KisSurrogateUndoStore(), imageBounds.width(), imageBounds.height(), cs, "data");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    KisPaintOpPresetSP brush = loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp"));
+    paintStroke(image, layer, brush, KoColor(Qt::black, cs));
+    paintStroke(image, layer, brush, KoColor(QColor(200, 30, 60), cs));
+
+    QVector<KisRecordedBrushStrokeSP> strokes = layer->strokes();
+    QCOMPARE(strokes.size(), 2);
+    // a pattern travels with the data
+    KoPatternSP pattern = KisGlobalResourcesInterface::instance()
+                              ->source<KoPattern>(ResourceType::Patterns)
+                              .fallbackResource()
+                              .dynamicCast<KoPattern>();
+    QVERIFY(pattern);
+    QSharedPointer<KisRecordedBrushStroke> withPattern(new KisRecordedBrushStroke(*strokes[1]));
+    withPattern->pattern = pattern;
+    strokes[1] = withPattern;
+
+    QBuffer buffer;
+    buffer.open(QBuffer::WriteOnly);
+    QVERIFY(KisBrushStrokeLayer::saveStrokes(strokes, &buffer));
+    qInfo() << "stroke data:" << buffer.data().size() << "bytes for"
+            << strokes[0]->jobs.size() + strokes[1]->jobs.size() << "jobs";
+    buffer.close();
+
+    buffer.open(QBuffer::ReadOnly);
+    QVector<KisRecordedBrushStrokeSP> loaded;
+    QVERIFY(KisBrushStrokeLayer::loadStrokes(&buffer, &loaded));
+    QCOMPARE(loaded.size(), 2);
+    for (int i = 0; i < 2; i++) {
+        QCOMPARE(loaded[i]->seed, strokes[i]->seed);
+        QCOMPARE(loaded[i]->jobs.size(), strokes[i]->jobs.size());
+        QCOMPARE(loaded[i]->fgColor, strokes[i]->fgColor);
+        QCOMPARE(loaded[i]->compositeOpId, strokes[i]->compositeOpId);
+        QCOMPARE(loaded[i]->deviceOffset, strokes[i]->deviceOffset);
+        QCOMPARE(loaded[i]->preset->paintOp(), brush->paintOp());
+    }
+    // the two strokes share one stored preset
+    QCOMPARE(loaded[0]->preset, loaded[1]->preset);
+    QVERIFY(!loaded[0]->pattern);
+    QVERIFY(loaded[1]->pattern);
+    QCOMPARE(loaded[1]->pattern->pattern(), pattern->pattern());
+
+    const QPoint offset(layer->paintDevice()->x(), layer->paintDevice()->y());
+    QCOMPARE(toImage(KisBrushStrokeLayer::renderStrokes(loaded, cs, imageBounds, offset)),
+             toImage(layer->paintDevice()));
+
+    // damaged data is refused, not half read
+    QByteArray damaged = buffer.data().left(buffer.data().size() / 2);
+    QBuffer damagedBuffer(&damaged);
+    damagedBuffer.open(QBuffer::ReadOnly);
+    QVector<KisRecordedBrushStrokeSP> none;
+    QVERIFY(!KisBrushStrokeLayer::loadStrokes(&damagedBuffer, &none));
+    QVERIFY(none.isEmpty());
+}
+
+/// Stage 2c: a brush stroke layer saved in a .kra opens as a brush stroke
+/// layer with its strokes, and enlarging it then draws them again
+void KisBrushStrokeLayerTest::testKraRoundTrip()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("brush_stroke_layer.kra"));
+
+    QImage pixels;
+    QPointF firstPoint;
+    {
+        QScopedPointer<KisDocument> document(KisPart::instance()->createDocument());
+        document->setFileBatchMode(true);
+        KisImageSP image =
+            new KisImage(document->createUndoStore(), imageBounds.width(), imageBounds.height(), cs, "kra");
+        KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+        image->addNode(layer, image->root());
+        KisPaintLayerSP plain = new KisPaintLayer(image, "plain", OPACITY_OPAQUE_U8, cs);
+        image->addNode(plain, image->root());
+        paintStroke(image, layer, loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp")), KoColor(Qt::black, cs));
+        pixels = toImage(layer->paintDevice());
+        firstPoint = layer->strokes().first()->jobs.first().pi1.pos();
+
+        document->setCurrentImage(image);
+        image->waitForDone();
+        QVERIFY(document->exportDocumentSync(path, KisDocument::nativeFormatMimeType()));
+    }
+
+    QScopedPointer<KisDocument> document(KisPart::instance()->createDocument());
+    document->setFileBatchMode(true);
+    QVERIFY(document->loadNativeFormat(path));
+    KisImageSP image = document->image();
+    image->waitForDone();
+
+    KisNodeSP strokesNode = KisLayerUtils::findNodeByName(image->root(), "strokes");
+    KisBrushStrokeLayerSP layer = dynamic_cast<KisBrushStrokeLayer *>(strokesNode.data());
+    QVERIFY(layer);
+    QVERIFY(!dynamic_cast<KisBrushStrokeLayer *>(KisLayerUtils::findNodeByName(image->root(), "plain").data()));
+    QCOMPARE(layer->strokes().size(), 1);
+    QCOMPARE(toImage(layer->paintDevice()), pixels);
+
+    scaleImage4x(image);
+    QCOMPARE(layer->strokes().first()->jobs.first().pi1.pos(), firstPoint * 4);
+}
+
+/// A smudging (blur) stroke reads the strokes below it; drawn again, in a
+/// canvas just around the strokes as the redraw uses, it gives the same
+/// pixels, and scaling then draws it again
+void KisBrushStrokeLayerTest::testSmudgeOverStroke()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisImageSP image = new KisImage(new KisSurrogateUndoStore(), 600, 400, cs, "smudge");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    KisPaintOpPresetSP blur = loadPreset(QStringLiteral("k)_Blender_Blur.kpp"));
+    QVERIFY(blur);
+    paintStroke(image, layer, loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp")), KoColor(Qt::black, cs));
+    paintStroke(image, layer, blur, KoColor(Qt::black, cs));
+    QCOMPARE(layer->strokes().size(), 2);
+
+    const QRect content = layer->paintDevice()->exactBounds();
+    QCOMPARE(toImage(KisBrushStrokeLayer::renderStrokes(layer->strokes(), cs, content | QRect(0, 0, 1, 1), QPoint()),
+                     content),
+             toImage(layer->paintDevice(), content));
+
+    const QPointF firstPoint = layer->strokes().last()->jobs.first().pi1.pos();
+    image->scaleImage(QSize(2400, 1600),
+                      image->xRes(),
+                      image->yRes(),
+                      KisFilterStrategyRegistry::instance()->value(QStringLiteral("Bicubic")));
+    image->waitForDone();
+    QCOMPARE(layer->strokes().last()->jobs.first().pi1.pos(), firstPoint * 4);
+}
+
+/// The color of a transparent pixel does not show: a smudging brush can
+/// leave it different from what drawing again gives (seen with a blur brush
+/// in an RGBA float document), and that must not stop the redraw
+void KisBrushStrokeLayerTest::testTransparentColorsIgnored()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisImageSP image =
+        new KisImage(new KisSurrogateUndoStore(), imageBounds.width(), imageBounds.height(), cs, "alpha");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    paintStroke(image, layer, loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp")), KoColor(Qt::black, cs));
+    const QPointF firstPoint = layer->strokes().first()->jobs.first().pi1.pos();
+
+    KoColor transparentWhite(Qt::white, cs);
+    transparentWhite.setOpacity(OPACITY_TRANSPARENT_U8);
+    layer->paintDevice()->fill(QRect(150, 70, 30, 20), transparentWhite);
+
+    scaleImage4x(image);
+    QCOMPARE(layer->strokes().first()->jobs.first().pi1.pos(), firstPoint * 4);
 }
 
 SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(KisBrushStrokeLayerTest, QStringLiteral("Krita_4_Default_Resources.bundle"))

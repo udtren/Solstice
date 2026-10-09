@@ -9,6 +9,7 @@
 #include <QtMath>
 
 #include <KisAsynchronousStrokeUpdateHelper.h>
+#include <KisUsageLogger.h>
 #include <KoCanvasResourceProvider.h>
 #include <kis_command_utils.h>
 #include <kis_debug.h>
@@ -195,27 +196,52 @@ KisPaintDeviceSP KisBrushStrokeLayer::renderStrokes(const QVector<KisRecordedBru
 namespace
 {
 /// Whether two devices hold the same pixels in @p rect, allowing a
-/// difference of 3 in each 8-bit channel
-bool sameContent(KisPaintDeviceSP a, KisPaintDeviceSP b, const QRect &rect)
+/// difference of 3 in each 8-bit channel; otherwise @p difference describes
+/// how they differ. The colors are compared premultiplied by alpha: the
+/// color of a transparent pixel does not show, and smudging brushes leave
+/// it different from what drawing again gives.
+bool sameContent(KisPaintDeviceSP a, KisPaintDeviceSP b, const QRect &rect, QString *difference)
 {
     if (rect.isEmpty()) {
+        *difference = QStringLiteral("the layer is empty, the redrawn strokes are not");
         return b->exactBounds().isEmpty();
     }
     const QImage first = a->convertToQImage(nullptr, rect).convertToFormat(QImage::Format_ARGB32);
     const QImage second = b->convertToQImage(nullptr, rect).convertToFormat(QImage::Format_ARGB32);
+    int differing = 0;
+    int largest = 0;
+    QRect area;
     for (int y = 0; y < first.height(); y++) {
         const QRgb *lineA = reinterpret_cast<const QRgb *>(first.constScanLine(y));
         const QRgb *lineB = reinterpret_cast<const QRgb *>(second.constScanLine(y));
         for (int x = 0; x < first.width(); x++) {
             const QRgb p = lineA[x];
             const QRgb q = lineB[x];
-            if (qAbs(qAlpha(p) - qAlpha(q)) > 3 || qAbs(qRed(p) - qRed(q)) > 3 || qAbs(qGreen(p) - qGreen(q)) > 3
-                || qAbs(qBlue(p) - qBlue(q)) > 3) {
-                return false;
+            const int alphaP = qAlpha(p);
+            const int alphaQ = qAlpha(q);
+            auto premultiplied = [](int channel, int alpha) {
+                return channel * alpha / 255;
+            };
+            const int channel =
+                qMax(qMax(qAbs(alphaP - alphaQ), qAbs(premultiplied(qRed(p), alphaP) - premultiplied(qRed(q), alphaQ))),
+                     qMax(qAbs(premultiplied(qGreen(p), alphaP) - premultiplied(qGreen(q), alphaQ)),
+                          qAbs(premultiplied(qBlue(p), alphaP) - premultiplied(qBlue(q), alphaQ))));
+            if (channel > 3) {
+                differing++;
+                largest = qMax(largest, channel);
+                area |= QRect(rect.x() + x, rect.y() + y, 1, 1);
             }
         }
     }
-    return true;
+    *difference = QStringLiteral("%1 of %2 pixels differ, by up to %3, in %4,%5 %6x%7")
+                      .arg(differing)
+                      .arg(rect.width() * rect.height())
+                      .arg(largest)
+                      .arg(area.x())
+                      .arg(area.y())
+                      .arg(area.width())
+                      .arg(area.height());
+    return differing == 0;
 }
 
 /// Replaces the layer's strokes; undo restores the previous ones
@@ -299,9 +325,16 @@ KUndo2Command *KisBrushStrokeLayer::createTransformRedrawCommand(const QTransfor
 
     // the layer must hold just its recorded strokes
     KisPaintDeviceSP current = renderStrokes(recorded, colorSpace, bounds | QRect(0, 0, 1, 1), offset);
-    if (!sameContent(device, current, bounds)) {
-        warnKrita << "KisBrushStrokeLayer:" << name()
-                  << "holds changes that are not brush strokes; transforming its pixels instead of drawing again";
+    QString difference;
+    if (!sameContent(device, current, bounds, &difference)) {
+        const QString message = QStringLiteral(
+                                    "Brush stroke layer \"%1\": its pixels are not its %2 recorded strokes (%3); "
+                                    "transforming the pixels instead of drawing again")
+                                    .arg(name())
+                                    .arg(recorded.size())
+                                    .arg(difference);
+        warnKrita << message;
+        KisUsageLogger::log(message);
         return nullptr;
     }
 

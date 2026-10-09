@@ -384,3 +384,20 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   libraries needs an out-of-line destructor in the defining library; running
   a private image's stroke and waiting for it inside the main image's
   processing job did not deadlock.
+
+## 2026-10-09 ingest: brush stroke layer, stage 2c
+
+- `brush-stroke-layer-plan.md`: the strokes are saved in a `.kra` as a
+  `layers/<layer>.brushstrokes` file (QDataStream) beside the pixels, and
+  the layer element stays a `paintlayer` with an extra attribute, so
+  original Krita opens it as a paint layer. Lessons: `KisPaintOpPreset::toXML()`
+  looks up linked resources, which asserts off the GUI thread, and `.kra`
+  saving runs on another thread; a preset loaded with the global resources
+  must get a resources snapshot (`cloneWithResourcesSnapshot()`) on the GUI
+  thread before it is used in image processing.
+- Follow-up (same day): a layer with Color Smudge blur strokes fell back to
+  resampling in an RGBA float document. `KisUsageLogger` diagnostics showed
+  only fully transparent pixels differed in color (black vs white). Lesson:
+  compare redraws by premultiplied color; the color of a transparent pixel is
+  not content. Log fallback reasons to `krita.log` so they can be read after
+  a manual repro.

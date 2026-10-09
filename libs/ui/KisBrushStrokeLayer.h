@@ -23,6 +23,8 @@
 
 #include "kritaui_export.h"
 
+class QIODevice;
+
 /**
  * One brush stroke as the brush tool drew it on a KisBrushStrokeLayer: the
  * stroke's jobs and the state they were drawn with, enough to draw it again
@@ -107,6 +109,17 @@ public:
                                           const QRect &imageBounds,
                                           const QPoint &deviceOffset,
                                           const QTransform &transform = QTransform());
+
+    /**
+     * Writes @p strokes to @p device in Solstice's brush stroke format (the
+     * layer's file in a .kra, KisBrushStrokeLayerIO.cpp). The brush tips
+     * are not embedded; patterns and gradients are.
+     */
+    static bool saveStrokes(const QVector<KisRecordedBrushStrokeSP> &strokes, QIODevice *device);
+
+    /// Reads strokes written by saveStrokes(); false for damaged or newer
+    /// data. Strokes whose brush engine is missing are left out.
+    static bool loadStrokes(QIODevice *device, QVector<KisRecordedBrushStrokeSP> *strokes);
 
 private:
     mutable QMutex m_mutex;

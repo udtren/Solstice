@@ -39,6 +39,7 @@
 #include <KisReferenceImagesLayer.h>
 #include "kis_keyframe_channel.h"
 #include "kis_dom_utils.h"
+#include <KisBrushStrokeLayer.h>
 
 using namespace KRA;
 
@@ -141,6 +142,9 @@ void KisSaveXmlVisitor::loadPaintLayerAttributes(const QDomElement &el, KisPaint
 bool KisSaveXmlVisitor::visit(KisPaintLayer *layer)
 {
     QDomElement layerElement = savePaintLayerAttributes(layer, m_doc, true);
+    if (dynamic_cast<KisBrushStrokeLayer *>(layer)) {
+        layerElement.setAttribute(BRUSH_STROKE_LAYER, 1);
+    }
     m_elem.appendChild(layerElement);
     m_count++;
     return saveMasks(layer, layerElement);

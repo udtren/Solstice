@@ -35,6 +35,7 @@
 #include "gpu/KisGpuBrushPainter.h"
 #include "KisBrushStrokeLayer.h"
 #include <QRandomGenerator>
+#include <KisUsageLogger.h>
 
 struct FreehandStrokeStrategy::Private
 {
@@ -192,6 +193,8 @@ void FreehandStrokeStrategy::recordJob(const Data &data)
         m_d->recording->jobs.append(job);
     } else {
         // a shape the stroke cannot draw again: not recorded at all
+        KisUsageLogger::log(
+            QStringLiteral("Brush stroke layer: a stroke with a job of type %1 is not recorded").arg(data.type));
         m_d->recording.reset();
         m_d->recordingLayer.clear();
     }
