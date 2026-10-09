@@ -56,6 +56,17 @@ KisDuplicateOptionWidget::KisDuplicateOptionWidget(lager::cursor<KisDuplicateOpt
 
     setConfigurationPage(page);
 
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Healing"), i18n("Healing"), page->cbHealing);
+    addToolOptionsParameter(QStringLiteral("CorrectPerspective"), i18n("Correct the perspective"), page->cbPerspective);
+    addToolOptionsParameter(QStringLiteral("MoveSourcePoint"), i18n("Source point move"), page->cbSourcePoint);
+    addToolOptionsParameter(QStringLiteral("ResetSourcePoint"),
+                            i18n("Source point reset before a new stroke"),
+                            page->cbResetSourcePoint);
+    addToolOptionsParameter(QStringLiteral("CloneFromProjection"),
+                            i18n("Clone From All Visible Layers"),
+                            page->chkCloneProjection);
 }
 
 KisDuplicateOptionWidget::~KisDuplicateOptionWidget()

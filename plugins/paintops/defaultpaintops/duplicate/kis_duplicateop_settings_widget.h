@@ -16,6 +16,7 @@
 
 class KisDuplicateOpOption;
 class KisPaintopLodLimitations;
+class KisPaintOpOptionsModel;
 
 class KisDuplicateOpSettingsWidget : public KisBrushBasedPaintopOptionWidget
 {
@@ -38,6 +39,13 @@ public:
 public:
     KisDuplicateOpOption* m_duplicateOption {nullptr};
 
+private:
+    // Solstice: the option states live in @p model, which must exist before
+    // the base class creates the brush tip option
+    KisDuplicateOpSettingsWidget(QWidget *parent,
+                                 KisResourcesInterfaceSP resourcesInterface,
+                                 KoCanvasResourcesInterfaceSP canvasResourcesInterface,
+                                 KisPaintOpOptionsModel *model);
 };
 
 

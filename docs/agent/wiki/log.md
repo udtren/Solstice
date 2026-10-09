@@ -316,3 +316,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   A parity test against the full rewrite alone does not catch it; test a
   single-option edit against the preset's document.
 - Only Clone (`duplicate`) is left before phase 5.
+
+## 2026-10-09 ingest: Clone on the shared model; phase 4 complete
+
+- `brush-option-shared-model-plan.md`: Clone (`duplicate`), missing from the
+  plan's engine list, now uses the model; every brush engine does, so
+  phase 5 (retiring the clear-and-rewrite path) can start. Lesson: check
+  the engine list against the settings widgets that lack
+  `setOptionsModel()` instead of trusting a plan's list.

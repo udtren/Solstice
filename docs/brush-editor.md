@@ -24,7 +24,7 @@ showing Brush Editor options in the Tool Options docker later.
 | Spray | Yes |
 | MyPaint | Yes |
 | Deform | Yes |
-| Clone | Not yet; it works as in Krita |
+| Clone | Yes |
 
 ## Differences from Krita
 
@@ -78,7 +78,9 @@ Spacing, Curve on Line width, History size and Curves opacity, Grid on
 Diameter, Grid width, Grid height, Scale, Random HSV and Random opacity,
 Particle on Particles, Iterations, Gravity and Opacity weight, Shape on
 Speed, Smoothing and Displace, Spray on Diameter, Aspect ratio, Angle, Scale
-and Spacing, and MyPaint on Radius Logarithmic, Hardness, Opacity and Eraser.
+and Spacing, MyPaint on Radius Logarithmic, Hardness, Opacity and Eraser,
+and Clone on its five check boxes (Healing, perspective, source point move and
+reset, and cloning from all visible layers).
 The Rectangle, Ellipse, Polygon and Polyline tools show the section too, at
 the end of their options.
 

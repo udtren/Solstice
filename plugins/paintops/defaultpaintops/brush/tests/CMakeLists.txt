@@ -14,6 +14,11 @@ kis_add_test(KisBrushTipOptionParityTest.cpp
     LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
     )
 
+kis_add_test(KisCloneParityTest.cpp
+    TEST_NAME KisCloneParityTest
+    LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
+    )
+
 if(HAVE_KRITA_GPU_ENGINE)
     kis_add_test(KisGpuBrushJobsTest.cpp
         TEST_NAME KisGpuBrushJobsTest

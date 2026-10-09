@@ -41,8 +41,8 @@ Editor (F5) chooses which brush items appear in the Tool Options docker.
   and their Brush section shows a hint.
 - Engines with ids: Pixel Brush, Deform, Color Smudge, Sketch, Bristle,
   Tangent Normal, Hatching, Filter, Quick Brush, Curve, Grid, Particle,
-  Shape, Spray and MyPaint (phase 4 of the shared model plan); Clone not
-  yet. MyPaint's option ids are its setting names (`radius_logarithmic`,
+  Shape, Spray, MyPaint and Clone (phase 4 of the shared model plan): every
+  engine. MyPaint's option ids are its setting names (`radius_logarithmic`,
   `opaque`, ...) plus `Basic` and `Airbrush`. Color Smudge has no masked brush; its other page
   parameters (Brush Tip, Blending Mode, Opacity, Texture Scale) come from the
   shared option widgets.
@@ -83,6 +83,7 @@ shows the control in the Brush section, as a copy kept in sync with it.
 | Color options (`ColorOptions`, Grid; `KisColorOptionWidget`) | `RandomHSV`, `RandomOpacity` (check boxes) |
 | Particle (`ParticleOp`) | `Particles`, `Iterations`, `Gravity`, `Weight` (their sliders) |
 | Spray Area (`SprayOp`) | `Diameter`, `Aspect`, `Angle` (`rotationAngleSelector`), `Scale`, `Spacing` |
+| Clone (`Clone`) | `Healing`, `CorrectPerspective`, `MoveSourcePoint`, `ResetSourcePoint`, `CloneFromProjection` (check boxes) |
 | MyPaint Basic (`Basic`) | `Radius`, `Hardness`, `Opacity` (sliders), `Eraser` (check box) |
 | Shape (`ExperimentOp`) | `Speed`, `Smoothing`, `Displace` (sliders; the eye goes before the check box in front of each) |
 

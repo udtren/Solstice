@@ -535,7 +535,8 @@ Tool Optionsではツール設定の下に置く。下記の「設定による�
 Tangent Normal、Hatching、Filter、Quick Brushも同日に実装し、手動確認で
 問題なし。Curve、Grid、Particle、Shape(Experiment)も同日に実装し、手動
 確認で問題なし(2026年10月9日)。SprayとMyPaintも同日に実装し、手動確認で
-問題なし。残るのはClone(`duplicate`、計画の一覧になかった)だけ。
+問題なし。Clone(`duplicate`、計画の一覧になかった)も同日に実装し、手動確認で
+問題なし。これで全エンジンが共有モデルを使い、フェーズ5に進める。
 
 本書の最終目的である3つの要件を実現する。
 
@@ -804,6 +805,27 @@ Spray AreaページのDiameter、Aspect ratio、Angle、Scale、Spacingに目を
 保たれる。MyPaintで1つの設定を変えても、他の設定(カーブを含む)が消えない。
 上のページ項目に目を入れるとTool Optionsに出て、そこでの変更が描画とF5に
 反映される。
+
+#### フェーズ4の実装結果: Clone(2026年10月9日)
+
+Clone(`duplicate`)の設定画面を共有モデルのビューに置き換えた。これで全
+エンジンが共有モデルを使う。オプション: BrushTip(精度)、CompositeOp、
+Opacity、Size、Rotation、Mirror、Clone(ページ)、Texture(パターン埋め込み)、
+Strength。依存はない。CloneページのHealing、Correct the perspective、
+Source point move、Source point reset before a new stroke、Clone From All
+Visible Layersに目を付けた。
+
+**テスト(`KisCloneParityTest` 10件、すべて通過)**: 同梱プリセット2件を、
+そのまま、カラー先端、Cloneの全設定オンの3通りで、移行前のコードで記録した
+基準と比較する(移行前のコードでも一致を確認)。合成モード、Clone、Sizeの
+編集のたびに、プリセットがモデルの全書き込みと一致する。テストは
+`plugins/paintops/defaultpaintops/brush/tests/`(静的ライブラリ
+`kritadefaultpaintops_static` がCloneも含む)。
+
+手動確認の項目: CloneでF5の各ページを変更し、描画、プレビュー、変更済み
+表示が従来どおり更新される。プリセットの切り替え・保存で値が保たれる。
+Ctrl+クリックでの複製元の指定とクローン描画が従来どおり動く。Cloneページの
+項目に目を入れるとTool Optionsに出て、そこでの変更がF5に反映される。
 
 ### フェーズ5: 旧経路の整理
 
