@@ -18,6 +18,8 @@
 #include <MyPaintStandardOptionData.h>
 
 #include <kis_paintop_lod_limitations.h>
+#include <KisPaintOpOptionStateUtils.h>
+#include <KisPaintOpOptionsModel.h>
 
 namespace KisPaintOpOptionWidgetUtils {
 
@@ -44,120 +46,115 @@ KisMyPaintOpSettingsWidget:: KisMyPaintOpSettingsWidget(QWidget* parent)
     /// TODO: move category into the widget itself, remove this
     /// overridden enum
 
-    namespace kpowu = KisPaintOpOptionWidgetUtils;
+    namespace kposu = KisPaintOpOptionStateUtils;
 
-    m_radiusWidget =
-        kpowu::createMyPaintCurveOptionWidget(MyPaintRadiusLogarithmicData());
-    MyPaintCurveOptionWidget *hardnessWidget =
-        kpowu::createMyPaintCurveOptionWidget(MyPaintHardnessData());
-    MyPaintCurveOptionWidget *opacityWidget =
-        kpowu::createMyPaintCurveOptionWidget(MyPaintOpacityData());
+    // Solstice: the option states live in a shared model, so that one option
+    // change writes only that option (docs/agent/brush-option-shared-model-plan.md,
+    // phase 4). Every curve option patches only its own part of the shared
+    // MyPaint/json, which resetSettings() keeps, so writing one option gives
+    // the same document as a full rewrite. The ids are MyPaint's setting names.
+    KisPaintOpOptionsModel *model = new KisPaintOpOptionsModel(this);
+    model->addSharedKey(QStringLiteral("MyPaint/json"));
 
-    KisPaintOpSettingsWidget::addPaintOpOption(
-        kpowu::createOptionWidget<MyPaintBasicOptionWidget>(MyPaintBasicOptionData(),
-                                                            m_radiusWidget->strengthValueDenorm(),
-                                                            hardnessWidget->strengthValueDenorm(),
-                                                            opacityWidget->strengthValueDenorm()));
+    auto addCurveState = [model](auto data) {
+        using Data = decltype(data);
+        return model->addOption(data.id.id(), data, &kposu::bakeCurveOption<Data>);
+    };
+    auto yLimit = [](const auto *state) {
+        return qAbs(state->data().strengthMaxValue - state->data().strengthMinValue);
+    };
+    auto addCurve = [this, yLimit](auto *state, MyPaintPaintopCategory category, const QString &yValueSuffix) {
+        MyPaintCurveOptionWidget *widget =
+            kposu::createOptionWidget<MyPaintCurveOptionWidget>(state, yLimit(state), yValueSuffix);
+        widget->setToolOptionsId(state->id());
+        addPaintOpOption(widget, category);
+        return widget;
+    };
+    auto add = [addCurve,
+                addCurveState](auto data, MyPaintPaintopCategory category, const QString &yValueSuffix = QString()) {
+        return addCurve(addCurveState(data), category, yValueSuffix);
+    };
+    auto addWithLodLimitations = [this, yLimit, addCurveState](auto data, MyPaintPaintopCategory category) {
+        auto *state = addCurveState(data);
+        MyPaintCurveOptionWidget *widget =
+            kposu::createOptionWidgetWithLodLimitations<MyPaintCurveOptionWidget>(state, yLimit(state), QString());
+        widget->setToolOptionsId(state->id());
+        addPaintOpOption(widget, category);
+    };
 
-    addPaintOpOption(m_radiusWidget,
-                     BASIC);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidgetWithLodLimitations(MyPaintRadiusByRandomData()),
-                     BASIC);
-    addPaintOpOption(hardnessWidget,
-                     BASIC);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintAntiAliasingData()),
-                     BASIC);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintEllipticalDabAngleData(), "°"),
-                     BASIC);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintEllipticalDabRatioData()),
-                     BASIC);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintDirectionFilterData()),
-                     BASIC);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSnapToPixelsData()),
-                     BASIC);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintPressureGainData()),
-                     BASIC);
+    // the Basic page edits the base values of these three
+    auto *radius = addCurveState(MyPaintRadiusLogarithmicData());
+    auto *hardness = addCurveState(MyPaintHardnessData());
+    auto *opacity = addCurveState(MyPaintOpacityData());
+    auto *basic = model->addOption(QStringLiteral("Basic"), MyPaintBasicOptionData());
 
-    addPaintOpOption(kpowu::createOptionWidget<KisAirbrushOptionWidget>(),
-                     AIRBRUSH);
+    MyPaintBasicOptionWidget *basicWidget = kposu::createOptionWidget<MyPaintBasicOptionWidget>(
+        basic,
+        kposu::curveCursor(radius)[&KisCurveOptionDataCommon::strengthValue],
+        kposu::curveCursor(hardness)[&KisCurveOptionDataCommon::strengthValue],
+        kposu::curveCursor(opacity)[&KisCurveOptionDataCommon::strengthValue]);
+    basicWidget->setToolOptionsId(QStringLiteral("Basic"));
+    KisPaintOpSettingsWidget::addPaintOpOption(basicWidget);
 
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintChangeColorHData()),
-                     COLOR);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintChangeColorLData()),
-                     COLOR);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintChangeColorVData()),
-                     COLOR);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintChangeColorHSLSData()),
-                     COLOR);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintChangeColorHSVSData()),
-                     COLOR);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintColorizeData()),
-                     COLOR);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintPosterizeData()),
-                     COLOR);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintPosterizationLevelsData()),
-                     COLOR);
+    m_radiusWidget = addCurve(radius, BASIC, QString());
+    addWithLodLimitations(MyPaintRadiusByRandomData(), BASIC);
+    addCurve(hardness, BASIC, QString());
+    add(MyPaintAntiAliasingData(), BASIC);
+    add(MyPaintEllipticalDabAngleData(), BASIC, "°");
+    add(MyPaintEllipticalDabRatioData(), BASIC);
+    add(MyPaintDirectionFilterData(), BASIC);
+    add(MyPaintSnapToPixelsData(), BASIC);
+    add(MyPaintPressureGainData(), BASIC);
 
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintFineSpeedGammaData()),
-                     SPEED);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintGrossSpeedGammaData()),
-                     SPEED);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintFineSpeedSlownessData()),
-                     SPEED);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintGrossSpeedSlownessData()),
-                     SPEED);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintOffsetBySpeedData()),
-                     SPEED);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintOffsetBySpeedFilterData()),
-                     SPEED);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidgetWithLodLimitations(MyPaintOffsetByRandomData()),
-                     SPEED);
+    auto *airbrush = model->addOption(QStringLiteral("Airbrush"), KisAirbrushOptionData());
+    KisAirbrushOptionWidget *airbrushWidget = kposu::createOptionWidget<KisAirbrushOptionWidget>(airbrush);
+    airbrushWidget->setToolOptionsId(QStringLiteral("Airbrush"));
+    addPaintOpOption(airbrushWidget, AIRBRUSH);
 
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintDabsPerBasicRadiusData()),
-                     DABS);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintDabsPerActualRadiusData()),
-                     DABS);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintDabsPerSecondData()),
-                     DABS);
+    add(MyPaintChangeColorHData(), COLOR);
+    add(MyPaintChangeColorLData(), COLOR);
+    add(MyPaintChangeColorVData(), COLOR);
+    add(MyPaintChangeColorHSLSData(), COLOR);
+    add(MyPaintChangeColorHSVSData(), COLOR);
+    add(MyPaintColorizeData(), COLOR);
+    add(MyPaintPosterizeData(), COLOR);
+    add(MyPaintPosterizationLevelsData(), COLOR);
 
-    addPaintOpOption(opacityWidget,
-                     OPACITY);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintOpaqueLinearizeData()),
-                     OPACITY);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintOpaqueMultiplyData()),
-                     OPACITY);
+    add(MyPaintFineSpeedGammaData(), SPEED);
+    add(MyPaintGrossSpeedGammaData(), SPEED);
+    add(MyPaintFineSpeedSlownessData(), SPEED);
+    add(MyPaintGrossSpeedSlownessData(), SPEED);
+    add(MyPaintOffsetBySpeedData(), SPEED);
+    add(MyPaintOffsetBySpeedFilterData(), SPEED);
+    addWithLodLimitations(MyPaintOffsetByRandomData(), SPEED);
 
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSlowTrackingPerDabData()),
-                     TRACKING);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSlowTrackingData()),
-                     TRACKING);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintTrackingNoiseData()),
-                     TRACKING);
+    add(MyPaintDabsPerBasicRadiusData(), DABS);
+    add(MyPaintDabsPerActualRadiusData(), DABS);
+    add(MyPaintDabsPerSecondData(), DABS);
 
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSmudgeData()),
-                     SMUDGE);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSmudgeLengthData()),
-                     SMUDGE);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSmudgeLengthMultiplierData()),
-                     SMUDGE);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSmudgeRadiusLogData()),
-                     SMUDGE);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSmudgeTransparencyData()),
-                     SMUDGE);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintSmudgeBucketData()),
-                     SMUDGE);
+    addCurve(opacity, OPACITY, QString());
+    add(MyPaintOpaqueLinearizeData(), OPACITY);
+    add(MyPaintOpaqueMultiplyData(), OPACITY);
 
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintStrokeDurationLogData()),
-                     STROKE);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintStrokeHoldtimeData()),
-                     STROKE);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintStrokeThresholdData()),
-                     STROKE);
+    add(MyPaintSlowTrackingPerDabData(), TRACKING);
+    add(MyPaintSlowTrackingData(), TRACKING);
+    add(MyPaintTrackingNoiseData(), TRACKING);
 
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintCustomInputData()),
-                     CUSTOM);
-    addPaintOpOption(kpowu::createMyPaintCurveOptionWidget(MyPaintCustomInputSlownessData()),
-                     CUSTOM);
+    add(MyPaintSmudgeData(), SMUDGE);
+    add(MyPaintSmudgeLengthData(), SMUDGE);
+    add(MyPaintSmudgeLengthMultiplierData(), SMUDGE);
+    add(MyPaintSmudgeRadiusLogData(), SMUDGE);
+    add(MyPaintSmudgeTransparencyData(), SMUDGE);
+    add(MyPaintSmudgeBucketData(), SMUDGE);
+
+    add(MyPaintStrokeDurationLogData(), STROKE);
+    add(MyPaintStrokeHoldtimeData(), STROKE);
+    add(MyPaintStrokeThresholdData(), STROKE);
+
+    add(MyPaintCustomInputData(), CUSTOM);
+    add(MyPaintCustomInputSlownessData(), CUSTOM);
+
+    setOptionsModel(model);
 }
 
 KisMyPaintOpSettingsWidget::~ KisMyPaintOpSettingsWidget()

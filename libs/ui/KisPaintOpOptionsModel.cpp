@@ -36,6 +36,7 @@ struct KisPaintOpOptionsModel::Private {
     QHash<QString, int> indexById;
     QMultiHash<int, int> dependentsBySource;
     QStringList preservedKeys;
+    QStringList sharedKeys;
 
     KisPaintOpPresetSP preset;
     KisSignalAutoConnectionsStore presetConnections;
@@ -119,6 +120,13 @@ void KisPaintOpOptionsModel::setPreservedKeys(const QStringList &keys)
 QStringList KisPaintOpOptionsModel::preservedKeys() const
 {
     return m_d->preservedKeys;
+}
+
+void KisPaintOpOptionsModel::addSharedKey(const QString &key)
+{
+    if (!m_d->sharedKeys.contains(key)) {
+        m_d->sharedKeys << key;
+    }
 }
 
 void KisPaintOpOptionsModel::attachPreset(KisPaintOpPresetSP preset)
@@ -252,6 +260,12 @@ void KisPaintOpOptionsModel::writeOption(int index, KisPaintOpSettings *settings
     KisPaintOpOptionStateBase *option = m_d->options[size_t(index)].get();
 
     KisPropertiesConfigurationSP scratch = new KisPropertiesConfiguration();
+    // a shared document is patched, not rewritten from scratch
+    Q_FOREACH (const QString &key, m_d->sharedKeys) {
+        if (settings->hasProperty(key)) {
+            scratch->setProperty(key, settings->getProperty(key));
+        }
+    }
     option->write(scratch.data());
     const QList<QString> newKeyList = scratch->getPropertiesKeys();
     const QSet<QString> newKeys(newKeyList.begin(), newKeyList.end());

@@ -67,7 +67,8 @@ private:
  * Typed option state. \p Data must provide read(const
  * KisPropertiesConfiguration*), write(KisPropertiesConfiguration*) const and
  * operator==. Per-option writes require write() to depend only on the data
- * (no read-modify-write of the target configuration).
+ * (no read-modify-write of the target configuration), except for the
+ * model's shared keys (KisPaintOpOptionsModel::addSharedKey()).
  */
 template<typename Data>
 class KisPaintOpOptionState : public KisPaintOpOptionStateBase
@@ -185,6 +186,15 @@ public:
      */
     void setPreservedKeys(const QStringList &keys);
     QStringList preservedKeys() const;
+
+    /**
+     * Declares \p key a document that several options read and patch, each
+     * its own part (MyPaint's "MyPaint/json"). A per-option write then
+     * starts from the key's current value in the preset instead of an empty
+     * configuration, so the other options' parts are kept. A full rewrite
+     * relies on the settings keeping the key (resetSettings()).
+     */
+    void addSharedKey(const QString &key);
 
     /**
      * Starts synchronizing with \p preset: reads all options from its

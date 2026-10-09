@@ -21,8 +21,10 @@ showing Brush Editor options in the Tool Options docker later.
 | Grid | Yes |
 | Particle | Yes |
 | Shape | Yes |
+| Spray | Yes |
+| MyPaint | Yes |
 | Deform | Yes |
-| Other engines | Not yet; they work as in Krita |
+| Clone | Not yet; it works as in Krita |
 
 ## Differences from Krita
 
@@ -74,8 +76,9 @@ Direction/Tilt Mix Value, Hatching on Angle, Separation, Thickness and its
 three Graphical Tweaks, Filter on Smudge Mode, Quick Brush on Diameter and
 Spacing, Curve on Line width, History size and Curves opacity, Grid on
 Diameter, Grid width, Grid height, Scale, Random HSV and Random opacity,
-Particle on Particles, Iterations, Gravity and Opacity weight, and Shape on
-Speed, Smoothing and Displace.
+Particle on Particles, Iterations, Gravity and Opacity weight, Shape on
+Speed, Smoothing and Displace, Spray on Diameter, Aspect ratio, Angle, Scale
+and Spacing, and MyPaint on Radius Logarithmic, Hardness, Opacity and Eraser.
 The Rectangle, Ellipse, Polygon and Polyline tools show the section too, at
 the end of their options.
 

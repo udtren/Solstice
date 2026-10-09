@@ -302,3 +302,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `KisBrushStrokePreviewRenderer`); the cache keeps rendering saved presets
   only. Lesson: a renderer with a running stroke must outlive its owner
   until `finished`, so detach it and delete it then.
+
+## 2026-10-09 ingest: Spray and MyPaint on the shared model (phase 4)
+
+- `brush-option-shared-model-plan.md`: Spray's shape page reads the spray
+  area's diameter and scale through cursors on the SprayOp state but writes
+  only its own data, so no dependency. MyPaint's options all patch
+  `MyPaint/json`; `KisPaintOpOptionsModel::addSharedKey()` seeds a
+  per-option write with the preset's current document. Lesson: the model's
+  per-option write starts from an empty scratch configuration, so an option
+  that read-modify-writes a shared key silently drops everything else in
+  it; the full rewrite hid this because `resetSettings()` keeps the key.
+  A parity test against the full rewrite alone does not catch it; test a
+  single-option edit against the preset's document.
+- Only Clone (`duplicate`) is left before phase 5.

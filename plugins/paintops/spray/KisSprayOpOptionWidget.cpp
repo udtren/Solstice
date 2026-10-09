@@ -237,6 +237,14 @@ KisSprayOpOptionWidget::KisSprayOpOptionWidget(lager::cursor<KisSprayOpOptionDat
     m_d->model.optionData.bind(std::bind(&KisSprayOpOptionWidget::emitSettingChanged, this));
     
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Diameter"), i18n("Diameter"), widget->diameterSpinBox);
+    addToolOptionsParameter(QStringLiteral("Aspect"), i18n("Aspect ratio"), widget->aspectSPBox);
+    addToolOptionsParameter(QStringLiteral("Angle"), i18n("Angle"), widget->rotationAngleSelector);
+    addToolOptionsParameter(QStringLiteral("Scale"), i18n("Scale"), widget->scaleSpin);
+    addToolOptionsParameter(QStringLiteral("Spacing"), i18n("Spacing"), widget->spacingSpin);
 }
 
 KisSprayOpOptionWidget::~KisSprayOpOptionWidget()

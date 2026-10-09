@@ -119,7 +119,8 @@ Read these before adding or updating any feature:
   2026-10-08; phase 4 Color Smudge done and manually checked 2026-10-08; Sketch and
   Bristle done and manually checked 2026-10-08; Tangent Normal, Hatching,
   Filter and Quick Brush done and manually checked 2026-10-08; Curve, Grid,
-  Particle and Shape done and manually checked 2026-10-09):
+  Particle and Shape done and manually checked 2026-10-09; Spray and MyPaint
+  done and manually checked 2026-10-09; only Clone remains):
   `docs/agent/brush-option-shared-model-plan.md`, findings in
   `docs/agent/brush-option-shared-model-phase0.md`
 - Brush options in Tool Options (eyes in the Brush Editor; phases 3a and 3b

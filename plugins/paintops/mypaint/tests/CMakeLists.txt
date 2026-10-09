@@ -6,3 +6,7 @@ kis_add_test(
     LINK_LIBRARIES kritaimage kritamypaintop_static kritalibpaintop LibMyPaint::mypaint kritatestsdk
     )
 
+
+kis_add_test(KisMyPaintParityTest.cpp
+    TEST_NAME KisMyPaintParityTest
+    LINK_LIBRARIES kritamypaintop_static kritalibpaintop kritaui kritatestsdk)

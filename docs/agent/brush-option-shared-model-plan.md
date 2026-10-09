@@ -534,7 +534,8 @@ Tool Optionsではツール設定の下に置く。下記の「設定による�
 手動確認で問題なし(「フェーズ4の実装結果: SketchとBristle(Hairy)」)。
 Tangent Normal、Hatching、Filter、Quick Brushも同日に実装し、手動確認で
 問題なし。Curve、Grid、Particle、Shape(Experiment)も同日に実装し、手動
-確認で問題なし(2026年10月9日)。残りはSprayとMyPaint。
+確認で問題なし(2026年10月9日)。SprayとMyPaintも同日に実装し、手動確認で
+問題なし。残るのはClone(`duplicate`、計画の一覧になかった)だけ。
 
 本書の最終目的である3つの要件を実現する。
 
@@ -568,7 +569,7 @@ Tool Optionsへの外だしを無効にする。
 - Color Smudgeは、ブラシ先端の加工済みデータから始まる依存の連鎖がある。
 - Sprayは、SprayShapeが `lager::with` のレンズでSprayOpに書き戻す。
 - MyPaintは、すべてのオプションが共有のJSONキー `MyPaint/json` を読み書きする。
-  JSONを1つの集約データとして扱う方式が決まるまで、従来の経路のままにする。
+  モデルの共有キー(`addSharedKey()`)で扱う(下記の実装結果)。
 
 #### フェーズ4の実装結果: Color Smudge(2026年10月8日)
 
@@ -765,6 +766,44 @@ ShapeのSpeed・Smoothing・Displace(各スライダー、目は前のチェッ�
 表示が従来どおり更新される。プリセットの切り替え・保存で値が保たれる。上の
 ページ項目に目を入れるとTool Optionsに出て、そこでの変更が描画とF5に反映
 される。
+
+#### フェーズ4の実装結果: SprayとMyPaint(2026年10月9日)
+
+**Spray(`spraybrush`)**: SprayOp、SprayShape、BrushTip(ブラシ先端、基底の
+ブラシ先端オプションではなく単独のページ)、Opacity、Size、CompositeOp、
+ShapeDynamics、ColorOptions、Rotation、Airbrush、Rate、PaintingMode。
+Spray Shapeのページは粒子の大きさをSpray Areaの直径と倍率に対する割合でも
+表示するため、SprayOpの状態から直径と倍率のカーソル(`lager::with` のレンズ)を
+受け取る。ただし書き込むのは自身のデータだけなので、依存は宣言しない。
+Spray AreaページのDiameter、Aspect ratio、Angle、Scale、Spacingに目を付けた。
+
+**MyPaint(`mypaintbrush`)**: 計画で保留にしていた共有JSONは、モデルの
+「共有キー」で扱う。各カーブオプションは `MyPaint/json` のうち自分の
+設定名の部分だけを読み書きする(読み込んで変更して書く)。全書き込みでは
+`KisMyPaintOpSettings::resetSettings()` がこのキーを残すので、各オプションが
+既存の文書に自分の部分を書き足す。1つのオプションの書き込みも同じ結果に
+なるよう、`KisPaintOpOptionsModel::addSharedKey()` を追加した。共有キーは
+オプション単位の書き込みの作業用設定に、プリセットの現在の値を入れてから
+書き込ませる(空から作ると、そのオプションの部分しかない文書で上書きして
+しまう。移行直後のテストで実際に起きた)。オプションのidはMyPaintの
+設定名(`radius_logarithmic`、`hardness`、`opaque` など)と `Basic`、
+`Airbrush`。BasicページのRadius、Hardness、Opacityは、それぞれのカーブ
+オプションの基準値を編集するカーソルを受け取る(表示倍率は1)。Basic
+ページのRadius Logarithmic、Hardness、Opacity、Eraserに目を付けた。
+
+**テスト(すべて通過)**: `KisSprayParityTest` 19件(同梱プリセット5件を、
+そのまま、カラー先端、比率指定の粒子形状の3通り)、`KisMyPaintParityTest`
+11件(同梱のMyPaintブラシ7件。基準には `MyPaint/json` 全体を含む。編集の
+テストでは、プリセットの文書にモデルの全オプションを書き足した結果と、
+プリセットが一致することを確かめる)。基準はどちらも移行前のコードで記録し、
+移行前のコードでも一致を確認した。`addSharedKey()` を外すとMyPaintの編集の
+テストが失敗する。
+
+手動確認の項目: SprayとMyPaintでF5の各ページを変更し、描画、プレビュー、
+変更済み表示が従来どおり更新される。プリセットの切り替え・保存で値が
+保たれる。MyPaintで1つの設定を変えても、他の設定(カーブを含む)が消えない。
+上のページ項目に目を入れるとTool Optionsに出て、そこでの変更が描画とF5に
+反映される。
 
 ### フェーズ5: 旧経路の整理
 

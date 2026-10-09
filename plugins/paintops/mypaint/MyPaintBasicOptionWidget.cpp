@@ -57,6 +57,13 @@ MyPaintBasicOptionWidget::MyPaintBasicOptionWidget(lager::cursor<MyPaintBasicOpt
 
     setConfigurationPage(widget);
     m_d->model.optionData.bind(std::bind(&MyPaintBasicOptionWidget::emitSettingChanged, this));
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Radius"), i18n("Radius Logarithmic"), ui.radiusSPBox);
+    addToolOptionsParameter(QStringLiteral("Hardness"), i18n("Hardness"), ui.hardnessSPBox);
+    addToolOptionsParameter(QStringLiteral("Opacity"), i18n("Opacity"), ui.opacitySPBox);
+    addToolOptionsParameter(QStringLiteral("Eraser"), i18n("Eraser"), ui.eraserBox);
 }
 
 MyPaintBasicOptionWidget::~MyPaintBasicOptionWidget()
