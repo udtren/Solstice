@@ -95,6 +95,9 @@ private Q_SLOTS:
     KisGeneratorLayerSP addGeneratorLayer(KisNodeSP activeNode, const QString &name, KisFilterConfigurationSP filter, KisSelectionSP selection, KisProcessingApplicator *applicator);
 
     KisNodeSP addFileLayer(KisNodeSP activeNode);
+    /// Solstice: a paint layer that records its brush strokes
+    /// (docs/agent/brush-stroke-layer-plan.md)
+    KisNodeSP addBrushStrokeLayer(KisNodeSP activeNode);
 
     void layerStyle();
 

@@ -439,6 +439,11 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
         wrapper->addCommand(m_autokeyCommand.release());
     }
 
+    if (m_additionalUndoCommand) {
+        KisCommandUtils::CompositeCommand *wrapper = new KisCommandUtils::CompositeCommand(parentCommand.data());
+        wrapper->addCommand(m_additionalUndoCommand.release());
+    }
+
     if (indirect && indirect->hasTemporaryTarget()) {
         KUndo2MagicString transactionText = m_transaction->text();
         m_transaction->end();
@@ -488,8 +493,14 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
 
 }
 
+void KisPainterBasedStrokeStrategy::setAdditionalUndoCommand(KUndo2Command *command)
+{
+    m_additionalUndoCommand.reset(command);
+}
+
 void KisPainterBasedStrokeStrategy::cancelStrokeCallback()
 {
+    m_additionalUndoCommand.reset();
     if (!m_transaction) return;
 
     if (m_autokeyCommand) {

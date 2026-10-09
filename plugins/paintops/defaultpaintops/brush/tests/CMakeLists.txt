@@ -24,6 +24,11 @@ kis_add_test(KisBrushStrokeReplayTest.cpp
     LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
     )
 
+kis_add_test(KisBrushStrokeLayerTest.cpp
+    TEST_NAME KisBrushStrokeLayerTest
+    LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
+    )
+
 if(HAVE_KRITA_GPU_ENGINE)
     kis_add_test(KisGpuBrushJobsTest.cpp
         TEST_NAME KisGpuBrushJobsTest

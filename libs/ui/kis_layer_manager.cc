@@ -6,6 +6,7 @@
  */
 
 #include "kis_layer_manager.h"
+#include "KisBrushStrokeLayer.h"
 
 #include <QRect>
 #include <QApplication>
@@ -681,6 +682,22 @@ KisLayerSP KisLayerManager::addPaintLayer(KisNodeSP activeNode)
 {
     KisImageWSP image = m_view->image();    
     KisLayerSP layer = new KisPaintLayer(image.data(),  image->nextLayerName( i18n("Paint Layer") ), OPACITY_OPAQUE_U8, image->colorSpace());
+
+    KisConfig cfg(true);
+    layer->setPinnedToTimeline(cfg.autoPinLayersToTimeline());
+
+    addLayerCommon(activeNode, layer, false, 0);
+
+    return layer;
+}
+
+KisNodeSP KisLayerManager::addBrushStrokeLayer(KisNodeSP activeNode)
+{
+    KisImageWSP image = m_view->image();
+    KisLayerSP layer = new KisBrushStrokeLayer(image.data(),
+                                               image->nextLayerName(i18n("Brush Stroke Layer")),
+                                               OPACITY_OPAQUE_U8,
+                                               image->colorSpace());
 
     KisConfig cfg(true);
     layer->setPinnedToTimeline(cfg.autoPinLayersToTimeline());

@@ -103,6 +103,11 @@ protected:
 protected:
     KisPainterBasedStrokeStrategy(const KisPainterBasedStrokeStrategy &rhs, int levelOfDetail);
 
+    /// Solstice: @p command becomes part of the stroke's undo command, done
+    /// and undone with the painting (e.g. recording the stroke on a brush
+    /// stroke layer). Call it before finishStrokeCallback().
+    void setAdditionalUndoCommand(KUndo2Command *command);
+
 private:
     void init();
     void initPainters(KisPaintDeviceSP targetDevice, KisPaintDeviceSP maskingDevice,
@@ -128,6 +133,7 @@ private:
     KisSelectionSP m_activeSelection;
 
     std::unique_ptr<KUndo2Command> m_autokeyCommand;
+    std::unique_ptr<KUndo2Command> m_additionalUndoCommand;
 
     bool m_useMergeID {false};
 

@@ -2635,6 +2635,18 @@
       <isCheckable>false</isCheckable>
       <statusTip/>
     </Action>
+    <Action name="add_new_brush_stroke_layer">
+      <icon>krita_tool_freehand</icon>
+      <text>Add &amp;Brush Stroke Layer</text>
+      <whatsThis/>
+      <toolTip>Add a new layer that records its brush strokes, so that enlarging the image draws them again sharply</toolTip>
+      <iconText>Brush Stroke Layer</iconText>
+      <activationFlags>1000</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut/>
+      <isCheckable>false</isCheckable>
+      <statusTip/>
+    </Action>
     <Action name="add_new_file_layer">
       <icon>fileLayer</icon>
       <text>Add &amp;File Layer...</text>

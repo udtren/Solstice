@@ -33,6 +33,8 @@
 #include "brushengine/kis_paintop_utils.h"
 #include "KisAsynchronousStrokeUpdateHelper.h"
 #include "gpu/KisGpuBrushPainter.h"
+#include "KisBrushStrokeLayer.h"
+#include <QRandomGenerator>
 
 struct FreehandStrokeStrategy::Private
 {
@@ -68,6 +70,13 @@ struct FreehandStrokeStrategy::Private
 
     const bool needsAsynchronousUpdates = false;
     std::mutex updateEntryMutex;
+
+    // Solstice: the stroke recorded for a brush stroke layer
+    // (docs/agent/brush-stroke-layer-plan.md); not copied to level of
+    // detail clones
+    KisBrushStrokeLayerSP recordingLayer;
+    QSharedPointer<KisRecordedBrushStroke> recording;
+    std::mutex recordingMutex;
 };
 
 FreehandStrokeStrategy::FreehandStrokeStrategy(KisResourcesSnapshotSP resources,
@@ -79,6 +88,7 @@ FreehandStrokeStrategy::FreehandStrokeStrategy(KisResourcesSnapshotSP resources,
       m_d(new Private(resources))
 {
     init(flags);
+    initRecording(1);
 }
 
 FreehandStrokeStrategy::FreehandStrokeStrategy(KisResourcesSnapshotSP resources,
@@ -90,6 +100,7 @@ FreehandStrokeStrategy::FreehandStrokeStrategy(KisResourcesSnapshotSP resources,
       m_d(new Private(resources))
 {
     init(flags);
+    initRecording(strokeInfos.size());
 }
 
 FreehandStrokeStrategy::FreehandStrokeStrategy(const FreehandStrokeStrategy &rhs, int levelOfDetail)
@@ -134,6 +145,56 @@ void FreehandStrokeStrategy::init(Flags flags)
 void FreehandStrokeStrategy::setPreviewRandomSeed(int seed)
 {
     m_d->randomSource.setSeed(seed);
+    if (m_d->recording) {
+        m_d->recording->seed = seed;
+    }
+}
+
+void FreehandStrokeStrategy::initRecording(int strokeInfoCount)
+{
+    KisResourcesSnapshotSP resources = m_d->resources;
+    KisBrushStrokeLayer *layer = dynamic_cast<KisBrushStrokeLayer *>(resources->currentNode().data());
+    if (!layer || !layer->paintDevice() || !resources->currentPaintOpPreset()) {
+        return;
+    }
+
+    m_d->recordingLayer = layer;
+    m_d->recording.reset(new KisRecordedBrushStroke());
+    KisRecordedBrushStroke &stroke = *m_d->recording;
+    stroke.preset = resources->currentPaintOpPreset()->clone().dynamicCast<KisPaintOpPreset>();
+    stroke.fgColor = resources->currentFgColor();
+    stroke.bgColor = resources->currentBgColor();
+    stroke.compositeOpId = resources->compositeOpId();
+    stroke.opacity = resources->opacity();
+    stroke.effectiveZoom = resources->effectiveZoom();
+    stroke.pattern = resources->currentPattern();
+    stroke.gradient = resources->currentGradient();
+    stroke.strokeInfoCount = strokeInfoCount;
+    stroke.deviceOffset = QPoint(layer->paintDevice()->x(), layer->paintDevice()->y());
+
+    // a known seed, so that the stroke can be drawn again the same way
+    stroke.seed = int(QRandomGenerator::global()->bounded(1, std::numeric_limits<int>::max()));
+    m_d->randomSource.setSeed(stroke.seed);
+}
+
+void FreehandStrokeStrategy::recordJob(const Data &data)
+{
+    KisRecordedBrushStroke::Job job;
+    job.type = data.type;
+    job.strokeInfoId = data.strokeInfoId;
+    job.pi1 = data.pi1;
+    job.pi2 = data.pi2;
+    job.control1 = data.control1;
+    job.control2 = data.control2;
+
+    std::lock_guard<std::mutex> lock(m_d->recordingMutex);
+    if (data.type == Data::POINT || data.type == Data::LINE || data.type == Data::CURVE) {
+        m_d->recording->jobs.append(job);
+    } else {
+        // a shape the stroke cannot draw again: not recorded at all
+        m_d->recording.reset();
+        m_d->recordingLayer.clear();
+    }
 }
 
 void FreehandStrokeStrategy::initStrokeCallback()
@@ -145,6 +206,13 @@ void FreehandStrokeStrategy::initStrokeCallback()
 void FreehandStrokeStrategy::finishStrokeCallback()
 {
     m_d->efficiencyMeasurer.notifyRenderingFinished();
+
+    if (m_d->recording && !m_d->recording->jobs.isEmpty()) {
+        setAdditionalUndoCommand(new KisRecordBrushStrokeCommand(m_d->recordingLayer.data(), m_d->recording));
+    }
+    m_d->recording.reset();
+    m_d->recordingLayer.clear();
+
     KisPainterBasedStrokeStrategy::finishStrokeCallback();
 }
 
@@ -160,6 +228,10 @@ void FreehandStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
 
     } else if (Data *d = dynamic_cast<Data*>(data)) {
         KisMaskedFreehandStrokePainter *maskedPainter = this->maskedPainter(d->strokeInfoId);
+
+        if (m_d->recording) {
+            recordJob(*d);
+        }
 
         KisUpdateTimeMonitor::instance()->reportPaintOpPreset(maskedPainter->preset());
         KisRandomSourceSP rnd = m_d->randomSource.source();

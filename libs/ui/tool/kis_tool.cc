@@ -536,6 +536,11 @@ void KisTool::deleteSelection()
     }
 }
 
+bool KisTool::supportsBrushStrokeLayer() const
+{
+    return false;
+}
+
 KisTool::NodePaintAbility KisTool::nodePaintAbility()
 {
     KisNodeSP node = currentNode();
@@ -553,6 +558,10 @@ KisTool::NodePaintAbility KisTool::nodePaintAbility()
     }
     if (node->inherits("KisCloneLayer")) {
         return NodePaintAbility::CLONE;
+    }
+    // Solstice: only the strokes of the brush tools are recorded there
+    if (node->inherits("KisBrushStrokeLayer") && !supportsBrushStrokeLayer()) {
+        return NodePaintAbility::VECTOR;
     }
     if (node->paintDevice()) {
 

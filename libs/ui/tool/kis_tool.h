@@ -165,6 +165,9 @@ public:
     virtual void beginAlternateDoubleClickAction(KoPointerEvent *event, AlternateAction action);
     virtual bool alternateActionSupportsHiResEvents(AlternateAction action) const;
     virtual bool supportsPaintingAssistants() const;
+    /// Solstice: whether the tool may paint on a brush stroke layer, which
+    /// records only brush tool strokes (docs/agent/brush-stroke-layer-plan.md)
+    virtual bool supportsBrushStrokeLayer() const;
 
     void mousePressEvent(KoPointerEvent *event) override;
     void mouseDoubleClickEvent(KoPointerEvent *event) override;

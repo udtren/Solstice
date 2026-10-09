@@ -186,9 +186,17 @@ public:
                            Flags flags = None);
 
     ~FreehandStrokeStrategy() override;
-    /// Preview-only, called before startStroke(). Never changes ordinary stroke randomness.
+    /// Fixes the stroke's random seed, before startStroke(): stroke previews
+    /// and brush stroke layer redraws. Ordinary strokes keep a random seed.
     void setPreviewRandomSeed(int seed);
 
+private:
+    // Solstice: recording for a brush stroke layer
+    // (docs/agent/brush-stroke-layer-plan.md)
+    void initRecording(int strokeInfoCount);
+    void recordJob(const Data &data);
+
+public:
     void initStrokeCallback() override;
     void finishStrokeCallback() override;
 

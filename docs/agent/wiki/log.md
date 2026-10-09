@@ -362,3 +362,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   job (`KisAsynchronousStrokeUpdateHelper::UpdateData`) before the stroke
   ends, or nothing is drawn; freehand smoothing sends curve jobs, so record
   the jobs, not only points.
+
+## 2026-10-09 ingest: brush stroke layer, stage 2a
+
+- `brush-stroke-layer-plan.md`: `KisBrushStrokeLayer` derives from
+  `KisPaintLayer` (not `KisExternalLayer`), so Wash/indirect painting, the GPU
+  wash preview and `.kra` saving as a paint layer come for free. Strokes are
+  recorded in `FreehandStrokeStrategy` and join the stroke's undo command
+  through `KisPainterBasedStrokeStrategy::setAdditionalUndoCommand()`.
+  Lesson: a stroke's undo is one parent command built in
+  `finishStrokeCallback()`; extra state that must undo with the pixels goes
+  in as a child of it, not as a separate undo step.

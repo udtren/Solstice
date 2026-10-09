@@ -376,6 +376,8 @@ void KisNodeManager::setup(KisKActionCollection * actionCollection, KisActionMan
 
     NEW_LAYER_ACTION("add_new_file_layer", "KisFileLayer");
 
+    NEW_LAYER_ACTION("add_new_brush_stroke_layer", "KisBrushStrokeLayer");
+
     NEW_LAYER_ACTION("add_new_transparency_mask", "KisTransparencyMask");
 
     NEW_LAYER_ACTION("add_new_filter_mask", "KisFilterMask");
@@ -684,6 +686,8 @@ KisNodeSP  KisNodeManager::createNode(const QString & nodeType, bool quiet, KisP
         return m_d->maskManager.createSelectionMask(activeNode, copyFrom, false);
     } else if (nodeType == "KisFileLayer") {
         return m_d->layerManager.addFileLayer(activeNode);
+    } else if (nodeType == "KisBrushStrokeLayer") {
+        return m_d->layerManager.addBrushStrokeLayer(activeNode);
     }
     return 0;
 }

@@ -46,6 +46,13 @@ public Q_SLOTS:
 protected:
     bool trySampleByPaintOp(KoPointerEvent *event, AlternateAction action);
 
+    /// Solstice: the brush tools' strokes are recorded on a brush stroke
+    /// layer
+    bool supportsBrushStrokeLayer() const override
+    {
+        return true;
+    }
+
     /// Solstice: the freehand tools paint with the brush preset
     bool showsBrushOptions() const override
     {
