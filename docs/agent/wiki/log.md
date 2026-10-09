@@ -324,3 +324,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   phase 5 (retiring the clear-and-rewrite path) can start. Lesson: check
   the engine list against the settings widgets that lack
   `setOptionsModel()` instead of trusting a plan's list.
+
+## 2026-10-09 ingest: shared model phase 5
+
+- `brush-option-shared-model-plan.md`: the clear-and-rewrite in
+  `slotGuiChangedCurrentPreset()` is only a warned safety net; locks write
+  the model's option; Uniform Properties stay as they are (decision and
+  reasons in the plan).
+- Pitfall: Windows PowerShell 5.1 drops an empty-string argument to a
+  native program, so `script.py "" "a,b"` arrives as `script.py "a,b"`.
+  The formatting helper then formatted two upstream files whole; they were
+  restored from HEAD and the edits reapplied. The helper now takes `-` for
+  an empty list; never pass `""` positionally from PowerShell.

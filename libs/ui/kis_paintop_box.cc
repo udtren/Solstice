@@ -1478,10 +1478,17 @@ void KisPaintopBox::slotGuiChangedCurrentPreset() // Called only when UI is chan
 
         KisPaintOpPreset::UpdatedPostponer postponer(preset);
 
-        // An attached options model writes the options itself, one option
-        // at a time; only the Brush Editor's own keys are written here.
+        // Solstice: every engine's editor keeps its options in a model,
+        // attached to the current preset by setCurrentPaintop(), which writes
+        // each change itself, one option at a time; only the Brush Editor's
+        // own keys are written here (docs/agent/brush-option-shared-model-plan.md,
+        // phase 5). Clearing the preset and rewriting every option is no
+        // longer a path for normal edits; it remains a safety net for an
+        // editor without a model or not attached to the current preset.
         KisPaintOpOptionsModel *model = optionsModelFor(m_optionWidget);
         if (!model || !model->isAttachedTo(preset->settings().data())) {
+            warnKrita << "KisPaintopBox: the Brush Editor's options are not attached to the current preset;"
+                      << "rewriting all of them";
             // clear all the properties before dumping the stuff into the
             // preset, so that keys no option writes any more are dropped
             preset->settings()->resetSettings();

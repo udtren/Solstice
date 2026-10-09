@@ -536,7 +536,8 @@ Tangent Normal、Hatching、Filter、Quick Brushも同日に実装し、手動�
 問題なし。Curve、Grid、Particle、Shape(Experiment)も同日に実装し、手動
 確認で問題なし(2026年10月9日)。SprayとMyPaintも同日に実装し、手動確認で
 問題なし。Clone(`duplicate`、計画の一覧になかった)も同日に実装し、手動確認で
-問題なし。これで全エンジンが共有モデルを使い、フェーズ5に進める。
+問題なし。これで全エンジンが共有モデルを使う。フェーズ5も同日に実装し、手動確認で
+問題なし(下記の「フェーズ5の実装結果」)。
 
 本書の最終目的である3つの要件を実現する。
 
@@ -832,6 +833,44 @@ Ctrl+クリックでの複製元の指定とクローン描画が従来どおり
 全エンジンの移行後に、`slotGuiChangedCurrentPreset()` の全消去による通常編集を
 廃止する。プリセット読み込み後の最初の書き込みで全書き込みを行う規則は残す。プリセット切り替えなどの全書き込み経路は残す。Uniform Propertyを
 モデルのカーソルの上に作り直すかどうかは、この時点で判断する。
+
+#### フェーズ5の実装結果(2026年10月9日)
+
+- **通常編集の全消去を廃止:** `KisPaintopBox::slotGuiChangedCurrentPreset()`
+  は、全エンジンのモデルがプリセットに結び付いている前提で、F5の編集では
+  プリセットを消さない(各オプションはモデルが1つずつ書く。ここで書くのは
+  Brush Editor自身のLOD設定だけ)。モデルのない、または現在のプリセットに
+  結び付いていない編集画面のための全消去と全書き込みは、警告
+  (`warnKrita`)を出す安全策として残した。モデルはプリセットに結び付き、
+  設定オブジェクトの差し替え(再読み込み)にも追従するため、通常は通らない。
+- **全書き込みの経路は残す:** 結び付け後の最初の書き込み、プリセットの
+  切り替え、`KisPaintOpSettingsWidget::writeConfiguration()` に結び付いて
+  いない設定を渡したとき(保存や複製)は、モデルの全書き込み。
+- **ロック:** `KisPaintOpSettingsWidget::lockProperties()` は、ロックする値を
+  オプションのウィジェットではなく、モデルの同じidのオプションから書く
+  (プリセットに届くのと同じデータ)。idが見つからないときだけ従来の
+  ウィジェットの書き込み。テスト `KisToolOptionsBrushTest::testLockWritesModelOption`
+  (ロックでモデルの書き込みと同じキーと値がロックされ、解除で消える)。
+  ウィジェットとモデルの書き込みは全オプションで同じデータなので、この
+  テストは両者を区別しない(契約の確認)。
+- **基底クラスの旧経路は残す:** `KisPaintOpSettingsWidget` のモデルなしの
+  読み書き(`startReadOptionSetting()`/`startWriteOptionSetting()` の
+  ループ)は、モデルのないエンジンの安全策と、`KisPaintOpOptionsModelTest` の
+  `LegacyDeformSettingsWidget`(移行前の挙動を同じテスト内で計算する)の
+  ために残す。各オプションの `readOptionSetting()`/`writeOptionSetting()`
+  も上流のコードのまま残す。
+- **Uniform Propertyは作り直さない(判断):** On-Canvas Brush Editorの
+  Uniform Propertyは、プリセットの設定のキーを直接読み書きする。モデルは
+  更新プロキシの変更キー通知でその変更を読み込み、書き戻さないため、
+  値の食い違いは起きない。モデルのカーソルの上に作り直すと、Tool Optionsの
+  外だしと同じ仕組みを2つ持つことになり、エンジンごとのUniform Property
+  定義(上流のコード)も書き換えが必要になる。利点が小さいので、現状のままと
+  する。
+
+手動確認の項目(フェーズ5): いくつかのエンジンでF5を変更し、描画と変更済み
+表示が従来どおり。オプションのロックと解除(保存・破棄)が従来どおり。
+On-Canvas Brush Editorでの変更がF5に反映される。プリセットの再読み込み
+(Reload)後の編集で、他の設定が消えない。
 
 ## リスク
 

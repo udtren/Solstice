@@ -121,7 +121,7 @@ Read these before adding or updating any feature:
   Filter and Quick Brush done and manually checked 2026-10-08; Curve, Grid,
   Particle and Shape done and manually checked 2026-10-09; Spray and MyPaint
   done and manually checked 2026-10-09; Clone done and manually checked
-  2026-10-09; every engine uses the model, phase 5 next):
+  2026-10-09; every engine uses the model; phase 5 done and manually checked 2026-10-09):
   `docs/agent/brush-option-shared-model-plan.md`, findings in
   `docs/agent/brush-option-shared-model-phase0.md`
 - Brush options in Tool Options (eyes in the Brush Editor; phases 3a and 3b

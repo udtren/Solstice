@@ -27,6 +27,8 @@
 #include <KisToolOptionsBrushItems.h>
 #include <KoAspectButton.h>
 #include <KoCompositeOpRegistry.h>
+#include <brushengine/kis_locked_properties_proxy.h>
+#include <brushengine/kis_locked_properties_server.h>
 #include <brushengine/kis_paintop_preset.h>
 #include <kis_categorized_list_model.h>
 #include <kis_config.h>
@@ -61,6 +63,7 @@ private Q_SLOTS:
     void testPresetPreview();
     void testFadeGroup();
     void testOptionListScrollBarColor();
+    void testLockWritesModelOption();
 };
 
 namespace
@@ -664,6 +667,45 @@ void KisToolOptionsBrushTest::testOptionListScrollBarColor()
     palette.setColor(QPalette::Inactive, QPalette::Window, QColor(10, 20, 30));
     editor.view->setPalette(palette);
     QCOMPARE(bar->palette().color(QPalette::Active, QPalette::Window), QColor(10, 20, 30));
+}
+
+/// Locking an option keeps what the options model writes for it (phase 5 of
+/// the shared model plan); unlocking removes it again.
+void KisToolOptionsBrushTest::testLockWritesModelOption()
+{
+    Editor editor;
+    loadPreset(editor, QStringLiteral("b_Basic-5_Size_Opacity.kpp"));
+    KisPaintOpOptionsModel *model = editor.widget.optionsModel();
+    QVERIFY(model);
+    KisPaintOpOption *size = editor.option(QStringLiteral("Size"));
+    QVERIFY(size);
+    const QModelIndex row = editor.row(QStringLiteral("Size"));
+    QVERIFY(row.isValid());
+
+    KisPropertiesConfigurationSP expected = new KisPropertiesConfiguration();
+    model->option(QStringLiteral("Size"))->write(expected.data());
+    QVERIFY(!expected->getProperties().isEmpty());
+
+    QVERIFY(QMetaObject::invokeMethod(&editor.widget, "lockProperties", Q_ARG(QModelIndex, row)));
+    QVERIFY(size->isLocked());
+    // a preset read through the locked properties gets the locked values
+    KisPaintOpPresetSP other(
+        new KisPaintOpPreset(QDir(QString(FILES_DATA_DIR)).filePath("brushtip/b_Basic-5_Size_Opacity.kpp")));
+    QVERIFY(other->load(KisGlobalResourcesInterface::instance()));
+    other->updateProxy();
+    KisLockedPropertiesProxySP proxy =
+        KisLockedPropertiesServer::instance()->createLockedPropertiesProxy(other->settings());
+    const QMap<QString, QVariant> values = expected->getProperties();
+    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+        QVERIFY2(KisLockedPropertiesServer::instance()->hasProperty(it.key()), qPrintable(it.key()));
+        QCOMPARE(proxy->getProperty(it.key()), it.value());
+    }
+
+    QVERIFY(QMetaObject::invokeMethod(&editor.widget, "lockProperties", Q_ARG(QModelIndex, row)));
+    QVERIFY(!size->isLocked());
+    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+        QVERIFY2(!KisLockedPropertiesServer::instance()->hasProperty(it.key()), qPrintable(it.key()));
+    }
 }
 
 SOLSTICE_BRUSH_TEST_MAIN(KisToolOptionsBrushTest)
