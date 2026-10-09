@@ -16,8 +16,6 @@ QString itemsKey(const QString &paintOpId)
 {
     return QStringLiteral("Solstice/ToolOptionsBrushItems/") + paintOpId;
 }
-
-const QString collapsedKey = QStringLiteral("Solstice/ToolOptionsBrushCollapsed");
 } // namespace
 
 Q_GLOBAL_STATIC(KisToolOptionsBrushItems, s_instance)
@@ -67,18 +65,4 @@ void KisToolOptionsBrushItems::setShown(const QString &paintOpId, const QString 
     KisConfig(false).writeEntry<QString>(itemsKey(paintOpId), sorted.join(QLatin1Char(',')));
 
     Q_EMIT sigShownItemsChanged(paintOpId);
-}
-
-bool KisToolOptionsBrushItems::isSectionCollapsed() const
-{
-    return KisConfig(true).readEntry<bool>(collapsedKey, false);
-}
-
-void KisToolOptionsBrushItems::setSectionCollapsed(bool collapsed)
-{
-    if (isSectionCollapsed() == collapsed) {
-        return;
-    }
-    KisConfig(false).writeEntry<bool>(collapsedKey, collapsed);
-    Q_EMIT sigSectionCollapsedChanged(collapsed);
 }

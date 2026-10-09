@@ -55,8 +55,8 @@ The pages of the engines that use the shared model (see the table above)
 have an eye column at the left of the option list. Options with a checkbox (Size, Ratio, Spacing,
 Texture, Masked Brush and so on) have a box there: click it to show the eye.
 Those options then appear as checkboxes in the **Tool Options** docker of the
-Freehand Brush, Line and other brush tools, under **Brush** below the tool's
-own settings. Turning a checkbox on or off there does the same as in the
+Freehand Brush, Line and other brush tools, in the brush section below the
+tool's own settings. Turning a checkbox on or off there does the same as in the
 Brush Editor; the curves and other details stay in the Brush Editor.
 
 Some settings inside the pages have an eye too, in front of their label:
@@ -64,10 +64,10 @@ the Pixel Brush tip's Diameter, Ratio, Fade (both values with their link),
 Angle, Density and Spacing (or Size,
 Angle and Spacing for an image tip), Precision, the Blending Mode, the
 Painting Mode and the Texture Scale, and for Opacity and Flow the strength
-bar at the top of the page and **Enable Pen Settings** (in Tool Options both
-rows carry the option's name; the second is the checkbox). With the eye on, the
+bar at the top of the page and **Enable Pen Settings** (in Tool Options the
+checkbox sits beside the strength bar when both are shown). With the eye on, the
 setting appears in
-the **Brush** section with the same control, and changes in either place
+the brush section with the same control, and changes in either place
 apply to both. Tip settings appear only for the kind of tip the brush uses.
 Sketch has eyes on Line width, Offset scale and Density, and Bristle on
 Scale, Random offset, Shear and Density; tip settings that Bristle hides
@@ -91,7 +91,9 @@ toolbar, shortly after they stop; the Brush Presets docker keeps showing the
 saved brush.
 
 The choice is remembered for each brush engine, so every Pixel Brush preset
-shows the same options. The **Brush** heading collapses the section.
+shows the same options. A line separates the brush options from the tool's
+own options, and another line separates option categories (for example the
+General and Masked Brush "Size"); there are no headings.
 
 ## Options that depend on others
 

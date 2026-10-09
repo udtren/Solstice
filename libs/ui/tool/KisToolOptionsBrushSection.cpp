@@ -6,7 +6,9 @@
 #include "KisToolOptionsBrushSection.h"
 
 #include <QCheckBox>
+#include <QFrame>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -29,6 +31,21 @@
 #include <QPainter>
 #include <brushengine/kis_paintop_preset.h>
 #include <kis_canvas_resource_provider.h>
+
+namespace
+{
+/// A thin horizontal line between groups of options
+QFrame *createSeparator(QWidget *parent)
+{
+    QFrame *line = new QFrame(parent);
+    line->setObjectName(QStringLiteral("ToolOptionsBrushSeparator"));
+    line->setFrameShape(QFrame::HLine);
+    line->setFrameShadow(QFrame::Plain);
+    line->setFixedHeight(1);
+    line->setForegroundRole(QPalette::Mid);
+    return line;
+}
+} // namespace
 
 KisToolOptionsBrushPreview::KisToolOptionsBrushPreview(QWidget *parent)
     : QWidget(parent)
@@ -249,16 +266,9 @@ KisToolOptionsBrushSection::KisToolOptionsBrushSection(KisPaintopBox *paintopBox
     layout->setContentsMargins(0, 6, 0, 0);
     layout->setSpacing(2);
 
-    m_header = new QToolButton(this);
-    m_header->setObjectName(QStringLiteral("ToolOptionsBrushHeader"));
-    m_header->setText(i18nc("@title Brush options shown in Tool Options", "Brush"));
-    m_header->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    m_header->setAutoRaise(true);
-    m_header->setCheckable(true);
-    QFont font = m_header->font();
-    font.setBold(true);
-    m_header->setFont(font);
-    layout->addWidget(m_header);
+    // a line, not a heading, between the tool's options and the brush's
+    // (user request 2026-10-09: headings took too much room)
+    layout->addWidget(createSeparator(this));
 
     // at the top of the section, above the options rebuild() replaces
     m_preview = new KisToolOptionsBrushPreview(this);
@@ -266,20 +276,11 @@ KisToolOptionsBrushSection::KisToolOptionsBrushSection(KisPaintopBox *paintopBox
 
     m_content = new QWidget(this);
     m_contentLayout = new QVBoxLayout(m_content);
-    m_contentLayout->setContentsMargins(12, 0, 0, 0);
+    m_contentLayout->setContentsMargins(0, 0, 0, 0);
     m_contentLayout->setSpacing(2);
     layout->addWidget(m_content);
 
     KisToolOptionsBrushItems *items = KisToolOptionsBrushItems::instance();
-    connect(m_header, &QToolButton::toggled, this, [](bool expanded) {
-        KisToolOptionsBrushItems::instance()->setSectionCollapsed(!expanded);
-    });
-    connect(items,
-            &KisToolOptionsBrushItems::sigSectionCollapsedChanged,
-            this,
-            &KisToolOptionsBrushSection::slotCollapsedChanged);
-    slotCollapsedChanged(items->isSectionCollapsed());
-
     connect(items, &KisToolOptionsBrushItems::sigShownItemsChanged, this, &KisToolOptionsBrushSection::rebuild);
     if (paintopBox) {
         QPointer<KisPaintopBox> box(paintopBox);
@@ -311,15 +312,6 @@ void KisToolOptionsBrushSection::setSettingsWidget(KisPaintOpSettingsWidget *set
 
 KisToolOptionsBrushSection::~KisToolOptionsBrushSection()
 {
-}
-
-void KisToolOptionsBrushSection::slotCollapsedChanged(bool collapsed)
-{
-    QSignalBlocker blocker(m_header);
-    m_header->setChecked(!collapsed);
-    m_header->setArrowType(collapsed ? Qt::RightArrow : Qt::DownArrow);
-    m_preview->setVisible(!collapsed);
-    m_content->setVisible(!collapsed);
 }
 
 void KisToolOptionsBrushSection::rebuild()
@@ -382,12 +374,10 @@ void KisToolOptionsBrushSection::rebuild()
     }
 
     Q_FOREACH (KisPaintOpOption::PaintopCategory category, categories) {
-        if (categories.size() > 1) {
-            QLabel *title = new QLabel(KisPaintOpOptionListModel::categoryName(category), body);
-            QFont font = title->font();
-            font.setBold(true);
-            title->setFont(font);
-            grid->addWidget(title, row++, 0, 1, 2);
+        // a line between categories (the Pixel Brush has "Size" in General
+        // and in Masked Brush)
+        if (category != categories.first()) {
+            grid->addWidget(createSeparator(body), row++, 0, 1, 2);
         }
 
         Q_FOREACH (KisPaintOpOption *option, options) {
@@ -414,7 +404,24 @@ void KisToolOptionsBrushSection::rebuild()
                 connect(option, &KisPaintOpOption::sigEnabledChanged, checkBox, &QWidget::setEnabled);
             }
 
-            Q_FOREACH (const KisPaintOpOption::ToolOptionsParameter &parameter, shownParameters(option)) {
+            const QList<KisPaintOpOption::ToolOptionsParameter> parameters = shownParameters(option);
+            // a curve option's Enable Pen Settings sits beside its strength
+            // bar when both are shown
+            const QString strengthId = QStringLiteral("Strength");
+            const QString penSettingsId = QStringLiteral("PenSettings");
+            bool hasStrength = false;
+            bool hasPenSettings = false;
+            for (const KisPaintOpOption::ToolOptionsParameter &parameter : parameters) {
+                hasStrength |= parameter.id == strengthId;
+                hasPenSettings |= parameter.id == penSettingsId;
+            }
+            const bool penSettingsBesideStrength = hasStrength && hasPenSettings;
+
+            QHBoxLayout *strengthRow = nullptr;
+            Q_FOREACH (const KisPaintOpOption::ToolOptionsParameter &parameter, parameters) {
+                if (penSettingsBesideStrength && parameter.id == penSettingsId) {
+                    continue;
+                }
                 auto *mirror = new KisToolOptionsParameterMirror(parameter.control, option, parameter.modeWidget, body);
                 if (!mirror->widget()) {
                     delete mirror;
@@ -424,14 +431,42 @@ void KisToolOptionsBrushSection::rebuild()
                 label->setObjectName(QStringLiteral("ToolOptionsParameterLabel"));
                 mirror->widget()->setObjectName(QStringLiteral("ToolOptionsParameter_") + parameter.id);
                 grid->addWidget(label, row, 0);
-                grid->addWidget(mirror->widget(), row, 1);
+
+                QWidget *rowWidget = mirror->widget();
+                if (penSettingsBesideStrength && parameter.id == strengthId) {
+                    QWidget *cell = new QWidget(body);
+                    strengthRow = new QHBoxLayout(cell);
+                    strengthRow->setContentsMargins(0, 0, 0, 0);
+                    strengthRow->setSpacing(4);
+                    strengthRow->addWidget(mirror->widget(), 1);
+                    grid->addWidget(cell, row, 1);
+                    rowWidget = cell;
+
+                    Q_FOREACH (const KisPaintOpOption::ToolOptionsParameter &penSettings, parameters) {
+                        if (penSettings.id != penSettingsId) {
+                            continue;
+                        }
+                        auto *penMirror = new KisToolOptionsParameterMirror(penSettings.control,
+                                                                            option,
+                                                                            penSettings.modeWidget,
+                                                                            body);
+                        if (!penMirror->widget()) {
+                            delete penMirror;
+                            continue;
+                        }
+                        penMirror->widget()->setObjectName(QStringLiteral("ToolOptionsParameter_") + penSettings.id);
+                        penMirror->widget()->setToolTip(i18n("Enable Pen Settings"));
+                        strengthRow->addWidget(penMirror->widget());
+                    }
+                } else {
+                    grid->addWidget(mirror->widget(), row, 1);
+                }
                 row++;
 
                 // e.g. the Auto tip's Diameter only while the tip is Auto
-                QWidget *widget = mirror->widget();
-                auto setShown = [label, widget](bool shown) {
+                auto setShown = [label, rowWidget](bool shown) {
                     label->setVisible(shown);
-                    widget->setVisible(shown);
+                    rowWidget->setVisible(shown);
                 };
                 setShown(mirror->isShownInEditor());
                 connect(mirror, &KisToolOptionsParameterMirror::sigShownInEditorChanged, body, setShown);

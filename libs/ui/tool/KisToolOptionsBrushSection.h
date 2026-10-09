@@ -94,11 +94,9 @@ public:
 
 private Q_SLOTS:
     void rebuild();
-    void slotCollapsedChanged(bool collapsed);
 
 private:
     QPointer<KisPaintOpSettingsWidget> m_settingsWidget;
-    QToolButton *m_header{nullptr};
     KisToolOptionsBrushPreview *m_preview{nullptr};
     QWidget *m_content{nullptr};
     QVBoxLayout *m_contentLayout{nullptr};

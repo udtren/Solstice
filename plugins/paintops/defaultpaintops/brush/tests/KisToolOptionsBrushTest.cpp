@@ -5,6 +5,8 @@
 
 #include <QCheckBox>
 #include <QDir>
+#include <QFrame>
+#include <QGridLayout>
 #include <QLabel>
 #include <QRadioButton>
 #include <QScrollBar>
@@ -64,6 +66,7 @@ private Q_SLOTS:
     void testFadeGroup();
     void testOptionListScrollBarColor();
     void testLockWritesModelOption();
+    void testPenSettingsBesideStrength();
 };
 
 namespace
@@ -124,7 +127,6 @@ void KisToolOptionsBrushTest::init()
     Q_FOREACH (const QString &id, items->shownItems(paintbrush)) {
         items->setShown(paintbrush, id, false);
     }
-    items->setSectionCollapsed(false);
 }
 
 /// Only checkable options get an eye; the ids are the model's option ids.
@@ -275,15 +277,12 @@ void KisToolOptionsBrushTest::testSectionFollowsOptions()
     size->setChecked(before);
     QCOMPARE(checkBox->isChecked(), before);
 
-    // options of another category come under a header
+    // options of another category come after a line, not a heading
+    QCOMPARE(section.findChildren<QFrame *>(QStringLiteral("ToolOptionsBrushSeparator")).size(), 1);
     editor.option(QStringLiteral("MaskingSize"))->setShownInToolOptions(true);
     QCOMPARE(checkBoxLabels(&section).size(), 2);
-    QStringList titles;
-    Q_FOREACH (QLabel *label, section.findChildren<QLabel *>()) {
-        titles << label->text();
-    }
-    QVERIFY(titles.contains(KisPaintOpOptionListModel::categoryName(KisPaintOpOption::GENERAL)));
-    QVERIFY(titles.contains(KisPaintOpOptionListModel::categoryName(KisPaintOpOption::MASKING_BRUSH)));
+    QCOMPARE(section.findChildren<QFrame *>(QStringLiteral("ToolOptionsBrushSeparator")).size(), 2);
+    QVERIFY(section.findChildren<QToolButton *>(QStringLiteral("ToolOptionsBrushHeader")).isEmpty());
 
     // an option that does not apply is disabled, as in the editor
     KisPaintOpOption *lightness = editor.option(QStringLiteral("LightnessStrength"));
@@ -585,12 +584,6 @@ void KisToolOptionsBrushTest::testPresetPreview()
     preset->setDirty(false);
     QVERIFY(!preview->hasModifiedImage());
     QVERIFY(preview->hasImage());
-
-    // collapsing the section hides it
-    KisToolOptionsBrushItems::instance()->setSectionCollapsed(true);
-    QVERIFY(preview->isHidden());
-    KisToolOptionsBrushItems::instance()->setSectionCollapsed(false);
-    QVERIFY(!preview->isHidden());
 }
 
 /// The auto tip's Fade is one parameter: both values and their link, shown
@@ -706,6 +699,41 @@ void KisToolOptionsBrushTest::testLockWritesModelOption()
     for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
         QVERIFY2(!KisLockedPropertiesServer::instance()->hasProperty(it.key()), qPrintable(it.key()));
     }
+}
+
+/// A curve option's Enable Pen Settings sits beside its strength bar when
+/// both are shown, and on its own row otherwise.
+void KisToolOptionsBrushTest::testPenSettingsBesideStrength()
+{
+    Editor editor;
+    loadPreset(editor, QStringLiteral("b_Basic-5_Size_Opacity.kpp"));
+    KisToolOptionsBrushSection section(nullptr);
+    section.setSettingsWidget(&editor.widget);
+
+    showParameter(editor, QStringLiteral("Opacity"), QStringLiteral("PenSettings"));
+    settle();
+    auto *penSettings = mirrorWidget<QCheckBox>(&section, QStringLiteral("PenSettings"));
+    QVERIFY(penSettings);
+    QVERIFY(qobject_cast<QGridLayout *>(penSettings->parentWidget()->layout()));
+    const int labelsAlone = section.findChildren<QLabel *>(QStringLiteral("ToolOptionsParameterLabel")).size();
+
+    showParameter(editor, QStringLiteral("Opacity"), QStringLiteral("Strength"));
+    settle();
+    auto *strength = mirrorWidget<QWidget>(&section, QStringLiteral("Strength"));
+    penSettings = mirrorWidget<QCheckBox>(&section, QStringLiteral("PenSettings"));
+    QVERIFY(strength);
+    QVERIFY(penSettings);
+    // one row: the same cell, one label for both
+    QCOMPARE(penSettings->parentWidget(), strength->parentWidget());
+    QCOMPARE(section.findChildren<QLabel *>(QStringLiteral("ToolOptionsParameterLabel")).size(), labelsAlone);
+    QVERIFY(!penSettings->toolTip().isEmpty());
+
+    // it still edits the option
+    KisPaintOpOptionsModel *model = editor.widget.optionsModel();
+    auto *opacity = typedOption<KisOpacityOptionData>(model, QStringLiteral("Opacity"));
+    const bool useCurve = opacity->data().useCurve;
+    penSettings->setChecked(!useCurve);
+    QCOMPARE(opacity->data().useCurve, !useCurve);
 }
 
 SOLSTICE_BRUSH_TEST_MAIN(KisToolOptionsBrushTest)

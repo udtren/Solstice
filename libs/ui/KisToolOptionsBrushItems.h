@@ -32,13 +32,8 @@ public:
     bool isShown(const QString &paintOpId, const QString &itemId) const;
     void setShown(const QString &paintOpId, const QString &itemId, bool shown);
 
-    /// Whether the Brush section in Tool Options is collapsed
-    bool isSectionCollapsed() const;
-    void setSectionCollapsed(bool collapsed);
-
 Q_SIGNALS:
     void sigShownItemsChanged(const QString &paintOpId);
-    void sigSectionCollapsedChanged(bool collapsed);
 
 private:
     mutable QHash<QString, QSet<QString>> m_shownItems;

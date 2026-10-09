@@ -344,3 +344,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   with the tools' context menus (`KoToolBase::popupActionsMenu()`); remove
   the popup widget, never the action or its profile entries. A removed
   plugin's DLL stays in the test installation until deleted by hand.
+
+## 2026-10-09 ingest: Tool Options brush section without headings
+
+- `tool-options-brush.md`: Enable Pen Settings sits beside its strength bar
+  when both are shown; the "Brush" heading and the category headings are
+  gone (they took too much room), replaced by thin lines; nothing folds.
+  Lesson: a setting a test changes (kritarc) persists between test runs, so
+  a failed run leaks state into the next; reset such settings in `init()`.

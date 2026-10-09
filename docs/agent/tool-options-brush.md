@@ -26,7 +26,7 @@ Editor (F5) chooses which brush items appear in the Tool Options docker.
 | Item id and shown flag of an option | `KisPaintOpOption::setToolOptionsId()`, `setShownInToolOptions()`, `sigShownInToolOptionsChanged()` (`libs/ui/kis_paintop_option.*`) |
 | Eye roles | `__CategorizedListModelBase::isShowableInToolOptionsRole`, `isShownInToolOptionsRole` (`libs/ui/kis_categorized_list_model.h`); `KisPaintOpOptionListModel::data()`/`setData()`, `slotShownInToolOptionsChanged()` |
 | Eye column | `KisCategorizedItemDelegate::setToolOptionsColumnVisible()`, `paint()`, `sizeHint()`, `editorEvent()` |
-| Per-engine storage | `KisToolOptionsBrushItems` (`libs/ui/KisToolOptionsBrushItems.*`): `Solstice/ToolOptionsBrushItems/<paintop id>` (comma separated ids), `Solstice/ToolOptionsBrushCollapsed` |
+| Per-engine storage | `KisToolOptionsBrushItems` (`libs/ui/KisToolOptionsBrushItems.*`): `Solstice/ToolOptionsBrushItems/<paintop id>` (comma separated ids) |
 | Engine id, sync with the storage | `KisPaintOpSettingsWidget::setPaintOpId()`, `toolOptionsOptions()`; called by `KisPaintopBox::setCurrentPaintop()` after creating the widget |
 | Engine switch notification | `KisPaintopBox::sigCurrentSettingsWidgetChanged()`, `currentSettingsWidget()` |
 | Brush section | `KisToolOptionsBrushSection` (`libs/ui/tool/KisToolOptionsBrushSection.*`), added by `KisToolPaint::createOptionWidget()` when `showsBrushOptions()` |
@@ -54,7 +54,16 @@ Editor (F5) chooses which brush items appear in the Tool Options docker.
   writes the preset; the editor's list follows through its existing signals.
 - Options are grouped under their editor category when more than one
   category is shown (the Pixel Brush has "Size" in General and in Masked
-  Brush).
+  Brush). Neither the section nor the categories have headings (user
+  request 2026-10-09: the heading buttons took too much room): a thin line
+  (`QFrame` `ToolOptionsBrushSeparator`, `createSeparator()`) separates the
+  tool's own options from the section and one category from the next.
+  Nothing collapses; the former `Solstice/ToolOptionsBrushCollapsed` key is
+  no longer read.
+- When an option's `Strength` and `PenSettings` are both shown, they share
+  one row: the option's label, the strength bar and the pen settings check
+  box (tooltip "Enable Pen Settings") in one cell (user request
+  2026-10-09). Either one alone keeps its own row.
 - A click in the eye column never toggles the checkbox: `editorEvent()`
   consumes it and passes other events with the row rectangle shifted, as
   painted.
@@ -68,7 +77,7 @@ shows the control in the Brush section, as a copy kept in sync with it.
 | --- | --- |
 | Brush Tip (`BrushTip`, Pixel Brush) | Auto tip: `Diameter` (`inputRadius`), `Ratio` (`inputRatio`), `Fade` (`grpFade`: both values and their link, mode widget `PageFade`, hidden for the Soft mask type), `Angle` (`inputAngle`), `Density` (`density`), `Spacing` (`spacingWidget`, with Auto); Predefined tip: `PredefinedSize` (`brushSizeSpinBox`), `PredefinedAngle` (`brushRotationAngleSelector`), `PredefinedSpacing` (`brushSpacingSelectionWidget`); with SupportsPrecision: `Precision` (`sliderPrecision`), `AutoPrecision` (`autoPrecisionCheckBox`) |
 | Blending Mode (`CompositeOp`) | `BlendingMode` (the list, as a blending mode combo box) |
-| Curve options without a checkbox in the list (Pixel Brush Opacity, Flow, Masked Brush Opacity and Flow; Deform Opacity) | `Strength` (the strength bar at the top of the page, labeled with the option's name), `PenSettings` (Enable Pen Settings, also labeled with the option's name only, so the label column stays narrow); registered by `KisCurveOptionWidget` when `isCheckable()` is false. A checkable curve option is switched by its row's checkbox instead (phase 3a) |
+| Curve options without a checkbox in the list (Pixel Brush Opacity, Flow, Masked Brush Opacity and Flow; Deform Opacity) | `Strength` (the strength bar at the top of the page, labeled with the option's name), `PenSettings` (Enable Pen Settings, also labeled with the option's name only, so the label column stays narrow; beside the strength bar when both are shown); registered by `KisCurveOptionWidget` when `isCheckable()` is false. A checkable curve option is switched by its row's checkbox instead (phase 3a) |
 | Painting Mode (`PaintingMode`) | `PaintingMode` (the group box's radio buttons) |
 | Texture (`Texture`) | `Scale` (`scaleSlider`) |
 | Sketch (`Sketch`, Sketch engine page) | `LineWidth` (`lineWidthSPBox`), `Offset` (`offsetSPBox`), `Density` (`densitySPBox`) |
@@ -107,7 +116,7 @@ The kritarc list stores a parameter as `<option id>/<parameter id>`, e.g.
 
 ### Preset preview
 
-At the top of the section (between the header and the options, so
+At the top of the section (below its line and above the options, so
 `rebuild()` keeps it) `KisToolOptionsBrushPreview` shows the current preset's
 stroke preview and name, as Clip Studio Paint's tool property palette does.
 
@@ -127,8 +136,8 @@ stroke preview and name, as Clip Studio Paint's tool property palette does.
 - The name is drawn over the top left of the image; a modified preset gets a
   "*" (repainted on `KisPaintOpPresetUpdateProxy::sigSettingsChanged()`).
 - It follows `KisCanvasResourceProvider::sigPaintOpPresetChanged()`
-  (`KisToolPaint::createBrushOptionsSection()` passes the provider) and
-  collapses with the section. Height: a third of the width, 36-110 px.
+  (`KisToolPaint::createBrushOptionsSection()` passes the provider).
+  Height: a third of the width, 36-110 px.
 - Test: `KisToolOptionsBrushTest::testPresetPreview`.
 
 ### Mirror rules
@@ -192,20 +201,19 @@ checks that the ids are unique.
 8. Opacity and Flow have eyes on their strength bar and on Enable Pen
    Settings; both work from Tool Options (2026-10-08, user request).
 9. The section starts with the current brush's stroke preview and name;
-   switching brushes updates it, a modified brush shows "*", and it
-   collapses with the section.
+   switching brushes updates it, and a modified brush shows "*".
 
 ## Manual checks (3a)
 
 1. Pixel Brush: F5 shows an eye column; checkable rows have a box, others
    none. Clicking the box shows the eye without toggling the checkbox.
 2. With eyes on (e.g. Size, Spacing, Masked Brush Size), the Freehand Brush
-   and Line tools show them under "Brush" below their options, grouped by
-   category; toggling a checkbox there changes F5, the stroke and the
+   and Line tools show them below a line under their options, grouped by
+   category with a line between categories; toggling a checkbox there changes F5, the stroke and the
    preset's modified mark, and the reverse.
 3. Switching presets updates the checkboxes; switching to an engine
    without support shows the hint; Deform shows its own items.
 4. The choice survives a restart and applies to every Pixel Brush preset.
-5. The section's header collapses and expands, remembered.
+5. The section and its categories have no headings, only lines.
 6. Lightness Strength is disabled in Tool Options unless the tip is in
    Lightness map mode.
