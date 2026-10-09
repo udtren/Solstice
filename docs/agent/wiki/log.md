@@ -352,3 +352,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   gone (they took too much room), replaced by thin lines; nothing folds.
   Lesson: a setting a test changes (kritarc) persists between test runs, so
   a failed run leaks state into the next; reset such settings in `init()`.
+
+## 2026-10-09 ingest: brush stroke layer plan, stage 1
+
+- `brush-stroke-layer-plan.md` (new): a layer that records brush strokes
+  and redraws them at a new resolution. Stage 1 (`KisBrushStrokeReplayTest`)
+  shows a recorded stroke replays pixel-identically with a fixed seed and
+  redraws sharply at 4x. Lessons: the dab rendering queue needs an update
+  job (`KisAsynchronousStrokeUpdateHelper::UpdateData`) before the stroke
+  ends, or nothing is drawn; freehand smoothing sends curve jobs, so record
+  the jobs, not only points.
