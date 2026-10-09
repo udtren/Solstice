@@ -40,8 +40,8 @@ Editor (F5) chooses which brush items appear in the Tool Options docker.
   Engines without ids (not migrated to the shared model) show no eye column
   and their Brush section shows a hint.
 - Engines with ids: Pixel Brush, Deform, Color Smudge, Sketch, Bristle,
-  Tangent Normal, Hatching, Filter and Quick Brush (phase 4 of the shared
-  model plan). Color Smudge has no masked brush; its other page
+  Tangent Normal, Hatching, Filter, Quick Brush, Curve, Grid, Particle and
+  Shape (phase 4 of the shared model plan); Spray and MyPaint not yet. Color Smudge has no masked brush; its other page
   parameters (Brush Tip, Blending Mode, Opacity, Texture Scale) come from the
   shared option widgets.
 - The ids are the options-model ids, stable and untranslated. Renaming one
@@ -76,6 +76,11 @@ shows the control in the Brush section, as a copy kept in sync with it.
 | Hatching preferences (`HatchingPreferences`) | `Antialias`, `SubpixelPrecision`, `ColorBackground` (check boxes) |
 | Filter (`Filter`) | `SmudgeMode` (`checkBoxSmudgeMode`); the filter list (`KisCmbIDList`) cannot be mirrored |
 | Quick Brush (`RoundMarker`) | `Diameter` (`dblDiameter`), `Spacing` (`spacingWidget`) |
+| Curve (`CurveOp`) | `LineWidth`, `HistorySize`, `CurvesOpacity` (their sliders) |
+| Grid (`GridOp`) | `Diameter`, `GridWidth`, `GridHeight`, `Scale` (their sliders); Particle type (`GridShape`, a combo box) cannot be mirrored |
+| Color options (`ColorOptions`, Grid; `KisColorOptionWidget`) | `RandomHSV`, `RandomOpacity` (check boxes) |
+| Particle (`ParticleOp`) | `Particles`, `Iterations`, `Gravity`, `Weight` (their sliders) |
+| Shape (`ExperimentOp`) | `Speed`, `Smoothing`, `Displace` (sliders; the eye goes before the check box in front of each) |
 
 A tip control that an engine hides with `KisBrushOptionWidget::hideOptions()`
 (Bristle: the auto tip's Fade, Density and Spacing) loses its parameter and
@@ -106,6 +111,14 @@ stroke preview and name, as Clip Studio Paint's tool property palette does.
   (`indexForResourceId()`), like the Brush Presets docker: it shows the
   saved preset. A preset that is not in the resource database has only its
   name. The widget is a cache consumer while shown.
+- A modified (dirty) preset gets its own image (user request 2026-10-09):
+  250 ms after the last `sigSettingsChanged()` the widget renders a clone of
+  the preset with its own `KisBrushStrokePreviewRenderer` (the cache renders
+  only saved presets). A change during a render cancels it and renders again
+  afterwards. The image is used only while the preset is dirty; a clean
+  preset shows the cache's image. Hidden, the widget renders nothing. On
+  destruction a running renderer is detached and deleted after its
+  cancelled stroke has drained (`finished`), as the cache does.
 - The name is drawn over the top left of the image; a modified preset gets a
   "*" (repainted on `KisPaintOpPresetUpdateProxy::sigSettingsChanged()`).
 - It follows `KisCanvasResourceProvider::sigPaintOpPresetChanged()`

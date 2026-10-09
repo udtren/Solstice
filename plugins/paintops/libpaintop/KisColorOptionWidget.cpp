@@ -83,6 +83,11 @@ KisColorOptionWidget::KisColorOptionWidget(lager::cursor<KisColorOptionData> opt
     m_d->model.optionData.bind(std::bind(&KisColorOptionWidget::emitSettingChanged, this));
     
     setConfigurationPage(m_d->options);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("RandomHSV"), i18n("Random HSV"), m_d->options->randomHSVCHBox);
+    addToolOptionsParameter(QStringLiteral("RandomOpacity"), i18n("Random opacity"), m_d->options->randomOpacityCHBox);
 }
 
 KisColorOptionWidget::~KisColorOptionWidget()

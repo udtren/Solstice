@@ -14,9 +14,21 @@ set(kritagridpaintop_SOURCES
 
 ki18n_wrap_ui(kritagridpaintop_SOURCES wdggridoptions.ui wdggridbrushshapeoptions.ui )
 
-kis_add_library(kritagridpaintop MODULE ${kritagridpaintop_SOURCES})
+# Solstice: a static library for the tests of the settings widget
+# (docs/agent/brush-option-shared-model-plan.md, phase 4)
+set(kritagridpaintop_static_SOURCES ${kritagridpaintop_SOURCES})
+list(REMOVE_ITEM kritagridpaintop_static_SOURCES grid_paintop_plugin.cpp)
 
-target_link_libraries(kritagridpaintop kritalibpaintop)
+kis_add_library(kritagridpaintop_static STATIC ${kritagridpaintop_static_SOURCES})
+target_link_libraries(kritagridpaintop_static kritaui kritalibpaintop)
+
+kis_add_library(kritagridpaintop MODULE grid_paintop_plugin.cpp)
+
+target_link_libraries(kritagridpaintop kritagridpaintop_static)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 install(TARGETS kritagridpaintop  DESTINATION ${KRITA_PLUGIN_INSTALL_DIR})
 install( FILES

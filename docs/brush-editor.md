@@ -17,6 +17,10 @@ showing Brush Editor options in the Tool Options docker later.
 | Tangent Normal | Yes |
 | Filter | Yes |
 | Quick Brush | Yes |
+| Curve | Yes |
+| Grid | Yes |
+| Particle | Yes |
+| Shape | Yes |
 | Deform | Yes |
 | Other engines | Not yet; they work as in Krita |
 
@@ -67,14 +71,19 @@ Sketch has eyes on Line width, Offset scale and Density, and Bristle on
 Scale, Random offset, Shear and Density; tip settings that Bristle hides
 have no eye. Tangent Normal has eyes on Elevation Sensitivity and the
 Direction/Tilt Mix Value, Hatching on Angle, Separation, Thickness and its
-three Graphical Tweaks, Filter on Smudge Mode, and Quick Brush on Diameter and
-Spacing.
+three Graphical Tweaks, Filter on Smudge Mode, Quick Brush on Diameter and
+Spacing, Curve on Line width, History size and Curves opacity, Grid on
+Diameter, Grid width, Grid height, Scale, Random HSV and Random opacity,
+Particle on Particles, Iterations, Gravity and Opacity weight, and Shape on
+Speed, Smoothing and Displace.
 The Rectangle, Ellipse, Polygon and Polyline tools show the section too, at
 the end of their options.
 
 The section starts with the current brush's stroke preview and name, as in
-the Brush Presets docker (the preview shows the saved brush; a modified
-brush has "*" after its name).
+the Brush Presets docker. A modified brush has "*" after its name, and its
+preview follows the changes made in the Brush Editor, Tool Options or the
+toolbar, shortly after they stop; the Brush Presets docker keeps showing the
+saved brush.
 
 The choice is remembered for each brush engine, so every Pixel Brush preset
 shows the same options. The **Brush** heading collapses the section.

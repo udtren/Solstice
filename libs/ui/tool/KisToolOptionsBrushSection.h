@@ -14,9 +14,11 @@
 #include "kritaui_export.h"
 #include "widgets/KisBrushStrokePreviewCache.h"
 
+class KisBrushStrokePreviewRenderer;
 class KisCanvasResourceProvider;
 class KisPaintopBox;
 class KisPaintOpSettingsWidget;
+class QTimer;
 class QToolButton;
 class QVBoxLayout;
 
@@ -37,8 +39,11 @@ public:
 
     /// The name shown over the image
     QString text() const;
-    /// Whether the cache has the preview image of the preset
+    /// Whether the preview has an image of the preset: the cache's image of
+    /// the saved preset, or the image of the modified preset
     bool hasImage() const;
+    /// Whether the image shows the unsaved changes of the modified preset
+    bool hasModifiedImage() const;
 
     bool hasHeightForWidth() const override;
     int heightForWidth(int width) const override;
@@ -51,10 +56,19 @@ protected:
 
 private:
     void updateRequest();
+    /// Renders the modified preset after its settings stop changing
+    void scheduleModifiedRender();
+    void startModifiedRender();
+    void cancelModifiedRender();
 
     KisPaintOpPresetSP m_preset;
     KisBrushStrokePreviewCache::Request m_request;
     bool m_hasRequest{false};
+    // the stroke of the modified preset, which the cache does not render
+    KisBrushStrokePreviewRenderer *m_renderer{nullptr};
+    QTimer *m_renderTimer{nullptr};
+    QImage m_modifiedImage;
+    bool m_renderAgain{false};
 };
 
 /**

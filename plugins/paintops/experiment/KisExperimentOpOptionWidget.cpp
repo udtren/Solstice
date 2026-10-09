@@ -88,6 +88,18 @@ KisExperimentOpOptionWidget::KisExperimentOpOptionWidget(lager::cursor<KisExperi
     m_d->model.optionData.bind(std::bind(&KisExperimentOpOptionWidget::emitSettingChanged, this));
     
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Speed"), i18n("Speed"), widget->speed, widget->speedCHBox);
+    addToolOptionsParameter(QStringLiteral("Smoothing"),
+                            i18n("Smoothing"),
+                            widget->smoothThreshold,
+                            widget->smoothCHBox);
+    addToolOptionsParameter(QStringLiteral("Displace"),
+                            i18n("Displace"),
+                            widget->displaceStrength,
+                            widget->displaceCHBox);
 }
 
 KisExperimentOpOptionWidget::~KisExperimentOpOptionWidget()

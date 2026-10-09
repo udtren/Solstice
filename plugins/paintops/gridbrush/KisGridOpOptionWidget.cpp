@@ -118,6 +118,13 @@ KisGridOpOptionWidget::KisGridOpOptionWidget(lager::cursor<KisGridOpOptionData> 
     m_d->model.optionData.bind(std::bind(&KisGridOpOptionWidget::emitSettingChanged, this));
     
     setConfigurationPage(m_d->options);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Diameter"), i18n("Diameter"), m_d->options->diameterSPBox);
+    addToolOptionsParameter(QStringLiteral("GridWidth"), i18n("Grid width"), m_d->options->gridWidthSPBox);
+    addToolOptionsParameter(QStringLiteral("GridHeight"), i18n("Grid height"), m_d->options->gridHeightSPBox);
+    addToolOptionsParameter(QStringLiteral("Scale"), i18n("Scale"), m_d->options->scaleDSPBox);
 }
 
 KisGridOpOptionWidget::~KisGridOpOptionWidget()

@@ -75,6 +75,13 @@ KisParticleOpOptionWidget::KisParticleOpOptionWidget(lager::cursor<KisParticleOp
     m_d->model.optionData.bind(std::bind(&KisParticleOpOptionWidget::emitSettingChanged, this));
 
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("Particles"), i18n("Particles"), widget->particleSpinBox);
+    addToolOptionsParameter(QStringLiteral("Iterations"), i18n("Iterations"), widget->itersSPBox);
+    addToolOptionsParameter(QStringLiteral("Gravity"), i18n("Gravity"), widget->gravSPBox);
+    addToolOptionsParameter(QStringLiteral("Weight"), i18n("Opacity weight"), widget->weightSPBox);
 }
 
 KisParticleOpOptionWidget::~KisParticleOpOptionWidget()

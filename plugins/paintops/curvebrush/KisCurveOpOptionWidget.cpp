@@ -71,6 +71,12 @@ KisCurveOpOptionWidget::KisCurveOpOptionWidget(lager::cursor<KisCurveOpOptionDat
     m_d->model.optionData.bind(std::bind(&KisCurveOpOptionWidget::emitSettingChanged, this));
     
     setConfigurationPage(widget);
+
+    // Solstice: page parameters that can be shown in Tool Options
+    // (docs/agent/tool-options-brush.md)
+    addToolOptionsParameter(QStringLiteral("LineWidth"), i18n("Line width"), widget->lineWidthSlider);
+    addToolOptionsParameter(QStringLiteral("HistorySize"), i18n("History size"), widget->historySizeSlider);
+    addToolOptionsParameter(QStringLiteral("CurvesOpacity"), i18n("Curves opacity"), widget->curvesOpacitySlider);
 }
 
 KisCurveOpOptionWidget::~KisCurveOpOptionWidget()

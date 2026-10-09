@@ -12,15 +12,42 @@
 #include <KisPaintOpOptionWidgetUtils.h>
 #include <KisCompositeOpOptionWidget.h>
 #include <KisExperimentOpOptionWidget.h>
+#include <KisPaintOpOptionStateUtils.h>
+#include <KisPaintOpOptionsModel.h>
 
+namespace
+{
+/// Solstice: the option's checkbox and page parameters can be shown in Tool
+/// Options under @p id, the option's id in the options model
+/// (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
+} // namespace
 
 KisExperimentPaintOpSettingsWidget:: KisExperimentPaintOpSettingsWidget(QWidget* parent)
     : KisPaintOpSettingsWidget(parent)
 {
     namespace kpowu = KisPaintOpOptionWidgetUtils;
 
-    addPaintOpOption(kpowu::createOptionWidget<KisExperimentOpOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisCompositeOpOptionWidget>());
+    namespace kposu = KisPaintOpOptionStateUtils;
+
+    // Solstice: the option states live in a shared model, so that one option
+    // change writes only that option (docs/agent/brush-option-shared-model-plan.md,
+    // phase 4); no option's written data depends on another
+    KisPaintOpOptionsModel *model = new KisPaintOpOptionsModel(this);
+
+    auto *experimentOp = model->addOption(QStringLiteral("ExperimentOp"), KisExperimentOpOptionData());
+    auto *compositeOp = model->addOption(QStringLiteral("CompositeOp"), KisCompositeOpOptionData());
+
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisExperimentOpOptionWidget>(experimentOp),
+                                       QStringLiteral("ExperimentOp")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
+
+    setOptionsModel(model);
 }
 
 KisExperimentPaintOpSettingsWidget::~ KisExperimentPaintOpSettingsWidget()

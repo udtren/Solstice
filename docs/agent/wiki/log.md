@@ -288,3 +288,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   behavior before the fix.
 - A long prefix in a value bar widens its layout column; give such bars a
   horizontal `QSizePolicy::Ignored` when columns must stay equal.
+
+## 2026-10-09 ingest: Curve, Grid, Particle, Shape (phase 4); live Tool Options preview
+
+- `brush-option-shared-model-plan.md`: four more engines without a brush tip
+  on the shared model, no dependencies. Only Spray and MyPaint remain.
+  Parity tests come from a scaffold script (static library, test target,
+  bundled presets, references written by the old code); a template
+  placeholder that silently fails to match leaves a test uncompilable, so
+  check the generated file.
+- `tool-options-brush.md`: the Tool Options preview renders a modified
+  preset itself (debounced clone render with its own
+  `KisBrushStrokePreviewRenderer`); the cache keeps rendering saved presets
+  only. Lesson: a renderer with a running stroke must outlive its owner
+  until `finished`, so detach it and delete it then.

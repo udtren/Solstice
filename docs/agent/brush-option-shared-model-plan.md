@@ -533,7 +533,8 @@ Tool Optionsではツール設定の下に置く。下記の「設定による�
 「フェーズ4の実装結果: Color Smudge」)。SketchとBristleも同日に実装し、
 手動確認で問題なし(「フェーズ4の実装結果: SketchとBristle(Hairy)」)。
 Tangent Normal、Hatching、Filter、Quick Brushも同日に実装し、手動確認で
-問題なし。残りはCurve、Grid、Particle、Experiment、Spray、MyPaint。
+問題なし。Curve、Grid、Particle、Shape(Experiment)も同日に実装し、手動
+確認で問題なし(2026年10月9日)。残りはSprayとMyPaint。
 
 本書の最終目的である3つの要件を実現する。
 
@@ -733,6 +734,37 @@ Tangent Normalの方向の種類、Hatchingの交差の種類は対象外。
    反映される。
 3. 上のページ項目に目を入れるとTool Optionsに出て、そこでの変更が描画とF5に
    反映される。
+
+#### フェーズ4の実装結果: Curve、Grid、Particle、Shape(Experiment)(2026年10月8日)
+
+4つの設定画面を共有モデルのビューに置き換えた。どれもブラシ先端のない
+エンジンで(Deformと同じ構成)、オプション間の依存も焼き込みもない。
+F5の目とTool Optionsの「Brush」欄も使える。
+
+| エンジン(paintop) | オプション(モデルのid) |
+| --- | --- |
+| Curve(`curvebrush`) | CurveOp、Opacity、LineWidth、CurvesOpacity、CompositeOp、PaintingMode |
+| Grid(`gridbrush`) | GridOp、GridShape、CompositeOp、ColorOptions、PaintingMode |
+| Particle(`particlebrush`) | ParticleOp(LOD制限付き)、CompositeOp、Airbrush(間隔を無視する設定なし)、Rate、PaintingMode |
+| Shape(`experimentbrush`) | ExperimentOp、CompositeOp |
+
+エンジン固有ページのTool Options項目: CurveのLine width・History size・
+Curves opacity、GridのDiameter・Grid width・Grid height・Scale、
+Color options(Grid、libpaintopの `KisColorOptionWidget`)のRandom HSVと
+Random opacity、ParticleのParticles・Iterations・Gravity・Opacity weight、
+ShapeのSpeed・Smoothing・Displace(各スライダー、目は前のチェックボックスの
+前)。GridのParticle type(コンボボックス)とShapeの塗りの種類は対象外。
+
+**テスト(すべて通過)**: `KisCurveParityTest` 9件、`KisGridParityTest` 6件、
+`KisParticleParityTest` 6件、`KisExperimentParityTest` 7件。同梱プリセット
+(5、2、2、3件)の全書き込みを移行前のコードで記録した基準と比較し(移行前の
+コードでも一致を確認)、合成モードとエンジン固有オプションを編集するたびに
+プリセットがモデルの全書き込みと一致することを確かめる。
+
+手動確認の項目: 4エンジンでF5の各ページを変更し、描画、プレビュー、変更済み
+表示が従来どおり更新される。プリセットの切り替え・保存で値が保たれる。上の
+ページ項目に目を入れるとTool Optionsに出て、そこでの変更が描画とF5に反映
+される。
 
 ### フェーズ5: 旧経路の整理
 

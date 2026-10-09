@@ -571,6 +571,18 @@ void KisToolOptionsBrushTest::testPresetPreview()
     QVERIFY(preview->text().endsWith(QLatin1Char('*')));
     preset->setDirty(false);
 
+    // a change of the settings renders the modified preset's own stroke; the
+    // saved preset again shows the cache's image
+    QVERIFY(!preview->hasModifiedImage());
+    const qreal size = preset->settings()->paintOpSize();
+    preset->settings()->setPaintOpSize(size * 2);
+    QVERIFY(preset->isDirty());
+    QTRY_VERIFY_WITH_TIMEOUT(preview->hasModifiedImage(), 20000);
+    preset->settings()->setPaintOpSize(size);
+    preset->setDirty(false);
+    QVERIFY(!preview->hasModifiedImage());
+    QVERIFY(preview->hasImage());
+
     // collapsing the section hides it
     KisToolOptionsBrushItems::instance()->setSectionCollapsed(true);
     QVERIFY(preview->isHidden());

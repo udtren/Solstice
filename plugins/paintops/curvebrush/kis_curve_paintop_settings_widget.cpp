@@ -13,18 +13,65 @@
 #include <KisCompositeOpOptionWidget.h>
 #include <KisStandardOptionData.h>
 #include <KisCurveStandardOptionData.h>
+#include <KisCurveOptionWidget.h>
+#include <KisPaintOpOptionStateUtils.h>
+#include <KisPaintOpOptionsModel.h>
+
+namespace
+{
+/// Solstice: the option's checkbox and page parameters can be shown in Tool
+/// Options under @p id, the option's id in the options model
+/// (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
+} // namespace
 
 KisCurvePaintOpSettingsWidget:: KisCurvePaintOpSettingsWidget(QWidget* parent)
     : KisPaintOpSettingsWidget(parent)
 {
     namespace kpowu = KisPaintOpOptionWidgetUtils;
 
-    addPaintOpOption(kpowu::createOptionWidget<KisCurveOpOptionWidget>());
-    addPaintOpOption(kpowu::createOpacityOptionWidget());
-    addPaintOpOption(kpowu::createCurveOptionWidget(KisLineWidthOptionData(), KisPaintOpOption::GENERAL, i18n("0%"), i18n("100%")));
-    addPaintOpOption(kpowu::createCurveOptionWidget(KisCurvesOpacityOptionData(), KisPaintOpOption::GENERAL, i18n("0%"), i18n("100%")));
-    addPaintOpOption(kpowu::createOptionWidget<KisCompositeOpOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisPaintingModeOptionWidget>());
+    namespace kposu = KisPaintOpOptionStateUtils;
+
+    // Solstice: the option states live in a shared model, so that one option
+    // change writes only that option (docs/agent/brush-option-shared-model-plan.md,
+    // phase 4); no option's written data depends on another
+    KisPaintOpOptionsModel *model = new KisPaintOpOptionsModel(this);
+
+    auto *curveOp = model->addOption(QStringLiteral("CurveOp"), KisCurveOpOptionData());
+    auto *opacity = model->addOption(QStringLiteral("Opacity"),
+                                     KisOpacityOptionData(),
+                                     &kposu::bakeCurveOption<KisOpacityOptionData>);
+    auto *lineWidth = model->addOption(QStringLiteral("LineWidth"),
+                                       KisLineWidthOptionData(),
+                                       &kposu::bakeCurveOption<KisLineWidthOptionData>);
+    auto *curvesOpacity = model->addOption(QStringLiteral("CurvesOpacity"),
+                                           KisCurvesOpacityOptionData(),
+                                           &kposu::bakeCurveOption<KisCurvesOpacityOptionData>);
+    auto *compositeOp = model->addOption(QStringLiteral("CompositeOp"), KisCompositeOpOptionData());
+    auto *paintingMode = model->addOption(QStringLiteral("PaintingMode"), KisPaintingModeOptionData());
+
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidget<KisCurveOpOptionWidget>(curveOp), QStringLiteral("CurveOp")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createOpacityOptionWidget(kposu::curveCursor(opacity)), QStringLiteral("Opacity")));
+    addPaintOpOption(withToolOptionsId(
+        new KisCurveOptionWidget(kposu::curveCursor(lineWidth), KisPaintOpOption::GENERAL, i18n("0%"), i18n("100%")),
+        QStringLiteral("LineWidth")));
+    addPaintOpOption(withToolOptionsId(new KisCurveOptionWidget(kposu::curveCursor(curvesOpacity),
+                                                                KisPaintOpOption::GENERAL,
+                                                                i18n("0%"),
+                                                                i18n("100%")),
+                                       QStringLiteral("CurvesOpacity")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisPaintingModeOptionWidget>(paintingMode),
+                                       QStringLiteral("PaintingMode")));
+
+    setOptionsModel(model);
 }
 
 KisCurvePaintOpSettingsWidget::~ KisCurvePaintOpSettingsWidget()

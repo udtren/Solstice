@@ -9,6 +9,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QSignalBlocker>
+#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -20,6 +21,7 @@
 #include "kis_paintop_option.h"
 #include "kis_paintop_options_model.h"
 #include "kis_paintop_settings_widget.h"
+#include <KisBrushStrokePreviewRenderer.h>
 #include <KisPaintOpPresetUpdateProxy.h>
 #include <KisResourceModel.h>
 #include <KisResourceModelProvider.h>
@@ -37,11 +39,23 @@ KisToolOptionsBrushPreview::KisToolOptionsBrushPreview(QWidget *parent)
             &KisBrushStrokePreviewCache::previewReady,
             this,
             QOverload<>::of(&QWidget::update));
+
+    m_renderTimer = new QTimer(this);
+    m_renderTimer->setSingleShot(true);
+    m_renderTimer->setInterval(250);
+    connect(m_renderTimer, &QTimer::timeout, this, &KisToolOptionsBrushPreview::startModifiedRender);
 }
 
 KisToolOptionsBrushPreview::~KisToolOptionsBrushPreview()
 {
     KisBrushStrokePreviewCache::instance()->removeConsumer(this);
+    if (m_renderer && m_renderer->isRunning()) {
+        // a renderer is deleted only after its stroke has drained
+        disconnect(m_renderer, nullptr, this, nullptr);
+        m_renderer->setParent(nullptr);
+        connect(m_renderer, &KisBrushStrokePreviewRenderer::finished, m_renderer, &QObject::deleteLater);
+        m_renderer->cancel();
+    }
 }
 
 void KisToolOptionsBrushPreview::setPreset(KisPaintOpPresetSP preset)
@@ -50,14 +64,17 @@ void KisToolOptionsBrushPreview::setPreset(KisPaintOpPresetSP preset)
         disconnect(m_preset->updateProxy(), nullptr, this, nullptr);
     }
     m_preset = preset;
+    m_modifiedImage = QImage();
+    cancelModifiedRender();
     if (m_preset) {
-        // the modified mark
-        connect(m_preset->updateProxy(),
-                &KisPaintOpPresetUpdateProxy::sigSettingsChanged,
-                this,
-                QOverload<>::of(&QWidget::update));
+        // the modified mark and the image of the modified preset
+        connect(m_preset->updateProxy(), &KisPaintOpPresetUpdateProxy::sigSettingsChanged, this, [this]() {
+            update();
+            scheduleModifiedRender();
+        });
     }
     updateRequest();
+    scheduleModifiedRender();
     update();
 }
 
@@ -75,7 +92,66 @@ QString KisToolOptionsBrushPreview::text() const
 
 bool KisToolOptionsBrushPreview::hasImage() const
 {
-    return m_hasRequest && !KisBrushStrokePreviewCache::instance()->preview(m_request).isNull();
+    return hasModifiedImage() || (m_hasRequest && !KisBrushStrokePreviewCache::instance()->preview(m_request).isNull());
+}
+
+bool KisToolOptionsBrushPreview::hasModifiedImage() const
+{
+    return m_preset && m_preset->isDirty() && !m_modifiedImage.isNull();
+}
+
+void KisToolOptionsBrushPreview::scheduleModifiedRender()
+{
+    if (!m_preset || !m_preset->isDirty()) {
+        // the cache shows the saved preset
+        m_renderTimer->stop();
+        cancelModifiedRender();
+        m_modifiedImage = QImage();
+        return;
+    }
+    if (isVisible()) {
+        m_renderTimer->start();
+    }
+}
+
+void KisToolOptionsBrushPreview::startModifiedRender()
+{
+    if (!m_preset || !m_preset->isDirty() || !isVisible()) {
+        return;
+    }
+    if (!m_renderer) {
+        m_renderer = new KisBrushStrokePreviewRenderer(this);
+        connect(m_renderer,
+                &KisBrushStrokePreviewRenderer::finished,
+                this,
+                [this](const QImage &image, bool cancelled) {
+                    if (m_renderAgain) {
+                        m_renderAgain = false;
+                        startModifiedRender();
+                        return;
+                    }
+                    if (!cancelled && m_preset && m_preset->isDirty()) {
+                        m_modifiedImage = image;
+                        update();
+                    }
+                });
+    }
+    if (m_renderer->isRunning()) {
+        // render the latest settings once the running stroke is cancelled
+        m_renderAgain = true;
+        m_renderer->cancel();
+        return;
+    }
+    // a copy: the settings may change while the stroke is rendered
+    m_renderer->start(m_preset->clone().dynamicCast<KisPaintOpPreset>());
+}
+
+void KisToolOptionsBrushPreview::cancelModifiedRender()
+{
+    m_renderAgain = false;
+    if (m_renderer && m_renderer->isRunning()) {
+        m_renderer->cancel();
+    }
 }
 
 bool KisToolOptionsBrushPreview::hasHeightForWidth() const
@@ -117,12 +193,15 @@ void KisToolOptionsBrushPreview::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
     updateRequest();
+    scheduleModifiedRender();
 }
 
 void KisToolOptionsBrushPreview::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
     KisBrushStrokePreviewCache::instance()->removeConsumer(this);
+    m_renderTimer->stop();
+    cancelModifiedRender();
 }
 
 void KisToolOptionsBrushPreview::paintEvent(QPaintEvent *event)
@@ -133,15 +212,17 @@ void KisToolOptionsBrushPreview::paintEvent(QPaintEvent *event)
     // the background of the previews in the Brush Presets docker
     painter.fillRect(rect, QColor("#303030"));
 
-    if (m_hasRequest) {
-        const QImage image = KisBrushStrokePreviewCache::instance()->preview(m_request);
-        if (!image.isNull()) {
-            QSize size = image.size().scaled(rect.size(), Qt::KeepAspectRatio);
-            QRect imageRect(QPoint(), size);
-            imageRect.moveCenter(rect.center());
-            painter.setRenderHint(QPainter::SmoothPixmapTransform);
-            painter.drawImage(imageRect, image);
-        }
+    // the modified preset's own stroke while it has one, else the saved one
+    QImage image = m_modifiedImage;
+    if (!hasModifiedImage()) {
+        image = m_hasRequest ? KisBrushStrokePreviewCache::instance()->preview(m_request) : QImage();
+    }
+    if (!image.isNull()) {
+        QSize size = image.size().scaled(rect.size(), Qt::KeepAspectRatio);
+        QRect imageRect(QPoint(), size);
+        imageRect.moveCenter(rect.center());
+        painter.setRenderHint(QPainter::SmoothPixmapTransform);
+        painter.drawImage(imageRect, image);
     }
 
     const QString name = text();

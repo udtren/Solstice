@@ -15,17 +15,53 @@
 #include <KisAirbrushOptionWidget.h>
 #include <KisCompositeOpOptionWidget.h>
 #include <KisStandardOptionData.h>
+#include <KisPaintOpOptionStateUtils.h>
+#include <KisPaintOpOptionsModel.h>
+
+namespace
+{
+/// Solstice: the option's checkbox and page parameters can be shown in Tool
+/// Options under @p id, the option's id in the options model
+/// (docs/agent/tool-options-brush.md)
+KisPaintOpOption *withToolOptionsId(KisPaintOpOption *option, const QString &id)
+{
+    option->setToolOptionsId(id);
+    return option;
+}
+} // namespace
 
 KisParticlePaintOpSettingsWidget:: KisParticlePaintOpSettingsWidget(QWidget* parent)
     : KisPaintOpSettingsWidget(parent)
 {
     namespace kpowu = KisPaintOpOptionWidgetUtils;
 
-    addPaintOpOption(kpowu::createOptionWidgetWithLodLimitations<KisParticleOpOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisCompositeOpOptionWidget>());
-    addPaintOpOption(kpowu::createOptionWidget<KisAirbrushOptionWidget>(KisAirbrushOptionData(), false));
-    addPaintOpOption(kpowu::createRateOptionWidget());
-    addPaintOpOption(kpowu::createOptionWidget<KisPaintingModeOptionWidget>());
+    namespace kposu = KisPaintOpOptionStateUtils;
+
+    // Solstice: the option states live in a shared model, so that one option
+    // change writes only that option (docs/agent/brush-option-shared-model-plan.md,
+    // phase 4); no option's written data depends on another
+    KisPaintOpOptionsModel *model = new KisPaintOpOptionsModel(this);
+
+    auto *particleOp = model->addOption(QStringLiteral("ParticleOp"), KisParticleOpOptionData());
+    auto *compositeOp = model->addOption(QStringLiteral("CompositeOp"), KisCompositeOpOptionData());
+    auto *airbrush = model->addOption(QStringLiteral("Airbrush"), KisAirbrushOptionData());
+    auto *rate =
+        model->addOption(QStringLiteral("Rate"), KisRateOptionData(), &kposu::bakeCurveOption<KisRateOptionData>);
+    auto *paintingMode = model->addOption(QStringLiteral("PaintingMode"), KisPaintingModeOptionData());
+
+    addPaintOpOption(
+        withToolOptionsId(kposu::createOptionWidgetWithLodLimitations<KisParticleOpOptionWidget>(particleOp),
+                          QStringLiteral("ParticleOp")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisCompositeOpOptionWidget>(compositeOp),
+                                       QStringLiteral("CompositeOp")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisAirbrushOptionWidget>(airbrush, false),
+                                       QStringLiteral("Airbrush")));
+    addPaintOpOption(
+        withToolOptionsId(kpowu::createRateOptionWidget(kposu::curveCursor(rate)), QStringLiteral("Rate")));
+    addPaintOpOption(withToolOptionsId(kposu::createOptionWidget<KisPaintingModeOptionWidget>(paintingMode),
+                                       QStringLiteral("PaintingMode")));
+
+    setOptionsModel(model);
 }
 
 KisParticlePaintOpSettingsWidget::~ KisParticlePaintOpSettingsWidget()
