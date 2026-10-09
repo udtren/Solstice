@@ -58,6 +58,7 @@ private:
     qreal m_angle;
     QTransform m_shapesCorrection;
     KisSelectionBasedProcessingHelper m_selectionHelper;
+    KisSelectionSP m_selection;
 };
 
 #endif /* __KIS_TRANSFORM_PROCESSING_VISITOR_H */

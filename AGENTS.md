@@ -130,7 +130,8 @@ Read these before adding or updating any feature:
   `docs/agent/ui-modernization-plan.md`
 - GitHub Actions Windows trial builds: `docs/agent/github-actions.md`
 - Brush stroke layer (redraw recorded brush strokes at a new resolution;
-  stage 1 done; stage 2a recording done and manually checked 2026-10-09):
+  stage 1 done; stage 2a recording done and manually checked 2026-10-09;
+  stage 2b redraw on image/layer scaling done and manually checked 2026-10-09):
   `docs/agent/brush-stroke-layer-plan.md`
 - Removal of the right-click Popup Palette and the On-Canvas Brush Editor
   (what was kept and why): `docs/agent/popup-palette-removal.md`

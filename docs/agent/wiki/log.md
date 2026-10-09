@@ -373,3 +373,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   Lesson: a stroke's undo is one parent command built in
   `finishStrokeCallback()`; extra state that must undo with the pixels goes
   in as a child of it, not as a separate undo step.
+
+## 2026-10-09 ingest: brush stroke layer, stage 2b
+
+- `brush-stroke-layer-plan.md`: scaling redraws the recorded strokes through
+  `KisRedrawableLayerInterface`, asked by `KisTransformProcessingVisitor`
+  before it resamples a paint layer. The layer first redraws its record at
+  the current size and compares it with its pixels; any other edit falls back
+  to resampling. Lessons: an interface used with `dynamic_cast` across
+  libraries needs an out-of-line destructor in the defining library; running
+  a private image's stroke and waiting for it inside the main image's
+  processing job did not deadlock.

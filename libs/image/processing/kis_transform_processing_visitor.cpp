@@ -36,6 +36,7 @@
 #include <kis_transform_mask_params_interface.h>
 
 #include "KisSimpleModifyTransformMaskCommand.h"
+#include "KisRedrawableLayerInterface.h"
 
 
 KisTransformProcessingVisitor::
@@ -58,6 +59,7 @@ KisTransformProcessingVisitor(qreal  xscale, qreal  yscale,
 void KisTransformProcessingVisitor::setSelection(KisSelectionSP selection)
 {
     m_selectionHelper.setSelection(selection);
+    m_selection = selection;
 }
 
 KUndo2Command *KisTransformProcessingVisitor::createInitCommand()
@@ -77,6 +79,19 @@ void KisTransformProcessingVisitor::visit(KisNode *node, KisUndoAdapter *undoAda
 
 void KisTransformProcessingVisitor::visit(KisPaintLayer *layer, KisUndoAdapter *undoAdapter)
 {
+    // Solstice: a brush stroke layer draws its strokes again at the new size
+    // (docs/agent/brush-stroke-layer-plan.md)
+    KisRedrawableLayerInterface *redrawable = dynamic_cast<KisRedrawableLayerInterface *>(layer);
+    if (redrawable && !m_selection) {
+        KisTransformWorker
+            tw(layer->paintDevice(), m_sx, m_sy, m_shearx, m_sheary, m_angle, m_tx, m_ty, nullptr, m_filter);
+        if (KUndo2Command *command = redrawable->createTransformRedrawCommand(tw.transform())) {
+            undoAdapter->addCommand(command);
+            transformClones(layer, undoAdapter);
+            return;
+        }
+    }
+
     transformPaintDevice(layer->paintDevice(), undoAdapter, ProgressHelper(layer));
     transformClones(layer, undoAdapter);
 }

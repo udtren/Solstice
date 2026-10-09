@@ -12,6 +12,7 @@
 #include <QTransform>
 #include <QVector>
 
+#include <KisRedrawableLayerInterface.h>
 #include <KoColor.h>
 #include <kis_paint_information.h>
 #include <kis_paint_layer.h>
@@ -61,7 +62,7 @@ using KisRecordedBrushStrokeSP = QSharedPointer<const KisRecordedBrushStroke>;
  * be drawn again at a new resolution (Solstice). Only the brush tool paints
  * on it. See docs/agent/brush-stroke-layer-plan.md.
  */
-class KRITAUI_EXPORT KisBrushStrokeLayer : public KisPaintLayer
+class KRITAUI_EXPORT KisBrushStrokeLayer : public KisPaintLayer, public KisRedrawableLayerInterface
 {
     Q_OBJECT
 public:
@@ -76,6 +77,23 @@ public:
     void addStroke(KisRecordedBrushStrokeSP stroke);
     void removeStroke(KisRecordedBrushStrokeSP stroke);
     void setStrokes(const QVector<KisRecordedBrushStrokeSP> &strokes);
+
+    /**
+     * Draws the strokes again with @p transform applied (scaling and moving
+     * only), if the layer still holds just its recorded strokes: drawing
+     * the record at the current size must give its pixels. Otherwise
+     * (another tool or a filter changed them, a selection clipped a stroke,
+     * rotation, mirroring), nullptr: the pixels are transformed as on a
+     * paint layer.
+     */
+    KUndo2Command *createTransformRedrawCommand(const QTransform &transform) override;
+
+    /// @p strokes with their positions mapped by @p transform from the
+    /// device at @p deviceOffset, and their brush sizes scaled; their
+    /// recorded offset becomes @p deviceOffset
+    static QVector<KisRecordedBrushStrokeSP> transformedStrokes(const QVector<KisRecordedBrushStrokeSP> &strokes,
+                                                                const QPoint &deviceOffset,
+                                                                const QTransform &transform);
 
     /**
      * Draws @p strokes again into a new paint device in @p colorSpace, through

@@ -10,12 +10,16 @@
 
 #include <KisAsynchronousStrokeUpdateHelper.h>
 #include <KoCanvasResourceProvider.h>
+#include <kis_command_utils.h>
+#include <kis_debug.h>
 #include <kis_icon_utils.h>
 #include <kis_image.h>
 #include <kis_paint_device.h>
+#include <kis_painter.h>
 #include <kis_paintop_preset.h>
 #include <kis_paintop_settings.h>
 #include <kis_resources_snapshot.h>
+#include <kis_transaction.h>
 #include <strokes/KisFreehandStrokeInfo.h>
 #include <strokes/freehand_stroke.h>
 
@@ -186,6 +190,139 @@ KisPaintDeviceSP KisBrushStrokeLayer::renderStrokes(const QVector<KisRecordedBru
         }
     }
     return layer->paintDevice();
+}
+
+namespace
+{
+/// Whether two devices hold the same pixels in @p rect, allowing a
+/// difference of 3 in each 8-bit channel
+bool sameContent(KisPaintDeviceSP a, KisPaintDeviceSP b, const QRect &rect)
+{
+    if (rect.isEmpty()) {
+        return b->exactBounds().isEmpty();
+    }
+    const QImage first = a->convertToQImage(nullptr, rect).convertToFormat(QImage::Format_ARGB32);
+    const QImage second = b->convertToQImage(nullptr, rect).convertToFormat(QImage::Format_ARGB32);
+    for (int y = 0; y < first.height(); y++) {
+        const QRgb *lineA = reinterpret_cast<const QRgb *>(first.constScanLine(y));
+        const QRgb *lineB = reinterpret_cast<const QRgb *>(second.constScanLine(y));
+        for (int x = 0; x < first.width(); x++) {
+            const QRgb p = lineA[x];
+            const QRgb q = lineB[x];
+            if (qAbs(qAlpha(p) - qAlpha(q)) > 3 || qAbs(qRed(p) - qRed(q)) > 3 || qAbs(qGreen(p) - qGreen(q)) > 3
+                || qAbs(qBlue(p) - qBlue(q)) > 3) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/// Replaces the layer's strokes; undo restores the previous ones
+class SetStrokesCommand : public KUndo2Command
+{
+public:
+    SetStrokesCommand(KisBrushStrokeLayer *layer,
+                      const QVector<KisRecordedBrushStrokeSP> &before,
+                      const QVector<KisRecordedBrushStrokeSP> &after)
+        : m_layer(layer)
+        , m_before(before)
+        , m_after(after)
+    {
+    }
+
+    void redo() override
+    {
+        m_layer->setStrokes(m_after);
+    }
+
+    void undo() override
+    {
+        m_layer->setStrokes(m_before);
+    }
+
+private:
+    KisBrushStrokeLayerSP m_layer;
+    QVector<KisRecordedBrushStrokeSP> m_before;
+    QVector<KisRecordedBrushStrokeSP> m_after;
+};
+} // namespace
+
+QVector<KisRecordedBrushStrokeSP>
+KisBrushStrokeLayer::transformedStrokes(const QVector<KisRecordedBrushStrokeSP> &strokes,
+                                        const QPoint &deviceOffset,
+                                        const QTransform &transform)
+{
+    const qreal scale = lengthScale(transform);
+    QVector<KisRecordedBrushStrokeSP> result;
+    for (const KisRecordedBrushStrokeSP &stroke : strokes) {
+        QSharedPointer<KisRecordedBrushStroke> mapped(new KisRecordedBrushStroke(*stroke));
+        const QPointF shift(deviceOffset - stroke->deviceOffset);
+        auto map = [&](const QPointF &point) {
+            return transform.map(point + shift);
+        };
+        for (KisRecordedBrushStroke::Job &job : mapped->jobs) {
+            job.pi1.setPos(map(job.pi1.pos()));
+            job.pi2.setPos(map(job.pi2.pos()));
+            job.control1 = map(job.control1);
+            job.control2 = map(job.control2);
+        }
+        mapped->deviceOffset = deviceOffset;
+
+        mapped->preset = stroke->preset->clone().dynamicCast<KisPaintOpPreset>();
+        KisPaintOpSettingsSP settings = mapped->preset->settings();
+        settings->setPaintOpSize(settings->paintOpSize() * scale);
+        if (settings->hasProperty("Texture/Pattern/Scale")) {
+            settings->setProperty("Texture/Pattern/Scale", settings->getDouble("Texture/Pattern/Scale") * scale);
+        }
+        result << mapped;
+    }
+    return result;
+}
+
+KUndo2Command *KisBrushStrokeLayer::createTransformRedrawCommand(const QTransform &transform)
+{
+    const QVector<KisRecordedBrushStrokeSP> recorded = strokes();
+    KisPaintDeviceSP device = paintDevice();
+    if (recorded.isEmpty() || !device || device->keyframeChannel()) {
+        return nullptr;
+    }
+    // scaling and moving only: a rotated or mirrored brush tip would not
+    // match the transformed pixels
+    if (transform.type() > QTransform::TxScale || transform.m11() <= 0.0 || transform.m22() <= 0.0) {
+        return nullptr;
+    }
+
+    const QPoint offset(device->x(), device->y());
+    const QRect bounds = device->exactBounds();
+    const KoColorSpace *colorSpace = device->colorSpace();
+
+    // the layer must hold just its recorded strokes
+    KisPaintDeviceSP current = renderStrokes(recorded, colorSpace, bounds | QRect(0, 0, 1, 1), offset);
+    if (!sameContent(device, current, bounds)) {
+        warnKrita << "KisBrushStrokeLayer:" << name()
+                  << "holds changes that are not brush strokes; transforming its pixels instead of drawing again";
+        return nullptr;
+    }
+
+    const QVector<KisRecordedBrushStrokeSP> mapped = transformedStrokes(recorded, offset, transform);
+    const QRect mappedBounds = transform.mapRect(QRectF(bounds)).toAlignedRect();
+    KisPaintDeviceSP redrawn = renderStrokes(mapped, colorSpace, mappedBounds | QRect(0, 0, 1, 1), offset);
+
+    KisCommandUtils::CompositeCommand *command = new KisCommandUtils::CompositeCommand();
+    command->setText(kundo2_i18n("Redraw Brush Strokes"));
+    command->addCommand(new SetStrokesCommand(this, recorded, mapped));
+
+    KisTransaction transaction(device);
+    device->clear();
+    const QRect redrawnRect = redrawn->extent();
+    if (!redrawnRect.isEmpty()) {
+        KisPainter::copyAreaOptimized(redrawnRect.topLeft(), redrawn, device, redrawnRect);
+    }
+    command->addCommand(transaction.endAndTake());
+    setDirty();
+
+    return command;
 }
 
 KisRecordBrushStrokeCommand::KisRecordBrushStrokeCommand(KisBrushStrokeLayer *layer, KisRecordedBrushStrokeSP stroke)
