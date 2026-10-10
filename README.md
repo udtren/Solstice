@@ -8,12 +8,25 @@
 
 ![Solstice main window with the Brush Presets docker grouped by bundle, Quick Brush Adjustments, HueSVC, the Quick Access Palette and the Brush section of Tool Options](docs/images/solstice-main-window.webp)
 
-**Solstice is an open-source, GPU-focused digital painting application derived
-from the Krita 6 codebase.**
+**Solstice is an open-source digital painting application derived from the
+Krita 6 codebase.**
 
-It combines Krita's established painting workflow with Vulkan-powered layer
-compositing, an experimental GPU pixel-brush path, and productivity tools
-integrated natively into the application.
+<table>
+<tr>
+<td width="33%" valign="top">
+<h3>⚡ GPU acceleration</h3>
+<p>Vulkan-powered layer compositing and canvas updates, and a GPU brush that is on by default: from pen input to the displayed frame, about four times faster than the CPU brush.</p>
+</td>
+<td width="33%" valign="top">
+<h3>🎨 Workflows from Clip Studio Paint</h3>
+<p><a href="docs/puppet-warp.md">Puppet Warp</a> with movable and rotatable pins, eye marks that put brush settings in <a href="docs/brush-editor.md#brush-options-in-tool-options">Tool Options</a>, and a <a href="docs/brush-stroke-layer.md">Brush Stroke Layer</a> that redraws its strokes sharply when scaled, like a vector layer.</p>
+</td>
+<td width="33%" valign="top">
+<h3>🛠️ Krita, refined</h3>
+<p><a href="docs/brush-stroke-preview.md">Brush Presets</a> with stroke previews, filters and grouping, a reworked <a href="docs/brush-editor.md">Brush Editor</a>, <a href="docs/photoshop-brushes.md">Photoshop brush import</a> with presets, textures and folders, docker locks, a live Overview and a modernized <a href="docs/ui-modernization.md">interface</a>, together with native tools such as <a href="docs/quick-access.md">Quick Access</a> and the <a href="docs/asset-library.md">Asset Library</a>.</p>
+</td>
+</tr>
+</table>
 
 Solstice is independently maintained and desktop-only. It is not an official
 Krita edition, and development no longer tracks upstream Krita. It is in

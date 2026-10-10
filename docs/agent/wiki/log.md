@@ -565,3 +565,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   README now opens with the splash (480 px wide, centered), a separator and
   a one-line description before the main window screenshot; the `# Solstice`
   heading was dropped because the splash carries the name.
+- README introduction rewritten (same day, user request): three columns
+  (GPU acceleration, workflows from Clip Studio Paint, Krita refined) in an
+  HTML table; links inside the table are HTML anchors because Markdown is not
+  rendered in table cells.
