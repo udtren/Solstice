@@ -513,3 +513,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   depth capped at 32). Storage tags are re-added by `synchronizeDb()` on
   every start, so already registered libraries gain new tags without a
   re-import; `KisAbrStorage::tags()` must load the file first.
+
+## 2026-10-10 ingest: ABR import, finishing work
+
+- `abr-import-plan.md`: color dynamics map to the Pixel Brush's Mix and
+  HSV options, and the scatter count divides the spacing. Pitfall found on
+  the way: a curve option written with `<id>UseSameCurve` true takes the
+  `commonCurve` for every sensor (`KisCurveOption::generateSensors()`), so
+  per-sensor curves were silently replaced by the identity and "constant"
+  options followed pressure; generated options must write it false. Also
+  learnt from real brushes: in Krita's and Photoshop's subtract and height
+  texture modes the pattern's lightness is taken from the paint, so the
+  pattern must not be inverted, and Photoshop inverts the pattern before
+  its brightness while Krita inverts after. Verify such mappings against
+  real presets (authors' settings reveal the intended direction), not just
+  against the documentation of another mode.

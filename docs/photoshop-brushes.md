@@ -22,8 +22,12 @@ its own.
   roundness, spacing and hardness; size, angle, roundness, opacity and flow
   dynamics (pressure, tilt, wheel, direction, rotation, fade and jitter);
   scattering; texture (with the file's pattern and Photoshop's blend modes);
-  the dual brush (as the masking brush); and the tool's opacity, flow and
-  blend mode. They paint in Wash mode.
+  the dual brush (as the masking brush); color dynamics (foreground and
+  background jitter as Mix, hue, saturation, brightness and purity as Hue,
+  Saturation and Value, per tip or once per stroke); and the tool's
+  opacity, flow and blend mode. They paint in Wash mode. The scatter count
+  brings the dabs closer together (the Pixel Brush places one dab per
+  step).
 - The folders of Photoshop's Brushes panel become tags of the presets,
   named after the file and the folder (`Inking / Pens`). A folder's tag
   also holds the presets of its subfolders. Every preset also carries the
@@ -35,15 +39,15 @@ its own.
 ## Not read yet
 
 - Some Photoshop settings have no counterpart and are left out (the log
-  lists them for each file): the scatter count, flipping and flip jitter,
-  color dynamics, wet edges, noise, brush pose, texture protection and
+  lists them for each file): the dual brush's scatter count, flipping and
+  flip jitter, wet edges, noise, brush pose, texture protection and
   smoothing.
 - Computed (round) brushes of ABR versions 1 and 2.
 
 ## Known limitations
 
-- Presets with a shallow texture depth in Photoshop's Height mode, or with a
-  dual brush in Darken or Color Burn mode, may paint very faintly.
+- Presets with a dual brush in Darken or Color Burn mode, or with a dual
+  brush much larger than the tip, may paint very faintly.
 
 - ABR libraries imported before this version keep the tip names they had;
   removing the library and importing the file again shows the new names.

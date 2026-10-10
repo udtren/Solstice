@@ -55,6 +55,10 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
   Transform tool, draws them again at the new size, so small line art
   enlarges without blurring. The
   strokes are saved in `.kra`, and Krita opens the layer as a paint layer.
+- **[Photoshop brushes](docs/photoshop-brushes.md)**: an `.abr` file is
+  imported like a bundle, with its brush tips, patterns and brush presets
+  (converted to Pixel Brush presets, with their dynamics, texture, dual
+  brush and color dynamics) and its Brushes panel folders as tags.
 
 ## Screenshots
 

@@ -155,7 +155,9 @@ void writeCurveOption(KisPropertiesConfiguration *config,
     config->setProperty(prefix + QStringLiteral("Pressure") + id, checked);
     config->setProperty(prefix + id + QStringLiteral("Sensor"), doc.toString());
     config->setProperty(prefix + id + QStringLiteral("UseCurve"), true);
-    config->setProperty(prefix + id + QStringLiteral("UseSameCurve"), true);
+    // each sensor has its own curve: with the same curve for all, the
+    // common (identity) curve would replace them
+    config->setProperty(prefix + id + QStringLiteral("UseSameCurve"), false);
     config->setProperty(prefix + id + QStringLiteral("Value"), value);
     config->setProperty(prefix + id + QStringLiteral("curveMode"), 0);
     config->setProperty(prefix + id + QStringLiteral("commonCurve"), DefaultCurve);
@@ -163,8 +165,11 @@ void writeCurveOption(KisPropertiesConfiguration *config,
 
 /// The sensors that make a setting follow a Photoshop dynamic, going from
 /// @p minimum at the lowest input to full at the highest; jitter becomes a
-/// random (fuzzy) sensor
-QVector<Sensor> sensorsFor(const Dynamic &dynamic, qreal minimum, QMap<QString, int> *unsupported)
+/// random sensor (@p fuzzyId: per dab or per stroke)
+QVector<Sensor> sensorsFor(const Dynamic &dynamic,
+                           qreal minimum,
+                           QMap<QString, int> *unsupported,
+                           const QString &fuzzyId = QStringLiteral("fuzzy"))
 {
     QVector<Sensor> sensors;
     const QString rising = curveString({QPointF(0, minimum), QPointF(1, 1)});
@@ -197,10 +202,55 @@ QVector<Sensor> sensorsFor(const Dynamic &dynamic, qreal minimum, QMap<QString, 
         break;
     }
     if (dynamic.jitter > 0.0) {
-        sensors.append(
-            {QStringLiteral("fuzzy"), curveString({QPointF(0, 1.0 - qMin(1.0, dynamic.jitter)), QPointF(1, 1)})});
+        sensors.append({fuzzyId, curveString({QPointF(0, 1.0 - qMin(1.0, dynamic.jitter)), QPointF(1, 1)})});
     }
     return sensors;
+}
+
+/// Photoshop's color dynamics as the Pixel Brush's Mix (foreground and
+/// background) and Hue, Saturation and Value options; per tip or once per
+/// stroke
+void writeColorDynamics(KisPropertiesConfiguration *config, const QDomElement &p, QMap<QString, int> *unsupported)
+{
+    const bool on = isOn(p, QStringLiteral("useColorDynamics"));
+    const bool perTip =
+        child(p, QStringLiteral("colorDynamicsPerTip")).isNull() || isOn(p, QStringLiteral("colorDynamicsPerTip"));
+    const QString fuzzyId = perTip ? QStringLiteral("fuzzy") : QStringLiteral("fuzzystroke");
+    auto percent = [&](const QString &key) {
+        return on ? qBound(-1.0, number(p, key, 0) / 100.0, 1.0) : 0.0;
+    };
+
+    // foreground/background jitter: the Mix option goes from the
+    // foreground (1) towards the background (0)
+    const Dynamic mix = on ? Dynamic::read(child(p, QStringLiteral("clVr"))) : Dynamic();
+    writeCurveOption(config,
+                     QString(),
+                     QStringLiteral("Mix"),
+                     mix.isUsed(),
+                     1.0,
+                     sensorsFor(mix, mix.minimum, unsupported, fuzzyId));
+
+    // hue jitter: a random shift of up to the jitter in either direction
+    // (1 is half the hue circle)
+    const qreal hue = qAbs(percent(QStringLiteral("H   ")));
+    writeCurveOption(config, QString(), QStringLiteral("h"), hue > 0, hue, {{fuzzyId, QString()}});
+
+    // saturation (with purity, a constant shift) and brightness jitter: the
+    // option's value is twice the curve's value less one, so the random
+    // curve spans the shift less and plus the jitter
+    auto shiftOption = [&](const QString &id, qreal shift, qreal jitter) {
+        const qreal low = qBound(0.0, (shift - jitter + 1.0) / 2.0, 1.0);
+        const qreal high = qBound(0.0, (shift + jitter + 1.0) / 2.0, 1.0);
+        writeCurveOption(
+            config,
+            QString(),
+            id,
+            shift != 0.0 || jitter > 0.0,
+            1.0,
+            {{jitter > 0.0 ? fuzzyId : QStringLiteral("pressure"), curveString({QPointF(0, low), QPointF(1, high)})}});
+    };
+    shiftOption(QStringLiteral("s"), percent(QStringLiteral("purity")), qAbs(percent(QStringLiteral("Strt"))));
+    shiftOption(QStringLiteral("v"), 0.0, qAbs(percent(QStringLiteral("Brgh"))));
 }
 
 QString compositeOpFor(const QString &mode)
@@ -365,6 +415,14 @@ KisAbrPresetConverter::Result KisAbrPresetConverter::convert(const QDomElement &
             continue;
         }
         settings->setProperty(QStringLiteral("paintop"), paintbrush.id());
+        // Photoshop's scatter count places that many dabs at each spacing
+        // step; the Pixel Brush places one, so the dabs come closer
+        // together instead
+        const int scatterCount =
+            isOn(p, QStringLiteral("useScatter")) ? qBound(1, int(number(p, QStringLiteral("Cnt "), 1)), 16) : 1;
+        if (scatterCount > 1) {
+            brush.common.spacing = qMax(0.01, brush.common.spacing / scatterCount);
+        }
         brush.write(settings.data());
 
         const QDomElement tip = child(p, QStringLiteral("Brsh"));
@@ -434,9 +492,6 @@ KisAbrPresetConverter::Result KisAbrPresetConverter::convert(const QDomElement &
                              sensorsFor(control, amount.minimum, &unsupported));
             settings->setProperty(QStringLiteral("Scattering/AxisX"), true);
             settings->setProperty(QStringLiteral("Scattering/AxisY"), scatter && isOn(p, QStringLiteral("bothAxes")));
-            if (scatter && number(p, QStringLiteral("Cnt "), 1) > 1) {
-                unsupported[QStringLiteral("scatter count")]++;
-            }
         }
 
         // transfer and the tool's opacity, flow and blend mode
@@ -479,9 +534,12 @@ KisAbrPresetConverter::Result KisAbrPresetConverter::convert(const QDomElement &
                 settings->setProperty(prefix + QStringLiteral("Scale"),
                                       qBound(0.01, number(p, QStringLiteral("textureScale"), 100) / 100.0, 10.0));
                 // Solstice's brightness is subtracted from the pattern's
-                // lightness; Photoshop's is added
+                // lightness before inverting it; Photoshop's is added after
+                // inverting
+                const bool invert = isOn(p, QStringLiteral("InvT"));
+                const qreal brightness = number(p, QStringLiteral("textureBrightness"), 0) / 150.0;
                 settings->setProperty(prefix + QStringLiteral("Brightness"),
-                                      qBound(-1.0, -number(p, QStringLiteral("textureBrightness"), 0) / 150.0, 1.0));
+                                      qBound(-1.0, invert ? brightness : -brightness, 1.0));
                 settings->setProperty(prefix + QStringLiteral("Contrast"),
                                       qBound(0.0, 1.0 + number(p, QStringLiteral("textureContrast"), 0) / 50.0, 2.0));
                 settings->setProperty(prefix + QStringLiteral("NeutralPoint"), 0.5);
@@ -491,15 +549,14 @@ KisAbrPresetConverter::Result KisAbrPresetConverter::convert(const QDomElement &
                 settings->setProperty(prefix + QStringLiteral("isRandomOffsetY"), false);
                 const int texturingMode = texturingModeFor(text(p, QStringLiteral("textureBlendMode")));
                 settings->setProperty(prefix + QStringLiteral("TexturingMode"), texturingMode);
-                // Photoshop's subtract and height modes take paint away
-                // where the pattern is dark; Solstice's take away the mask
-                // value, so the pattern is inverted for them
-                const bool depthMode = texturingMode == 1 || texturingMode == 14 || texturingMode == 15;
                 settings->setProperty(prefix + QStringLiteral("UseSoftTexturing"), false);
                 settings->setProperty(prefix + QStringLiteral("CutoffLeft"), 0);
                 settings->setProperty(prefix + QStringLiteral("CutoffRight"), 255);
                 settings->setProperty(prefix + QStringLiteral("CutoffPolicy"), 0);
-                settings->setProperty(prefix + QStringLiteral("Invert"), isOn(p, QStringLiteral("InvT")) != depthMode);
+                // the subtract and height modes take the pattern's lightness
+                // away from the paint, as Photoshop's do: brushes made for
+                // them darken the pattern to let more paint through
+                settings->setProperty(prefix + QStringLiteral("Invert"), invert);
                 settings->setProperty(prefix + QStringLiteral("AutoInvertOnErase"), false);
 
                 const Dynamic depth = Dynamic::read(child(p, QStringLiteral("textureDepthDynamics")));
@@ -564,9 +621,7 @@ KisAbrPresetConverter::Result KisAbrPresetConverter::convert(const QDomElement &
             }
         }
 
-        if (isOn(p, QStringLiteral("useColorDynamics"))) {
-            unsupported[QStringLiteral("color dynamics")]++;
-        }
+        writeColorDynamics(settings.data(), p, &unsupported);
         if (isOn(p, QStringLiteral("Wtdg"))) {
             unsupported[QStringLiteral("wet edges")]++;
         }

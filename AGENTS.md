@@ -142,7 +142,9 @@ Read these before adding or updating any feature:
   parser and tip names, done and manually checked 2026-10-10; phase 3,
   patterns, done and manually checked 2026-10-10; phase 4, presets,
   done and manually checked 2026-10-10; phase 5, folders as tags,
-  done and manually checked 2026-10-10):
+  done and manually checked 2026-10-10; finishing work (color dynamics,
+  scatter count, curve and texture fixes, README) done and manually checked
+  2026-10-10):
   `docs/agent/abr-import-plan.md`
 - Removal of the right-click Popup Palette and the On-Canvas Brush Editor
   (what was kept and why): `docs/agent/popup-palette-removal.md`

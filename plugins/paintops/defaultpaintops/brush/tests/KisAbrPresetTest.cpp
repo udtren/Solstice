@@ -44,6 +44,8 @@ private Q_SLOTS:
     void testReload();
     void testFolders();
     void testFolderForms();
+    void testColorDynamicsAndScatterCount();
+    void testTextureDepthModes();
 };
 
 namespace
@@ -69,7 +71,8 @@ KisPaintOpPresetSP withFileResources(KisPaintOpPresetSP preset, const KisAbrBrus
     return copy;
 }
 
-QImage paintedImage(KisPaintOpPresetSP preset);
+QImage
+paintedImage(KisPaintOpPresetSP preset, const QColor &foreground = Qt::black, const QColor &background = Qt::white);
 
 int paintedPixels(KisPaintOpPresetSP preset)
 {
@@ -83,17 +86,17 @@ int paintedPixels(KisPaintOpPresetSP preset)
     return painted;
 }
 
-QImage paintedImage(KisPaintOpPresetSP preset)
+QImage paintedImage(KisPaintOpPresetSP preset, const QColor &foreground, const QColor &background)
 {
     const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
     KisImageSP image = new KisImage(new KisSurrogateUndoStore(), 300, 200, cs, "abr");
     KisPaintLayerSP layer = new KisPaintLayer(image, "layer", OPACITY_OPAQUE_U8, cs);
     image->addNode(layer, image->root());
 
-    const KoColor color(Qt::black, cs);
+    const KoColor color(foreground, cs);
     KoCanvasResourceProvider provider;
     provider.setResource(KoCanvasResource::ForegroundColor, QVariant::fromValue(color));
-    provider.setResource(KoCanvasResource::BackgroundColor, QVariant::fromValue(KoColor(Qt::white, cs)));
+    provider.setResource(KoCanvasResource::BackgroundColor, QVariant::fromValue(KoColor(background, cs)));
     provider.setResource(KoCanvasResource::CurrentPaintOpPreset, QVariant::fromValue(preset));
     provider.setResource(KoCanvasResource::Opacity, 1.0);
     provider.setResource(KoCanvasResource::CurrentCompositeOp, COMPOSITE_OVER);
@@ -426,6 +429,180 @@ void KisAbrPresetTest::testFolderForms()
     const QVector<QStringList> deepFolders = KisAbrPresetConverter::presetFolders(deepDoc.documentElement());
     QCOMPARE(deepFolders.size(), 1);
     QCOMPARE(deepFolders[0].size(), 32);
+}
+
+namespace
+{
+/// a Photoshop preset with a round tip, as the descriptor reader gives it
+QString roundPresetXml(const QString &extra)
+{
+    return QStringLiteral(
+               "<asl><node type='Descriptor' classId='null'><node key='Brsh' type='List'>"
+               "<node type='Descriptor' classId='brushPreset'>"
+               "<node key='Nm  ' type='Text' value='Round'/>"
+               "<node key='Brsh' type='Descriptor' classId='computedBrush'>"
+               "<node key='Dmtr' type='UnitFloat' unit='#Pxl' value='20'/>"
+               "<node key='Hrdn' type='UnitFloat' unit='#Prc' value='100'/>"
+               "<node key='Spcn' type='UnitFloat' unit='#Prc' value='25'/></node>"
+               "%1</node></node></node></asl>")
+        .arg(extra);
+}
+
+KisPaintOpPresetSP convertOne(const QString &xml)
+{
+    QDomDocument doc;
+    if (!doc.setContent(xml)) {
+        return KisPaintOpPresetSP();
+    }
+    KisAbrPresetConverter::Sources sources;
+    sources.baseName = QStringLiteral("round");
+    const auto result = KisAbrPresetConverter::convert(doc.documentElement(), sources);
+    return result.presets.value(QStringLiteral("round_preset_1.kpp"));
+}
+
+int distinctOpaqueColors(const QImage &image)
+{
+    QSet<QRgb> colors;
+    for (int y = 0; y < image.height(); y++) {
+        for (int x = 0; x < image.width(); x++) {
+            const QRgb pixel = image.pixel(x, y);
+            if (qAlpha(pixel) > 200) {
+                colors.insert(pixel | 0xff000000);
+            }
+        }
+    }
+    return colors.size();
+}
+
+qreal tipSpacing(KisPaintOpPresetSP preset)
+{
+    QDomDocument doc;
+    doc.setContent(preset->settings()->getString("brush_definition"));
+    return doc.documentElement().attribute("spacing").toDouble();
+}
+} // namespace
+
+/// Color dynamics become the Mix and HSV options; the scatter count brings
+/// the dabs closer together
+void KisAbrPresetTest::testColorDynamicsAndScatterCount()
+{
+    const KisPaintOpPresetSP plain = convertOne(roundPresetXml(QString()));
+    QVERIFY(plain);
+    QCOMPARE(tipSpacing(plain), 0.25);
+    KisMixOptionData plainMix;
+    QVERIFY(plainMix.read(plain->settings().data()));
+    QVERIFY(!plainMix.isChecked);
+    QCOMPARE(distinctOpaqueColors(paintedImage(plain, Qt::red, Qt::blue)), 1);
+
+    const QString dynamics = QStringLiteral(
+        "<node key='useScatter' type='Boolean' value='1'/>"
+        "<node key='Cnt ' type='Integer' value='4'/>"
+        "<node key='useColorDynamics' type='Boolean' value='1'/>"
+        "<node key='clVr' type='Descriptor' classId='brVr'>"
+        "<node key='bVTy' type='Integer' value='0'/>"
+        "<node key='jitter' type='UnitFloat' unit='#Prc' value='100'/></node>"
+        "<node key='H   ' type='UnitFloat' unit='#Prc' value='20'/>"
+        "<node key='Strt' type='UnitFloat' unit='#Prc' value='30'/>"
+        "<node key='Brgh' type='UnitFloat' unit='#Prc' value='10'/>"
+        "<node key='purity' type='UnitFloat' unit='#Prc' value='-40'/>"
+        "<node key='colorDynamicsPerTip' type='Boolean' value='%1'/>");
+
+    const KisPaintOpPresetSP perStroke = convertOne(roundPresetXml(dynamics.arg(0)));
+    QVERIFY(perStroke);
+    QCOMPARE(tipSpacing(perStroke), 0.0625);
+    KisMixOptionData mix;
+    QVERIFY(mix.read(perStroke->settings().data()));
+    QVERIFY(mix.isChecked);
+    QVERIFY(mix.sensorStruct().sensorFuzzyPerStroke.isActive);
+    KisHueOptionData hue;
+    QVERIFY(hue.read(perStroke->settings().data()));
+    QVERIFY(hue.isChecked);
+    QCOMPARE(hue.strengthValue, 0.2);
+    KisSaturationOptionData saturation;
+    QVERIFY(saturation.read(perStroke->settings().data()));
+    QVERIFY(saturation.isChecked);
+    // purity -40 and jitter 30: from -70% to -10%
+    QCOMPARE(saturation.sensorStruct().sensorFuzzyPerStroke.curve, QString("0,0.15;1,0.45;"));
+    KisValueOptionData value;
+    QVERIFY(value.read(perStroke->settings().data()));
+    QVERIFY(value.isChecked);
+
+    // per tip: the dabs of one stroke take many colors
+    const KisPaintOpPresetSP perTip = convertOne(roundPresetXml(dynamics.arg(1)));
+    QVERIFY(perTip);
+    KisMixOptionData tipMix;
+    QVERIFY(tipMix.read(perTip->settings().data()));
+    QVERIFY(tipMix.sensorStruct().sensorFuzzyPerDab.isActive);
+    const int colors = distinctOpaqueColors(paintedImage(perTip, Qt::red, Qt::blue));
+    qInfo() << "colors with per-tip color dynamics" << colors;
+    QVERIFY(colors > 20);
+
+    // purity -100 alone takes the color out
+    const KisPaintOpPresetSP gray =
+        convertOne(roundPresetXml(QStringLiteral("<node key='useColorDynamics' type='Boolean' value='1'/>"
+                                                 "<node key='purity' type='UnitFloat' unit='#Prc' value='-100'/>")));
+    QVERIFY(gray);
+    const QImage grayImage = paintedImage(gray, Qt::red, Qt::blue);
+    bool painted = false;
+    for (int y = 0; y < grayImage.height(); y++) {
+        for (int x = 0; x < grayImage.width(); x++) {
+            const QRgb pixel = grayImage.pixel(x, y);
+            if (qAlpha(pixel) > 200) {
+                painted = true;
+                QVERIFY2(qAbs(qRed(pixel) - qGreen(pixel)) < 16 && qAbs(qRed(pixel) - qBlue(pixel)) < 16,
+                         qPrintable(QColor(pixel).name()));
+            }
+        }
+    }
+    QVERIFY(painted);
+}
+
+/// Photoshop's Height mode at a shallow depth paints where the pattern is
+/// dark; brushes darken the pattern to let paint through. Photoshop
+/// inverts the pattern before its brightness, Solstice after.
+void KisAbrPresetTest::testTextureDepthModes()
+{
+    QImage image(32, 32, QImage::Format_ARGB32);
+    image.fill(QColor(150, 150, 150));
+    KoPatternSP pattern(new KoPattern(image, QStringLiteral("Gray"), QStringLiteral("gray.pat")));
+
+    auto convert = [&](bool invert) {
+        QDomDocument doc;
+        doc.setContent(roundPresetXml(QStringLiteral("<node key='useTexture' type='Boolean' value='1'/>"
+                                                     "<node key='Txtr' type='Descriptor' classId='Ptrn'>"
+                                                     "<node key='Idnt' type='Text' value='gray'/></node>"
+                                                     "<node key='textureBlendMode' type='Enum' value='Hght'/>"
+                                                     "<node key='textureDepth' type='UnitFloat' value='9'/>"
+                                                     "<node key='textureBrightness' type='Integer' value='4294967196'/>"
+                                                     "<node key='InvT' type='Boolean' value='%1'/>")
+                                          .arg(invert ? 1 : 0)));
+        KisAbrPresetConverter::Sources sources;
+        sources.baseName = QStringLiteral("round");
+        sources.patternsById.insert(QStringLiteral("gray"), pattern);
+        KisPaintOpPresetSP preset =
+            KisAbrPresetConverter::convert(doc.documentElement(), sources).presets.value("round_preset_1.kpp");
+        if (preset) {
+            preset->setResourcesInterface(
+                QSharedPointer<KisLocalStrokeResources>::create(QList<KoResourceSP>({pattern})));
+        }
+        return preset;
+    };
+
+    const KisPaintOpPresetSP plain = convert(false);
+    QVERIFY(plain);
+    QCOMPARE(plain->settings()->getInt("Texture/Pattern/TexturingMode"), 14);
+    QVERIFY(!plain->settings()->getBool("Texture/Pattern/Invert"));
+    // brightness -100: darker, which Solstice subtracts as a positive value
+    QVERIFY(qAbs(plain->settings()->getDouble("Texture/Pattern/Brightness") - 100.0 / 150.0) < 1e-6);
+    const int plainPixels = paintedPixels(plain);
+    qInfo() << "height mode pixels" << plainPixels;
+    QVERIFY(plainPixels > 500);
+
+    const KisPaintOpPresetSP inverted = convert(true);
+    QVERIFY(inverted);
+    QVERIFY(inverted->settings()->getBool("Texture/Pattern/Invert"));
+    QVERIFY(qAbs(inverted->settings()->getDouble("Texture/Pattern/Brightness") + 100.0 / 150.0) < 1e-6);
+    QVERIFY(paintedPixels(inverted) > 500);
 }
 
 SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(KisAbrPresetTest, QStringLiteral("Krita_4_Default_Resources.bundle"))
