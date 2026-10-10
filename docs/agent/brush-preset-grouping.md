@@ -114,3 +114,18 @@ Manual checks: in the Brush Editor's Predefined tips, the Bundles dropdown
 lists the bundles and ABR libraries that hold tips, unchecking one hides its
 tips, and Group by Bundle shows the tips under bundle headers; the presets'
 grouping is unaffected.
+
+## Scroll position across relayouts (2026-10-10)
+
+Clicking a preset at the bottom of a grouped list threw the list upwards.
+`KisResourceItemListView::doItemsLayout()` first runs `QListView`'s plain
+layout, which sets the scroll range without the group headers and clips the
+scroll value; the grouped layout then extends the range but the value stayed
+clipped (459 became 433 in the test). The selection triggers such a relayout.
+`doItemsLayout()` now remembers the vertical scroll value before the plain
+layout and sets it again after the grouped layout's `updateGeometries()`.
+Test: `testClickAtBottomKeepsScroll` (no grouping, by bundle, by engine) in
+`libs/ui/tests/KisBrushStrokePreviewTest.cpp`.
+
+Manual check: with Group by Bundle or Group by Engine, scroll the Brush
+Presets docker to the bottom and click a preset there; the list stays.

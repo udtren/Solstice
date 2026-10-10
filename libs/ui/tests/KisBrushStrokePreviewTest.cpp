@@ -315,6 +315,65 @@ private Q_SLOTS:
         QCOMPARE(chooser->currentResource(), KoResourceSP(last));
         QVERIFY(view->verticalScrollBar()->value() > 0);
     }
+    void testClickAtBottomKeepsScroll()
+    {
+        // Clicking a preset at the bottom of a grouped list keeps the list
+        // where it is (the selection used to throw it upwards)
+        const QString key = QStringLiteral("Solstice/BrushPresetScrollToSelection");
+        const auto restore = qScopeGuard([key]() {
+            KisConfig(false).writeEntry<bool>(key, false);
+        });
+        KisConfig(false).writeEntry<bool>(key, false);
+
+        for (int grouping : {int(KisPresetDockerFilters::NoGrouping),
+                             int(KisPresetDockerFilters::GroupByBundle),
+                             int(KisPresetDockerFilters::GroupByEngine)}) {
+            KisPaintOpPresetsChooserPopup docker;
+            docker.enableStrokePreviewSetting();
+            docker.enableScrollToSelectionSetting();
+            docker.resize(300, 260);
+            docker.show();
+            auto *chooser = docker.findChild<KisPresetChooser *>();
+            QVERIFY(chooser);
+            auto *items = chooser->itemChooser();
+            auto *view = items->itemView();
+            auto *combo = items->findChild<QComboBox *>("PresetGrouping");
+            QVERIFY(combo);
+            const int initial = combo->currentIndex();
+            combo->setCurrentIndex(combo->findData(grouping));
+            auto *bar = view->verticalScrollBar();
+            QTRY_VERIFY(bar->maximum() > 0);
+            QTest::qWait(100);
+            bar->setValue(bar->maximum());
+            QTest::qWait(100);
+            const int bottom = bar->value();
+
+            // the last visible item
+            auto *model = view->model();
+            QModelIndex target;
+            for (int row = model->rowCount() - 1; row >= 0; --row) {
+                const QModelIndex index = model->index(row, 0);
+                if (view->viewport()->rect().contains(view->visualRect(index).center())) {
+                    target = index;
+                    break;
+                }
+            }
+            QVERIFY(target.isValid());
+            QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, view->visualRect(target).center());
+            KisPaintOpPresetSP preset = model->data(target, Qt::UserRole + KisAbstractResourceModel::Id).isValid()
+                ? items->tagFilterModel()->resourceForIndex(target).dynamicCast<KisPaintOpPreset>()
+                : KisPaintOpPresetSP();
+            if (preset) {
+                // the application then sets the selected preset back
+                docker.canvasResourceChanged(preset);
+            }
+            QTest::qWait(300);
+            qInfo() << "grouping" << grouping << "bottom" << bottom << "after" << bar->value() << "max"
+                    << bar->maximum();
+            QCOMPARE(bar->value(), bottom);
+            combo->setCurrentIndex(initial);
+        }
+    }
     void testResponsiveDockerLayout()
     {
         // Reproduce the real docker's initialization order, including entering

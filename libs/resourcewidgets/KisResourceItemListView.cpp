@@ -238,6 +238,9 @@ void KisResourceItemListView::setGrouping(const GroupFunction &groupOf)
 
 void KisResourceItemListView::doItemsLayout()
 {
+    // The plain layout below sets a scroll range without the group headers,
+    // which clips the scroll position; the grouped layout restores it
+    const int scrollPosition = verticalScrollBar()->value();
     QListView::doItemsLayout();
     m_d->groupHeaders.clear();
     if (!m_d->groupOf || m_d->viewMode != ListViewMode::IconGrid || viewMode() != IconMode || !model()
@@ -293,6 +296,7 @@ void KisResourceItemListView::doItemsLayout()
         y += ((group.rows.size() + columns - 1) / columns) * cell.height() + 4;
     }
     updateGeometries();
+    verticalScrollBar()->setValue(scrollPosition);
     viewport()->update();
 }
 
