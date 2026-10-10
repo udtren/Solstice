@@ -608,3 +608,9 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   can be tested under a throwaway HKCU key; only `Software\Classes` is
   redirected for the 32-bit view.
 - User manual check OK on 2026-10-10.
+
+## 2026-10-10 ingest: version 0.2.0-alpha
+
+- Solstice version raised to `0.2.0-alpha` (MINOR, a milestone) at the
+  user's request before a trial build; the Krita compatibility version is
+  unchanged ([versioning.md](../versioning.md), "History").

@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.1.0-alpha` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.2.0-alpha` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -69,6 +69,13 @@ Edit only the `SOLSTICE_VERSION_*` values in the top-level `CMakeLists.txt`:
 Do not change `KRITA_VERSION_STRING` unless the compatibility consequences
 above are intended. The Windows file version is numeric, so the label only
 appears in the version strings.
+
+## History
+
+| Version | Date | Reason |
+| --- | --- | --- |
+| `0.1.0-alpha` | 2026-10-07 | First Solstice version. |
+| `0.2.0-alpha` | 2026-10-10 | Milestone (user request): GPU brush by default, masking brush on the GPU, ABR import improvements, Solstice icons and splash, Explorer thumbnails. |
 
 ## Checks
 
