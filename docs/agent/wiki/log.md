@@ -417,3 +417,22 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `image->waitForDone()` while a stroke is open (it waits forever).
 - Tests comparing redraws of smudge strokes must compare premultiplied
   images; the color under alpha 0 varies with the random seed.
+
+## 2026-10-10 ingest: brush stroke layer, exact redraws and brush tips in .kra
+
+- `brush-stroke-layer-plan.md`: the strokes' brush tips and textures are
+  saved with the strokes (the recorded preset's resources snapshot, written
+  with `saveToDevice()`, loaded through `KisResourceLoaderRegistry`; ABR tips
+  cannot be saved). Two causes made live strokes differ from their redraw:
+  Pixel Brush dabs rendered on several threads draw random numbers (image
+  pipes with `sel0:random`) in thread order, and the brush tool starts the
+  dab spacing from the last hover position. Recorded strokes and redraws now
+  render dabs sequentially (`setSequentialDabRendering()`), and the start of
+  each copy's `KisDistanceInformation` is recorded (format version 2).
+- Lessons: a redraw that differs only at the stroke's outline points to dab
+  placement (spacing start), not color; to tell a live-only difference from
+  a replay one, feed the recorded jobs through a live recording stroke in a
+  test and compare both ways; a random-choice pipe brush makes the default
+  multithreaded dab rendering nondeterministic, so exact replay needs
+  sequential dabs. `FreehandStrokeTest` has four failures that predate this
+  work (textured 17, Mix dull, two LOD strokes).

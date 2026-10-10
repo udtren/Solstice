@@ -13,6 +13,7 @@
 #include <KoCanvasResourceProvider.h>
 #include <kis_command_utils.h>
 #include <kis_debug.h>
+#include <kis_distance_information.h>
 #include <kis_icon_utils.h>
 #include <kis_image.h>
 #include <kis_paint_device.h>
@@ -85,6 +86,13 @@ qreal lengthScale(const QTransform &transform)
     return qSqrt(qAbs(transform.determinant()));
 }
 
+/// A direction (radians) after @p transform
+qreal mappedAngle(const QTransform &transform, qreal angle)
+{
+    const QPointF direction = transform.map(QPointF(qCos(angle), qSin(angle))) - transform.map(QPointF());
+    return qAtan2(direction.y(), direction.x());
+}
+
 void drawStroke(KisImageSP image,
                 KisPaintLayerSP layer,
                 const KisRecordedBrushStroke &stroke,
@@ -133,13 +141,27 @@ void drawStroke(KisImageSP image,
     resources->setFGColorOverride(stroke.fgColor);
     resources->setBGColorOverride(stroke.bgColor);
 
+    // each copy's dab spacing starts as it did when the stroke was drawn
     QVector<KisFreehandStrokeInfo *> strokeInfos;
     for (int i = 0; i < qMax(1, stroke.strokeInfoCount); i++) {
-        strokeInfos << new KisFreehandStrokeInfo();
+        const KisRecordedBrushStroke::Start start =
+            i < stroke.starts.size() ? stroke.starts[i] : KisRecordedBrushStroke::Start();
+        if (start.hasLastDab) {
+            strokeInfos << new KisFreehandStrokeInfo(KisDistanceInformation(map(start.lastPosition),
+                                                                            mappedAngle(transform, start.lastAngle),
+                                                                            start.spacingUpdateInterval,
+                                                                            start.timingUpdateInterval,
+                                                                            start.dabSeqNo));
+        } else {
+            strokeInfos << new KisFreehandStrokeInfo(
+                KisDistanceInformation(start.spacingUpdateInterval, start.timingUpdateInterval, start.dabSeqNo));
+        }
     }
     FreehandStrokeStrategy *strategy =
         new FreehandStrokeStrategy(resources, strokeInfos, kundo2_noi18n("redraw brush stroke"));
     strategy->setPreviewRandomSeed(stroke.seed);
+    // as the stroke was drawn: its dabs one after another
+    strategy->setSequentialDabRendering(true);
     KisStrokeId id = image->startStroke(strategy);
 
     for (const KisRecordedBrushStroke::Job &job : stroke.jobs) {
@@ -292,6 +314,12 @@ KisBrushStrokeLayer::transformedStrokes(const QVector<KisRecordedBrushStrokeSP> 
             job.pi2.setPos(map(job.pi2.pos()));
             job.control1 = map(job.control1);
             job.control2 = map(job.control2);
+        }
+        for (KisRecordedBrushStroke::Start &start : mapped->starts) {
+            if (start.hasLastDab) {
+                start.lastPosition = map(start.lastPosition);
+                start.lastAngle = mappedAngle(transform, start.lastAngle);
+            }
         }
         mapped->deviceOffset = deviceOffset;
 

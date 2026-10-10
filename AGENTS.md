@@ -133,7 +133,9 @@ Read these before adding or updating any feature:
   stage 1 done; stage 2a recording done and manually checked 2026-10-09;
   stage 2b redraw on image/layer scaling done and manually checked 2026-10-09;
   stage 2c saving the strokes in .kra done and manually checked 2026-10-09;
-  redraw with the Transform Tool done and manually checked 2026-10-10):
+  redraw with the Transform Tool done and manually checked 2026-10-10;
+  brush tips saved in .kra, sequential dabs and recorded stroke starts for
+  exact redraws done and manually checked 2026-10-10):
   `docs/agent/brush-stroke-layer-plan.md`
 - Removal of the right-click Popup Palette and the On-Canvas Brush Editor
   (what was kept and why): `docs/agent/popup-palette-removal.md`

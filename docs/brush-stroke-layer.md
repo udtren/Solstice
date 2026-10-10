@@ -50,12 +50,25 @@ be enlarged sharply. Original Krita opens the layer as a normal paint layer
 with the same pixels; saving the file again from Krita drops the remembered
 strokes.
 
-The file stores each stroke's brush settings, colors, pattern and gradient,
-but not the brush tip images. On a computer without the brush tip that a
-stroke used, the layer keeps its pixels and enlarges like a paint layer.
+The file stores each stroke's brush settings and colors, and the brush tip
+images, textures, patterns and gradients the strokes use, so the file
+enlarges sharply on a computer that does not have those brushes installed.
+Brush tips imported from Photoshop ABR files cannot be stored; strokes
+drawn with them are drawn again only where that brush is installed, and
+otherwise the layer keeps its pixels and enlarges like a paint layer.
 Other formats (PSD, ORA, PNG and so on) store the pixels only.
 
 ## Current limitations
+
+- Strokes on the layer render their dabs one after another, not on several
+  threads, so that each stroke can be drawn again exactly. Very large or
+  complex brushes may feel slower on this layer than on a paint layer.
+- Strokes drawn with earlier Solstice builds (before 2026-10-10) may not be
+  drawn again exactly, for example strokes of brushes that choose their
+  images at random or whose spacing depends on pressure; such a layer
+  enlarges like a paint layer. Strokes drawn now are drawn again. Files with
+  strokes saved now cannot be read by earlier builds, which open the layer
+  with its pixels only.
 
 - Filters and other non-brush edits change the pixels but are not
   remembered.

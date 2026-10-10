@@ -21,6 +21,7 @@ class KisFreehandStrokeInfo;
 class KisMaskedFreehandStrokePainter;
 class KisMaskingBrushRenderer;
 class KisRunnableStrokeJobData;
+class KisRunnableStrokeJobsInterface;
 class KisUndoStore;
 
 class KRITAUI_EXPORT KisPainterBasedStrokeStrategy : public KisRunnableBasedStrokeStrategy
@@ -44,6 +45,15 @@ public:
 
     void suspendStrokeCallback() override;
     void resumeStrokeCallback() override;
+
+    /**
+     * Solstice: the paint ops render their dabs one after another instead of
+     * on several threads, so that the stroke's pixels do not depend on the
+     * threads' timing and the same stroke can be drawn again exactly (the
+     * brush stroke layer, docs/agent/brush-stroke-layer-plan.md). Call it
+     * before the stroke starts.
+     */
+    void setSequentialDabRendering(bool value);
 
 protected:
     KisNodeSP targetNode() const;
@@ -134,6 +144,8 @@ private:
 
     std::unique_ptr<KUndo2Command> m_autokeyCommand;
     std::unique_ptr<KUndo2Command> m_additionalUndoCommand;
+    bool m_sequentialDabRendering{false};
+    QScopedPointer<KisRunnableStrokeJobsInterface> m_sequentialJobs;
 
     bool m_useMergeID {false};
 

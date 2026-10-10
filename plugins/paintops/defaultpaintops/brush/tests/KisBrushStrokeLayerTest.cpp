@@ -16,11 +16,13 @@
 #include <KisDocument.h>
 #include <KisGlobalResourcesInterface.h>
 #include <KisPart.h>
+#include <KisResourceModel.h>
 #include <KoCanvasResourceProvider.h>
 #include <KoColorSpaceRegistry.h>
 #include <KoCompositeOpRegistry.h>
 #include <brushengine/kis_paintop_preset.h>
 #include <brushengine/kis_paintop_settings.h>
+#include <kis_distance_information.h>
 #include <kis_filter_strategy.h>
 #include <kis_image.h>
 #include <kis_layer_utils.h>
@@ -50,6 +52,9 @@ private Q_SLOTS:
     void testKraRoundTrip();
     void testSmudgeOverStroke();
     void testTransparentColorsIgnored();
+    void testBrushTipsSaved();
+    void testRandomizedBrushesRedraw();
+    void testStrokeStartRecorded();
 };
 
 namespace
@@ -66,7 +71,11 @@ KisPaintOpPresetSP loadPreset(const QString &fileName)
 
 /// A stroke as the brush tool sends it: a point, lines with rising and
 /// falling pressure, and a curve
-void paintStroke(KisImageSP image, KisNodeSP node, KisPaintOpPresetSP preset, const KoColor &color)
+void paintStroke(KisImageSP image,
+                 KisNodeSP node,
+                 KisPaintOpPresetSP preset,
+                 const KoColor &color,
+                 const KisDistanceInformation *start = nullptr)
 {
     KoCanvasResourceProvider provider;
     provider.setResource(KoCanvasResource::ForegroundColor, QVariant::fromValue(color));
@@ -91,7 +100,9 @@ void paintStroke(KisImageSP image, KisNodeSP node, KisPaintOpPresetSP preset, co
     resources->setFGColorOverride(color);
 
     FreehandStrokeStrategy *stroke =
-        new FreehandStrokeStrategy(resources, new KisFreehandStrokeInfo(), kundo2_noi18n("test stroke"));
+        new FreehandStrokeStrategy(resources,
+                                   start ? new KisFreehandStrokeInfo(*start) : new KisFreehandStrokeInfo(),
+                                   kundo2_noi18n("test stroke"));
     KisStrokeId id = image->startStroke(stroke);
 
     KisPaintInformation previous(QPointF(20, 50), 0.2);
@@ -460,6 +471,153 @@ void KisBrushStrokeLayerTest::testTransparentColorsIgnored()
 
     scaleImage4x(image);
     QCOMPARE(layer->strokes().first()->jobs.first().pi1.pos(), firstPoint * 4);
+}
+
+/// The brush tip images of the strokes' presets are saved with the strokes,
+/// and the loaded strokes draw with the saved copies, so a file redraws
+/// where the brush tips are not installed
+void KisBrushStrokeLayerTest::testBrushTipsSaved()
+{
+    // a Pixel Brush preset with an image brush tip
+    KisPaintOpPresetSP brush;
+    KisResourceModel model(ResourceType::PaintOpPresets);
+    for (int i = 0; i < model.rowCount() && !brush; i++) {
+        KisPaintOpPresetSP preset = model.resourceForIndex(model.index(i, 0)).dynamicCast<KisPaintOpPreset>();
+        if (preset && preset->paintOp().id() == "paintbrush") {
+            const QString definition = preset->settings()->getString("brush_definition");
+            if (definition.contains("gbr_brush") || definition.contains("png_brush")) {
+                brush = preset;
+            }
+        }
+    }
+    QVERIFY(brush);
+    qInfo() << "brush with an image tip:" << brush->name();
+
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisImageSP image = new KisImage(new KisSurrogateUndoStore(), imageBounds.width(), imageBounds.height(), cs, "tips");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    paintStroke(image, layer, brush, KoColor(Qt::black, cs));
+
+    QBuffer buffer;
+    buffer.open(QBuffer::WriteOnly);
+    QVERIFY(KisBrushStrokeLayer::saveStrokes(layer->strokes(), &buffer));
+    buffer.close();
+    buffer.open(QBuffer::ReadOnly);
+    QVector<KisRecordedBrushStrokeSP> loaded;
+    QVERIFY(KisBrushStrokeLayer::loadStrokes(&buffer, &loaded));
+    QCOMPARE(loaded.size(), 1);
+
+    // the loaded preset's brush tip is the saved copy, not the installed one
+    const KisPaintOpPresetSP preset = loaded.first()->preset;
+    int tips = 0;
+    for (const KoResourceLoadResult &link : preset->linkedResources(preset->resourcesInterface())) {
+        KoResourceSP tip = link.resource();
+        QVERIFY(tip);
+        if (tip->resourceType().first != ResourceType::Brushes) {
+            continue;
+        }
+        tips++;
+        KoResourceSP installed = KisGlobalResourcesInterface::instance()
+                                     ->source(ResourceType::Brushes)
+                                     .bestMatch(tip->md5Sum(), tip->filename(), tip->name());
+        QVERIFY(installed);
+        QVERIFY(tip.data() != installed.data());
+        QCOMPARE(tip->md5Sum(), installed->md5Sum());
+    }
+    QVERIFY(tips > 0);
+
+    // and draws the same pixels
+    QCOMPARE(toImage(KisBrushStrokeLayer::renderStrokes(loaded, cs, imageBounds, QPoint()))
+                 .convertToFormat(QImage::Format_ARGB32_Premultiplied),
+             toImage(layer->paintDevice()).convertToFormat(QImage::Format_ARGB32_Premultiplied));
+}
+
+/// Brushes whose dabs would differ with the timing of the threads that
+/// render them (an image pipe tip or masking brush choosing its images at
+/// random, textures) still draw the same pixels again: a recorded stroke and
+/// its redraw render their dabs one after another
+/// (KisPainterBasedStrokeStrategy::setSequentialDabRendering())
+void KisBrushStrokeLayerTest::testRandomizedBrushesRedraw()
+{
+    KisResourceModel model(ResourceType::PaintOpPresets);
+    int tried = 0;
+    int pipes = 0;
+    for (int i = 0; i < model.rowCount() && tried < 16; i++) {
+        KisPaintOpPresetSP preset = model.resourceForIndex(model.index(i, 0)).dynamicCast<KisPaintOpPreset>();
+        if (!preset || preset->paintOp().id() != "paintbrush") {
+            continue;
+        }
+        const KisPaintOpSettingsSP settings = preset->settings();
+        const bool pipe = settings->getString("brush_definition").contains(".gih")
+            || (settings->getBool("MaskingBrush/Enabled")
+                && settings->getString("MaskingBrush/Preset/brush_definition").contains(".gih"));
+        if (!pipe && !settings->getBool("Texture/Pattern/Enabled")) {
+            continue;
+        }
+        tried++;
+        pipes += pipe;
+
+        const KoColorSpace *cs = KoColorSpaceRegistry::instance()->colorSpace("RGBA", "F32", QString());
+        KisImageSP image =
+            new KisImage(new KisSurrogateUndoStore(), imageBounds.width(), imageBounds.height(), cs, "random");
+        KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+        image->addNode(layer, image->root());
+        paintStroke(image, layer, preset, KoColor(Qt::black, cs));
+        paintStroke(image, layer, preset, KoColor(Qt::red, cs));
+
+        const QImage live = toImage(layer->paintDevice()).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+        const QImage redraw = toImage(KisBrushStrokeLayer::renderStrokes(layer->strokes(), cs, imageBounds, QPoint()))
+                                  .convertToFormat(QImage::Format_ARGB32_Premultiplied);
+        QVERIFY2(live == redraw, qPrintable(preset->name()));
+    }
+    qInfo() << "presets checked:" << tried << "with image pipes:" << pipes;
+    QVERIFY(tried > 0);
+}
+
+/// The brush tool starts a stroke's dab spacing from the cursor's last
+/// hover position and direction (KisToolFreehandHelper); that start places
+/// every dab, so it is recorded and drawn again
+void KisBrushStrokeLayerTest::testStrokeStartRecorded()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisImageSP image =
+        new KisImage(new KisSurrogateUndoStore(), imageBounds.width(), imageBounds.height(), cs, "start");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    const KisDistanceInformation hover(QPointF(16.3, 52.7), 0.4, 30, LONG_TIME, 0);
+    paintStroke(image, layer, loadPreset(QStringLiteral("c)_Pencil-2.kpp")), KoColor(Qt::black, cs), &hover);
+
+    QCOMPARE(layer->strokes().size(), 1);
+    const KisRecordedBrushStroke &stroke = *layer->strokes().first();
+    QCOMPARE(stroke.starts.size(), 1);
+    QVERIFY(stroke.starts.first().hasLastDab);
+    QCOMPARE(stroke.starts.first().lastPosition, QPointF(16.3, 52.7));
+    QCOMPARE(stroke.starts.first().spacingUpdateInterval, 30.0);
+
+    const QImage live = toImage(layer->paintDevice()).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    QCOMPARE(toImage(KisBrushStrokeLayer::renderStrokes(layer->strokes(), cs, imageBounds, QPoint()))
+                 .convertToFormat(QImage::Format_ARGB32_Premultiplied),
+             live);
+
+    // without its start, the stroke's dabs land elsewhere
+    QSharedPointer<KisRecordedBrushStroke> withoutStart(new KisRecordedBrushStroke(stroke));
+    withoutStart->starts.clear();
+    QVERIFY(toImage(KisBrushStrokeLayer::renderStrokes({withoutStart}, cs, imageBounds, QPoint()))
+                .convertToFormat(QImage::Format_ARGB32_Premultiplied)
+            != live);
+
+    // and it is saved
+    QBuffer buffer;
+    buffer.open(QBuffer::WriteOnly);
+    QVERIFY(KisBrushStrokeLayer::saveStrokes(layer->strokes(), &buffer));
+    buffer.close();
+    buffer.open(QBuffer::ReadOnly);
+    QVector<KisRecordedBrushStrokeSP> loaded;
+    QVERIFY(KisBrushStrokeLayer::loadStrokes(&buffer, &loaded));
+    QCOMPARE(loaded.first()->starts.size(), 1);
+    QCOMPARE(loaded.first()->starts.first().lastPosition, QPointF(16.3, 52.7));
+    QCOMPARE(loaded.first()->starts.first().lastAngle, 0.4);
 }
 
 SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(KisBrushStrokeLayerTest, QStringLiteral("Krita_4_Default_Resources.bundle"))

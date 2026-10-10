@@ -89,7 +89,7 @@ FreehandStrokeStrategy::FreehandStrokeStrategy(KisResourcesSnapshotSP resources,
       m_d(new Private(resources))
 {
     init(flags);
-    initRecording(1);
+    initRecording({strokeInfo});
 }
 
 FreehandStrokeStrategy::FreehandStrokeStrategy(KisResourcesSnapshotSP resources,
@@ -101,7 +101,7 @@ FreehandStrokeStrategy::FreehandStrokeStrategy(KisResourcesSnapshotSP resources,
       m_d(new Private(resources))
 {
     init(flags);
-    initRecording(strokeInfos.size());
+    initRecording(strokeInfos);
 }
 
 FreehandStrokeStrategy::FreehandStrokeStrategy(const FreehandStrokeStrategy &rhs, int levelOfDetail)
@@ -151,7 +151,7 @@ void FreehandStrokeStrategy::setPreviewRandomSeed(int seed)
     }
 }
 
-void FreehandStrokeStrategy::initRecording(int strokeInfoCount)
+void FreehandStrokeStrategy::initRecording(const QVector<KisFreehandStrokeInfo *> &strokeInfos)
 {
     KisResourcesSnapshotSP resources = m_d->resources;
     KisBrushStrokeLayer *layer = dynamic_cast<KisBrushStrokeLayer *>(resources->currentNode().data());
@@ -161,6 +161,8 @@ void FreehandStrokeStrategy::initRecording(int strokeInfoCount)
 
     m_d->recordingLayer = layer;
     m_d->recording.reset(new KisRecordedBrushStroke());
+    // dabs rendered on several threads may differ with the threads' timing
+    setSequentialDabRendering(true);
     KisRecordedBrushStroke &stroke = *m_d->recording;
     stroke.preset = resources->currentPaintOpPreset()->clone().dynamicCast<KisPaintOpPreset>();
     stroke.fgColor = resources->currentFgColor();
@@ -170,7 +172,20 @@ void FreehandStrokeStrategy::initRecording(int strokeInfoCount)
     stroke.effectiveZoom = resources->effectiveZoom();
     stroke.pattern = resources->currentPattern();
     stroke.gradient = resources->currentGradient();
-    stroke.strokeInfoCount = strokeInfoCount;
+    stroke.strokeInfoCount = strokeInfos.size();
+    for (KisFreehandStrokeInfo *info : strokeInfos) {
+        const KisDistanceInformation *distance = info->dragDistance;
+        KisRecordedBrushStroke::Start start;
+        start.hasLastDab = distance->hasLastDabInformation();
+        if (start.hasLastDab) {
+            start.lastPosition = distance->lastPosition();
+            start.lastAngle = distance->lastDrawingAngle();
+        }
+        start.spacingUpdateInterval = distance->getSpacingInterval();
+        start.timingUpdateInterval = distance->getTimingUpdateInterval();
+        start.dabSeqNo = distance->currentDabSeqNo();
+        stroke.starts << start;
+    }
     stroke.deviceOffset = QPoint(layer->paintDevice()->x(), layer->paintDevice()->y());
 
     // a known seed, so that the stroke can be drawn again the same way

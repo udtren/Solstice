@@ -16,6 +16,7 @@
 #include <KoColor.h>
 #include <kis_paint_information.h>
 #include <kis_paint_layer.h>
+#include <kis_timing_information.h>
 #include <kis_types.h>
 #include <kundo2command.h>
 #include <resources/KoAbstractGradient.h>
@@ -54,6 +55,19 @@ struct KRITAUI_EXPORT KisRecordedBrushStroke {
     int strokeInfoCount = 1;
     /// the offset of the layer's paint device when the stroke was drawn
     QPoint deviceOffset;
+
+    /// Where the dab spacing of each mirrored copy started: the brush tool
+    /// starts it from the cursor's last hover position and direction
+    /// (KisToolFreehandHelper), which places every dab of the stroke
+    struct Start {
+        bool hasLastDab = false;
+        QPointF lastPosition;
+        qreal lastAngle = 0.0;
+        qreal spacingUpdateInterval = LONG_TIME;
+        qreal timingUpdateInterval = LONG_TIME;
+        int dabSeqNo = 0;
+    };
+    QVector<Start> starts;
     QVector<Job> jobs;
 };
 

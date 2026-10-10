@@ -41,6 +41,47 @@
 #include <KisStrokeCompatibilityInfo.h>
 #include "KisAnimAutoKey.h"
 
+namespace
+{
+/**
+ * Solstice: passes the paint ops' jobs on with the concurrent ones made
+ * sequential (setSequentialDabRendering())
+ */
+class SequentialRunnableJobs : public KisRunnableStrokeJobsInterface
+{
+public:
+    SequentialRunnableJobs(KisRunnableStrokeJobsInterface *target)
+        : m_target(target)
+    {
+    }
+
+    void addRunnableJobs(const QVector<KisRunnableStrokeJobDataBase *> &list) override
+    {
+        QVector<KisRunnableStrokeJobDataBase *> jobs;
+        for (KisRunnableStrokeJobDataBase *job : list) {
+            if (job->sequentiality() != KisStrokeJobData::CONCURRENT) {
+                jobs << job;
+                continue;
+            }
+            // owned by the wrapper, so that a job dropped by cancelling
+            // the stroke is deleted too
+            QSharedPointer<KisRunnableStrokeJobDataBase> wrapped(job);
+            KisRunnableStrokeJobData *sequential = new KisRunnableStrokeJobData(
+                [wrapped]() {
+                    wrapped->run();
+                },
+                KisStrokeJobData::SEQUENTIAL,
+                job->exclusivity());
+            sequential->setLevelOfDetailOverride(job->levelOfDetailOverride());
+            jobs << sequential;
+        }
+        m_target->addRunnableJobs(jobs);
+    }
+
+private:
+    KisRunnableStrokeJobsInterface *m_target;
+};
+} // namespace
 
 KisPainterBasedStrokeStrategy::KisPainterBasedStrokeStrategy(const QLatin1String &id,
                                                              const KUndo2MagicString &name,
@@ -213,7 +254,11 @@ void KisPainterBasedStrokeStrategy::initPainters(KisPaintDeviceSP targetDevice,
         KisPainter *painter = info->painter;
 
         painter->begin(targetDevice, !hasIndirectPainting ? selection : nullptr);
-        painter->setRunnableStrokeJobsInterface(runnableJobsInterface());
+        if (m_sequentialDabRendering && !m_sequentialJobs) {
+            m_sequentialJobs.reset(new SequentialRunnableJobs(runnableJobsInterface()));
+        }
+        painter->setRunnableStrokeJobsInterface(m_sequentialDabRendering ? m_sequentialJobs.data()
+                                                                         : runnableJobsInterface());
         m_resources->setupPainter(painter);
 
         if(hasIndirectPainting) {
@@ -496,6 +541,11 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
 void KisPainterBasedStrokeStrategy::setAdditionalUndoCommand(KUndo2Command *command)
 {
     m_additionalUndoCommand.reset(command);
+}
+
+void KisPainterBasedStrokeStrategy::setSequentialDabRendering(bool value)
+{
+    m_sequentialDabRendering = value;
 }
 
 void KisPainterBasedStrokeStrategy::cancelStrokeCallback()
