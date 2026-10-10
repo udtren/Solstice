@@ -582,3 +582,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   make the GPU minimum update period counterproductive when dabs arrive
   slowly from CPU generation; masked strokes keep the adaptive period.
 - User manual check OK on 2026-10-10.
+
+## 2026-10-10 ingest: new splash artwork and README screenshot
+
+- The user replaced the splash master (`krita/pics/branding/source/
+  solstice-splash.png`, a linear-profile export of a float document). The
+  app splash `krita/data/splash/solstice-splash.png` was regenerated the same
+  way as before: converted to sRGB, composited over white, 8-bit RGB PNG at
+  full size (3146x1920); it is compiled into `krita.dll` through `splash.qrc`.
+- The README main image `docs/images/solstice-main-window.webp` is the user's
+  new screenshot, used as supplied.
