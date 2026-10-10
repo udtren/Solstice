@@ -592,3 +592,125 @@ KisAbrPresetConverter::Result KisAbrPresetConverter::convert(const QDomElement &
     }
     return result;
 }
+
+namespace
+{
+/// deeper folders are put in their parent at this depth
+const int MaxFolderDepth = 32;
+
+enum class HierarchyToken {
+    Preset,
+    Group,
+    GroupEnd
+};
+
+/// The hierarchy is a list of tokens: a folder (`Grup`, with its name in
+/// `Nm  `), the end of the innermost folder (`groupEnd`) and a preset
+/// (`preset`). The token is the descriptor's class or, for a plain
+/// descriptor, the key of its only child; an enumeration or text gives it
+/// as its value. Anything else counts as a preset.
+HierarchyToken hierarchyToken(const QDomElement &e)
+{
+    QStringList names;
+    names << e.attribute(QStringLiteral("classId")) << e.attribute(QStringLiteral("value"));
+    const QDomElement first = e.firstChildElement();
+    if (!first.isNull() && first.nextSiblingElement().isNull()) {
+        names << first.attribute(QStringLiteral("key"));
+    }
+    for (const QString &name : names) {
+        const QString token = name.trimmed().toLower();
+        if (token == QStringLiteral("groupend")) {
+            return HierarchyToken::GroupEnd;
+        }
+        if (token == QStringLiteral("grup") || token == QStringLiteral("group")) {
+            return HierarchyToken::Group;
+        }
+    }
+    return HierarchyToken::Preset;
+}
+
+QString folderName(const QDomElement &group)
+{
+    const QDomNodeList nodes = group.elementsByTagName(QStringLiteral("node"));
+    for (int i = 0; i < nodes.size(); i++) {
+        const QDomElement e = nodes.at(i).toElement();
+        if (e.attribute(QStringLiteral("key")) == QStringLiteral("Nm  ")
+            && e.attribute(QStringLiteral("type")) == QStringLiteral("Text")) {
+            return e.attribute(QStringLiteral("value")).trimmed();
+        }
+    }
+    return QString();
+}
+
+struct HierarchyWalk {
+    QStringList path;
+    /// folders past MaxFolderDepth, which are not in the path
+    int hiddenDepth = 0;
+    QVector<QStringList> folders;
+
+    void open(const QString &name)
+    {
+        if (path.size() < MaxFolderDepth) {
+            path << (name.isEmpty() ? QStringLiteral("?") : name);
+        } else {
+            hiddenDepth++;
+        }
+    }
+
+    void close()
+    {
+        // a stray end is ignored
+        if (hiddenDepth > 0) {
+            hiddenDepth--;
+        } else if (!path.isEmpty()) {
+            path.removeLast();
+        }
+    }
+
+    void walk(const QDomElement &list)
+    {
+        for (QDomElement e = list.firstChildElement(); !e.isNull(); e = e.nextSiblingElement()) {
+            switch (hierarchyToken(e)) {
+            case HierarchyToken::GroupEnd:
+                close();
+                break;
+            case HierarchyToken::Group: {
+                open(folderName(e));
+                // a folder that holds its contents as a list closes itself
+                QDomElement contents;
+                for (QDomElement c = e.firstChildElement(); !c.isNull(); c = c.nextSiblingElement()) {
+                    if (c.attribute(QStringLiteral("type")) == QStringLiteral("List")) {
+                        contents = c;
+                        break;
+                    }
+                }
+                if (!contents.isNull()) {
+                    walk(contents);
+                    close();
+                }
+                break;
+            }
+            case HierarchyToken::Preset:
+                folders << path;
+                break;
+            }
+        }
+    }
+};
+} // namespace
+
+QVector<QStringList> KisAbrPresetConverter::presetFolders(const QDomElement &root)
+{
+    const QDomNodeList nodes = root.elementsByTagName(QStringLiteral("node"));
+    for (int i = 0; i < nodes.size(); i++) {
+        const QDomElement e = nodes.at(i).toElement();
+        if (e.attribute(QStringLiteral("key")) == QStringLiteral("hierarchy")
+            && e.attribute(QStringLiteral("type")) == QStringLiteral("List")) {
+            // folders still open at the end close themselves
+            HierarchyWalk walk;
+            walk.walk(e);
+            return walk.folders;
+        }
+    }
+    return {};
+}

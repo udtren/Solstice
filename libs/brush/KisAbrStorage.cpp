@@ -30,20 +30,45 @@ public:
         if (m_resourceType != ResourceType::Brushes && m_resourceType != ResourceType::Patterns
             && m_resourceType != ResourceType::PaintOpPresets)
             return false;
-        return !m_taggingDone;
+        if (!m_taggingDone) {
+            return true;
+        }
+        return m_folder + 1 < folderTags().size();
     }
 
-    void next() override { m_taggingDone = true; }
+    void next() override
+    {
+        if (!m_taggingDone) {
+            m_taggingDone = true;
+        } else {
+            m_folder++;
+        }
+    }
 
     KisTagSP tag() const override
     {
+        const QString fileName = QFileInfo(m_location).fileName();
         KisTagSP abrTag(new KisTag());
-        abrTag->setUrl(QFileInfo(m_location).fileName());
-        abrTag->setName(QFileInfo(m_location).fileName());
-        abrTag->setComment(QFileInfo(m_location).fileName());
-        abrTag->setFilename(QFileInfo(m_location).fileName());
         abrTag->setResourceType(m_resourceType);
         abrTag->setValid(true);
+        if (m_folder >= 0) {
+            // Solstice: a folder of Photoshop's Brushes panel, with the
+            // presets in it and in its subfolders
+            // (docs/agent/abr-import-plan.md, phase 5)
+            const auto folder = folderTags().at(m_folder);
+            const QString name = QFileInfo(m_location).completeBaseName() + QStringLiteral(" / ")
+                + folder.first.join(QStringLiteral(" / "));
+            abrTag->setUrl(fileName + QLatin1Char('/') + folder.first.join(QLatin1Char('/')));
+            abrTag->setName(name);
+            abrTag->setComment(name);
+            abrTag->setFilename(fileName);
+            abrTag->setDefaultResources(folder.second);
+            return abrTag;
+        }
+        abrTag->setUrl(fileName);
+        abrTag->setName(fileName);
+        abrTag->setComment(fileName);
+        abrTag->setFilename(fileName);
         QStringList brushes;
         if (m_resourceType == ResourceType::Patterns) {
             // Solstice: the file's patterns (docs/agent/abr-import-plan.md)
@@ -61,8 +86,33 @@ public:
     }
 
 private:
+    /// the folders of the presets, each with the presets in it or below
+    QVector<QPair<QStringList, QStringList>> folderTags() const
+    {
+        if (m_resourceType != ResourceType::PaintOpPresets) {
+            return {};
+        }
+        if (!m_folderTagsDone) {
+            QMap<QStringList, QStringList> folders;
+            const QMap<QString, QStringList> presetFolders = m_brushCollection->presetFolders();
+            for (auto it = presetFolders.constBegin(); it != presetFolders.constEnd(); ++it) {
+                for (int depth = 1; depth <= it.value().size(); depth++) {
+                    folders[it.value().mid(0, depth)] << it.key();
+                }
+            }
+            for (auto it = folders.constBegin(); it != folders.constEnd(); ++it) {
+                m_folderTags << qMakePair(it.key(), it.value());
+            }
+            m_folderTagsDone = true;
+        }
+        return m_folderTags;
+    }
 
     bool m_taggingDone {false};
+    /// the folder tag, after the file's own tag
+    int m_folder {-1};
+    mutable bool m_folderTagsDone {false};
+    mutable QVector<QPair<QStringList, QStringList>> m_folderTags;
     KisAbrBrushCollectionSP m_brushCollection;
     QString m_location;
     QString m_resourceType;
@@ -231,6 +281,11 @@ QSharedPointer<KisResourceStorage::ResourceIterator> KisAbrStorage::resources(co
 
 QSharedPointer<KisResourceStorage::TagIterator> KisAbrStorage::tags(const QString &resourceType)
 {
+    // Solstice: the tags come from the file's contents (the presets and
+    // their folders), so it has to be read
+    if (!m_brushCollection->isLoaded()) {
+        m_brushCollection->load();
+    }
     return QSharedPointer<KisResourceStorage::TagIterator>(new AbrTagIterator(m_brushCollection, location(), resourceType));
 }
 

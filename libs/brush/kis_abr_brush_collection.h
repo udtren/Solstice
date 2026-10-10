@@ -10,7 +10,9 @@
 
 #include <QImage>
 #include <QDataStream>
+#include <QMap>
 #include <QString>
+#include <QStringList>
 #include <kis_debug.h>
 
 #include <kis_scaling_size_brush.h>
@@ -103,6 +105,13 @@ public:
         return m_presets->value(name);
     }
 
+    /// Solstice: the folders of the file's presets in Photoshop's Brushes
+    /// panel, by preset file name; presets at the top level are left out
+    QMap<QString, QStringList> presetFolders() const
+    {
+        return m_presetFolders;
+    }
+
     QString filename() const {
         return m_filename;
     }
@@ -120,6 +129,7 @@ private:
     QSharedPointer<QMap<QString, KisAbrBrushSP>> m_abrBrushes;
     QSharedPointer<QMap<QString, KoPatternSP>> m_patterns;
     QSharedPointer<QMap<QString, KisPaintOpPresetSP>> m_presets;
+    QMap<QString, QStringList> m_presetFolders;
 };
 
 typedef QSharedPointer<KisAbrBrushCollection> KisAbrBrushCollectionSP;

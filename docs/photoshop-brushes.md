@@ -2,7 +2,7 @@
 
 Solstice reads Photoshop brush files (`.abr`) added in **Settings > Manage
 Resource Libraries > Import**. Each `.abr` file appears there as a library of
-its own. Improved ABR support is being added in stages.
+its own.
 
 ## What is read now
 
@@ -24,6 +24,11 @@ its own. Improved ABR support is being added in stages.
   scattering; texture (with the file's pattern and Photoshop's blend modes);
   the dual brush (as the masking brush); and the tool's opacity, flow and
   blend mode. They paint in Wash mode.
+- The folders of Photoshop's Brushes panel become tags of the presets,
+  named after the file and the folder (`Inking / Pens`). A folder's tag
+  also holds the presets of its subfolders. Every preset also carries the
+  file's own tag. Pick a tag in the Brush Presets docker's tag menu to
+  show one folder.
 - Strokes drawn with ABR tips on a [Brush Stroke Layer](brush-stroke-layer.md)
   save their tips in the `.kra` file.
 
@@ -33,7 +38,6 @@ its own. Improved ABR support is being added in stages.
   lists them for each file): the scatter count, flipping and flip jitter,
   color dynamics, wet edges, noise, brush pose, texture protection and
   smoothing.
-- Folders of presets: planned, as tags.
 - Computed (round) brushes of ABR versions 1 and 2.
 
 ## Known limitations

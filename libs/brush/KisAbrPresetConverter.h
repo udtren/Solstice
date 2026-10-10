@@ -50,6 +50,13 @@ public:
 
     /// @p root is the descriptor document's root element
     static Result convert(const QDomElement &root, const Sources &sources);
+
+    /// The folders of the presets, from the `phry` section's `hierarchy`
+    /// list (@p root is its descriptor document's root element): one entry
+    /// per preset, in the order of the `desc` section, with the names of the
+    /// folders it is in (empty at the top level). See phase 5 of
+    /// docs/agent/abr-import-plan.md.
+    static QVector<QStringList> presetFolders(const QDomElement &root);
 };
 
 #endif // KISABRPRESETCONVERTER_H

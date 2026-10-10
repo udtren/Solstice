@@ -3,11 +3,15 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+#include <QDataStream>
+#include <QDomDocument>
+#include <QTemporaryDir>
 #include <QTest>
 #include <QtMath>
 
 #include "KisBrushTestMain.h"
 
+#include <KisAbrPresetConverter.h>
 #include <KisAbrStorage.h>
 #include <KisAsynchronousStrokeUpdateHelper.h>
 #include <KisLocalStrokeResources.h>
@@ -38,6 +42,8 @@ private Q_SLOTS:
     void testPresetsFromBundledFile();
     void testPresetsPaint();
     void testReload();
+    void testFolders();
+    void testFolderForms();
 };
 
 namespace
@@ -205,6 +211,221 @@ void KisAbrPresetTest::testReload()
     QVERIFY(storage.loadVersionedResource(edited));
     QCOMPARE(edited->name(), name);
     QCOMPARE(edited->settings()->paintOpOpacity(), opacity);
+}
+
+namespace
+{
+/// writes Photoshop descriptor items, big-endian
+class DescriptorWriter
+{
+public:
+    DescriptorWriter()
+        : m_stream(&m_data, QIODevice::WriteOnly)
+    {
+        m_stream.setByteOrder(QDataStream::BigEndian);
+    }
+
+    void id(const QByteArray &id)
+    {
+        if (id.size() == 4) {
+            m_stream << quint32(0);
+        } else {
+            m_stream << quint32(id.size());
+        }
+        m_stream.writeRawData(id.constData(), id.size());
+    }
+
+    void unicode(const QString &text)
+    {
+        m_stream << quint32(text.size() + 1);
+        for (QChar c : text) {
+            m_stream << quint16(c.unicode());
+        }
+        m_stream << quint16(0);
+    }
+
+    /// a descriptor's name, class and number of items
+    void descriptor(const QByteArray &classId, int items)
+    {
+        unicode(QString());
+        id(classId);
+        m_stream << quint32(items);
+    }
+
+    void key(const QByteArray &key, const char *osType)
+    {
+        id(key);
+        m_stream.writeRawData(osType, 4);
+    }
+
+    void text(const QByteArray &key, const QString &value)
+    {
+        this->key(key, "TEXT");
+        unicode(value);
+    }
+
+    void raw(const char *data, int size)
+    {
+        m_stream.writeRawData(data, size);
+    }
+
+    void count(int n)
+    {
+        m_stream << quint32(n);
+    }
+
+    QByteArray data() const
+    {
+        return m_data;
+    }
+
+private:
+    QByteArray m_data;
+    QDataStream m_stream;
+};
+
+/// a `phry` section body: its version, then a descriptor with the
+/// `hierarchy` list of tokens; "+Name" opens a folder, "-" ends one, and
+/// "p" is a preset
+QByteArray hierarchySection(const QStringList &tokens)
+{
+    DescriptorWriter w;
+    w.count(16);
+    w.descriptor("null", 1);
+    w.key("hierarchy", "VlLs");
+    w.count(tokens.size());
+    for (const QString &token : tokens) {
+        w.raw("Objc", 4);
+        if (token.startsWith('+')) {
+            w.descriptor("Grup", 2);
+            w.text("Nm  ", token.mid(1));
+            w.text("zuid", QStringLiteral("id-") + token.mid(1));
+        } else if (token == QStringLiteral("-")) {
+            w.descriptor("groupEnd", 0);
+        } else {
+            w.descriptor("preset", 0);
+        }
+    }
+    QByteArray result;
+    QDataStream s(&result, QIODevice::WriteOnly);
+    s.setByteOrder(QDataStream::BigEndian);
+    const QByteArray body = w.data();
+    s.writeRawData("8BIMphry", 8);
+    s << quint32(body.size());
+    s.writeRawData(body.constData(), body.size());
+    while (result.size() % 4) {
+        result += '\0';
+    }
+    return result;
+}
+
+QStringList tagResources(KisAbrStorage &storage, const QString &url, QString *name)
+{
+    auto tags = storage.tags(ResourceType::PaintOpPresets);
+    while (tags->hasNext()) {
+        tags->next();
+        if (tags->tag()->url() == url) {
+            *name = tags->tag()->name();
+            QStringList resources = tags->tag()->defaultResources();
+            resources.sort();
+            return resources;
+        }
+    }
+    return {};
+}
+} // namespace
+
+/// Phase 5: the folders of Photoshop's Brushes panel (the `phry` section)
+/// become tags of the presets
+void KisAbrPresetTest::testFolders()
+{
+    QFile original(bundledFile());
+    QVERIFY(original.open(QIODevice::ReadOnly));
+    QByteArray data = original.readAll();
+    while (data.size() % 4) {
+        data += '\0';
+    }
+    // a stray end is ignored and the last folder is left open
+    data += hierarchySection({"p", "+Ink", "p", "p", "+Wet", "p", "-", "-", "p", "-", "+Open", "p"});
+
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("folders.abr"));
+    {
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(data);
+    }
+
+    KisAbrBrushCollection collection(path);
+    QVERIFY(collection.load());
+    for (int i = 1; i <= 6; i++) {
+        QVERIFY(collection.presetsMap()->contains(QStringLiteral("folders_preset_%1.kpp").arg(i)));
+    }
+    const auto folders = collection.presetFolders();
+    QCOMPARE(folders.size(), 4);
+    QCOMPARE(folders.value("folders_preset_2.kpp"), QStringList({"Ink"}));
+    QCOMPARE(folders.value("folders_preset_3.kpp"), QStringList({"Ink"}));
+    QCOMPARE(folders.value("folders_preset_4.kpp"), QStringList({"Ink", "Wet"}));
+    QCOMPARE(folders.value("folders_preset_6.kpp"), QStringList({"Open"}));
+
+    KisAbrStorage storage(path);
+    QString name;
+    QCOMPARE(tagResources(storage, "folders.abr/Ink", &name),
+             QStringList({"folders_preset_2.kpp", "folders_preset_3.kpp", "folders_preset_4.kpp"}));
+    QCOMPARE(name, QString("folders / Ink"));
+    QCOMPARE(tagResources(storage, "folders.abr/Ink/Wet", &name), QStringList({"folders_preset_4.kpp"}));
+    QCOMPARE(name, QString("folders / Ink / Wet"));
+    QCOMPARE(tagResources(storage, "folders.abr/Open", &name), QStringList({"folders_preset_6.kpp"}));
+    // the file's own tag still has all the presets
+    QCOMPARE(tagResources(storage, "folders.abr", &name).size(), collection.presetsMap()->size());
+
+    // without folders, only the file's tag
+    KisAbrStorage plain(bundledFile());
+    auto tags = plain.tags(ResourceType::PaintOpPresets);
+    int count = 0;
+    while (tags->hasNext()) {
+        tags->next();
+        count++;
+    }
+    QCOMPARE(count, 1);
+}
+
+/// The folder tokens as plain descriptors with one item, and a folder that
+/// holds its contents as a list
+void KisAbrPresetTest::testFolderForms()
+{
+    QDomDocument doc;
+    QVERIFY(doc.setContent(QStringLiteral(
+        "<asl><node type='Descriptor' classId='null'><node key='hierarchy' type='List'>"
+        "<node type='Descriptor' classId='null'><node key='Grup' type='Descriptor' classId='Grup'>"
+        "<node key='Nm  ' type='Text' value='Dry'/></node></node>"
+        "<node type='Descriptor' classId='null'><node key='preset' type='Descriptor' classId='null'/></node>"
+        "<node type='Descriptor' classId='null'><node key='groupEnd' type='Descriptor' classId='null'/></node>"
+        "<node type='Descriptor' classId='Grup'><node key='Nm  ' type='Text' value='Nested'/>"
+        "<node key='Kids' type='List'><node type='Descriptor' classId='preset'/></node></node>"
+        "<node type='Descriptor' classId='preset'/>"
+        "</node></node></asl>")));
+    const QVector<QStringList> folders = KisAbrPresetConverter::presetFolders(doc.documentElement());
+    QCOMPARE(folders.size(), 3);
+    QCOMPARE(folders[0], QStringList({"Dry"}));
+    QCOMPARE(folders[1], QStringList({"Nested"}));
+    QCOMPARE(folders[2], QStringList());
+
+    // deeper than 32 folders: the deeper ones are left out
+    QStringList deep;
+    for (int i = 0; i < 40; i++) {
+        deep << QStringLiteral(
+                    "<node type='Descriptor' classId='Grup'><node key='Nm  ' type='Text' value='%1'/></node>")
+                    .arg(i);
+    }
+    QDomDocument deepDoc;
+    QVERIFY(deepDoc.setContent(QStringLiteral("<asl><node key='hierarchy' type='List'>%1"
+                                              "<node type='Descriptor' classId='preset'/></node></asl>")
+                                   .arg(deep.join(QString()))));
+    const QVector<QStringList> deepFolders = KisAbrPresetConverter::presetFolders(deepDoc.documentElement());
+    QCOMPARE(deepFolders.size(), 1);
+    QCOMPARE(deepFolders[0].size(), 32);
 }
 
 SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(KisAbrPresetTest, QStringLiteral("Krita_4_Default_Resources.bundle"))

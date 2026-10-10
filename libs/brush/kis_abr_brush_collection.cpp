@@ -175,6 +175,7 @@ KisAbrBrushCollection::KisAbrBrushCollection(const KisAbrBrushCollection& rhs)
     m_abrBrushes.reset(new QMap<QString, KisAbrBrushSP>());
     m_patterns.reset(new QMap<QString, KoPatternSP>(*rhs.m_patterns));
     m_presets.reset(new QMap<QString, KisPaintOpPresetSP>(*rhs.m_presets));
+    m_presetFolders = rhs.m_presetFolders;
     for (auto it = rhs.m_abrBrushes->begin();
          it != rhs.m_abrBrushes->end();
          ++it) {
@@ -269,6 +270,21 @@ bool KisAbrBrushCollection::loadFromDevice(QIODevice *dev)
         for (auto it = converted.unsupported.constBegin(); it != converted.unsupported.constEnd(); ++it) {
             warnKrita << "ABR" << filename() << ":" << it.value() << "presets use" << it.key()
                       << ", which Solstice does not have";
+        }
+
+        // the folders of the Brushes panel (phase 5): the hierarchy lists
+        // the presets in the order of the descriptors; presets it does not
+        // list stay at the top level
+        m_presetFolders.clear();
+        const QDomDocument hierarchy = readDescriptors(contents.hierarchy);
+        if (!hierarchy.isNull()) {
+            const QVector<QStringList> folders = KisAbrPresetConverter::presetFolders(hierarchy.documentElement());
+            for (int i = 0; i < folders.size(); i++) {
+                const QString fileName = QStringLiteral("%1_preset_%2.kpp").arg(sources.baseName).arg(i + 1);
+                if (!folders[i].isEmpty() && m_presets->contains(fileName)) {
+                    m_presetFolders.insert(fileName, folders[i]);
+                }
+            }
         }
     }
 

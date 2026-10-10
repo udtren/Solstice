@@ -493,3 +493,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `loadVersionedResource()` for presets to be reloadable; and it must not set
   an md5 of its own on presets, because the stroke preview only renders when
   a reloaded preset's md5 equals the database's.
+
+## 2026-10-10 ingest: grouped Brush Presets scroll position
+
+- `brush-preset-grouping.md`: selecting a preset relayouts the list, and
+  Qt's plain `QListView::doItemsLayout()` sets a scroll range without the
+  group headers, clipping the position. The grouped layout saves the scroll
+  value first and restores it after its own geometry update. Lesson: a view
+  that adds rows to Qt's layout must restore anything Qt clamps in between.
+
+## 2026-10-10 ingest: ABR import, phase 5
+
+- `abr-import-plan.md`: the `phry` section's `hierarchy` token list
+  (`Grup` with `Nm  `, `preset`, `groupEnd`) becomes preset tags named
+  `<file> / <folder> / ...`; preset tokens map by order to the `desc`
+  presets. The format has no public specification and none of the local
+  files has folders, so the reader is lenient (class, single child key or
+  value names the token; nested lists close themselves; stray ends ignored;
+  depth capped at 32). Storage tags are re-added by `synchronizeDb()` on
+  every start, so already registered libraries gain new tags without a
+  re-import; `KisAbrStorage::tags()` must load the file first.
