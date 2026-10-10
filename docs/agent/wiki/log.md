@@ -614,3 +614,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Solstice version raised to `0.2.0-alpha` (MINOR, a milestone) at the
   user's request before a trial build; the Krita compatibility version is
   unchanged ([versioning.md](../versioning.md), "History").
+
+## 2026-10-10 ingest: resized application icon
+
+- The user resized the icon master (`krita/pics/branding/source/
+  solstice-icon-1024.png`); the application icons (Next and default, ICO,
+  scalable resource) and the `.kra`/`.krz` document icons were regenerated
+  the same way as before.
+- Pitfall: the document icon tool draws the "KRZ" label with system fonts;
+  run it without `QT_QPA_PLATFORM=offscreen`, which has no fonts and draws
+  empty boxes.
