@@ -47,6 +47,14 @@ public:
     void setTemporarySelection(KisSelectionSP selection);
 
     /**
+     * Solstice (GPU engine): the temporary target is painted on the CPU (a
+     * stroke with a masking brush), so a GPU Wash preview would upload it on
+     * every update. Reset by setTemporaryTarget().
+     */
+    void setTemporaryTargetPaintedOnCpu(bool value);
+    bool temporaryTargetPaintedOnCpu() const;
+
+    /**
      * Configures the painter to conform the painting parameters
      * stored for th temporary target, such as compositeOp, opacity,
      * channel flags and selection. Please do not setup them manually,

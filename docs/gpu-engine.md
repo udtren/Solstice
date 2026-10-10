@@ -7,8 +7,8 @@ Vulkan instead of on the CPU. It is developed on the `krita-sol-gpu` branch.
 ## Current status
 
 Layer compositing and the canvas display run on the GPU for RGBA floating
-point documents. Painting normally runs on the CPU; an opt-in prototype can
-composite supported pixel-brush blend modes on the GPU in RGBA32F
+point documents. Pixel-brush strokes are painted on the GPU by default (since
+2026-10-10); the GPU brush composites supported blend modes in RGBA32F
 documents, including the temporary painting buffer used by Wash mode.
 RGBA16F pixel brushes also support major GPU blend modes in Buildup and Wash,
 including selections, channel locks and mirrors. These are Normal, Erase,
@@ -332,8 +332,9 @@ selected F16 Soft Light Wash stroke. Process ranges overlap, so these results
 do not establish a substantial drawing speedup. See the
 [context-reuse checks and measurements](agent/wiki/history/gpu-phases-4.17-4.57.md#projection-context-reuse-phase-453).
 
-The CPU is faster for these short strokes. GPU brush painting remains opt-in;
-these measurements do not claim a general drawing-latency improvement or a
+The CPU is faster for these short strokes when the whole stroke is timed;
+from pen input to the displayed frame the GPU brush is now faster (see
+[Input to display](#input-to-display)). These measurements do not claim a
 fix for the deferred large mirrored Alpha Lock case. All measured paths
 passed their CPU image comparisons. The canvas benchmark also compares the
 actual OpenGL textures after timing. See the
@@ -388,13 +389,35 @@ other modes and workloads can behave differently. See the
 [basic blend-brush measurements](agent/wiki/history/gpu-phases-4.17-4.57.md#rgba16f-basic-blend-brushes-phases-449-450)
 and [extended major-mode measurements](agent/wiki/history/gpu-phases-4.17-4.57.md#rgba16f-extended-major-blend-brushes-phases-451-452).
 
+## Input to display
+
+How long it takes from a pen movement until the painted pixels are handed to
+the screen, measured on 2026-10-10 with hand-drawn strokes (`b) Basic-4 Flow
+Opacity`, RGBA32F 2480x3508, one Solstice process per setting, three strokes
+per condition; median of the strokes' medians, ms):
+
+| Condition | CPU | GPU canvas, CPU brush | GPU brush |
+| --- | --- | --- | --- |
+| 64px Buildup | 17.8 | 18.8 | 5.0 |
+| 64px Wash | 19.4 | 15.5 | 5.6 |
+| 256px Buildup | 20.6 | 17.3 | 4.8 |
+| 256px Wash | 22.5 | 21.2 | 5.6 |
+
+The end point is Qt's frame swap, not light leaving the screen, and the
+strokes were drawn by hand. Since the same day the CPU brush also starts
+its updates sooner (it used to wait at least 10 ms between them); its new
+times have not been measured yet. Details:
+[the run sheet](agent/paint-trace-baseline-runs.md).
+
 ## Turning it on or off
 
 The engine is on by default. To change it:
 
 1. Open **Settings → Configure Solstice → Performance → General**.
 2. In **GPU Engine (Vulkan)**, check or uncheck **Use the GPU engine for RGBA
-   float documents**.
+   float documents**. **Paint brush strokes on the GPU** (on by default)
+   chooses whether pixel-brush strokes are painted on the GPU too; strokes
+   the GPU brush does not support are always painted on the CPU.
 3. Restart Solstice. With the engine on, the status line in the same place
    shows the GPU in use once an RGBA float document is open.
 
@@ -475,7 +498,11 @@ export formats write the file directly and are not covered.)
   by Vulkan can actually be read by OpenGL. If this check fails, the canvas
   automatically reads the projection through the CPU for the rest of the
   session. Layer compositing can continue on the GPU; no setting is changed.
-- The brush prototype requires `KRITA_GPU_BRUSH=1` as well as the GPU engine.
+- The GPU brush needs the GPU engine and its own option (on by default);
+  `KRITA_GPU_BRUSH=1` or `0` overrides the option. Strokes of brushes with a
+  masking brush (two-tip brushes) are painted on the CPU: their masking is
+  computed on the CPU, and moving the stroke between the GPU and the CPU for
+  every update made them slower than the CPU brush.
   Large groups of brush dabs are split by their pixel-data size so they can
   stay within the GPU upload budget. A single oversized dab can still use
   the CPU. Up to three brush batches can be queued without waiting after each

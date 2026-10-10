@@ -19,9 +19,11 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 
 - **[Experimental Vulkan engine](docs/gpu-engine.md)**: GPU-resident image
   tiles, accelerated layer compositing and canvas data preparation.
-- **[GPU brush prototype](docs/gpu-engine.md)**: opt-in GPU compositing for
+- **[GPU brush](docs/gpu-engine.md)**: on by default; GPU compositing for
   RGBA32F pixel brushes and major RGBA16F modes in Buildup and Wash, including
-  supported selection, alpha-lock and mirror-painting paths.
+  supported selection, alpha-lock and mirror-painting paths. In a hand-drawn
+  comparison (2026-10-10), input to display took about 5 ms, against 18–22 ms
+  with the CPU brush.
 - **Native productivity tools**: [Quick Access Manager](docs/quick-access.md),
   [Asset Library](docs/asset-library.md), [Rest Note](docs/rest-note.md) and
   [Lazy Tools](docs/lazy-tools.md).
@@ -130,7 +132,7 @@ for display. Supported layer modes include Normal, Multiply, Screen, Overlay,
 Soft Light and HSY color modes, including individual channel locks. It is
 enabled by default and falls back to CPU paths for unsupported operations.
 
-An opt-in RGBA32F pixel-brush prototype also composites supported blend modes
+The RGBA32F pixel brush (on by default since 2026-10-10) also composites supported blend modes
 (including Normal, Multiply, Screen, Overlay and Erase) on the GPU, with
 selections, alpha lock and mirror painting. Supported Buildup strokes and Wash
 previews and final merges use GPU paths with CPU-compatible channel handling.
@@ -144,8 +146,8 @@ completed work buffers and can queue consecutive updates. Whole-tile copies
 can retain GPU pixels, and CPU filters, FFT convolution, affine transforms
 and layer flips now batch their GPU readbacks.
 
-The brush prototype requires `KRITA_GPU_BRUSH=1` in addition to enabling the
-GPU engine. Dab generation, texture generation, masking, filter calculations
+The GPU brush can be turned off with **Paint brush strokes on the GPU** next
+to the GPU engine option; `KRITA_GPU_BRUSH=1` or `0` overrides the setting. Dab generation, texture generation, masking, filter calculations
 and most transform calculations still run on the CPU; the Transform Tool's
 affine transforms, Liquify, Puppet Warp and Gaussian Blur (also inside
 Unsharp Mask and Gaussian High Pass) are applied on the GPU for float layers. Large mirrored brushes with
@@ -210,7 +212,9 @@ not an F16-versus-F32 comparison. See the
 
 **Complete short strokes can still be slower on the GPU.** Work-buffer reuse
 removed an avoidable wait, but its before/after timing ranges overlap and do
-not establish a substantial stroke speedup. GPU brush painting remains opt-in.
+not establish a substantial stroke speedup. Measured from pen input to the
+displayed frame instead, the GPU brush is about four times faster (2026-10-10,
+see [the input-to-display comparison](docs/gpu-engine.md#input-to-display)).
 
 See the [current benchmark results and limitations](docs/gpu-engine.md#current-benchmarks)
 and [reproduction notes](docs/agent/wiki/history/gpu-phases-4.17-4.57.md#current-build-benchmark-baseline-phase-442).

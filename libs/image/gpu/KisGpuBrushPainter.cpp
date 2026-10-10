@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "KisGpuBrushPainter.h"
+#include "KisGpuEngineSettings.h"
 #include "KisGpuMergeBatch.h"
 #include "KisPaintTrace.h"
 #include "KisRenderedDab.h"
@@ -125,7 +126,13 @@ WorkPool &workPool()
 #endif
 bool KisGpuBrushPainter::isEnabled()
 {
-    return qEnvironmentVariableIntValue("KRITA_GPU_BRUSH") == 1 && KisGpuMergeBatch::isEnabled();
+    // The setting (Solstice/GpuBrush, on by default) is read once per
+    // process; KRITA_GPU_BRUSH (1 or 0) overrides it and is read every time,
+    // so that tests can switch it.
+    static const bool inConfig = KisGpuEngineSettings::brushEnabledInConfig();
+    const bool requested =
+        qEnvironmentVariableIsSet("KRITA_GPU_BRUSH") ? qEnvironmentVariableIntValue("KRITA_GPU_BRUSH") == 1 : inConfig;
+    return requested && KisGpuMergeBatch::isEnabled();
 }
 bool KisGpuBrushPainter::supports(KisPainter *painter)
 {

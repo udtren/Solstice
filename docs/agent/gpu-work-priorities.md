@@ -305,6 +305,48 @@ GPU共有転送の経路では、更新がGUIに届いた時点ですぐに転�
 - 編集中のプレビュー（縮小のQImage）と旧形式のMLSは従来どおりCPU。
 - 手動確認はユーザー報告で問題なし（2026年10月7日、Accurateプレビューでのメッシュ生成の修正を含む）。詳細は `wiki/history/gpu-phases-4.93-.md` の「GPU Puppet Warp mesh rendering (phase 4.96)」。
 
+順位1の再計測（フェーズ4.99、2026年10月10日、ユーザー指示）: 4.81〜4.92の改善後の
+ビルド（HEAD `f1aa854247`、全体をインストール）で、3設定を1プロセスずつ採取した
+（PID 44148／50752／51524、欠落0）。入力→表示の中央値は、GPUブラシで約5ms
+（3.7〜6.8ms）、CPUのみで18〜22ms、GPU投影＋CPUブラシで15〜21ms。
+全条件でGPUブラシがCPUより短く、ストロークごとの範囲も重ならない。
+CPUブラシの経路は最後の転送までに12〜21msかかる（4.88・4.92はGPU経路だけの変更）。
+GPUブラシはまだオプトイン（`KRITA_GPU_BRUSH=1`）で、ユーザーの通常の起動では使われない。
+詳細は `paint-trace-baseline-runs.md` と `wiki/history/gpu-phases-4.93-.md` の
+「Re-baseline of input to display」。
+
+順位2の続き（フェーズ4.100、2026年10月10日、ユーザー指示「両方」）:
+- CPUブラシの経路でダブがバッチに入るまでの待ちは中央値約10.4ms（バッチの描画は約0.9ms）で、
+  最小更新周期10msが主因だった。CPU経路の最小周期を10→0msにした（実測に基づく適応周期
+  1.5倍・上限100msは維持、`KRITA_CPU_BRUSH_MIN_UPDATE_MS` で比較用に上書き可能）。
+  ストローク開始時の40ms待ち（4.88）とバッチ後の再試行（4.89）もCPU経路に広げた。
+- GPUブラシを既定で有効にした（設定 `Solstice/GpuBrush`、既定true、Configure Solstice の
+  GPUエンジン欄に「Paint brush strokes on the GPU」。`KRITA_GPU_BRUSH` 1/0が優先）。
+  未対応の条件は従来どおりCPU。
+- テスト: GPUブラシ4451件、GPUストローク360件、GPUブラシジョブ41件、ダブキュー12件合格。
+  FreehandStrokeTestは既存の4件の失敗のみ（変更前と同じ）。インストール済み。
+  CPUブラシの新しい遅延は未計測。
+- ユーザー報告（同日）: テクスチャとマスクブラシのあるブラシ（`z) 线稿 纹理`、画像先端・間隔3%・
+  マスクブラシ乗算・テクスチャ・Wash）をミラーで大きく描くと、GPUブラシでCPUより大きく遅れる。
+  `KisGpuStrokeTest` に同条件の行を一時的に足して再現（40px・両ミラー・マスク・テクスチャで
+  CPU 57ms、GPUキャンバスのみ 80ms、GPUブラシ 136ms、送信518回）。原因は3つ:
+  1. マスクブラシの合成（`KisMaskingBrushRenderer::updateProjection`）はCPUで、GPUが描いた
+     ストロークのタイルを更新ごとに読み戻し・再転送していた。→ マスクブラシのあるストロークは
+     CPUブラシ（`KisBrushOp`、`hasMaskingSettings()`）。マスク（アルファ）に描く側も同様。
+     不要になった `doMaskingBrushUpdates()` の読み戻しを削除。
+  2. その一時描画先のWashプレビューと最後の合成がGPUで、更新・矩形ごとに転送していた。→
+     `KisIndirectPaintingSupport::setTemporaryTargetPaintedOnCpu()` をストロークが設定し、
+     `KisPaintLayer` はその場合CPUのプレビューと合成を使う。
+  3. ダブごとに `KisGpuBrushPainter::isEnabled()` が環境変数を読み（全体ロック）、ダブのスレッド間で
+     競合していた（GPUブラシのオン・オフに関係なく全経路）。→ ブラシ操作がストロークごとに一度だけ
+     判断し（`KisBrushOpResources::gpuDabs`）、ダブのジョブはそれを見る。
+  結果（同じ一時行、中央値）: 40px・両ミラー・マスク・テクスチャは GPUブラシ 136→38ms
+  （CPU 30ms、GPUキャンバスのみ 39ms）。マスクのあるストロークはGPUブラシのオン・オフで同等。
+  CPUだけの経路も速くなった（40px・マスクで約40→17ms）。テスト: GPUストローク360件、GPUブラシ4451件、
+  ジョブ41件、ダブキュー12件、ペイントレイヤー5件、ストロークレイヤー19件、ABR9件合格。
+  FreehandStrokeTestは既存の4件のみ。マスクブラシの合成のGPU化は今後の候補。
+  手動確認はユーザー報告で問題なし（2026年10月10日、GPUブラシの既定化とCPUブラシの待ち短縮を含む）。
+
 本書は `krita-sol-gpu` ブランチのGPUエンジンについて、フェーズ4.57以降に
 取り組む作業の順序を定める。技術的な経緯、実装の詳細、計測値の出典は
 `docs/agent/gpu-engine.md` を正とする。本書はその記録に基づく優先順位の

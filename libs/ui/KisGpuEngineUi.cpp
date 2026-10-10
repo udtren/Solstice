@@ -248,6 +248,7 @@ void KisGpuEngineUi::setAcknowledgedLossCountForTesting(quint64 count)
 KisGpuEngineSettingsWidget::KisGpuEngineSettingsWidget(QWidget *parent)
     : QGroupBox(i18n("GPU Engine (Vulkan)"), parent)
     , m_enabled(new QCheckBox(i18n("Use the GPU engine for RGBA float documents"), this))
+    , m_brush(new QCheckBox(i18n("Paint brush strokes on the GPU"), this))
     , m_convertPolicy(new QComboBox(this))
     , m_status(new QLabel(this))
 {
@@ -258,6 +259,9 @@ KisGpuEngineSettingsWidget::KisGpuEngineSettingsWidget(QWidget *parent)
 
     QFormLayout *layout = new QFormLayout(this);
     layout->addRow(m_enabled);
+    layout->addRow(m_brush);
+    // the brush uses the engine
+    connect(m_enabled, &QCheckBox::toggled, m_brush, &QWidget::setEnabled);
     layout->addRow(i18n("Opening other documents:"), m_convertPolicy);
     layout->addRow(m_status);
 
@@ -277,6 +281,7 @@ KisGpuEngineSettingsWidget::KisGpuEngineSettingsWidget(QWidget *parent)
 #else
     status = i18n("Not available: this build of Solstice has no Vulkan support.");
     m_enabled->setEnabled(false);
+    m_brush->setEnabled(false);
     m_convertPolicy->setEnabled(false);
 #endif
     m_status->setText(status);
@@ -286,6 +291,7 @@ void KisGpuEngineSettingsWidget::load(bool requestDefault)
 {
     // Solstice: the GPU engine is on by default (embedded kritarc defaults).
     m_enabled->setChecked(requestDefault ? true : KisGpuEngineSettings::enabledInConfig());
+    m_brush->setChecked(requestDefault ? true : KisGpuEngineSettings::brushEnabledInConfig());
     const int policy = requestDefault ? int(KisGpuEngineSettings::Ask) : int(KisGpuEngineSettings::convertPolicy());
     m_convertPolicy->setCurrentIndex(qMax(0, m_convertPolicy->findData(policy)));
 }
@@ -293,5 +299,6 @@ void KisGpuEngineSettingsWidget::load(bool requestDefault)
 void KisGpuEngineSettingsWidget::save()
 {
     KisGpuEngineSettings::setEnabledInConfig(m_enabled->isChecked());
+    KisGpuEngineSettings::setBrushEnabledInConfig(m_brush->isChecked());
     KisGpuEngineSettings::setConvertPolicy(KisGpuEngineSettings::ConvertPolicy(m_convertPolicy->currentData().toInt()));
 }

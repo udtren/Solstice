@@ -12,6 +12,17 @@ details are in the phase records, now in the wiki history pages (see
 
 - Branch: `krita-sol-gpu`, created from `krita-sol` at `890aadc2ba`.
   Upstream Krita synchronization is intentionally abandoned on this branch.
+- GPU brush on by default since 2026-10-10 (`Solstice/GpuBrush`, default
+  true, read once per process; `KRITA_GPU_BRUSH` 1/0 overrides), after the
+  input-to-display re-baseline (about 5 ms against 18–22 ms on the CPU;
+  `gpu-work-priorities.md`). The CPU brush's minimum update period went from
+  10 ms to 0 (adaptive period kept; `KRITA_CPU_BRUSH_MIN_UPDATE_MS`), and the
+  stroke's first update and the after-batch re-check (4.88, 4.89) apply to
+  every path. Strokes with a masking brush stay on the CPU brush, with a CPU
+  Wash preview and merge (`KisIndirectPaintingSupport::
+  temporaryTargetPaintedOnCpu()`); GPU dab descriptions are decided once per
+  stroke (`KisBrushOpResources::gpuDabs`) instead of reading the environment
+  for every dab (see `gpu-work-priorities.md`, 2026-10-10).
 - Phase: **4 (brush prototype), opt-in; phases 4.1–4.5 manually checked,
   phases 4.6 and 4.8 add brush-job and full stroke-strategy coverage.** Phase
   4.7 is also manually confirmed, with combined four-pass painting recorded

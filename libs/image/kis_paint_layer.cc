@@ -150,8 +150,10 @@ void KisPaintLayer::writeMergeData(KisPainter *painter, KisPaintDeviceSP src, co
 {
 #ifdef HAVE_KRITA_GPU_ENGINE
     const auto owningImage = image();
+    // Not for a temporary target painted on the CPU (a stroke with a masking
+    // brush): each merged rectangle would upload it.
     if (owningImage && KisGpuEngineSettings::isGpuColorSpace(owningImage->colorSpace())
-        && KisGpuBrushPainter::mergeWash(painter, src, rc)) {
+        && !temporaryTargetPaintedOnCpu() && KisGpuBrushPainter::mergeWash(painter, src, rc)) {
         return;
     }
 #endif
@@ -174,7 +176,9 @@ void KisPaintLayer::copyOriginalToProjection(const KisPaintDeviceSP original,
     // GPU engine (Solstice, phase 4.90): copy the original and composite the
     // Wash preview in one GPU submission, without a CPU write to projection
     // tiles that the previous preview left on the GPU.
-    if (hasTemporaryTarget()) {
+    // Not for a temporary target painted on the CPU (a stroke with a masking
+    // brush): uploading it for every preview cost more than the CPU preview.
+    if (hasTemporaryTarget() && !temporaryTargetPaintedOnCpu()) {
         const auto owningImage = image();
         if (owningImage && KisGpuEngineSettings::isGpuColorSpace(owningImage->colorSpace())) {
             KisPainter gc(projection);
@@ -197,7 +201,8 @@ void KisPaintLayer::copyOriginalToProjection(const KisPaintDeviceSP original,
 #ifdef HAVE_KRITA_GPU_ENGINE
         // Tile-exclusive merge scheduling is enabled only for float images.
         const auto owningImage = image();
-        if (owningImage && KisGpuEngineSettings::isGpuColorSpace(owningImage->colorSpace())) {
+        if (owningImage && KisGpuEngineSettings::isGpuColorSpace(owningImage->colorSpace())
+            && !temporaryTargetPaintedOnCpu()) {
             KisPaintTrace::Scope trace("layer.wash_preview", this);
             gpuPainted = KisGpuBrushPainter::paintWashPreview(&gc, temporaryTarget(), rect);
         }

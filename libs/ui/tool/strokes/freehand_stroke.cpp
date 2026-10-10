@@ -32,7 +32,6 @@
 
 #include "brushengine/kis_paintop_utils.h"
 #include "KisAsynchronousStrokeUpdateHelper.h"
-#include "gpu/KisGpuBrushPainter.h"
 #include "KisBrushStrokeLayer.h"
 #include <QRandomGenerator>
 #include <KisUsageLogger.h>
@@ -65,9 +64,10 @@ struct FreehandStrokeStrategy::Private
     KisStrokeEfficiencyMeasurer efficiencyMeasurer;
 
     QElapsedTimer timeSinceLastUpdate;
-    // GPU engine (Solstice, phase 4.88): with the GPU brush, attempt the
-    // first update at once; the paint op then returns its own period.
-    int currentUpdatePeriod = KisGpuBrushPainter::isEnabled() ? -1 : 40;
+    // GPU engine (Solstice, phase 4.88): attempt the first update at once;
+    // the paint op then returns its own period. Since 2026-10-10 on the CPU
+    // path too (the first dabs waited 40 ms).
+    int currentUpdatePeriod = -1;
 
     const bool needsAsynchronousUpdates = false;
     std::mutex updateEntryMutex;
@@ -363,11 +363,12 @@ void FreehandStrokeStrategy::tryDoUpdate(bool forceEnd)
                                 this->tryDoUpdate(true);
                             }
                         );
-                    } else if (startedBatch && KisGpuBrushPainter::isEnabled()) {
+                    } else if (startedBatch) {
                         // GPU engine (Solstice, phase 4.89): dabs finished while
                         // this batch is in flight get no trigger until the next
                         // input. Check again once it ends; this is a no-op when
                         // nothing is ready or the paint op's period has not passed.
+                        // Since 2026-10-10 on the CPU path too.
                         KritaUtils::addJobSequential(jobs, [this]() {
                             this->tryDoUpdate();
                         });

@@ -40,6 +40,8 @@ public:
     /// GPU engine (Solstice): the update period on the GPU brush path (ms;
     /// -1 means every stroke trigger). KRITA_GPU_BRUSH_MIN_UPDATE_MS overrides it.
     static int gpuMinimumUpdatePeriod();
+    /// Solstice: the CPU path's least update period, in ms (0 by default)
+    static int cpuMinimumUpdatePeriod();
     /// Overrides gpuMinimumUpdatePeriod(); a value below -1 restores the default.
     static void setGpuMinimumUpdatePeriodForTesting(int period);
 

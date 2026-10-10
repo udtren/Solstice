@@ -65,7 +65,7 @@ KisBrushOp::KisBrushOp(const KisPaintOpSettingsSP settings, KisPainter *painter,
     , m_avgNumDabs(50)
     , m_avgUpdateTimePerDab(50)
     , m_idealNumRects(KisImageConfig(true).maxNumberOfThreads())
-    , m_minUpdatePeriod(10)
+    , m_minUpdatePeriod(cpuMinimumUpdatePeriod())
     , m_maxUpdatePeriod(100)
 {
     // Only float images use the GPU-aware merge scheduling. A float layer
@@ -74,6 +74,19 @@ KisBrushOp::KisBrushOp(const KisPaintOpSettingsSP settings, KisPainter *painter,
         && (image->colorSpace()->colorDepthId() == Float32BitsColorDepthID
             || image->colorSpace()->colorDepthId() == Float16BitsColorDepthID);
     Q_ASSERT(settings);
+    // Solstice (2026-10-10): a stroke with a masking brush stays on the CPU
+    // brush path. Its masking composite (KisMaskingBrushRenderer) runs on
+    // the CPU over the stroke device, so GPU-painted tiles were read back
+    // and uploaded again for every update: up to 2.4 times slower than the
+    // CPU brush, more with mirrors (docs/agent/gpu-work-priorities.md).
+    if (settings->hasMaskingSettings()) {
+        m_isRgbaFloatImage = false;
+    }
+    // The masking brush of such a stroke paints into an alpha mask, which the
+    // GPU brush does not support either
+    if (painter && painter->device() && painter->device()->colorSpace()->colorModelId() != RGBAColorModelID) {
+        m_isRgbaFloatImage = false;
+    }
 
     m_airbrushData.read(settings.data());
     m_rotationOption.applyFanCornersInfo(this);
@@ -85,10 +98,13 @@ KisBrushOp::KisBrushOp(const KisPaintOpSettingsSP settings, KisPainter *painter,
     m_brush->notifyBrushIsGoingToBeClonedForStroke();
 
     KisBrushSP baseBrush = m_brush;
+    // decided once per stroke: reading the environment for every dab
+    // contended a global lock across the dab threads
+    const bool gpuDabs = m_isRgbaFloatImage && KisGpuBrushPainter::isEnabled();
     auto resourcesFactory =
-        [baseBrush, settings, painter] () {
-            KisDabCacheUtils::DabRenderingResources *resources =
-                new KisBrushOpResources(settings, painter);
+        [baseBrush, settings, painter, gpuDabs] () {
+            KisBrushOpResources *resources = new KisBrushOpResources(settings, painter);
+            resources->gpuDabs = gpuDabs;
             resources->brush = baseBrush->clone().dynamicCast<KisBrush>();
 
             return resources;
@@ -183,6 +199,19 @@ void materializePendingDabs(QList<KisRenderedDab> &dabs)
 quint64 KisBrushOp::materializedDabCount()
 {
     return s_materializedDabs.load();
+}
+
+int KisBrushOp::cpuMinimumUpdatePeriod()
+{
+    // Solstice (input to display, 2026-10-10): the CPU path waited at least
+    // 10 ms before each batch although a batch of a light brush paints in
+    // about 1 ms, so dabs waited about 10 ms. The period still adapts to the
+    // measured rendering time (1.5 times it, up to 100 ms), which holds heavy
+    // brushes back. KRITA_CPU_BRUSH_MIN_UPDATE_MS overrides it for
+    // comparisons; docs/agent/gpu-work-priorities.md.
+    bool valid = false;
+    const int value = qEnvironmentVariableIntValue("KRITA_CPU_BRUSH_MIN_UPDATE_MS", &valid);
+    return valid ? qBound(0, value, 100) : 0;
 }
 
 int KisBrushOp::gpuMinimumUpdatePeriod()

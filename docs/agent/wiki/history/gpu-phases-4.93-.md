@@ -529,3 +529,28 @@ Installed `libs/image` and `tool_transform2`; hashes match. The user reported
 the manual checks OK on 2026-10-07: Puppet Warp with the Accurate and Fast
 previews (mesh shown, image kept before the first pin), pins, orders, apply
 and Undo/Redo on RGBA32F and RGBA16F layers.
+
+## Re-baseline of input to display after phases 4.81-4.92 (phase 4.99)
+
+2026-10-10, user-run captures with the controlled protocol, one process per
+mode (run sheet: [paint-trace-baseline-runs.md](../../paint-trace-baseline-runs.md),
+"Re-baseline after phases 4.81-4.92"). Median of per-stroke medians, ms:
+
+| Condition | CPU (PID 44148) | Projection-requested (PID 50752) | Brush-requested (PID 51524) |
+| --- | --- | --- | --- |
+| 64px Buildup | 17.8 (17.7–18.8), 56 inputs | 18.8 (17.1–19.5), 58 | 5.0 (3.9–5.3), 52 |
+| 64px Wash | 19.4 (17.5–19.5), 59 | 15.5 (15.1–18.6), 53 | 5.6 (5.1–6.8), 50 |
+| 256px Buildup | 20.6 (19.0–22.5), 54 | 17.3 (16.9–19.9), 58 | 4.8 (3.7–5.1), 51 |
+| 256px Wash | 22.5 (20.2–23.1), 61 | 21.2 (17.7–24.4), 63 | 5.6 (5.3–5.9), 59 |
+
+- With the GPU brush, input to display is about 5 ms in every condition,
+  against 18–22 ms on the CPU; the per-stroke ranges do not overlap. This is
+  the first software-timing comparison in which the GPU path is lower than
+  the CPU in every condition (phase 4.72 had the GPU brush slower at 256px).
+- GPU projection with the CPU brush stays at the CPU's level: the CPU brush
+  modes spend 12–21 ms before the last upload. Phases 4.88 (brush minimum
+  update period) and 4.92 (canvas compressor) apply only to the GPU paths.
+- The GPU brush is still opt-in (`KRITA_GPU_BRUSH=1`); the user's normal
+  launcher does not set it, so everyday painting runs at the CPU figures.
+- Limits as before: Qt command-swap acknowledgement, not photons; trace on;
+  hand drawing; one process per mode.

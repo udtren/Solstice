@@ -20,6 +20,10 @@ class KoColorSpace;
  *   per process (KisGpuMergeBatch::isEnabled()), so a change takes effect
  *   after restarting Krita. The KRITA_GPU_PROJECTION environment variable
  *   (1 or 0) overrides it for development.
+ * - Solstice/GpuBrush (bool, default true): paint brush dabs on the GPU
+ *   while the GPU engine is in use. Read once per process
+ *   (KisGpuBrushPainter::isEnabled()); the KRITA_GPU_BRUSH environment
+ *   variable (1 or 0) overrides it. Unsupported strokes use the CPU.
  * - Solstice/GpuEngineConvertDocuments (int, ConvertPolicy, default Ask):
  *   what to do with a document that is opened in another color space than
  *   RGBA float while the GPU engine is enabled.
@@ -35,9 +39,13 @@ public:
 
     static QString enabledKey();
     static QString convertPolicyKey();
+    static QString brushKey();
 
     static bool enabledInConfig();
     static void setEnabledInConfig(bool enabled);
+
+    static bool brushEnabledInConfig();
+    static void setBrushEnabledInConfig(bool enabled);
 
     static ConvertPolicy convertPolicy();
     static void setConvertPolicy(ConvertPolicy policy);

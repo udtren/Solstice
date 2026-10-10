@@ -544,42 +544,47 @@ private:
                     QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > firstComposite);
                 else
                     QCOMPARE(KisGpuMergeBatch::gpuCompositeCount(), firstComposite);
+                // A stroke with a masking brush keeps the CPU brush path
+                // (its masking composite reads the stroke device on the CPU).
+                const bool gpuBrush = path == 2 && !masked;
                 const auto batches = KisGpuBrushPainter::batchCount() - firstBatch;
-                if (path == 2 && wash)
+                // The Wash preview and final merge of a stroke painted on the
+                // CPU stay on the CPU too.
+                if (gpuBrush && wash)
                     QVERIFY(KisGpuBrushPainter::washPreviewCount() > firstPreview);
                 else
                     QCOMPARE(KisGpuBrushPainter::washPreviewCount(), firstPreview);
                 // Phase 4.90: Wash previews copy the layer original on the GPU.
-                if (path == 2 && wash)
+                if (gpuBrush && wash)
                     QVERIFY(KisGpuBrushPainter::washBaseCopyCount() > firstBaseCopy);
                 else
                     QCOMPARE(KisGpuBrushPainter::washBaseCopyCount(), firstBaseCopy);
-                if (path == 2 && wash)
+                if (gpuBrush && wash)
                     QVERIFY(KisGpuBrushPainter::washMergeCount() > firstMerge);
                 else
                     QCOMPARE(KisGpuBrushPainter::washMergeCount(), firstMerge);
                 // Refused batches (testRefusedPendingBatches) may be all of them.
-                if (path == 2 && !m_refusePendingBatches)
+                if (gpuBrush && !m_refusePendingBatches)
                     QVERIFY(batches > 0);
-                else if (path != 2)
+                else if (!gpuBrush)
                     QCOMPARE(batches, quint64(0));
                 // Phase 4.83: the circle dabs of RGBA32F strokes are evaluated
                 // on the GPU; textured dabs and RGBA16F keep their pixels.
                 const auto generated = KisGpuBrushPainter::generatedDabCount() - firstGenerated;
                 // Phase 4.86: RGBA16F dabs are generated too.
-                if (path == 2 && !textured && !m_refusePendingBatches)
+                if (gpuBrush && !textured && !m_refusePendingBatches)
                     QVERIFY(generated > 0);
-                else if (path != 2 || textured)
+                else if (!gpuBrush || textured)
                     QCOMPARE(generated, quint64(0));
                 // Phase 4.85: after the first verified dabs of each mask kind,
                 // their CPU generation is skipped; every CPU use materializes them.
                 const auto skipped = KisDabRenderingJobRunner::skippedGenerationCount() - firstSkipped;
-                if (path == 2 && !textured)
+                if (gpuBrush && !textured)
                     QVERIFY(skipped > 0);
                 else
                     QCOMPARE(skipped, quint64(0));
                 const auto materialized = KisBrushOp::materializedDabCount() - firstMaterialized;
-                if (path == 2 && !textured && m_refusePendingBatches)
+                if (gpuBrush && !textured && m_refusePendingBatches)
                     QVERIFY(materialized > 0);
                 KisGpuBrushPainter::refusePendingBatchesForTesting(0);
                 const auto after = pixels(layer->paintDevice());

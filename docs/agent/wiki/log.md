@@ -528,3 +528,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   its brightness while Krita inverts after. Verify such mappings against
   real presets (authors' settings reveal the intended direction), not just
   against the documentation of another mode.
+
+## 2026-10-10 ingest: input-to-display re-baseline, GPU brush by default
+
+- `gpu-work-priorities.md`, `paint-trace-baseline-runs.md`: after phases
+  4.81-4.92 the GPU brush reaches input to display in about 5 ms against
+  18-22 ms on the CPU (one process per mode). The CPU brush's minimum update
+  period (10 ms) and the 40 ms first-update wait were the CPU path's main
+  delay and now apply only as adaptive periods; the GPU brush is on by
+  default (`Solstice/GpuBrush`). Lessons: an opt-in feature's gains never
+  reach the user until it is the default, so check what the user's own
+  launcher enables before reporting a speedup; strokes whose later stages run
+  on the CPU (the masking brush composite, its Wash preview and merge) must
+  stay on the CPU brush, or tiles ping-pong between GPU and CPU on every
+  update; and never read the environment (`qgetenv` takes a global lock) per
+  dab on worker threads: it slowed every path, CPU included, by more than
+  half for dense brushes. Decide once per stroke.

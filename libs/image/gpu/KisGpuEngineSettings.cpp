@@ -21,6 +21,11 @@ QString KisGpuEngineSettings::convertPolicyKey()
     return QStringLiteral("Solstice/GpuEngineConvertDocuments");
 }
 
+QString KisGpuEngineSettings::brushKey()
+{
+    return QStringLiteral("Solstice/GpuBrush");
+}
+
 bool KisGpuEngineSettings::enabledInConfig()
 {
     return KisImageConfig(true).readEntry<bool>(enabledKey(), false);
@@ -29,6 +34,18 @@ bool KisGpuEngineSettings::enabledInConfig()
 void KisGpuEngineSettings::setEnabledInConfig(bool enabled)
 {
     KisImageConfig(false).writeEntry<bool>(enabledKey(), enabled);
+}
+
+bool KisGpuEngineSettings::brushEnabledInConfig()
+{
+    // on by default since 2026-10-10: input to display about 5 ms against
+    // 18-22 ms with the CPU brush (docs/agent/gpu-work-priorities.md)
+    return KisImageConfig(true).readEntry<bool>(brushKey(), true);
+}
+
+void KisGpuEngineSettings::setBrushEnabledInConfig(bool enabled)
+{
+    KisImageConfig(false).writeEntry<bool>(brushKey(), enabled);
 }
 
 KisGpuEngineSettings::ConvertPolicy KisGpuEngineSettings::convertPolicy()

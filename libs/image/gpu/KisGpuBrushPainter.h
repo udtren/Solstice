@@ -13,7 +13,8 @@ struct KisRenderedDab;
 class KRITAIMAGE_EXPORT KisGpuBrushPainter
 {
 public:
-    /// Phase 4.1 development gate: KRITA_GPU_BRUSH=1 plus the GPU engine.
+    /// The GPU engine plus the GPU brush setting (on by default since
+    /// 2026-10-10); KRITA_GPU_BRUSH=1 or 0 overrides the setting.
     static bool isEnabled();
     static bool supports(KisPainter *painter);
     /// Entire batch in a sequential stroke job, never parallel rectangle jobs.

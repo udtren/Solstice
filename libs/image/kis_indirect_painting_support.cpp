@@ -35,6 +35,7 @@ struct Q_DECL_HIDDEN KisIndirectPaintingSupport::Private {
 
     QReadWriteLock lock;
     bool finalMergeInProgress = true;
+    bool temporaryTargetPaintedOnCpu = false;
 };
 
 
@@ -56,6 +57,17 @@ void KisIndirectPaintingSupport::setCurrentColor(const KoColor &color)
 void KisIndirectPaintingSupport::setTemporaryTarget(KisPaintDeviceSP t)
 {
     d->temporaryTarget = t;
+    d->temporaryTargetPaintedOnCpu = false;
+}
+
+void KisIndirectPaintingSupport::setTemporaryTargetPaintedOnCpu(bool value)
+{
+    d->temporaryTargetPaintedOnCpu = value;
+}
+
+bool KisIndirectPaintingSupport::temporaryTargetPaintedOnCpu() const
+{
+    return d->temporaryTargetPaintedOnCpu;
 }
 
 void KisIndirectPaintingSupport::setTemporaryCompositeOp(const QString &id)

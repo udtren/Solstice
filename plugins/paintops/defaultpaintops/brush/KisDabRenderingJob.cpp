@@ -14,6 +14,7 @@
 #include <KisRunnableStrokeJobsInterface.h>
 #include <KisRunnableStrokeJobData.h>
 
+#include "KisBrushOpResources.h"
 #include "KisDabCacheUtils.h"
 #include "KisDabRenderingQueue.h"
 
@@ -103,14 +104,24 @@ quint32 mirrorFlips(const KisDabCacheUtils::DabGenerationInfo &di)
     return (di.mirrorProperties.horizontalMirror ? 1u : 0u) | (di.mirrorProperties.verticalMirror ? 2u : 0u);
 }
 
+/// Whether the dabs of @p resources may be described for the GPU. Solstice:
+/// the brush op decides once per stroke (KisBrushOpResources::gpuDabs);
+/// KisGpuBrushPainter::isEnabled() reads the environment, which for every
+/// dab contended a global lock across the dab threads.
+bool gpuDabsWanted(KisDabCacheUtils::DabRenderingResources *resources)
+{
+    const auto *brushResources = dynamic_cast<const KisBrushOpResources *>(resources);
+    return brushResources ? brushResources->gpuDabs : KisGpuBrushPainter::isEnabled();
+}
+
 /// The GPU description of the dab @p di generates, or null when the dab is
 /// not an RGBA F32 vectorized circle auto-brush dab.
 QSharedPointer<KisProceduralCircleDab> buildCircleDab(const KisDabCacheUtils::DabGenerationInfo &di,
                                                       KisDabCacheUtils::DabRenderingResources *resources,
                                                       const KisFixedPaintDeviceSP &dab)
 {
-    if (!KisGpuBrushPainter::isEnabled() || !di.solidColorFill || di.needsPostprocessing || !dab
-        || !resources->brush || resources->brush->brushApplication() == IMAGESTAMP) {
+    if (!gpuDabsWanted(resources) || !di.solidColorFill || di.needsPostprocessing || !dab || !resources->brush
+        || resources->brush->brushApplication() == IMAGESTAMP) {
         return {};
     }
     const KoColorSpace *cs = dab->colorSpace();
@@ -196,7 +207,7 @@ describeWithoutPixels(const KisDabCacheUtils::DabGenerationInfo &di,
                       KisFixedPaintDeviceSP dab,
                       quint32 *flips)
 {
-    if (!KisGpuBrushPainter::isEnabled()) {
+    if (!gpuDabsWanted(resources)) {
         return {};
     }
     QSharedPointer<KisProceduralCircleDab> circle = buildCircleDab(di, resources, dab);

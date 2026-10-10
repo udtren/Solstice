@@ -104,7 +104,9 @@ Read these before adding or updating any feature:
 - Settings location (`%APPDATA%\Solstice`, Krita profile import, Solstice defaults):
   `docs/agent/settings-location.md`
 - GPU Engine (branch `krita-sol-gpu`): `docs/agent/gpu-engine.md`
-- GPU Engine work order (priority 1 measurement work in progress):
+- GPU Engine work order (priorities 1-3 done; input-to-display re-baseline
+  2026-10-10: GPU brush about 5 ms against 18-22 ms on the CPU; priority 4 in
+  progress):
   `docs/agent/gpu-work-priorities.md`
 - Brush Stroke Preview:
   `docs/agent/brush-stroke-preview.md`

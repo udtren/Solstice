@@ -373,3 +373,52 @@ The trace is enabled throughout; its GUI overhead has no calibrated correction.
 Treat this as the completed manual software-timing baseline with these limitations,
 not fulfillment of the stronger physical input-to-pixel acceptance criterion.
 No further repetitions of this series are requested; next work is overhead analysis.
+
+## Re-baseline after phases 4.81-4.92 (2026-10-10, one process per mode)
+
+A separate series; not pooled with the phase 4.72 baseline. Source HEAD
+`f1aa85424706216ef78837fe1d0583c0b0c236bd` with no local source changes; the
+whole build tree was installed (`cmake --install`) before the captures.
+
+| Installed artifact | SHA-256 |
+| --- | --- |
+| `bin/krita.exe` | `7f0d32da6151bb6583707f0dbd3637035f1fc0f883736de56bc4cf93ef13bf11` |
+| `bin/libkritaversion.dll` | `e7849fc5c7f70486e3884c6d32408bdaab28bf9513ad9934d21b92d7406d9c10` |
+| `bin/libkritaimage.dll` | `6eb14a5eaef21dd46a32d2e17a59cb5dc20dbc72e2edf2b8276df5f29888155a` |
+| `bin/libkritaui.dll` | `f1ac8fe3407e8436e03ac8ccfcfb660102eb8dd7fed4a9e63f7d19c73f366b1c` |
+| `lib/kritaplugins/kritadefaultpaintops.dll` | `d2f25172d61a55663fdbce58155bab1e50b4a70bbe5fc31988d3a2f45018d27b` |
+| `bin/libkritagpu.dll` | `394fae188a8d61aea7a3f3412d8ac8f5d9b5737f17454ae749bd099272183b58` |
+
+Order cpu → projection → brush, one process each, the controlled protocol's
+16 strokes per process (one warm-up and three measured strokes per condition,
+in the order 64px Buildup, 64px Wash, 256px Buildup, 256px Wash; Buildup is
+`incremental` true). All three traces: zero dropped events, every condition
+snapshot `b) Basic-4 Flow Opacity` on RGBA F32 2480x3508. Archive:
+`%TEMP%/solstice-paint-baseline-499/` (raw JSON, launch logs,
+`summary.json`). Trace SHA-256: cpu `4abaa9c8…f2a5`, projection
+`a57a6389…f0f`, brush `09b32975…ed05`.
+
+Command-presentation median per measured stroke (ms), median of the three
+and range, and timed inputs:
+
+| Condition | CPU (PID 44148) | Projection-requested (PID 50752) | Brush-requested (PID 51524) |
+| --- | --- | --- | --- |
+| 64px Buildup | 17.8 (17.7–18.8), 56 inputs | 18.8 (17.1–19.5), 58 | 5.0 (3.9–5.3), 52 |
+| 64px Wash | 19.4 (17.5–19.5), 59 | 15.5 (15.1–18.6), 53 | 5.6 (5.1–6.8), 50 |
+| 256px Buildup | 20.6 (19.0–22.5), 54 | 17.3 (16.9–19.9), 58 | 4.8 (3.7–5.1), 51 |
+| 256px Wash | 22.5 (20.2–23.1), 61 | 21.2 (17.7–24.4), 63 | 5.6 (5.3–5.9), 59 |
+
+Execution paths: the cpu process has CPU brush and CPU canvas pixels only;
+projection has CPU brush and shared-buffer canvas; brush has 336 GPU brush
+submissions with generated dabs, 1,129 compositor submissions and 94 CPU
+brush jobs (stroke edges and fallbacks).
+
+Split at the last required upload (median per stroke): the CPU brush modes
+spend 12–21 ms before it and 2–5 ms after; the GPU brush mode 1.0–2.3 ms
+before and 1.9–3.9 ms after. Interpretation: with the GPU brush, input to
+display is about four times shorter than with the CPU, and the ranges do not
+overlap; GPU projection alone does not change the CPU brush's latency. The
+CPU brush's time before the upload is the next candidate (its minimum update
+period of 10 ms and the canvas's fps-limit compressor still apply to the CPU
+paths; phases 4.88 and 4.92 changed only the GPU paths). Single process per
+mode and hand drawing: treat the ranges as within-process only.
