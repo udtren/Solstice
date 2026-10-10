@@ -85,8 +85,20 @@ The user's icon artwork replaced the gray application icon:
   seven sizes with matching declared dimensions. `krita.exe`, `krita.dll`,
   the hicolor PNGs and the scalable SVGZ were reinstalled; `krita.com` has no
   icon resource.
-- Still gray: `Beta/`, `Plus/`, the Apple `krita.icon`, the `.kra` file icons
-  (`krita/pics/mimetypes/`, `kritafile.ico`), MSIX and macOS package art.
+- Still gray: `Beta/`, `Plus/`, the Apple `krita.icon`, the `.icns` document
+  icons, MSIX and macOS package art.
+
+Document icons (2026-10-10, the user chose a page derived from the
+application icon): `krita/pics/mimetypes/*-mimetypes-application-x-krita.png`
+and `krz/*-mimetypes-application-x-krz.png` (16-1024) and their SVG copies
+(`application-x-krita[-16|-22|-24].svg`, which embed the PNG of their size;
+the main SVG embeds 256 px). Drawn from `branding/Next/1024-apps-krita.png`
+(already sRGB): a page with a folded corner and a shadow, the application
+icon at half the size, centered for `.kra`; `.krz` adds a bold "KRZ" label
+above it. Below 32 px the page is drawn directly at its size with a larger
+emblem and no label. The build's `kritafile.ico` (installed to
+`installer/`) decodes at all seven sizes. Regenerate them when the
+application icon changes.
 
 Splash artwork (2026-10-10): master `krita/pics/branding/source/solstice-splash.png`
 (3146 x 1920, 16-bit RGBA, 13 MB). The resource is an 8-bit opaque copy

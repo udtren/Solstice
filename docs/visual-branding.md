@@ -9,8 +9,11 @@ The startup splash shows Solstice's own artwork (2026-10-10): the Solstice
 logo over black and white ink strokes, with the version and loading
 messages at the top right.
 
-The Krita-format file icons (`.kra` documents in Explorer) are still plain
-gray placeholders while the rest of the Solstice artwork is being prepared. Windows package tiles and macOS
+Solstice documents have their own icons (2026-10-10): a white page with a
+folded corner carrying the application icon, for `.kra`, and the same page
+labeled "KRZ" for `.krz`. Explorer shows them for files associated with an
+installed Solstice; a development build started from a script does not
+register the association. Windows package tiles and macOS
 package artwork also remain gray placeholders.
 
 Upstream project references, contributor credits, and third-party sponsor

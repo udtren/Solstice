@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Temporary Solstice placeholder. SPDX-License-Identifier: CC0-1.0 -->
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-  <rect x="0" y="0" width="16" height="16" fill="#808080"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="16" height="16" viewBox="0 0 16 16">
+<image width="16" height="16" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAB5ElEQVQ4jZXTP48SQRjH8e8sDNlEGk5kaTginILXmTMEEuK2XkvnvQcaX4AvwFxCAwUdJW+ABBOLa44riAZbL7mGQy+EBMQ5A7vLjt2F5Y/RJ5lm5jef5ylmBEC9Xh9IKZ8KITR7arlcmsD7arX6YeuwVqv9nM1m2nXdvatWq+lms+nX6/V363eNfR13lW3bQkp5vo78M6C1ZjQakcvlBHDeaDQq/wXYts18Pmc6nZJMJoXjOC2A8GZQKYVSCt/3EUI87FuWRSaTIRqNopSi1WqttgDHceh0OvR6PSKRCPF4HK19JpMJnreiWCxSqVQCDY1NoNe74uLigru7H/i+i+97DIdDut2PXF72cBwnAAQm0FpjWRblcplyuUQ6nUZrn1QqRTKZJJs9QgiB1no3YBgGBwcxrq+/0e9/4f7+N/H4Y6QMc3LyksPDNOFwGNd1dwMAt7ff6XY/sVgsKBReUSoViEYfIQQkEtZmPAisVismkwnz+RzHcej3P6OUIp9/RiLxhMViGRh/CxBCEAqFCIUMhAClfjEYfGU8HpPPPyeTOfo7IKXk+PgFtv2a5XLBetYwQnhe8G1sAaZpcnb2ltPTN3ieB/CASBkmFothmiZKqSAgpbxpt9tZYO933ighpbwB+AMCQ+IlQ1C/+wAAAABJRU5ErkJggg=="/>
 </svg>
