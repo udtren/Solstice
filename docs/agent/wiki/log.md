@@ -460,3 +460,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   identify tips by file name and md5; the resource database does not refresh
   the names of unchanged resources of an existing storage, so renamed tips
   show only after the library is imported again.
+
+## 2026-10-10 ingest: ABR import, phase 3
+
+- `abr-import-plan.md`: ABR `patt` patterns become pattern resources of the
+  ABR storage (`<identifier>.pat`, as PSD and ASL patterns), read with
+  `KisAslReader::readPsdSectionPattern()` one block at a time. Lesson: that
+  reader stops at the first pattern it cannot read (CMYK, Lab), so a section
+  of length-prefixed blocks is best split by the caller; a storage plugin can
+  serve several resource types if its iterator, `resourceItem()` and
+  `resource()` agree on the type of each URL.

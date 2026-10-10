@@ -84,13 +84,81 @@ QHash<QString, QString> presetNamesBySample(const QByteArray &descriptors)
     }
     return names;
 }
+
+/**
+ * Solstice: the patterns of the `patt` section, read one by one with the
+ * layer style reader so that a pattern it cannot read (an unsupported
+ * color mode) does not hide the ones after it
+ */
+QMap<QString, KoPatternSP> readPatterns(const QByteArray &section, const QString &fileName)
+{
+    QMap<QString, KoPatternSP> patterns;
+    qint64 pos = 0;
+    int unreadable = 0;
+    while (pos + 4 <= section.size()) {
+        const quint32 length = qFromBigEndian<quint32>(section.constData() + pos);
+        const qint64 blockSize = 4 + ((qint64(length) + 3) & ~qint64(3));
+        if (length == 0 || pos + 4 + length > section.size()) {
+            break;
+        }
+        QByteArray block = section.mid(int(pos), int(qMin<qint64>(blockSize, section.size() - pos)));
+        pos += blockSize;
+
+        QBuffer buffer(&block);
+        buffer.open(QIODevice::ReadOnly);
+        const QDomDocument doc = KisAslReader::readPsdSectionPattern(buffer, block.size());
+
+        bool read = false;
+        const QDomNodeList nodes = doc.elementsByTagName(QStringLiteral("node"));
+        for (int i = 0; i < nodes.size(); i++) {
+            const QDomElement node = nodes.at(i).toElement();
+            if (node.attribute(QStringLiteral("classId")) != QStringLiteral("KisPattern")) {
+                continue;
+            }
+            QString name;
+            QString identifier;
+            QByteArray data;
+            for (QDomElement child = node.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
+                const QString key = child.attribute(QStringLiteral("key"));
+                if (key == QStringLiteral("Nm  ")) {
+                    name = child.attribute(QStringLiteral("value"));
+                } else if (key == QStringLiteral("Idnt")) {
+                    identifier = child.attribute(QStringLiteral("value"));
+                } else if (key == QStringLiteral("Data")) {
+                    data = qUncompress(QByteArray::fromBase64(child.text().toLatin1()));
+                }
+            }
+            if (identifier.isEmpty() || data.isEmpty()) {
+                continue;
+            }
+            const QString patternFileName = identifier + QStringLiteral(".pat");
+            KoPatternSP pattern(new KoPattern(patternFileName));
+            QBuffer patternBuffer(&data);
+            patternBuffer.open(QIODevice::ReadOnly);
+            if (!pattern->loadFromDevice(&patternBuffer, nullptr)) {
+                continue;
+            }
+            pattern->setName(name.isEmpty() ? identifier : name);
+            pattern->setMD5Sum(KoMD5Generator::generateHash(data));
+            pattern->setValid(true);
+            patterns.insert(patternFileName, pattern);
+            read = true;
+        }
+        unreadable += !read;
+    }
+    if (unreadable) {
+        warnKrita << "ABR" << fileName << ":" << unreadable << "patterns could not be read";
+    }
+    return patterns;
+}
 } // namespace
 
-KisAbrBrushCollection::KisAbrBrushCollection(const QString& filename)
+KisAbrBrushCollection::KisAbrBrushCollection(const QString &filename)
     : m_isLoaded(false)
     , m_lastModified()
     , m_filename(filename)
     , m_abrBrushes(new QMap<QString, KisAbrBrushSP>())
+    , m_patterns(new QMap<QString, KoPatternSP>())
 {
 }
 
@@ -99,6 +167,7 @@ KisAbrBrushCollection::KisAbrBrushCollection(const KisAbrBrushCollection& rhs)
     , m_lastModified(rhs.m_lastModified)
 {
     m_abrBrushes.reset(new QMap<QString, KisAbrBrushSP>());
+    m_patterns.reset(new QMap<QString, KoPatternSP>(*rhs.m_patterns));
     for (auto it = rhs.m_abrBrushes->begin();
          it != rhs.m_abrBrushes->end();
          ++it) {
@@ -139,9 +208,10 @@ bool KisAbrBrushCollection::loadFromDevice(QIODevice *dev)
                   << contents.subversion;
         return false;
     }
+    *m_patterns = readPatterns(contents.patterns, filename());
     if (contents.samples.isEmpty()) {
         warnKrita << "ERROR: no sample brush found in" << filename();
-        return false;
+        return !m_patterns->isEmpty();
     }
 
     const QString fileName = QFileInfo(filename()).fileName();

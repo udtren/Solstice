@@ -25,7 +25,8 @@ public:
     {}
 
     bool hasNext() const override {
-        if (m_resourceType != ResourceType::Brushes) return false;
+        if (m_resourceType != ResourceType::Brushes && m_resourceType != ResourceType::Patterns)
+            return false;
         return !m_taggingDone;
     }
 
@@ -41,8 +42,13 @@ public:
         abrTag->setResourceType(m_resourceType);
         abrTag->setValid(true);
         QStringList brushes;
-        Q_FOREACH(const KisAbrBrushSP brush, m_brushCollection->brushes()) {
-            brushes << brush->filename();
+        if (m_resourceType == ResourceType::Patterns) {
+            // Solstice: the file's patterns (docs/agent/abr-import-plan.md)
+            brushes = m_brushCollection->patternsMap()->keys();
+        } else {
+            Q_FOREACH (const KisAbrBrushSP brush, m_brushCollection->brushes()) {
+                brushes << brush->filename();
+            }
         }
         abrTag->setDefaultResources(brushes);
 
@@ -61,9 +67,10 @@ class AbrIterator : public KisResourceStorage::ResourceIterator
 {
 public:
     KisAbrBrushCollectionSP m_brushCollection;
-    QSharedPointer<QMap<QString, KisAbrBrushSP>> m_brushesMap;
-    QMap<QString, KisAbrBrushSP>::const_iterator m_brushCollectionIterator;
-    KisAbrBrushSP m_currentResource;
+    /// Solstice: the brush tips or the patterns (docs/agent/abr-import-plan.md)
+    QVector<QPair<QString, KoResourceSP>> m_items;
+    int m_nextItem{0};
+    KoResourceSP m_currentResource;
     bool isLoaded;
     QString m_currentUrl;
     QString m_resourceType;
@@ -78,39 +85,46 @@ public:
 
     bool hasNext() const override
     {
-        if (m_resourceType != ResourceType::Brushes) {
+        if (m_resourceType != ResourceType::Brushes && m_resourceType != ResourceType::Patterns) {
             return false;
         }
 
         if (!isLoaded) {
-            bool success = m_brushCollection->load();
-            Q_UNUSED(success); // brush collection will be empty
-            const_cast<AbrIterator*>(this)->m_brushesMap = m_brushCollection->brushesMap();
-            const_cast<AbrIterator*>(this)->m_brushCollectionIterator = m_brushesMap->constBegin();
-            const_cast<AbrIterator*>(this)->isLoaded = true;
+            AbrIterator *self = const_cast<AbrIterator *>(this);
+            if (!m_brushCollection->isLoaded()) {
+                bool success = m_brushCollection->load();
+                Q_UNUSED(success); // brush collection will be empty
+            }
+            if (m_resourceType == ResourceType::Brushes) {
+                const auto brushes = m_brushCollection->brushesMap();
+                for (auto it = brushes->constBegin(); it != brushes->constEnd(); ++it) {
+                    self->m_items.append({it.key(), it.value()});
+                }
+            } else {
+                const auto patterns = m_brushCollection->patternsMap();
+                for (auto it = patterns->constBegin(); it != patterns->constEnd(); ++it) {
+                    self->m_items.append({it.key(), it.value()});
+                }
+            }
+            self->isLoaded = true;
         }
 
-        if (m_brushCollectionIterator == m_brushesMap->constEnd()) {
-            return false;
-        }
-
-        bool hasNext = (m_brushCollectionIterator != m_brushesMap->constEnd());
-        return hasNext;
+        return m_nextItem < m_items.size();
     }
 
     void next() override
     {
-        if (m_resourceType != ResourceType::Brushes) {
-            return;
-        }
-        KIS_SAFE_ASSERT_RECOVER_RETURN(m_brushCollectionIterator != m_brushesMap->constEnd());
-        m_currentResource = m_brushCollectionIterator.value();
-        m_currentUrl = m_brushCollectionIterator.key();
-        m_brushCollectionIterator++;
+        KIS_SAFE_ASSERT_RECOVER_RETURN(m_nextItem < m_items.size());
+        m_currentUrl = m_items[m_nextItem].first;
+        m_currentResource = m_items[m_nextItem].second;
+        m_nextItem++;
     }
 
     QString url() const override { return m_currentUrl; }
-    QString type() const override { return ResourceType::Brushes; }
+    QString type() const override
+    {
+        return m_resourceType;
+    }
     QDateTime lastModified() const override { return m_brushCollection->lastModified(); }
 
     KoResourceSP resourceImpl() const override
@@ -141,6 +155,11 @@ KisResourceStorage::ResourceItem KisAbrStorage::resourceItem(const QString &url)
     filenameUrl.remove(indexOfUnderscore, url.length() - indexOfUnderscore);
     item.folder = filenameUrl;
     item.resourceType = ResourceType::Brushes;
+    // Solstice: the file's patterns are <identifier>.pat
+    if (url.endsWith(QStringLiteral(".pat"))) {
+        item.folder = QFileInfo(m_brushCollection->filename()).completeBaseName();
+        item.resourceType = ResourceType::Patterns;
+    }
     item.lastModified = QFileInfo(m_brushCollection->filename()).lastModified();
     return item;
 }
@@ -151,7 +170,11 @@ KoResourceSP KisAbrStorage::resource(const QString &url)
     if (!m_brushCollection->isLoaded()) {
         m_brushCollection->load();
     }
-    return m_brushCollection->brushByName(QFileInfo(url).fileName());
+    const QString name = QFileInfo(url).fileName();
+    if (name.endsWith(QStringLiteral(".pat"))) {
+        return m_brushCollection->patternByName(name);
+    }
+    return m_brushCollection->brushByName(name);
 }
 
 bool KisAbrStorage::loadVersionedResource(KoResourceSP /*resource*/)

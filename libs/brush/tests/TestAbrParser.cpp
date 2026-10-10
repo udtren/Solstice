@@ -11,6 +11,8 @@
 #include <QRandomGenerator>
 
 #include <KisAbrParser.h>
+#include <KisAbrStorage.h>
+#include <QTemporaryDir>
 #include <kis_abr_brush_collection.h>
 
 /**
@@ -25,6 +27,7 @@ private Q_SLOTS:
     void testSixteenBitAndRawTips();
     void testVersion2NamesAndComputedBrushes();
     void testDamagedFiles();
+    void testPatterns();
 };
 
 namespace
@@ -73,6 +76,45 @@ QByteArray section(const char *key, const QByteArray &body)
     return result;
 }
 
+/// a pattern block of the `patt` section: RGB, 8 bits, raw planes; @p mode
+/// 4 (CMYK) makes one the layer style reader cannot read
+QByteArray patternBlock(const QString &name, const QByteArray &id, int width, int height, quint8 red, quint32 mode = 3)
+{
+    const QByteArray body = bigEndian([&](QDataStream &s) {
+        s << quint32(1) << mode << quint16(height) << quint16(width);
+        s << quint32(name.size());
+        for (QChar c : name) {
+            s << quint16(c.unicode());
+        }
+        s << quint8(id.size());
+        s.writeRawData(id.constData(), id.size());
+
+        const QByteArray planes = bigEndian([&](QDataStream &p) {
+            for (int plane = 0; plane < 3; plane++) {
+                p << quint32(1) << quint32(23 + width * height) << quint32(8);
+                p << quint32(0) << quint32(0) << quint32(height) << quint32(width);
+                p << quint16(8) << quint8(0);
+                const QByteArray pixels(width * height, char(plane == 0 ? red : 40));
+                p.writeRawData(pixels.constData(), pixels.size());
+            }
+        });
+        const QByteArray array = bigEndian([&](QDataStream &a) {
+                                     a << quint32(0) << quint32(0) << quint32(height) << quint32(width) << quint32(24);
+                                 })
+            + planes;
+        s << quint32(3) << quint32(array.size());
+        s.writeRawData(array.constData(), array.size());
+    });
+    QByteArray block = bigEndian([&](QDataStream &s) {
+                           s << quint32(body.size());
+                       })
+        + body;
+    while (block.size() % 4) {
+        block += '\0';
+    }
+    return block;
+}
+
 /// a version 6/9 file with two tips: 16-bit RLE and 8-bit raw
 QByteArray version6File(int version)
 {
@@ -109,7 +151,10 @@ QByteArray version6File(int version)
         s << quint16(version) << quint16(2);
     });
     file += section("samp", samples);
-    file += section("patt", QByteArray());
+    file += section("patt",
+                    patternBlock(QStringLiteral("Paper"), "pat-paper", 6, 4, 200)
+                        + patternBlock(QStringLiteral("Cmyk"), "pat-cmyk", 3, 3, 10, 4)
+                        + patternBlock(QStringLiteral("Canvas"), "pat-canvas", 5, 5, 90));
     file += section("desc", QByteArray("not read here"));
     return file;
 }
@@ -153,6 +198,7 @@ void TestAbrParser::testSixteenBitAndRawTips()
         QCOMPARE(contents.version, version);
         QCOMPARE(contents.samples.size(), 2);
         QCOMPARE(contents.descriptors, QByteArray("not read here"));
+        QVERIFY(!contents.patterns.isEmpty());
 
         const KisAbrParser::Sample &sixteen = contents.samples[0];
         QCOMPARE(sixteen.id, QString("$tip-1"));
@@ -241,6 +287,55 @@ void TestAbrParser::testDamagedFiles()
     KisAbrParser::Contents contents;
     KisAbrParser::parse(huge, &contents);
     QVERIFY(!contents.warnings.isEmpty());
+}
+
+/// the `patt` section's patterns become pattern resources of the ABR
+/// storage; one that cannot be read does not hide the others
+void TestAbrParser::testPatterns()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("patterns.abr"));
+    {
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(version6File(6));
+    }
+
+    KisAbrBrushCollection collection(path);
+    QVERIFY(collection.load());
+    const auto patterns = collection.patternsMap();
+    QCOMPARE(patterns->size(), 2);
+    KoPatternSP paper = collection.patternByName(QStringLiteral("pat-paper.pat"));
+    QVERIFY(paper);
+    QCOMPARE(paper->name(), QStringLiteral("Paper"));
+    QCOMPARE(paper->pattern().size(), QSize(6, 4));
+    QCOMPARE(qRed(paper->pattern().pixel(2, 2)), 200);
+    QCOMPARE(qGreen(paper->pattern().pixel(2, 2)), 40);
+    QVERIFY(!paper->md5Sum().isEmpty());
+    QVERIFY(collection.patternByName(QStringLiteral("pat-canvas.pat")));
+
+    KisAbrStorage storage(path);
+    auto items = storage.resources(ResourceType::Patterns);
+    QStringList urls;
+    while (items->hasNext()) {
+        items->next();
+        QCOMPARE(items->type(), ResourceType::Patterns);
+        QVERIFY(items->resource());
+        urls << items->url();
+    }
+    urls.sort();
+    QCOMPARE(urls, QStringList({QStringLiteral("pat-canvas.pat"), QStringLiteral("pat-paper.pat")}));
+    QCOMPARE(storage.resourceItem(QStringLiteral("pat-paper.pat")).resourceType, ResourceType::Patterns);
+    QCOMPARE(storage.resource(QStringLiteral("pat-paper.pat"))->name(), QStringLiteral("Paper"));
+
+    auto brushes = storage.resources(ResourceType::Brushes);
+    int tips = 0;
+    while (brushes->hasNext()) {
+        brushes->next();
+        tips++;
+    }
+    QCOMPARE(tips, 2);
 }
 
 SIMPLE_TEST_MAIN(TestAbrParser)

@@ -14,6 +14,9 @@ its own. Improved ABR support is being added in stages.
   number (`brushes_12`).
 - Damaged files are read as far as possible; unreadable tips are skipped
   and reported in the log.
+- Patterns stored in ABR files appear with the other patterns, for fills and
+  brush textures. Patterns in color modes Solstice cannot read (such as
+  CMYK) are skipped and reported in the log.
 - Strokes drawn with ABR tips on a [Brush Stroke Layer](brush-stroke-layer.md)
   save their tips in the `.kra` file.
 
@@ -22,7 +25,6 @@ its own. Improved ABR support is being added in stages.
 - Photoshop's brush presets (size, spacing, pressure dynamics, scattering,
   texture, dual brush, color dynamics): planned. Until then each tip has to
   be set up as a brush in the Brush Editor.
-- Patterns stored in ABR files: planned.
 - Folders of presets: planned, as tags.
 - Computed (round) brushes of ABR versions 1 and 2.
 

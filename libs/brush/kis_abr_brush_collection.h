@@ -18,6 +18,7 @@
 #include <kis_shared.h>
 #include <brushengine/kis_paint_information.h>
 #include <kis_abr_brush.h>
+#include <resources/KoPattern.h>
 
 
 class QString;
@@ -78,6 +79,18 @@ public:
         return m_lastModified;
     }
 
+    /// Solstice: the patterns stored in the file, by file name
+    /// (`<identifier>.pat`); docs/agent/abr-import-plan.md
+    QSharedPointer<QMap<QString, KoPatternSP>> patternsMap() const
+    {
+        return m_patterns;
+    }
+
+    KoPatternSP patternByName(const QString &name) const
+    {
+        return m_patterns->value(name);
+    }
+
     QString filename() const {
         return m_filename;
     }
@@ -93,6 +106,7 @@ private:
     QDateTime m_lastModified;
     QString m_filename;
     QSharedPointer<QMap<QString, KisAbrBrushSP>> m_abrBrushes;
+    QSharedPointer<QMap<QString, KoPatternSP>> m_patterns;
 };
 
 typedef QSharedPointer<KisAbrBrushCollection> KisAbrBrushCollectionSP;
