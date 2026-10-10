@@ -15,7 +15,10 @@ public:
     RestNotePlugin(QObject *parent, const QVariantList &)
         : QObject(parent)
     {
-        KoDockRegistry::instance()->add(new RestNoteDockFactory());
+        // Solstice: off by default (Configure Solstice > General > Custom);
+        // enabling it adds the docker after a restart.
+        if (RestNoteDock::isEnabled())
+            KoDockRegistry::instance()->add(new RestNoteDockFactory());
     }
 };
 

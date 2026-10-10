@@ -25,6 +25,22 @@ cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root
 cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\restnote\cmake_install.cmake
 ```
 
+## Enable setting
+
+- `Solstice/RestNoteEnabled` in kritarc, default `false` (Configure Solstice >
+  General > Custom, `chkRestNoteEnabled` in `libs/ui/forms/wdggeneralsettings.ui`,
+  read/written/reset in `GeneralTab` of `libs/ui/dialogs/kis_dlg_preferences.cc`).
+  Added 2026-10-10 at the user's request; manually checked 2026-10-10.
+- `RestNotePlugin` registers `RestNoteDockFactory` only when
+  `RestNoteDock::isEnabled()` holds, so a disabled docker has no timer, idle
+  event filter or break windows. Enabling needs a restart.
+- A loaded docker follows `KisConfigNotifier::configChanged`
+  (`applyEnabled()`): off stops the timer, removes the application event
+  filter, cancels the overlay and toast, hides the docker and disables its
+  toggle action; on again starts a fresh work period. The event filter is
+  installed only while active (`m_active`), and the destructor removes it only
+  then.
+
 ## Configuration
 
 Configuration lives at `%APPDATA%\krita\rest_note\config\main.json`. Preserve

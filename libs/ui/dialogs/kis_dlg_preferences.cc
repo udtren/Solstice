@@ -231,6 +231,7 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
 
     chkColorPickFromAnywhere->setChecked(cfg.readEntry<bool>("Solstice/ColorPickFromAnywhere", true));
     chkDisableTopMenuShortcuts->setChecked(cfg.readEntry<bool>("Solstice/DisableTopMenuShortcuts", true));
+    chkRestNoteEnabled->setChecked(cfg.readEntry<bool>("Solstice/RestNoteEnabled", false));
     const QColor defaultSlotColors[] = {
         Qt::black, Qt::white, QColor(238, 50, 51), QColor(255, 170, 63), QColor(247, 229, 61),
         QColor(151, 202, 63), QColor(91, 173, 220), QColor(191, 106, 209), QColor(118, 119, 114)
@@ -714,6 +715,7 @@ void GeneralTab::setDefault()
 {
     KisConfig cfg(true);
 
+    chkRestNoteEnabled->setChecked(false);
     m_cmbCursorShape->setCurrentIndex(cfg.newCursorStyle(true));
     m_cmbOutlineShape->setCurrentIndex(cfg.newOutlineStyle(true));
     m_chkSeparateEraserCursor->setChecked(cfg.readEntry<bool>("separateEraserCursor", false));
@@ -2773,6 +2775,7 @@ bool KisDlgPreferences::editPreferences(std::optional<PageDesc>page)
         cfg.writeEntry<bool>("Solstice/OverviewLiveUpdate", m_general->m_chkOverviewLiveUpdate->isChecked());
         cfg.writeEntry<bool>("Solstice/ColorPickFromAnywhere", m_general->chkColorPickFromAnywhere->isChecked());
         cfg.writeEntry<bool>("Solstice/DisableTopMenuShortcuts", m_general->chkDisableTopMenuShortcuts->isChecked());
+        cfg.writeEntry<bool>("Solstice/RestNoteEnabled", m_general->chkRestNoteEnabled->isChecked());
         KisColorButton *slotButtons[] = {
             m_general->btnForegroundColor1, m_general->btnForegroundColor2, m_general->btnForegroundColor3,
             m_general->btnForegroundColor4, m_general->btnForegroundColor5, m_general->btnForegroundColor6,

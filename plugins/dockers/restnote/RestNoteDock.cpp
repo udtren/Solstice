@@ -6,6 +6,8 @@
 #include "RestNoteDock.h"
 
 #include <KoResourcePaths.h>
+#include <kis_config.h>
+#include <kis_config_notifier.h>
 #include <klocalizedstring.h>
 
 #include <QApplication>
@@ -382,17 +384,50 @@ RestNoteDock::RestNoteDock(QWidget *parent)
     m_microRemaining = m_config.microIntervalSeconds();
     m_lastActivity = QDateTime::currentDateTime();
     buildUi();
-    qApp->installEventFilter(this);
     m_tickTimer = new QTimer(this);
     connect(m_tickTimer, &QTimer::timeout, this, &RestNoteDock::tick);
-    m_tickTimer->start(1000);
+    connect(KisConfigNotifier::instance(), &KisConfigNotifier::configChanged, this, &RestNoteDock::applyEnabled);
+    applyEnabled();
     refreshDisplay();
 }
 
 RestNoteDock::~RestNoteDock()
 {
-    qApp->removeEventFilter(this);
+    if (m_active)
+        qApp->removeEventFilter(this);
     cancelTransientWindows();
+}
+
+bool RestNoteDock::isEnabled()
+{
+    return KisConfig(true).readEntry<bool>("Solstice/RestNoteEnabled", false);
+}
+
+void RestNoteDock::applyEnabled()
+{
+    // Turning the setting off stops the timers, breaks and idle tracking at
+    // once and hides the docker; turning it on again (when the docker was
+    // loaded at startup) starts a fresh work period.
+    const bool enabled = isEnabled();
+    if (enabled == m_active)
+        return;
+    m_active = enabled;
+    if (enabled) {
+        qApp->installEventFilter(this);
+        m_state = State::Running;
+        m_remaining = m_config.workSeconds();
+        m_microRemaining = m_config.microIntervalSeconds();
+        m_lastActivity = QDateTime::currentDateTime();
+        m_tickTimer->start(1000);
+        toggleViewAction()->setEnabled(true);
+        refreshDisplay();
+    } else {
+        qApp->removeEventFilter(this);
+        m_tickTimer->stop();
+        cancelTransientWindows();
+        hide();
+        toggleViewAction()->setEnabled(false);
+    }
 }
 
 void RestNoteDock::buildUi()

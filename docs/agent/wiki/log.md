@@ -624,3 +624,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Pitfall: the document icon tool draws the "KRZ" label with system fonts;
   run it without `QT_QPA_PLATFORM=offscreen`, which has no fonts and draws
   empty boxes.
+
+## 2026-10-10 ingest: Rest Note enable setting, Custom tab color buttons
+
+- Rest Note is off by default (`Solstice/RestNoteEnabled`, Custom tab); the
+  plugin registers the docker only when it is on, and a loaded docker stops
+  at once when it is turned off ([rest-note.md](../rest-note.md)).
+- Lesson: every registered docker is created with each main window, hidden
+  or not, so a timer docker keeps running while hidden; gating the factory
+  registration is the reliable "off".
+- The Custom tab's foreground color buttons use a fixed size policy like the
+  Cursor tab's outline color button.
+- Pitfall: `wdggeneralsettings.ui` has mixed line endings; match edits with
+  the section's own endings.
+- User manual check OK on 2026-10-10.

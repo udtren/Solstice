@@ -51,6 +51,10 @@ public:
     explicit RestNoteDock(QWidget *parent = nullptr);
     ~RestNoteDock() override;
 
+    /// Solstice/RestNoteEnabled (Configure Solstice > General > Custom), off by
+    /// default. The plugin registers the docker only when it is on.
+    static bool isEnabled();
+
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
@@ -74,6 +78,7 @@ private:
     void endMicroBreak();
     void cancelTransientWindows();
     void showSettings();
+    void applyEnabled();
     QWidget *mainWindowHost() const;
     QScreen *currentScreen() const;
 
@@ -83,6 +88,7 @@ private:
     int m_microRemaining{0};
     QDateTime m_lastActivity;
     QTimer *m_tickTimer{nullptr};
+    bool m_active{false};
     QWidget *m_root{nullptr};
     QLabel *m_statusLabel{nullptr};
     QLabel *m_timeLabel{nullptr};
