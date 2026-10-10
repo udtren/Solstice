@@ -449,3 +449,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   already storages (`AdobeBrushLibrary`); the Brush Presets bundle filter
   lists only storages with presets, so ABR files appear there once ABR
   presets exist (phase 4).
+
+## 2026-10-10 ingest: ABR import, phase 2
+
+- `abr-import-plan.md`: `KisAbrParser` replaces the old ABR parser (versions
+  6-10, 16-bit tips, bounds and size limits, fuzzed in tests) and tips are
+  named after the presets that use them, read with `KisAslReader::readFillLayer()`
+  (a version-16 descriptor to XML). Lessons: keep a resource's file name
+  when renaming what users see, because presets and the resource database
+  identify tips by file name and md5; the resource database does not refresh
+  the names of unchanged resources of an existing storage, so renamed tips
+  show only after the library is imported again.

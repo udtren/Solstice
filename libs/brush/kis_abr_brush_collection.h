@@ -24,8 +24,6 @@ class QString;
 class QIODevice;
 
 
-struct AbrInfo;
-
 /**
  * load a collection of brushes from an abr file
  */
@@ -90,10 +88,6 @@ protected:
     void toXML(QDomDocument& d, QDomElement& e) const;
 
 private:
-
-    qint32 abr_brush_load(QDataStream & abr, AbrInfo *abr_hdr, const QString filename, qint32 image_ID, qint32 id);
-    qint32 abr_brush_load_v12(QDataStream & abr, AbrInfo *abr_hdr, const QString filename, qint32 image_ID, qint32 id);
-    quint32 abr_brush_load_v6(QDataStream & abr, AbrInfo *abr_hdr, const QString filename, qint32 image_ID, qint32 id);
 
     bool m_isLoaded;
     QDateTime m_lastModified;

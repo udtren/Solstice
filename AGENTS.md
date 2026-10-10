@@ -138,8 +138,9 @@ Read these before adding or updating any feature:
   exact redraws done and manually checked 2026-10-10):
   `docs/agent/brush-stroke-layer-plan.md`
 - Photoshop brush (ABR) import improvements (phase 1, ABR tips saved with
-  brush stroke layers, done and manually checked 2026-10-10; phases 2-5
-  planned, in progress):
+  brush stroke layers, done and manually checked 2026-10-10; phase 2, new
+  parser and tip names, done and manually checked 2026-10-10; phases 3-5
+  planned):
   `docs/agent/abr-import-plan.md`
 - Removal of the right-click Popup Palette and the On-Canvas Brush Editor
   (what was kept and why): `docs/agent/popup-palette-removal.md`

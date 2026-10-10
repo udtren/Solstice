@@ -8,6 +8,7 @@ kis_add_tests(
     kis_boundary_test.cpp
     kis_imagepipe_brush_test.cpp
     TestAbrStorage.cpp
+    TestAbrParser.cpp
     KisBrushModelTest.cpp
     LINK_LIBRARIES kritaimage kritalibbrush kritatestsdk
     )
