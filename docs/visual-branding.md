@@ -1,14 +1,17 @@
 # Temporary visual branding
 
-Solstice currently uses plain gray placeholders for its application icons,
-splash artwork, splash wordmark, and Krita-format file icons. These are
-intentional while the Solstice artwork is being prepared. The replacement
-images retain their original dimensions.
+Solstice has its own application icon (2026-10-10): a white wave on a black
+rounded square. It is used for the program, the window and taskbar, and the
+installer. Windows may continue to display an older cached icon after an
+update; signing out and in, or rebuilding the icon cache, refreshes it.
 
-Windows package tiles and macOS package artwork also have gray placeholders.
-The application and document icons temporarily look alike; use filenames
-and file extensions to distinguish them. Windows may continue to display an
-older cached icon after an update.
+The startup splash shows Solstice's own artwork (2026-10-10): the Solstice
+logo over black and white ink strokes, with the version and loading
+messages at the top right.
+
+The Krita-format file icons (`.kra` documents in Explorer) are still plain
+gray placeholders while the rest of the Solstice artwork is being prepared. Windows package tiles and macOS
+package artwork also remain gray placeholders.
 
 Upstream project references, contributor credits, and third-party sponsor
 attributions remain in place. Solstice is independently maintained and is

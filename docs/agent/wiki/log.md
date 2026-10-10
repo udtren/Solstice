@@ -544,3 +544,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   update; and never read the environment (`qgetenv` takes a global lock) per
   dab on worker threads: it slowed every path, CPU included, by more than
   half for dense brushes. Decide once per stroke.
+
+## 2026-10-10 ingest: Solstice application icon and splash
+
+- `solstice-visual-branding-todo.md`: the user's icon and splash artwork
+  replaced the gray placeholders. Masters live in
+  `krita/pics/branding/source/`; generated sizes go to `Next/` (the
+  development build's variant) and `default/`, the splash to
+  `krita/data/splash/` as an 8-bit copy. Lesson: artwork exported from an
+  RGBA float document embeds a linear profile (`sRGB-elle-V2-g10.icc`);
+  convert from the embedded profile to sRGB before scaling or compositing,
+  or the generated assets come out dark and lose subtle tints. Also: the
+  splash text was already top-right (`Qt::AlignRight`); read the layout code
+  before describing it.

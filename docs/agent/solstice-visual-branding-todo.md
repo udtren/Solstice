@@ -66,6 +66,47 @@ User-facing status: [Temporary visual branding](../visual-branding.md).
 The unchecked items below refer to final artwork and release acceptance;
 gray placeholders do not complete them.
 
+## Application icon artwork (2026-10-10)
+
+The user's icon artwork replaced the gray application icon:
+
+- Master: `krita/pics/branding/source/solstice-icon-1024.png` (1024 x 1024,
+  16-bit RGBA, transparent corners; the rounded square spans 806 x 862 px,
+  centered). The editable `.kra` stays outside the repository (64.5 MiB).
+- Generated from the master into `Next/` (the development build's variant)
+  and `default/`: `16/22/24/32/48/64/128/256/512/1024-apps-krita.png`
+  (smooth halving, then one smooth step, in RGBA64), `krita.ico` (PNG frames
+  16-256), and `sc-apps-krita.svgz` (an SVG embedding the 512 px PNG, which
+  Qt's SVG renderer draws; there is no vector source). The legacy
+  `krita/pics/branding/krita.ico` is a copy of `Next/krita.ico`. The
+  generator was a small Qt program in the session scratchpad (not in the
+  repository); regenerate the same set when the master changes.
+- The build's own `krita.ico` (ECM, installed to `installer/`) decodes at all
+  seven sizes with matching declared dimensions. `krita.exe`, `krita.dll`,
+  the hicolor PNGs and the scalable SVGZ were reinstalled; `krita.com` has no
+  icon resource.
+- Still gray: `Beta/`, `Plus/`, the Apple `krita.icon`, the `.kra` file icons
+  (`krita/pics/mimetypes/`, `kritafile.ico`), MSIX and macOS package art.
+
+Splash artwork (2026-10-10): master `krita/pics/branding/source/solstice-splash.png`
+(3146 x 1920, 16-bit RGBA, 13 MB). The resource is an 8-bit opaque copy
+composited over white, `krita/data/splash/solstice-splash.png` (1.9 MB), as
+`:/splash/0.png` in `splash.qrc` (compiled into `krita.dll`). The gray
+`electrichearts_20250824A_kiki_4K.png` and the unused HD JPEG were removed.
+`KisSplashScreen` keeps the image's aspect ratio (480 px high when loading,
+about 786 x 480; 320 px in About) and draws the version and loading text
+right-aligned at the top right in white with a drop shadow; the artwork's
+top-right corner is dark for that reason. No artwork credit is shown.
+
+**Color profile of the masters.** Both masters are exported from RGBA
+float documents and embed the linear-gamma profile `sRGB-elle-V2-g10.icc`.
+Their 16-bit values are linear light: read as plain sRGB they come out too
+dark and lose the pale blue-gray tones (the first generated splash and icons
+did this). Generated assets are converted from the embedded profile to sRGB
+first (`QImage::convertToColorSpace(QColorSpace::SRgb)` on an RGBA64 copy),
+then scaled or composited; the generated PNGs are plain 8-bit sRGB. Do the
+same whenever the masters are regenerated.
+
 ## Brand source package
 
 - [ ] Create the canonical Solstice logo as an editable vector source.
@@ -77,13 +118,14 @@ gray placeholders do not complete them.
 
 ## Application icon
 
-- [ ] Replace the icon sources under `krita/pics/branding/default/`.
+- [x] Replace the icon sources under `krita/pics/branding/default/` (and `Next/`,
+      2026-10-10, from `source/solstice-icon-1024.png`).
 - [ ] Replace or retire the `Beta`, `Next`, and `Plus` branding variants; the current
       development build is configured with the `Next` variant, so changing only
       `default` will not change its icon.
 - [ ] Generate and visually inspect the installed icon at 16, 22, 32, 48, 64, 128,
       256, 512, and 1024 pixels where the platform supports those sizes.
-- [ ] Replace `krita/pics/branding/default/krita.ico` while retaining the filename until
+- [x] Replace `krita/pics/branding/default/krita.ico` while retaining the filename until
       the executable and packaging rename is completed.
 - [ ] Replace the Apple `krita.icon` asset package and verify its generated ICNS output.
 - [ ] Update `branding.qrc` and the `krita-branding` resource alias only if a coordinated

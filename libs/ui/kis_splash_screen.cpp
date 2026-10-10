@@ -270,7 +270,9 @@ void KisSplashScreen::setLoadingText(QString text)
 
 KisSplashScreen::Source KisSplashScreen::getImageSource()
 {
-    // The temporary solid-gray splash has no artwork credit.
+    // Solstice's own splash (krita/pics/branding/source/solstice-splash.png,
+    // 2026-10-10) carries no artwork credit; the version and loading text
+    // sit at the top right, over its dark corner.
     QString artistCredit;
     // Loading the ginormous 4K PNG splash image increases the startup time on
     // Android by several seconds and at the same time looks really bad when
