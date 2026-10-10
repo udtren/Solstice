@@ -80,9 +80,10 @@ waiting after every submission. Busy buffers remain protected until their
 GPU work completes, preserving selections, layer updates and Undo/Redo.
 
 Large textured brushes now reuse available GPU transfer buffers when the
-memory limit prevents keeping all three buffers. Masked Brush also batches
-GPU pixel reads before its CPU mask-compositing step. These changes reduce
-avoidable waits, but texture generation and masking remain CPU operations;
+memory limit prevents keeping all three buffers. The masking brush's mask
+is combined with the stroke on the GPU on RGBA 32-bit float layers (see the
+GPU brush notes below). These changes reduce avoidable waits, but texture
+generation and painting the masking brush's mask remain CPU operations;
 large or densely spaced strokes can still take time to catch up.
 
 Automated checks compare complete strokes and their layer projections with
@@ -500,9 +501,14 @@ export formats write the file directly and are not covered.)
   session. Layer compositing can continue on the GPU; no setting is changed.
 - The GPU brush needs the GPU engine and its own option (on by default);
   `KRITA_GPU_BRUSH=1` or `0` overrides the option. Strokes of brushes with a
-  masking brush (two-tip brushes) are painted on the CPU: their masking is
-  computed on the CPU, and moving the stroke between the GPU and the CPU for
-  every update made them slower than the CPU brush.
+  masking brush (two-tip brushes) also use the GPU brush on RGBA 32-bit float
+  layers: the masking brush's mask is still painted on the CPU, but it is
+  combined with the stroke on the GPU, with the same result as the CPU. This
+  covers the masking blend modes Multiply, Darken, Overlay, Color Dodge,
+  Color Burn, Linear Burn, Linear Dodge, Hard Mix (Photoshop), Hard Mix
+  Softer (Photoshop) and Subtract. Masked strokes on RGBA 16-bit float layers,
+  with the masking modes that have a strength value, or on a GPU without
+  64-bit float shader support are painted on the CPU.
   Large groups of brush dabs are split by their pixel-data size so they can
   stay within the GPU upload budget. A single oversized dab can still use
   the CPU. Up to three brush batches can be queued without waiting after each

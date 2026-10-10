@@ -7,6 +7,8 @@
 #ifndef KISMASKINGBRUSHRENDERER_H
 #define KISMASKINGBRUSHRENDERER_H
 
+#include <QString>
+
 #include "kis_types.h"
 
 class KisMaskingBrushCompositeOpBase;
@@ -20,6 +22,9 @@ public:
 
     KisPaintDeviceSP strokeDevice() const;
     KisPaintDeviceSP maskDevice() const;
+    // Solstice: for the GPU masking composite (KisGpuMaskingWorker)
+    KisPaintDeviceSP dstDevice() const;
+    QString compositeOpId() const;
 
     void updateProjection(const QRect &rc);
 
@@ -28,6 +33,7 @@ private:
     KisPaintDeviceSP m_strokeDevice;
     KisPaintDeviceSP m_maskDevice;
     KisPaintDeviceSP m_dstDevice;
+    QString m_compositeOpId;
 
     QScopedPointer<KisMaskingBrushCompositeOpBase> m_compositeOp;
 };

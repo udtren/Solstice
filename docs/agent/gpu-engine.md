@@ -18,11 +18,16 @@ details are in the phase records, now in the wiki history pages (see
   `gpu-work-priorities.md`). The CPU brush's minimum update period went from
   10 ms to 0 (adaptive period kept; `KRITA_CPU_BRUSH_MIN_UPDATE_MS`), and the
   stroke's first update and the after-batch re-check (4.88, 4.89) apply to
-  every path. Strokes with a masking brush stay on the CPU brush, with a CPU
-  Wash preview and merge (`KisIndirectPaintingSupport::
-  temporaryTargetPaintedOnCpu()`); GPU dab descriptions are decided once per
-  stroke (`KisBrushOpResources::gpuDabs`) instead of reading the environment
-  for every dab (see `gpu-work-priorities.md`, 2026-10-10).
+  every path. GPU dab descriptions are decided once per stroke
+  (`KisBrushOpResources::gpuDabs`) instead of reading the environment for
+  every dab (see `gpu-work-priorities.md`, 2026-10-10).
+- Masking brush on the GPU (phase 4.101, 2026-10-10; section "Masking
+  brush"): RGBA32F strokes with a masking brush in one of the ten modes
+  without strength use the GPU brush; the masking composite runs on the GPU
+  (`KisGpuMaskingWorker`), bit-identical to the CPU. Other masked strokes
+  (RGBA16F, strength modes, no shaderFloat64, `KRITA_GPU_MASKING=0`) stay on
+  the CPU brush with a CPU Wash preview and merge
+  (`KisIndirectPaintingSupport::temporaryTargetPaintedOnCpu()`).
 - Phase: **4 (brush prototype), opt-in; phases 4.1–4.5 manually checked,
   phases 4.6 and 4.8 add brush-job and full stroke-strategy coverage.** Phase
   4.7 is also manually confirmed, with combined four-pass painting recorded
@@ -562,6 +567,64 @@ All other modes run on the CPU.
   (active device, stopped, enabled but not started, not used, or not built
   with Vulkan).
 
+### Masking brush (phase 4.101)
+
+A brush with a masking brush paints two devices per stroke
+(`KisMaskingBrushRenderer`): the stroke device (the main brush, same color
+space as the target) and a GrayA8 mask device (the masking brush). Each
+update copies the stroke into the target and composites the mask into the
+target's alpha (`KisMaskingBrushCompositeOp`). Until phase 4.101 this
+composite ran on the CPU, so masked strokes stayed on the CPU brush.
+
+- `libs/gpu/shaders/masking_composite.comp` + `KisGpuMaskingCompositePass.*`:
+  one workgroup per 64x64 tile; inside the rect each pixel becomes the
+  stroke pixel (zero for an absent stroke tile) with
+  `a = composite(mode, uint8ToFloat[mask], a)`. Modes 0-9 follow
+  `KisMaskingBrushCompositeFuncTypes` without strength: Multiply, Darken,
+  Overlay, Color Dodge, Color Burn, Linear Burn, Linear Dodge, Hard Mix
+  (Photoshop), Hard Mix Softer (Photoshop), Subtract.
+- Parity: `KoColorSpaceMathsTraits<float>::compositetype` is float, so the
+  shader uses `precise float` for products and sums (no double chains:
+  Overlay, Linear Burn and Hard Mix Softer differed by 1 ulp with double).
+  Divisions are computed in double and cast, which rounds them correctly.
+  Dodge/Burn reproduce the CPU's NaN/inf handling; the fuzzy tests follow
+  `qFuzzyIsNull` (<= 0.00001) and `qFuzzyCompare`. The mask byte is
+  `multiply(gray, alpha)` computed on the CPU, and the byte-to-float table is
+  uploaded from `KoColorSpaceMaths<quint8, float>::scaleToA` (`KoLuts`).
+  Requires `shaderFloat64`.
+- `libs/image/gpu/KisGpuMaskingWorker.*`: `supports(colorSpace, opId)` (GPU
+  brush enabled, RGBA32F, a supported mode, float64, `KRITA_GPU_MASKING` not
+  `0`); `apply(stroke, mask, dst, rect, opId)` reads the mask bytes, takes
+  the stroke ReadOnly and the target ReadWrite (their tile grids must match),
+  records, submits and waits. It returns false without changing the devices
+  when it cannot run; the caller then composites on the CPU. `runCount()`
+  for tests.
+- `KisPainterBasedStrokeStrategy`: `m_gpuMasking` is decided once per stroke
+  (LOD 0, `paintbrush` preset, `supports()`); it marks the temporary target
+  as GPU-painted (`setTemporaryTargetPaintedOnCpu(!m_gpuMasking)`, also on
+  resume). `doMaskingBrushUpdates()` then runs one sequential job over the
+  union of the rects; on failure it falls back to
+  `updateProjection(rc)` per rect.
+- `KisBrushOp`: a masked stroke keeps the GPU brush only when `supports()`
+  holds for the masking composite op. Masked strokes keep the adaptive update
+  period instead of the GPU minimum (4.88): each batch also costs a masking
+  composite and a projection merge, and with CPU-generated (textured) dabs the
+  GPU minimum made about seven times more batches (300px textured masked:
+  113 -> 89 ms; CPU 78 ms, GPU projection only 90 ms).
+- Measurements (`KisGpuStrokeTest`, median of 5, no validation, ms; CPU /
+  GPU projection / GPU brush): masked 300px 51 / 56 / 30; masked 300px
+  textured 78 / 90 / 89; masked 150px 11 / 16 / 13; temporary dense rows
+  (spacing 0.03, both mirrors) 40px 25 / 32 / 29, 40px textured
+  29 / 36 / 36, 80px 39 / 47 / 27, 80px textured 49 / 55 / 41.
+- Tests: `KisGpuStrokeTest::testMaskingCompositeMatchesCpu` (all ten modes,
+  bit-exact against `KisMaskingBrushCompositeOpFactory`, pixels outside the
+  rect kept) and the masked rows of `testTexturedMaskedStroke` (RGBA32F masked
+  rows on the GPU brush path must run the worker; others must not).
+- Not covered: RGBA16F, the strength modes (Height, Linear Height and their
+  soft-texturing variants), LOD previews. Painting the mask itself stays on
+  the CPU (an alpha device).
+- Manual check reported OK by the user on 2026-10-10.
+
 ## Phase 0 technology decisions
 
 | Topic | Decision | Reason |
@@ -831,6 +894,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `KisGpuGLSharedBuffer.*` (Windows) | Vulkan buffer shared with a GL pixel unpack buffer, with the Vulkan/GL semaphore cycle. |
 | `KisGpuGLInterop_p.h` (private) | GL_EXT_memory_object / GL_EXT_semaphore entry points and the device-UUID check shared by the interop classes. |
 | `KisGpuSeparableConvolutionPass.*` + `shaders/separable_convolution.comp` | Phase-4.98 separable convolution in bands: horizontal pass into a double intermediate, vertical pass with the FFT worker's write rules. |
+| `KisGpuMaskingCompositePass.*` + `shaders/masking_composite.comp` | Phase-4.101 masking brush composite: stroke pixels into the target with the mask composited into alpha, ten modes, CPU-exact. |
 
 ## Source map (`libs/image`)
 
@@ -848,6 +912,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points. |
 | `kis_updater_context.cpp` | Tile-aligned job exclusivity when `KisGpuMergeBatch::mayCompositeOnGpu`. |
 | `gpu/KisGpuConvolutionWorker.*` | Phase-4.98 Gaussian convolution: old-data snapshot, one GPU submission into a temporary device, CPU copy into the rect. Called by `KisGaussianKernel::applyGaussian()`. |
+| `gpu/KisGpuMaskingWorker.*` | Phase-4.101 masking brush composite for `KisPainterBasedStrokeStrategy::doMaskingBrushUpdates()`; `supports()` is also used by `KisBrushOp`. |
 
 ## Source map (`libs/ui`)
 
@@ -968,6 +1033,11 @@ Phase 0 has no user-visible behavior. From phase 3 on:
 8. Puppet Warp apply on RGBA32F and RGBA16F layers (phase 4.96): one pin,
    several pins with a turned joint and pin orders, Undo/Redo; the result
    matches the preview.
+9. Masking brush on the GPU brush (phase 4.101) on an RGBA32F layer: a
+   textured masked preset (e.g. `z) 线稿 纹理`) with both mirrors at about
+   40px and at a large size, a masked preset in Wash and Buildup, another
+   masking mode (e.g. Darken or Subtract), Undo/Redo; the stroke looks like
+   the CPU brush (GPU brush off) and does not lag behind it.
 
 ## Phase history
 
@@ -1070,6 +1140,7 @@ Section index:
 - [GPU Liquify grid warp (phase 4.97)](wiki/history/gpu-phases-4.93-.md#gpu-liquify-grid-warp-phase-497)
 - [GPU Gaussian blur family (phase 4.98)](wiki/history/gpu-phases-4.93-.md#gpu-gaussian-blur-family-phase-498)
 - [GPU Puppet Warp mesh rendering (phase 4.96)](wiki/history/gpu-phases-4.93-.md#gpu-puppet-warp-mesh-rendering-phase-496)
+- [GPU masking brush composite (phase 4.101)](wiki/history/gpu-phases-4.93-.md#gpu-masking-brush-composite-phase-4101)
 
 ## Risks and open questions
 

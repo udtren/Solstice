@@ -23,6 +23,8 @@
 #include "KisRunnableStrokeJobData.h"
 #include "KisAnimAutoKey.h"
 
+#include "gpu/KisGpuMaskingWorker.h"
+#include "kis_default_bounds_base.h"
 #include "kis_paintop_registry.h"
 #include "kis_paintop_preset.h"
 #include "kis_paintop_settings.h"
@@ -173,8 +175,28 @@ QVector<KisRunnableStrokeJobData *> KisPainterBasedStrokeStrategy::doMaskingBrus
     QVector<KisRunnableStrokeJobData *> jobs;
     KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(m_maskingBrushRenderer, jobs);
 
-    // Solstice (GPU engine): strokes with a masking brush are painted on the
-    // CPU (KisBrushOp), so their stroke device needs no GPU readback here.
+    // Solstice (GPU engine): the stroke is painted with the GPU brush and the
+    // composite runs on the GPU, for all the rects at once; if the GPU cannot
+    // run it, the CPU composites (reading the stroke back first)
+    if (m_gpuMasking && !rects.isEmpty()) {
+        KritaUtils::addJobSequential(jobs, [this, rects]() {
+            QRect all;
+            for (const QRect &rc : rects) {
+                all |= rc;
+            }
+            KisMaskingBrushRenderer *renderer = this->m_maskingBrushRenderer.data();
+            if (!KisGpuMaskingWorker::apply(renderer->strokeDevice(),
+                                            renderer->maskDevice(),
+                                            renderer->dstDevice(),
+                                            all,
+                                            renderer->compositeOpId())) {
+                for (const QRect &rc : rects) {
+                    renderer->updateProjection(rc);
+                }
+            }
+        });
+        return jobs;
+    }
 
     Q_FOREACH (const QRect &rc, rects) {
         KritaUtils::addJobConcurrent(jobs,
@@ -372,10 +394,16 @@ void KisPainterBasedStrokeStrategy::initStrokeCallback()
                 m_resources->currentPaintOpPreset()->settings()->maskingBrushCompositeOp();
 
             m_maskingBrushRenderer.reset(new KisMaskingBrushRenderer(targetDevice, compositeOpId));
-            // Solstice (GPU engine): the masking composite writes the
-            // temporary target on the CPU; keep its Wash preview there too
+            // Solstice (GPU engine): with the GPU brush the composite runs on
+            // the GPU (KisBrushOp decides the same way); otherwise it writes
+            // the temporary target on the CPU, and its Wash preview stays
+            // there too
+            // (only the Pixel Brush paints with the GPU brush)
+            m_gpuMasking = targetDevice->defaultBounds()->currentLevelOfDetail() == 0
+                && m_resources->currentPaintOpPreset()->paintOp().id() == QLatin1String("paintbrush")
+                && KisGpuMaskingWorker::supports(targetDevice->colorSpace(), compositeOpId);
             if (auto *indirect = dynamic_cast<KisIndirectPaintingSupport *>(node.data())) {
-                indirect->setTemporaryTargetPaintedOnCpu(true);
+                indirect->setTemporaryTargetPaintedOnCpu(!m_gpuMasking);
             }
 
             initPainters(m_maskingBrushRenderer->strokeDevice(),
@@ -600,7 +628,7 @@ void KisPainterBasedStrokeStrategy::resumeStrokeCallback()
             QBitArray channelLockFlags = m_resources->channelLockFlags();
             indirect->setTemporaryChannelFlags(channelLockFlags);
             // Solstice (GPU engine): see initStrokeCallback()
-            indirect->setTemporaryTargetPaintedOnCpu(bool(m_maskingBrushRenderer));
+            indirect->setTemporaryTargetPaintedOnCpu(m_maskingBrushRenderer && !m_gpuMasking);
         }
     }
 

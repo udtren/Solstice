@@ -67,6 +67,16 @@ The masking formulas and patch partitioning remain unchanged. Phase 4.35
 changes the brush staging-context choice in `KisGpuBrushPainter.cpp` to reuse
 existing large buffers without exceeding the existing memory cap.
 
+GPU phase 4.101 (masking brush composite on the GPU) adds the new
+`libs/gpu/KisGpuMaskingCompositePass.*`, `libs/gpu/shaders/masking_composite.comp`
+and `libs/image/gpu/KisGpuMaskingWorker.*` (both `CMakeLists.txt` lists). Upstream
+touch points: `dstDevice()`/`compositeOpId()` in
+`libs/ui/tool/strokes/KisMaskingBrushRenderer.{h,cpp}`; `m_gpuMasking`, the
+temporary-target flag and the GPU job in `doMaskingBrushUpdates()` in
+`libs/ui/tool/strokes/kis_painter_based_stroke_strategy.{h,cpp}`;
+`m_maskedStroke` and the masked GPU-brush decision and update period in
+`plugins/paintops/defaultpaintops/brush/kis_brushop.{h,cpp}`.
+
 GPU phases 4.36-4.37 forward per-channel layer flags in
 `libs/image/gpu/KisGpuMergeBatch.*`, allow F16 channel masks in
 `KisGpuProjectionCompositor.cpp`, and align the established F16 generic blend

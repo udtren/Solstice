@@ -76,6 +76,8 @@ protected:
 
 private:
     bool m_isRgbaFloatImage = false;
+    // Solstice: a stroke with a masking brush (each batch also composites the mask)
+    bool m_maskedStroke = false;
     KisAirbrushOptionData m_airbrushData;
 
     KisSizeOption m_sizeOption;

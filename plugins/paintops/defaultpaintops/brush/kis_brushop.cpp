@@ -44,6 +44,7 @@
 #include <KisRunnableStrokeJobsInterface.h>
 
 #include "gpu/KisGpuBrushPainter.h"
+#include "gpu/KisGpuMaskingWorker.h"
 #include "kis_image_config.h"
 #include "kis_wrapped_rect.h"
 #include <QAtomicInt>
@@ -74,12 +75,16 @@ KisBrushOp::KisBrushOp(const KisPaintOpSettingsSP settings, KisPainter *painter,
         && (image->colorSpace()->colorDepthId() == Float32BitsColorDepthID
             || image->colorSpace()->colorDepthId() == Float16BitsColorDepthID);
     Q_ASSERT(settings);
-    // Solstice (2026-10-10): a stroke with a masking brush stays on the CPU
-    // brush path. Its masking composite (KisMaskingBrushRenderer) runs on
-    // the CPU over the stroke device, so GPU-painted tiles were read back
-    // and uploaded again for every update: up to 2.4 times slower than the
-    // CPU brush, more with mirrors (docs/agent/gpu-work-priorities.md).
-    if (settings->hasMaskingSettings()) {
+    // Solstice (2026-10-10): a stroke with a masking brush uses the GPU
+    // brush only when its masking composite runs on the GPU too
+    // (KisGpuMaskingWorker; the stroke decides the same way). A CPU
+    // composite over GPU-painted tiles read them back and uploaded them again
+    // for every update: up to 2.4 times slower than the CPU brush
+    // (docs/agent/gpu-work-priorities.md).
+    m_maskedStroke = settings->hasMaskingSettings();
+    if (m_maskedStroke
+        && !(painter && painter->device()
+             && KisGpuMaskingWorker::supports(painter->device()->colorSpace(), settings->maskingBrushCompositeOp()))) {
         m_isRgbaFloatImage = false;
     }
     // The masking brush of such a stroke paints into an alpha mask, which the
@@ -347,7 +352,11 @@ std::pair<int, bool> KisBrushOp::doAsynchronousUpdate(QVector<KisRunnableStrokeJ
     // GPU engine (Solstice, phase 4.88): on the GPU path a batch costs a
     // submission, not CPU rasterization by worker threads, so the CPU-tuned
     // 10-100 ms update period only delays dabs that are already ready.
-    const bool gpuPath = m_isRgbaFloatImage && KisGpuBrushPainter::supports(painter());
+    // A masked stroke keeps the adaptive period: each batch also composites
+    // the mask and merges the projection, so batches of the few dabs that
+    // CPU-generated (e.g. textured) dabs make ready at a time cost more than
+    // they save (docs/agent/gpu-engine.md, "Masking brush").
+    const bool gpuPath = m_isRgbaFloatImage && KisGpuBrushPainter::supports(painter()) && !m_maskedStroke;
     if (gpuPath) {
         m_currentUpdatePeriod = gpuMinimumUpdatePeriod();
     }

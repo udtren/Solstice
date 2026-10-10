@@ -554,3 +554,20 @@ mode (run sheet: [paint-trace-baseline-runs.md](../../paint-trace-baseline-runs.
   launcher does not set it, so everyday painting runs at the CPU figures.
 - Limits as before: Qt command-swap acknowledgement, not photons; trace on;
   hand drawing; one process per mode.
+
+## GPU masking brush composite (phase 4.101)
+
+2026-10-10, user request (follow-up of the masked-brush lag fix). The masking
+brush composite now runs on the GPU for RGBA32F strokes in the ten modes
+without strength, so masked strokes can use the GPU brush. Details and
+measurements: [gpu-engine.md](../../gpu-engine.md), "Masking brush".
+
+- Exact parity needed float arithmetic, not double: the CPU's
+  `compositetype` for float is float. Products and sums use `precise float`.
+  Divisions are computed in double and cast, which gives a correctly rounded
+  float quotient.
+- Masked strokes keep the CPU's adaptive update period. With the GPU minimum,
+  textured masked strokes split into about seven times more batches, each
+  paying for a masking composite and a projection merge.
+- Tests: `testMaskingCompositeMatchesCpu` (ten modes) and the masked rows of
+  `testTexturedMaskedStroke`.

@@ -24,6 +24,7 @@
 #include <brushengine/kis_paintop_registry.h>
 #include <cmath>
 #include <gpu/KisGpuBrushPainter.h>
+#include <gpu/KisGpuMaskingWorker.h>
 #include <gpu/KisGpuMergeBatch.h>
 #include <gpu/KisGpuTileBackend.h>
 #include <kis_canvas_resource_provider.h>
@@ -37,6 +38,8 @@
 #include <kis_undo_stores.h>
 #include <simpletest.h>
 #include <strokes/KisFreehandStrokeInfo.h>
+#include <strokes/KisMaskingBrushCompositeOpBase.h>
+#include <strokes/KisMaskingBrushCompositeOpFactory.h>
 #include <strokes/freehand_stroke.h>
 #include <vector>
 
@@ -349,6 +352,97 @@ private Q_SLOTS:
         QFETCH(bool, textured);
         runStroke(false, false, -1, QString(), masked, textured);
     }
+    void testMaskingCompositeMatchesCpu_data()
+    {
+        QTest::addColumn<QString>("mode");
+        for (const QString &mode : {QString(COMPOSITE_MULT),
+                                    QString(COMPOSITE_DARKEN),
+                                    QString(COMPOSITE_OVERLAY),
+                                    QString(COMPOSITE_DODGE),
+                                    QString(COMPOSITE_BURN),
+                                    QString(COMPOSITE_LINEAR_BURN),
+                                    QString(COMPOSITE_LINEAR_DODGE),
+                                    QString(COMPOSITE_HARD_MIX_PHOTOSHOP),
+                                    QString(COMPOSITE_HARD_MIX_SOFTER_PHOTOSHOP),
+                                    QString(COMPOSITE_SUBTRACT)})
+            QTest::newRow(qPrintable(mode)) << mode;
+    }
+    /// The GPU masking composite (KisGpuMaskingWorker) is bit-identical to the
+    /// CPU one (KisMaskingBrushCompositeOp<float>) for every mode, and leaves
+    /// the pixels outside the rect alone.
+    void testMaskingCompositeMatchesCpu()
+    {
+        QFETCH(QString, mode);
+        const KoColorSpace *cs = KoColorSpaceRegistry::instance()->colorSpace(RGBAColorModelID.id(),
+                                                                              Float32BitsColorDepthID.id(),
+                                                                              QString());
+        const KoColorSpace *grayA = KoColorSpaceRegistry::instance()->colorSpace(GrayAColorModelID.id(),
+                                                                                 Integer8BitsColorDepthID.id(),
+                                                                                 QString());
+        QVERIFY(KisGpuMaskingWorker::supports(cs, mode) || !KisGpuBrushPainter::isEnabled());
+        const QRect area(10, 20, 150, 90); // spans tiles
+        const QRect rect(25, 40, 100, 60);
+        // alphas at the modes' edges (0, 0.5, 1, the fuzzy thresholds) and
+        // in between; masks over the whole byte range
+        const float alphas[] = {0.0f, 1.0f, 0.5f, 0.00001f, 0.000011f, 0.99999f, 0.5000001f, 0.25f, 0.75f, 0.33f};
+        std::vector<float> stroke(size_t(area.width()) * area.height() * 4);
+        std::vector<quint8> mask(size_t(area.width()) * area.height() * 2);
+        quint32 seed = 7;
+        auto next = [&seed]() {
+            seed = seed * 1664525u + 1013904223u;
+            return seed >> 8;
+        };
+        for (size_t i = 0; i < stroke.size() / 4; ++i) {
+            for (int c = 0; c < 3; ++c)
+                stroke[4 * i + c] = float(next() % 1000) / 999.0f;
+            stroke[4 * i + 3] = i % 3 == 0 ? alphas[next() % 10] : float(next() % 100001) / 100000.0f;
+            mask[2 * i] = quint8(i % 7 == 0 ? (next() % 2) * 255 : next() % 256);
+            mask[2 * i + 1] = quint8(i % 5 == 0 ? 255 : next() % 256);
+        }
+        std::vector<float> background(stroke.size());
+        for (size_t i = 0; i < background.size(); ++i)
+            background[i] = 0.25f + float(i % 4) * 0.1f;
+
+        KisPaintDeviceSP strokeDevice = new KisPaintDevice(cs);
+        KisPaintDeviceSP maskDevice = new KisPaintDevice(grayA);
+        KisPaintDeviceSP dstDevice = new KisPaintDevice(cs);
+        strokeDevice->writeBytes(reinterpret_cast<const quint8 *>(stroke.data()), area);
+        maskDevice->writeBytes(mask.data(), area);
+        dstDevice->writeBytes(reinterpret_cast<const quint8 *>(background.data()), area);
+
+        // the CPU reference: the stroke copied into the rect, then the
+        // composite on its alpha
+        std::vector<float> expected = background;
+        QScopedPointer<KisMaskingBrushCompositeOpBase> op(
+            KisMaskingBrushCompositeOpFactory::create(mode, KoChannelInfo::FLOAT32, 16, 12));
+        for (int y = rect.top(); y <= rect.bottom(); ++y) {
+            const size_t row = size_t(y - area.top()) * area.width();
+            const size_t first = row + size_t(rect.left() - area.left());
+            std::copy(stroke.begin() + 4 * first,
+                      stroke.begin() + 4 * (first + rect.width()),
+                      expected.begin() + 4 * first);
+            op->composite(mask.data() + 2 * first,
+                          0,
+                          reinterpret_cast<quint8 *>(expected.data() + 4 * first),
+                          0,
+                          rect.width(),
+                          1);
+        }
+
+        QVERIFY(KisGpuMaskingWorker::apply(strokeDevice, maskDevice, dstDevice, rect, mode));
+        std::vector<float> actual(background.size());
+        dstDevice->readBytes(reinterpret_cast<quint8 *>(actual.data()), area);
+        int mismatches = 0;
+        for (size_t i = 0; i < actual.size(); ++i) {
+            if (std::memcmp(&actual[i], &expected[i], sizeof(float)) != 0) {
+                if (mismatches++ < 5)
+                    qWarning() << "pixel" << i / 4 << "channel" << i % 4 << "GPU" << actual[i] << "CPU" << expected[i]
+                               << "stroke alpha" << stroke[(i / 4) * 4 + 3] << "mask" << mask[(i / 4) * 2]
+                               << mask[(i / 4) * 2 + 1];
+            }
+        }
+        QCOMPARE(mismatches, 0);
+    }
 
 private:
     QString m_maskGenerator = QStringLiteral("default");
@@ -511,6 +605,7 @@ private:
                 const auto firstGenerated = KisGpuBrushPainter::generatedDabCount();
                 const auto firstSkipped = KisDabRenderingJobRunner::skippedGenerationCount();
                 const auto firstMaterialized = KisBrushOp::materializedDabCount();
+                const auto firstMaskingRuns = KisGpuMaskingWorker::runCount();
                 KisGpuBrushPainter::refusePendingBatchesForTesting(path == 2 ? m_refusePendingBatches : 0);
                 QElapsedTimer timer;
                 timer.start();
@@ -544,12 +639,15 @@ private:
                     QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > firstComposite);
                 else
                     QCOMPARE(KisGpuMergeBatch::gpuCompositeCount(), firstComposite);
-                // A stroke with a masking brush keeps the CPU brush path
-                // (its masking composite reads the stroke device on the CPU).
-                const bool gpuBrush = path == 2 && !masked;
+                // A stroke with a masking brush uses the GPU brush when its
+                // masking composite runs on the GPU too (RGBA32F).
+                const bool gpuBrush = path == 2 && !(masked && half);
+                const auto maskingRuns = KisGpuMaskingWorker::runCount() - firstMaskingRuns;
+                if (path == 2 && masked && !half)
+                    QVERIFY(maskingRuns > 0);
+                else
+                    QCOMPARE(maskingRuns, quint64(0));
                 const auto batches = KisGpuBrushPainter::batchCount() - firstBatch;
-                // The Wash preview and final merge of a stroke painted on the
-                // CPU stay on the CPU too.
                 if (gpuBrush && wash)
                     QVERIFY(KisGpuBrushPainter::washPreviewCount() > firstPreview);
                 else

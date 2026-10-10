@@ -569,3 +569,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   (GPU acceleration, workflows from Clip Studio Paint, Krita refined) in an
   HTML table; links inside the table are HTML anchors because Markdown is not
   rendered in table cells.
+
+## 2026-10-10 ingest: GPU masking brush composite (phase 4.101)
+
+- Masked strokes on RGBA32F use the GPU brush; the masking composite runs on
+  the GPU, bit-identical to the CPU in the ten modes without strength
+  ([gpu-engine.md](../gpu-engine.md), "Masking brush";
+  [history](history/gpu-phases-4.93-.md#gpu-masking-brush-composite-phase-4101)).
+- Lesson: for float parity, match the CPU's `compositetype` (float, not
+  double) with `precise float`; only divisions go through double.
+- Lesson: per-batch fixed costs (a masking composite plus a projection merge)
+  make the GPU minimum update period counterproductive when dabs arrive
+  slowly from CPU generation; masked strokes keep the adaptive period.
+- User manual check OK on 2026-10-10.

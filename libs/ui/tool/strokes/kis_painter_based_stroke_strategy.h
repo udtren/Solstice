@@ -138,6 +138,9 @@ private:
     QScopedPointer<KisTransaction> m_transaction;
 
     QScopedPointer<KisMaskingBrushRenderer> m_maskingBrushRenderer;
+    // Solstice (GPU engine): the masking composite runs on the GPU
+    // (KisGpuMaskingWorker), decided once per stroke like the brush op's path
+    bool m_gpuMasking = false;
 
     KisPaintDeviceSP m_targetDevice;
     KisSelectionSP m_activeSelection;

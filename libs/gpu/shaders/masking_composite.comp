@@ -1,0 +1,217 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Solstice contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * The masking brush composite (KisMaskingBrushRenderer::updateProjection())
+ * on RGBA32F tiles: inside the rect, every destination pixel becomes the
+ * stroke pixel with its alpha composited with the mask, exactly as
+ * KisMaskingBrushCompositeOp<float, mode> does (the same float and double
+ * operations, in the same order). Pixels outside the rect keep the
+ * destination. One workgroup per destination tile; the stroke and
+ * destination tile grids are the same.
+ */
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+layout(local_size_x = 256) in;
+
+layout(buffer_reference, std430, buffer_reference_align = 16) buffer TilePixels
+{
+    vec4 px[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer AddressTable
+{
+    uint64_t addr[];
+};
+
+// the mask bytes, four per word (little endian)
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer MaskBytes
+{
+    uint word[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer FloatTable
+{
+    float value[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer Params
+{
+    ivec4 rect; // x, y, width, height
+    ivec2 gridOrigin; // image coordinates of the first tile
+    int gridWidth;
+    int gridHeight;
+    int mode; // KisMaskingBrushCompositeFuncTypes
+    int padding[3];
+};
+
+layout(push_constant) uniform Push
+{
+    Params params;
+    AddressTable srcTiles; // 0: the stroke's default (transparent) pixel
+    AddressTable dstTiles;
+    MaskBytes mask; // gray * alpha of the mask, rect-sized rows
+    FloatTable uint8ToFloat; // KoLuts::Uint8ToFloat
+}
+push;
+
+const int MODE_MULT = 0;
+const int MODE_DARKEN = 1;
+const int MODE_OVERLAY = 2;
+const int MODE_DODGE = 3;
+const int MODE_BURN = 4;
+const int MODE_LINEAR_BURN = 5;
+const int MODE_LINEAR_DODGE = 6;
+const int MODE_HARD_MIX_PHOTOSHOP = 7;
+const int MODE_HARD_MIX_SOFTER_PHOTOSHOP = 8;
+const int MODE_SUBTRACT = 9;
+
+// qFuzzyIsNull(float)
+bool fuzzyZero(float v)
+{
+    return abs(v) <= 0.00001;
+}
+
+// qFuzzyCompare(float, float)
+bool fuzzyCompare(float a, float b)
+{
+    precise float difference = abs(a - b) * 100000.0;
+    return difference <= min(abs(a), abs(b));
+}
+
+// KoColorSpaceMathsTraits<float>::compositetype is float: every operation
+// rounds to float, in the CPU's order. `precise` keeps the compiler from
+// fusing or reordering them. Divisions are done in double and rounded once,
+// which is the correctly rounded float division the CPU does.
+
+// KoColorSpaceMaths<float>::multiply(): a * b / 1
+float mulf(float a, float b)
+{
+    precise float product = a * b;
+    return product;
+}
+
+float divf(float a, float b)
+{
+    precise double quotient = double(a) / double(b);
+    return float(quotient);
+}
+
+// Arithmetic::unionShapeOpacity<float>(): a + b - a * b
+float unionShape(float a, float b)
+{
+    const float m = mulf(a, b);
+    precise float sum = a + b;
+    precise float result = sum - m;
+    return result;
+}
+
+// CFHardLight<float>::composeChannel(src, dst)
+float hardLight(float src, float dst)
+{
+    if (fuzzyCompare(src, 0.5)) {
+        return dst;
+    }
+    precise float src2 = src + src;
+    if (src > 0.5) {
+        src2 = src2 - 1.0;
+        return unionShape(src2, dst);
+    }
+    return mulf(src2, dst);
+}
+
+float composite(int mode, float src, float dst)
+{
+    if (mode == MODE_MULT) {
+        return mulf(src, dst);
+    }
+    if (mode == MODE_DARKEN) {
+        // qMin(src, dst)
+        return dst < src ? dst : src;
+    }
+    if (mode == MODE_OVERLAY) {
+        // CFOverlay: hard light with the arguments swapped
+        return hardLight(dst, src);
+    }
+    if (mode == MODE_DODGE) {
+        if (fuzzyCompare(src, 1.0)) {
+            return fuzzyZero(dst) ? 0.0 : 1.0;
+        }
+        const float denominator = 1.0 - src;
+        const float quotient = divf(dst, denominator);
+        if (isnan(quotient)) {
+            return 1.0;
+        }
+        return clamp(quotient, 0.0, 1.0);
+    }
+    if (mode == MODE_BURN) {
+        // CFColorBurn<float>
+        if (dst == 1.0) {
+            return 1.0;
+        }
+        const float numerator = 1.0 - dst;
+        const float quotient = divf(numerator, src);
+        if (isnan(quotient) || isinf(quotient)) {
+            return 0.0;
+        }
+        const float clamped = clamp(quotient, 0.0, 1.0);
+        return 1.0 - clamped;
+    }
+    if (mode == MODE_LINEAR_BURN) {
+        precise float sum = src + dst;
+        precise float result = sum - 1.0;
+        return max(0.0, result);
+    }
+    if (mode == MODE_LINEAR_DODGE) {
+        if (fuzzyZero(dst)) {
+            return 0.0;
+        }
+        precise float sum = src + dst;
+        return min(sum, 1.0);
+    }
+    if (mode == MODE_HARD_MIX_PHOTOSHOP) {
+        precise float sum = src + dst;
+        return sum > 1.0 ? 1.0 : 0.0;
+    }
+    if (mode == MODE_HARD_MIX_SOFTER_PHOTOSHOP) {
+        const float inverted = 1.0 - src;
+        precise float a = 3.0 * dst;
+        precise float b = 2.0 * inverted;
+        precise float result = a - b;
+        return clamp(result, 0.0, 1.0);
+    }
+    // MODE_SUBTRACT
+    precise float difference = dst - src;
+    return max(0.0, difference);
+}
+
+void main()
+{
+    const uint tile = gl_WorkGroupID.x;
+    Params p = push.params;
+    if (tile >= uint(p.gridWidth * p.gridHeight)) {
+        return;
+    }
+    const uint64_t dstAddress = push.dstTiles.addr[tile];
+    if (dstAddress == 0) {
+        return;
+    }
+    const uint64_t srcAddress = push.srcTiles.addr[tile];
+    TilePixels dst = TilePixels(dstAddress);
+    const ivec2 tileOrigin = p.gridOrigin + ivec2(int(tile) % p.gridWidth, int(tile) / p.gridWidth) * 64;
+    for (uint index = gl_LocalInvocationID.x; index < 64 * 64; index += gl_WorkGroupSize.x) {
+        const ivec2 pos = tileOrigin + ivec2(int(index % 64), int(index / 64));
+        const ivec2 local = pos - p.rect.xy;
+        if (local.x < 0 || local.y < 0 || local.x >= p.rect.z || local.y >= p.rect.w) {
+            continue;
+        }
+        vec4 pixel = srcAddress != 0 ? TilePixels(srcAddress).px[index] : vec4(0.0);
+        const uint byteIndex = uint(local.y * p.rect.z + local.x);
+        const uint maskValue = (push.mask.word[byteIndex >> 2] >> ((byteIndex & 3u) * 8u)) & 0xffu;
+        const float src = push.uint8ToFloat.value[maskValue];
+        pixel.a = composite(p.mode, src, pixel.a);
+        dst.px[index] = pixel;
+    }
+}

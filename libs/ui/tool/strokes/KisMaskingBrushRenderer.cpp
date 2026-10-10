@@ -22,6 +22,7 @@
 
 KisMaskingBrushRenderer::KisMaskingBrushRenderer(KisPaintDeviceSP dstDevice, const QString &compositeOpId)
     : m_dstDevice(dstDevice)
+    , m_compositeOpId(compositeOpId)
 {
     m_strokeDevice = new KisPaintDevice(dstDevice->colorSpace());
     m_maskDevice = new KisPaintDevice(
@@ -67,6 +68,16 @@ KisPaintDeviceSP KisMaskingBrushRenderer::strokeDevice() const
 KisPaintDeviceSP KisMaskingBrushRenderer::maskDevice() const
 {
     return m_maskDevice;
+}
+
+KisPaintDeviceSP KisMaskingBrushRenderer::dstDevice() const
+{
+    return m_dstDevice;
+}
+
+QString KisMaskingBrushRenderer::compositeOpId() const
+{
+    return m_compositeOpId;
 }
 
 void KisMaskingBrushRenderer::updateProjection(const QRect &rc)
