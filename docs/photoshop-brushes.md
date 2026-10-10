@@ -17,18 +17,29 @@ its own. Improved ABR support is being added in stages.
 - Patterns stored in ABR files appear with the other patterns, for fills and
   brush textures. Patterns in color modes Solstice cannot read (such as
   CMYK) are skipped and reported in the log.
+- Photoshop's brush presets become Pixel Brush presets, listed under the
+  `.abr` file's name like a bundle. They take the tip, size, angle,
+  roundness, spacing and hardness; size, angle, roundness, opacity and flow
+  dynamics (pressure, tilt, wheel, direction, rotation, fade and jitter);
+  scattering; texture (with the file's pattern and Photoshop's blend modes);
+  the dual brush (as the masking brush); and the tool's opacity, flow and
+  blend mode. They paint in Wash mode.
 - Strokes drawn with ABR tips on a [Brush Stroke Layer](brush-stroke-layer.md)
   save their tips in the `.kra` file.
 
 ## Not read yet
 
-- Photoshop's brush presets (size, spacing, pressure dynamics, scattering,
-  texture, dual brush, color dynamics): planned. Until then each tip has to
-  be set up as a brush in the Brush Editor.
+- Some Photoshop settings have no counterpart and are left out (the log
+  lists them for each file): the scatter count, flipping and flip jitter,
+  color dynamics, wet edges, noise, brush pose, texture protection and
+  smoothing.
 - Folders of presets: planned, as tags.
 - Computed (round) brushes of ABR versions 1 and 2.
 
 ## Known limitations
+
+- Presets with a shallow texture depth in Photoshop's Height mode, or with a
+  dual brush in Darken or Color Burn mode, may paint very faintly.
 
 - ABR libraries imported before this version keep the tip names they had;
   removing the library and importing the file again shows the new names.

@@ -479,3 +479,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   width (stretch 3:2). Lesson: a Qt box layout without stretch factors gives
   extra width to the widgets with expanding policies, so a list next to
   expanding spin boxes never grows.
+
+## 2026-10-10 ingest: ABR import, phase 4
+
+- `abr-import-plan.md`: ABR brush presets become Pixel Brush presets of the
+  ABR storage. Option keys are written as `.kpp` stores them, because the
+  option data classes live in `kritalibpaintop`, which `kritalibbrush` cannot
+  link; tests read them back with those classes. Lessons: every curve option
+  needs at least one sensor (a constant one is pressure with a flat curve);
+  descriptor integers come out unsigned; Krita's texture brightness is
+  subtracted and its height modes subtract the mask, so Photoshop's depth
+  modes need an inverted pattern; a storage must hand out copies and support
+  `loadVersionedResource()` for presets to be reloadable; and it must not set
+  an md5 of its own on presets, because the stroke preview only renders when
+  a reloaded preset's md5 equals the database's.

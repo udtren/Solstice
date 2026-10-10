@@ -29,6 +29,7 @@
 #include <QTextStream>
 #include "KisAbrParser.h"
 #include <asl/kis_asl_reader.h>
+#include "KisAbrPresetConverter.h"
 
 namespace
 {
@@ -47,16 +48,20 @@ QString abr_v1_brush_name(const QString filename, qint32 id)
  * tip's identifier (`sampledData`), from the preset descriptors of version
  * 6 and later (docs/agent/abr-import-plan.md)
  */
-QHash<QString, QString> presetNamesBySample(const QByteArray &descriptors)
+QDomDocument readDescriptors(const QByteArray &descriptors)
 {
-    QHash<QString, QString> names;
     if (descriptors.isEmpty()) {
-        return names;
+        return QDomDocument();
     }
     QByteArray data = descriptors;
     QBuffer buffer(&data);
     buffer.open(QIODevice::ReadOnly);
-    const QDomDocument doc = KisAslReader::readFillLayer(buffer);
+    return KisAslReader::readFillLayer(buffer);
+}
+
+QHash<QString, QString> presetNamesBySample(const QDomDocument &doc)
+{
+    QHash<QString, QString> names;
 
     const QDomNodeList nodes = doc.elementsByTagName(QStringLiteral("node"));
     for (int i = 0; i < nodes.size(); i++) {
@@ -159,6 +164,7 @@ KisAbrBrushCollection::KisAbrBrushCollection(const QString &filename)
     , m_filename(filename)
     , m_abrBrushes(new QMap<QString, KisAbrBrushSP>())
     , m_patterns(new QMap<QString, KoPatternSP>())
+    , m_presets(new QMap<QString, KisPaintOpPresetSP>())
 {
 }
 
@@ -168,6 +174,7 @@ KisAbrBrushCollection::KisAbrBrushCollection(const KisAbrBrushCollection& rhs)
 {
     m_abrBrushes.reset(new QMap<QString, KisAbrBrushSP>());
     m_patterns.reset(new QMap<QString, KoPatternSP>(*rhs.m_patterns));
+    m_presets.reset(new QMap<QString, KisPaintOpPresetSP>(*rhs.m_presets));
     for (auto it = rhs.m_abrBrushes->begin();
          it != rhs.m_abrBrushes->end();
          ++it) {
@@ -215,7 +222,10 @@ bool KisAbrBrushCollection::loadFromDevice(QIODevice *dev)
     }
 
     const QString fileName = QFileInfo(filename()).fileName();
-    const QHash<QString, QString> presetNames = presetNamesBySample(contents.descriptors);
+    const QDomDocument descriptors = readDescriptors(contents.descriptors);
+    const QHash<QString, QString> presetNames = presetNamesBySample(descriptors);
+    KisAbrPresetConverter::Sources sources;
+    sources.baseName = QFileInfo(filename()).completeBaseName();
 
     for (const KisAbrParser::Sample &sample : contents.samples) {
         // the resource's file name identifies it, as it always has; the
@@ -238,6 +248,28 @@ bool KisAbrBrushCollection::loadFromDevice(QIODevice *dev)
         abrBrush->setValid(true);
         abrBrush->setName(shownName);
         m_abrBrushes.data()->operator[](key) = abrBrush;
+        if (!sample.id.isEmpty() || contents.samples.size() == 1) {
+            sources.tipsBySample.insert(sample.id, abrBrush);
+        }
+    }
+
+    // Solstice: the file's brush presets as Pixel Brush presets
+    // (docs/agent/abr-import-plan.md, phase 4)
+    for (auto it = m_patterns->constBegin(); it != m_patterns->constEnd(); ++it) {
+        sources.patternsById.insert(QFileInfo(it.key()).completeBaseName(), it.value());
+    }
+    if (!descriptors.isNull()) {
+        const KisAbrPresetConverter::Result converted =
+            KisAbrPresetConverter::convert(descriptors.documentElement(), sources);
+        *m_presets = converted.presets;
+        if (converted.skipped) {
+            warnKrita << "ABR" << filename() << ":" << converted.skipped
+                      << "presets whose tips are missing are skipped";
+        }
+        for (auto it = converted.unsupported.constBegin(); it != converted.unsupported.constEnd(); ++it) {
+            warnKrita << "ABR" << filename() << ":" << it.value() << "presets use" << it.key()
+                      << ", which Solstice does not have";
+        }
     }
 
     return true;

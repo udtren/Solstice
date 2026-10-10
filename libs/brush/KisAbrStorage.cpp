@@ -10,6 +10,8 @@
 
 #include <QFileInfo>
 #include <KisStaticInitializer.h>
+#include <brushengine/kis_paintop_preset.h>
+#include <brushengine/kis_paintop_settings.h>
 
 KIS_DECLARE_STATIC_INITIALIZER {
     KisStoragePluginRegistry::instance()->addStoragePluginFactory(KisResourceStorage::StorageType::AdobeBrushLibrary, new KisStoragePluginFactory<KisAbrStorage>());
@@ -25,7 +27,8 @@ public:
     {}
 
     bool hasNext() const override {
-        if (m_resourceType != ResourceType::Brushes && m_resourceType != ResourceType::Patterns)
+        if (m_resourceType != ResourceType::Brushes && m_resourceType != ResourceType::Patterns
+            && m_resourceType != ResourceType::PaintOpPresets)
             return false;
         return !m_taggingDone;
     }
@@ -45,6 +48,8 @@ public:
         if (m_resourceType == ResourceType::Patterns) {
             // Solstice: the file's patterns (docs/agent/abr-import-plan.md)
             brushes = m_brushCollection->patternsMap()->keys();
+        } else if (m_resourceType == ResourceType::PaintOpPresets) {
+            brushes = m_brushCollection->presetsMap()->keys();
         } else {
             Q_FOREACH (const KisAbrBrushSP brush, m_brushCollection->brushes()) {
                 brushes << brush->filename();
@@ -85,7 +90,8 @@ public:
 
     bool hasNext() const override
     {
-        if (m_resourceType != ResourceType::Brushes && m_resourceType != ResourceType::Patterns) {
+        if (m_resourceType != ResourceType::Brushes && m_resourceType != ResourceType::Patterns
+            && m_resourceType != ResourceType::PaintOpPresets) {
             return false;
         }
 
@@ -100,9 +106,14 @@ public:
                 for (auto it = brushes->constBegin(); it != brushes->constEnd(); ++it) {
                     self->m_items.append({it.key(), it.value()});
                 }
-            } else {
+            } else if (m_resourceType == ResourceType::Patterns) {
                 const auto patterns = m_brushCollection->patternsMap();
                 for (auto it = patterns->constBegin(); it != patterns->constEnd(); ++it) {
+                    self->m_items.append({it.key(), it.value()});
+                }
+            } else {
+                const auto presets = m_brushCollection->presetsMap();
+                for (auto it = presets->constBegin(); it != presets->constEnd(); ++it) {
                     self->m_items.append({it.key(), it.value()});
                 }
             }
@@ -159,6 +170,9 @@ KisResourceStorage::ResourceItem KisAbrStorage::resourceItem(const QString &url)
     if (url.endsWith(QStringLiteral(".pat"))) {
         item.folder = QFileInfo(m_brushCollection->filename()).completeBaseName();
         item.resourceType = ResourceType::Patterns;
+    } else if (url.endsWith(QStringLiteral(".kpp"))) {
+        item.folder = QFileInfo(m_brushCollection->filename()).completeBaseName();
+        item.resourceType = ResourceType::PaintOpPresets;
     }
     item.lastModified = QFileInfo(m_brushCollection->filename()).lastModified();
     return item;
@@ -174,12 +188,35 @@ KoResourceSP KisAbrStorage::resource(const QString &url)
     if (name.endsWith(QStringLiteral(".pat"))) {
         return m_brushCollection->patternByName(name);
     }
+    if (name.endsWith(QStringLiteral(".kpp"))) {
+        // a copy: editing the preset must not change the file's version,
+        // to which it is reloaded
+        const KisPaintOpPresetSP preset = m_brushCollection->presetByName(name);
+        return preset ? preset->clone() : KoResourceSP();
+    }
     return m_brushCollection->brushByName(name);
 }
 
-bool KisAbrStorage::loadVersionedResource(KoResourceSP /*resource*/)
+bool KisAbrStorage::loadVersionedResource(KoResourceSP resource)
 {
-    return false;
+    // Solstice: a preset made from the file's brush presets goes back to
+    // how the file made it (reloading a preset);
+    // docs/agent/abr-import-plan.md
+    KisPaintOpPresetSP preset = resource.dynamicCast<KisPaintOpPreset>();
+    if (!preset) {
+        return false;
+    }
+    if (!m_brushCollection->isLoaded()) {
+        m_brushCollection->load();
+    }
+    const KisPaintOpPresetSP original = m_brushCollection->presetByName(QFileInfo(preset->filename()).fileName());
+    if (!original) {
+        return false;
+    }
+    preset->setSettings(original->settings()->clone());
+    preset->setName(original->name());
+    preset->setImage(original->image());
+    return true;
 }
 
 bool KisAbrStorage::supportsVersioning() const

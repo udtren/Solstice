@@ -54,3 +54,9 @@ krita_add_broken_unit_test(kis_brushop_test.cpp ../../../../../sdk/tests/stroke_
     TEST_NAME KisBrushOpTest
     LINK_LIBRARIES kritaui kritalibpaintop kritatestsdk
     )
+
+# Solstice: Pixel Brush presets made from Photoshop brush files
+kis_add_test(KisAbrPresetTest.cpp
+    TEST_NAME KisAbrPresetTest
+    LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
+    )

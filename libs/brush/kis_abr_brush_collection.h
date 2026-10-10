@@ -91,6 +91,18 @@ public:
         return m_patterns->value(name);
     }
 
+    /// Solstice: the file's brush presets as Pixel Brush presets, by file
+    /// name (`<file>_preset_<n>.kpp`)
+    QSharedPointer<QMap<QString, KisPaintOpPresetSP>> presetsMap() const
+    {
+        return m_presets;
+    }
+
+    KisPaintOpPresetSP presetByName(const QString &name) const
+    {
+        return m_presets->value(name);
+    }
+
     QString filename() const {
         return m_filename;
     }
@@ -107,6 +119,7 @@ private:
     QString m_filename;
     QSharedPointer<QMap<QString, KisAbrBrushSP>> m_abrBrushes;
     QSharedPointer<QMap<QString, KoPatternSP>> m_patterns;
+    QSharedPointer<QMap<QString, KisPaintOpPresetSP>> m_presets;
 };
 
 typedef QSharedPointer<KisAbrBrushCollection> KisAbrBrushCollectionSP;

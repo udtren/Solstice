@@ -133,3 +133,74 @@ RLEと8ビット無圧縮の画素値)、版2(名前、計算の先端の読み�
    管理画面で、そのABRにパターンが含まれる。
 2. パターンで塗りつぶしやテクスチャに使える。
 3. Solsticeの起動の重さが大きく変わらない。
+
+## 段階4の実装結果(2026年10月10日)
+
+| 場所 | 内容 |
+| --- | --- |
+| `libs/brush/KisAbrPresetConverter.{h,cpp}`(新規) | `desc` の `brushPreset` から Pixel Brush のプリセットを作る。先端は `KisBrushModel::BrushData::write()`(画像の先端は `abr_brush` でファイルの先端を md5・ファイル名・名前で参照し、大きさは直径を先端の長辺で割った倍率。計算の先端は自動先端の円で、フェード = 1 − 硬さ)。カーブのオプションと、マスクブラシ・テクスチャの項目は、`.kpp` と同じ項目名で書く(それらのデータ型は `kritalibpaintop` にあり、`kritalibbrush` から使うと循環する)。センサーは `KisKritaSensorPack::write()` と同じXML。センサーのないオプションは、筆圧に水平のカーブ(`0,1;1,1;`)を付ける(Kritaのオプションはセンサーを1つは持つ前提) |
+| `libs/brush/kis_abr_brush_collection.{h,cpp}` | 記述子を一度だけXMLにし、先端の名前と変換の両方に使う。先端をIDで、パターンを `Idnt` で引ける表を渡す。`presetsMap()`、`presetByName()`。対応できない設定は、種類ごとの件数をログに出す |
+| `libs/brush/KisAbrStorage.cpp` | プリセット(`ResourceType::PaintOpPresets`、`<ファイル名>_preset_<番号>.kpp`)も返す |
+
+対応表:
+
+| Photoshop | Pixel Brush |
+| --- | --- |
+| `Brsh`(`sampledBrush` / `computedBrush`)、`Dmtr`、`Angl`(度→ラジアン)、`Spcn`(%→割合) | 先端、大きさ、角度、間隔 |
+| 画像の先端の `Rndn` | 比率のオプション(一定値) |
+| 計算の先端の `Rndn`、`Hrdn` | 自動先端の比率、フェード |
+| `useTipDynamics`: `szVr`+`minimumDiameter`、`angleDynamics`、`roundnessDynamics`+`minimumRoundness` | 大きさ、回転、比率のオプション |
+| 制御 `bVTy`: 1 フェード(`fStp`)、2 筆圧、3 傾き、4 ホイール、5 最初の向き、6 向き、7・8 回転 | センサー `fade`(長さ)、`pressure`、`declination`、`tangentialpressure`、`drawingangle`(角度を固定)、`drawingangle`、`rotation`。最小値はカーブの下端 |
+| ゆらぎ `jitter` | `fuzzy` センサー(カーブの下端 1 − ゆらぎ)。角度のゆらぎは回転の強さ |
+| `useScatter`: `scatterDynamics` のゆらぎ、`bothAxes` | 散布の量(%→倍、上限5)、Y軸 |
+| `usePaintDynamics`: `opVr`、`prVr`、ツールの `Opct`、`flow` | 不透明度と流量のオプション(強さと最小値) |
+| ツールの `Md  ` | `CompositeOp`(レイヤースタイルと同じ変換表) |
+| `useTexture`: `Txtr`(`Idnt`)、`textureScale`、`textureBrightness`、`textureContrast`、`textureBlendMode`、`textureDepth`+`textureDepthDynamics`+`minimumDepth`、`InvT` | テクスチャ(ファイルのパターン、倍率、明るさ = −値/150、コントラスト = 1+値/50、Photoshop互換のモード、強さのオプション、反転) |
+| `dualBrush` | マスクブラシ(合成モード、大きさの比 = 副の直径/主の直径、副の間隔、散布) |
+| 描画モード | 常に Wash(不透明度で上限、流量で重ねる) |
+
+記述子の整数は符号なしで読まれるので、符号付き32ビットに戻す(例: 明るさ −9 が 4294967287)。
+
+テクスチャの向き: Kritaのマスクの値はパターンの明るさで、明るさの設定は引かれる
+(`KisTextureMaskInfo`)。Photoshop の明るさは足されるので符号を反転した。
+「高さ」「線形の高さ」「減算」は、Photoshop では暗い所ほど絵の具が減る
+(「高さ」の深さは凹凸のどこまで届くか)ので、Kritaの式(高さは
+「点の濃さ × 10 × 強さ − マスク」)に合わせてパターンを反転する。深さが小さく
+パターンが暗いプリセットは、普通の筆圧ではほとんど描かれない(Photoshop でも
+同じと考えるが、未確認)。デュアルブラシの比較(暗)や焼き込みカラーも、小さな
+副ブラシでは薄くなる。
+
+対応しないもの(件数をログに出す): 散布の数 `Cnt `(Pixel Brushに相当なし)、
+デュアルブラシの散布の数と反転、先端の反転と反転のゆらぎ、カラーダイナミクス、
+ウェットエッジ、ノイズ、ブラシのポーズ、テクスチャの保護、`tiltScale`、
+ブラシのグループ(`brushGroup`)、スムージング。
+
+テスト `KisAbrPresetTest`(新規、2件、通過): 同梱の `brushes_by_mar_ka_d338ela.abr`
+から36のプリセット(ABRの先端31、自動先端5、筆圧で大きさ22)。全プリセットの設定を
+Pixel Brushのオプションのデータ型(`KisSizeOptionData`、`KisOpacityOptionData`)で
+読み戻せる。12のプリセットで実際に線を描ける(先端とパターンをプリセットの
+リソースに入れて)。ユーザーの3ファイルでは、手绘漫画 40、蚂蚁老师的笔刷-PS 38、
+TWOciyuan 1 のプリセットができた。中くらいの筆圧の試し描きで何も描かなかったのは、
+手绘漫画 で8(上の「高さ」とデュアルブラシのもの)、蚂蚁老师的笔刷-PS で1。
+
+リロード(2026年10月10日、手動確認で見つかった不具合): 保管場所はプリセットを
+そのまま渡していたので、ブラシエディタでの編集がファイルの版まで書き換え、
+プリセットのリロード(`KisPaintopBox::slotReloadPreset()` →
+`KisResourceLocator::reloadResource()` → `loadVersionedResource()`)は常に失敗して
+`couldn't reload preset` のアサートが出た。`KisAbrStorage::resource()` はプリセットの
+複製を返し、`loadVersionedResource()` は変換で作った版の設定(複製)・名前・画像を
+書き戻す。テスト `KisAbrPresetTest::testReload`。
+
+プリセットにmd5を付けてはいけない: md5が空のとき、DBは自分で計算した値を記録する。
+ストロークプレビュー(`docs/agent/brush-stroke-preview.md`)は、保管場所から
+読み直したプリセットのmd5がDBの値と同じときだけ描くので、別の値を付けると
+ABRのプリセットのプレビューが出なくなった(手動確認で判明し、取り消した)。
+
+手動確認の項目(段階4、2026年10月10日に問題なし):
+
+1. ブラシプリセットの一覧に、ABRファイル名のバンドルとしてプリセットが出る
+   (Bundles の絞り込みで選べる)。
+2. ABRのプリセットで描ける。大きさ・不透明度・流量の筆圧、散布、テクスチャ、
+   デュアルブラシが、Photoshop での描き味に近い。
+3. 薄すぎる、または何も描かないプリセットがあれば、その名前を伝えてもらう。
+4. 起動の重さが大きく変わらない。

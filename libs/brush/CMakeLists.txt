@@ -2,6 +2,7 @@ add_subdirectory( tests )
 
 set(kritalibbrush_LIB_SRCS
     KisAbrParser.cpp
+    KisAbrPresetConverter.cpp
     kis_predefined_brush_factory.cpp
     kis_auto_brush.cpp
     kis_boundary.cc
