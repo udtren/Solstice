@@ -8,6 +8,7 @@
 
 #include <QTransform>
 
+#include "kis_types.h"
 #include "kritaimage_export.h"
 
 class KUndo2Command;
@@ -24,11 +25,14 @@ public:
     virtual ~KisRedrawableLayerInterface();
 
     /**
-     * A command that leaves the layer as @p transform applied to its content,
-     * drawn again, or nullptr when the layer cannot do it (the pixels are
-     * transformed as usual then). Called while the image is being processed.
+     * A command that leaves the layer's paint device as @p transform applied
+     * to its content, drawn again, or nullptr when the layer cannot do it
+     * (the pixels are transformed as usual then). @p original holds the
+     * content before the transform: the paint device itself, or a copy that
+     * the Transform Tool keeps while the device shows its preview. Called
+     * while the image is being processed.
      */
-    virtual KUndo2Command *createTransformRedrawCommand(const QTransform &transform) = 0;
+    virtual KUndo2Command *createTransformRedrawCommand(const QTransform &transform, KisPaintDeviceSP original) = 0;
 };
 
 #endif // KISREDRAWABLELAYERINTERFACE_H

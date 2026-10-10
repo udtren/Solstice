@@ -58,6 +58,7 @@
 #include "kis_image_animation_interface.h"
 #include "KisAnimAutoKey.h"
 #include "krita_utils.h"
+#include "KisRedrawableLayerInterface.h"
 
 
 struct InplaceTransformStrokeStrategy::Private
@@ -1130,6 +1131,8 @@ void InplaceTransformStrokeStrategy::finishAction(QVector<KisStrokeJobData *> &m
         }
     }
 
+    redrawRecordedStrokes(mutatedJobs);
+
     mutatedJobs << new UpdateTransformData(m_d->currentTransformArgs,
                                            UpdateTransformData::SELECTION);
 
@@ -1152,6 +1155,43 @@ void InplaceTransformStrokeStrategy::finishAction(QVector<KisStrokeJobData *> &m
         this->addMutatedJobs(nonCancellableFinishJobs);
 
     });
+}
+
+void InplaceTransformStrokeStrategy::redrawRecordedStrokes(QVector<KisStrokeJobData *> &mutatedJobs)
+{
+    // Solstice: a brush stroke layer draws its strokes again for the final
+    // transform, over the transformed pixels of the preview; when it cannot
+    // (rotation, other edits on the layer), they stay
+    // (docs/agent/brush-stroke-layer-plan.md)
+    if (m_d->selection || m_d->initialTransformArgs.externalSource()) {
+        return;
+    }
+
+    Q_FOREACH (KisNodeSP node, m_d->processedNodes) {
+        KisRedrawableLayerInterface *redrawable = dynamic_cast<KisRedrawableLayerInterface *>(node.data());
+        if (!redrawable || !node->paintDevice())
+            continue;
+
+        KritaUtils::addJobSequential(mutatedJobs, [this, node, redrawable]() {
+            // the arguments of the last update, which has run by now
+            if (m_d->currentTransformArgs.mode() != ToolTransformArgs::FREE_TRANSFORM)
+                return;
+            const QTransform transform = KisTransformUtils::MatricesPack(m_d->currentTransformArgs).finalTransform();
+
+            KisPaintDeviceSP device = node->paintDevice();
+            KisPaintDeviceSP original;
+            {
+                QMutexLocker l(&m_d->devicesCacheMutex);
+                original = m_d->devicesCacheHash.value(device.data());
+            }
+
+            const QRect oldRect = device->extent();
+            if (KUndo2Command *cmd = redrawable->createTransformRedrawCommand(transform, original)) {
+                executeAndAddCommand(cmd, Transform, KisStrokeJobData::SEQUENTIAL);
+                m_d->updatesFacade->refreshGraphAsync(node, oldRect | device->extent());
+            }
+        });
+    }
 }
 
 void InplaceTransformStrokeStrategy::cancelAction(QVector<KisStrokeJobData *> &mutatedJobs)

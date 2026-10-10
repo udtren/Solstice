@@ -424,10 +424,13 @@ void KisBrushStrokeLayerTest::testSmudgeOverStroke()
     paintStroke(image, layer, blur, KoColor(Qt::black, cs));
     QCOMPARE(layer->strokes().size(), 2);
 
+    // compared premultiplied: smudging leaves transparent pixels with
+    // colors that differ from the redraw, which do not show
     const QRect content = layer->paintDevice()->exactBounds();
     QCOMPARE(toImage(KisBrushStrokeLayer::renderStrokes(layer->strokes(), cs, content | QRect(0, 0, 1, 1), QPoint()),
-                     content),
-             toImage(layer->paintDevice(), content));
+                     content)
+                 .convertToFormat(QImage::Format_ARGB32_Premultiplied),
+             toImage(layer->paintDevice(), content).convertToFormat(QImage::Format_ARGB32_Premultiplied));
 
     const QPointF firstPoint = layer->strokes().last()->jobs.first().pi1.pos();
     image->scaleImage(QSize(2400, 1600),

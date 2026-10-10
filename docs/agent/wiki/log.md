@@ -401,3 +401,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   compare redraws by premultiplied color; the color of a transparent pixel is
   not content. Log fallback reasons to `krita.log` so they can be read after
   a manual repro.
+
+## 2026-10-10 ingest: brush stroke layer with the Transform Tool
+
+- `brush-stroke-layer-plan.md`: a Free Transform that only scales and moves
+  redraws the strokes once, when the transform is applied
+  (`InplaceTransformStrokeStrategy::redrawRecordedStrokes()`; the overlay
+  preview strategy redraws instead of its final pixel transform). The redraw
+  interface now takes the content before the transform, because the
+  in-place stroke keeps it in its device cache while the device shows the
+  preview. Lessons: in `finishAction()` the last update may still be
+  pending (updates are throttled by a timer), so read `currentTransformArgs`
+  inside the job; in tests, force the update with
+  `KisAsynchronousStrokeUpdateHelper::UpdateData(true)`, and never call
+  `image->waitForDone()` while a stroke is open (it waits forever).
+- Tests comparing redraws of smudge strokes must compare premultiplied
+  images; the color under alpha 0 varies with the random seed.

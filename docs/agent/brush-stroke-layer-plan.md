@@ -174,7 +174,7 @@ QPainterで描く仕組みで、ブラシエンジン(`KisPainter`、ストロ�
 
 これにより Image > Scale Image(画像の拡大縮小)と Layer > Scale Layer
 (`KisTransformProcessingVisitor` を使う経路)が描き直しになる。変形ツールは
-別の経路なので画素の変換のまま(後の段階)。
+別の経路で、下の「変形ツールでの描き直し」で対応した。
 
 テスト `KisBrushStrokeLayerTest`(7件、通過): 4倍の拡大で記録の位置が4倍に
 なり、レイヤーの画素が記録の描き直しと一致する。半透明の画素の割合は
@@ -255,6 +255,45 @@ QPainterで描く仕組みで、ブラシエンジン(`KisPainter`、ストロ�
 2. 開き直したファイルで Image > Scale Image を拡大すると、くっきりする。
 3. 自動保存(またはファイル > 保存)の後もそのまま描き続けられる。
 4. 普通のペイントレイヤーやほかのレイヤーの保存と読み込みが変わらない。
+
+## 変形ツールでの描き直し(2026年10月10日)
+
+変形ツール(Free Transform)で拡大縮小と移動だけをしたとき、適用の時点で
+線を描き直す。
+
+| 場所 | 内容 |
+| --- | --- |
+| `libs/image/KisRedrawableLayerInterface.h` | `createTransformRedrawCommand()` に `original`(変形前の内容)を追加。変形ツールでは、レイヤーのデバイスはプレビューを表示しているので、変形前の画素はツールのキャッシュにある。2bの経路(`KisTransformProcessingVisitor`)はデバイスそのものを渡す |
+| `libs/ui/KisBrushStrokeLayer.{h,cpp}` | 記録と照合するのは `original`、描き直した画素はデバイスに書く(デバイスを消してから写す) |
+| `plugins/tools/tool_transform2/strokes/inplace_transform_stroke_strategy.{h,cpp}` | `redrawRecordedStrokes()`: `finishAction()` で最後の更新の後に順番に実行するジョブを加える。その時点の `currentTransformArgs` が Free Transform なら、`KisTransformUtils::MatricesPack::finalTransform()` で描き直す。コマンドは `Transform` のグループに加え、ストロークの元に戻すに入る。プレビュー中は従来どおり画素の変換(描き直しは重いので、確定時の1回だけ) |
+| `plugins/tools/tool_transform2/strokes/transform_stroke_strategy.cpp` | オーバーレイのプレビュー(設定)の経路: 確定時の画素の変換の代わりに描き直す。できなければ従来の画素の変換 |
+
+条件: 選択範囲なし、外部の画像の変形でない、Free Transform、変換が
+拡大縮小と移動だけ(2bと同じ判定)、記録と変形前の画素が一致。
+
+注意: 変形の引数は、確定時(`finishAction()`)ではまだ最後の更新が反映されて
+いないことがある(更新はタイマーで間引かれる)。ジョブの中で
+`currentTransformArgs` を読む。
+
+テスト `KisBrushStrokeLayerTransformTest`(新規、`kritatooltransform_static`
+をリンク): 実際の `InplaceTransformStrokeStrategy` で1.8倍にすると、記録が
+変換に従い、画素が記録の描き直しと一致する。元に戻すと記録と画素が戻る。
+回転は画素の変換で、記録は変わらない。テストでは、更新の強制
+(`KisAsynchronousStrokeUpdateHelper::UpdateData(true)`)が必要。ストロークが
+開いている間に `image->waitForDone()` を呼ぶと終わらない。
+
+あわせて `testSmudgeOverStroke` の画像の比較を、アルファを掛けた値の比較に
+した(透明な画素の色の違いで、乱数の種によって失敗していた)。
+
+手動確認の項目(変形ツール、2026年10月10日に問題なし):
+
+1. ブラシストロークレイヤーを変形ツール(Free)で拡大して適用すると、
+   くっきりする。ドラッグ中のプレビューはぼけていてよい。
+2. 元に戻す・やり直しで、大きさと線が一緒に戻る。
+3. 回転して適用すると、普通の画素の変換になる。その後に拡大すると、
+   画素の拡大になる(記録と画素が一致しないため)。
+4. 選択範囲の中だけの変形は、画素の変換になる。
+5. 普通のペイントレイヤーの変形が、これまでと変わらない。
 
 ## 段階1: 技術検証
 

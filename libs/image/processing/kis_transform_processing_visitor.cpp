@@ -85,7 +85,7 @@ void KisTransformProcessingVisitor::visit(KisPaintLayer *layer, KisUndoAdapter *
     if (redrawable && !m_selection) {
         KisTransformWorker
             tw(layer->paintDevice(), m_sx, m_sy, m_shearx, m_sheary, m_angle, m_tx, m_ty, nullptr, m_filter);
-        if (KUndo2Command *command = redrawable->createTransformRedrawCommand(tw.transform())) {
+        if (KUndo2Command *command = redrawable->createTransformRedrawCommand(tw.transform(), layer->paintDevice())) {
             undoAdapter->addCommand(command);
             transformClones(layer, undoAdapter);
             return;

@@ -176,6 +176,7 @@ private:
     void finalizeStrokeImpl(QVector<KisStrokeJobData *> &mutatedJobs, bool saveCommands);
 
     void finishAction(QVector<KisStrokeJobData *> &mutatedJobs);
+    void redrawRecordedStrokes(QVector<KisStrokeJobData *> &mutatedJobs);
     void cancelAction(QVector<KisStrokeJobData *> &mutatedJobs);
     void addDirtyRect(KisNodeSP node, const QRect &rect, int levelOfDetail);
 

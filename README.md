@@ -51,8 +51,9 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
   setting shows it in the Tool Options docker, under the current brush's
   stroke preview.
 - **[Brush Stroke Layer](docs/brush-stroke-layer.md)**: a paint layer that
-  remembers its brush strokes; scaling the image or the layer draws them
-  again at the new size, so small line art enlarges without blurring. The
+  remembers its brush strokes; scaling the image or the layer, or with the
+  Transform tool, draws them again at the new size, so small line art
+  enlarges without blurring. The
   strokes are saved in `.kra`, and Krita opens the layer as a paint layer.
 
 ## Screenshots

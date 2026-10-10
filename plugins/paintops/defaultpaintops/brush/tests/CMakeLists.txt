@@ -29,6 +29,15 @@ kis_add_test(KisBrushStrokeLayerTest.cpp
     LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
     )
 
+# the brush stroke layer with the Transform Tool's stroke
+kis_add_test(KisBrushStrokeLayerTransformTest.cpp
+    TEST_NAME KisBrushStrokeLayerTransformTest
+    LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritatooltransform_static kritaui kritatestsdk
+    )
+target_include_directories(KisBrushStrokeLayerTransformTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/plugins/tools/tool_transform2
+    ${CMAKE_BINARY_DIR}/plugins/tools/tool_transform2)
+
 if(HAVE_KRITA_GPU_ENGINE)
     kis_add_test(KisGpuBrushJobsTest.cpp
         TEST_NAME KisGpuBrushJobsTest

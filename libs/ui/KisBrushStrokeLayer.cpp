@@ -306,11 +306,11 @@ KisBrushStrokeLayer::transformedStrokes(const QVector<KisRecordedBrushStrokeSP> 
     return result;
 }
 
-KUndo2Command *KisBrushStrokeLayer::createTransformRedrawCommand(const QTransform &transform)
+KUndo2Command *KisBrushStrokeLayer::createTransformRedrawCommand(const QTransform &transform, KisPaintDeviceSP original)
 {
     const QVector<KisRecordedBrushStrokeSP> recorded = strokes();
     KisPaintDeviceSP device = paintDevice();
-    if (recorded.isEmpty() || !device || device->keyframeChannel()) {
+    if (recorded.isEmpty() || !device || !original || device->keyframeChannel()) {
         return nullptr;
     }
     // scaling and moving only: a rotated or mirrored brush tip would not
@@ -319,14 +319,14 @@ KUndo2Command *KisBrushStrokeLayer::createTransformRedrawCommand(const QTransfor
         return nullptr;
     }
 
-    const QPoint offset(device->x(), device->y());
-    const QRect bounds = device->exactBounds();
+    const QPoint offset(original->x(), original->y());
+    const QRect bounds = original->exactBounds();
     const KoColorSpace *colorSpace = device->colorSpace();
 
     // the layer must hold just its recorded strokes
     KisPaintDeviceSP current = renderStrokes(recorded, colorSpace, bounds | QRect(0, 0, 1, 1), offset);
     QString difference;
-    if (!sameContent(device, current, bounds, &difference)) {
+    if (!sameContent(original, current, bounds, &difference)) {
         const QString message = QStringLiteral(
                                     "Brush stroke layer \"%1\": its pixels are not its %2 recorded strokes (%3); "
                                     "transforming the pixels instead of drawing again")

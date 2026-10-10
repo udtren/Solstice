@@ -51,6 +51,7 @@
 #include "kis_raster_keyframe_channel.h"
 #include "kis_layer_utils.h"
 #include "KisAnimAutoKey.h"
+#include "KisRedrawableLayerInterface.h"
 
 
 TransformStrokeStrategy::TransformStrokeStrategy(ToolTransformArgs::TransformMode mode,
@@ -304,15 +305,28 @@ void TransformStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
                 KisPaintDeviceSP cachedPortion = getDeviceCache(device);
                 Q_ASSERT(cachedPortion);
 
-                KisTransaction transaction(device);
+                // Solstice: a brush stroke layer draws its strokes again
+                // instead (docs/agent/brush-stroke-layer-plan.md)
+                KUndo2Command *redraw = nullptr;
+                KisRedrawableLayerInterface *redrawable = dynamic_cast<KisRedrawableLayerInterface *>(td->node.data());
+                if (redrawable && !m_selection && td->config.mode() == ToolTransformArgs::FREE_TRANSFORM) {
+                    redraw = redrawable->createTransformRedrawCommand(
+                        KisTransformUtils::MatricesPack(td->config).finalTransform(),
+                        cachedPortion);
+                }
 
-                KisProcessingVisitor::ProgressHelper helper(td->node);
-                KisTransformUtils::transformAndMergeDevice(td->config, cachedPortion,
-                                                           device, &helper);
+                if (redraw) {
+                    runAndSaveCommand(KUndo2CommandSP(redraw), KisStrokeJobData::CONCURRENT, KisStrokeJobData::NORMAL);
+                } else {
+                    KisTransaction transaction(device);
 
-                runAndSaveCommand(KUndo2CommandSP(transaction.endAndTake()),
-                                  KisStrokeJobData::CONCURRENT,
-                                  KisStrokeJobData::NORMAL);
+                    KisProcessingVisitor::ProgressHelper helper(td->node);
+                    KisTransformUtils::transformAndMergeDevice(td->config, cachedPortion, device, &helper);
+
+                    runAndSaveCommand(KUndo2CommandSP(transaction.endAndTake()),
+                                      KisStrokeJobData::CONCURRENT,
+                                      KisStrokeJobData::NORMAL);
+                }
 
                 m_updateData->addUpdate(td->node, cachedPortion->extent() | oldExtent | td->node->projectionPlane()->tightUserVisibleBounds());
             } else if (KisExternalLayer *extLayer =
