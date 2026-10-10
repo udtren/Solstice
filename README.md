@@ -1,4 +1,10 @@
-# Solstice
+<p align="center">
+  <img src="krita/data/splash/solstice-splash.png" alt="Solstice" width="480">
+</p>
+
+---
+
+<p align="center"><b>A GPU-focused digital painting application for Windows, derived from Krita.</b></p>
 
 ![Solstice main window with the Brush Presets docker grouped by bundle, Quick Brush Adjustments, HueSVC, the Quick Access Palette and the Brush section of Tool Options](docs/images/solstice-main-window.webp)
 

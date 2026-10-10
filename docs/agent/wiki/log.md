@@ -557,3 +557,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   or the generated assets come out dark and lose subtle tints. Also: the
   splash text was already top-right (`Qt::AlignRight`); read the layout code
   before describing it.
+
+## 2026-10-10 ingest: document icons and README header
+
+- `solstice-visual-branding-todo.md`: `.kra`/`.krz` icons are drawn from the
+  application icon (a page with a folded corner; `.krz` labeled "KRZ").
+  README now opens with the splash (480 px wide, centered), a separator and
+  a one-line description before the main window screenshot; the `# Solstice`
+  heading was dropped because the splash carries the name.
