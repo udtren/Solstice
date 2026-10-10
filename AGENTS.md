@@ -137,6 +137,10 @@ Read these before adding or updating any feature:
   brush tips saved in .kra, sequential dabs and recorded stroke starts for
   exact redraws done and manually checked 2026-10-10):
   `docs/agent/brush-stroke-layer-plan.md`
+- Photoshop brush (ABR) import improvements (phase 1, ABR tips saved with
+  brush stroke layers, done and manually checked 2026-10-10; phases 2-5
+  planned, in progress):
+  `docs/agent/abr-import-plan.md`
 - Removal of the right-click Popup Palette and the On-Canvas Brush Editor
   (what was kept and why): `docs/agent/popup-palette-removal.md`
 

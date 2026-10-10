@@ -15,6 +15,7 @@
 #include <KisBrushStrokeLayer.h>
 #include <KisDocument.h>
 #include <KisGlobalResourcesInterface.h>
+#include <KisLocalStrokeResources.h>
 #include <KisPart.h>
 #include <KisResourceModel.h>
 #include <KoCanvasResourceProvider.h>
@@ -22,6 +23,7 @@
 #include <KoCompositeOpRegistry.h>
 #include <brushengine/kis_paintop_preset.h>
 #include <brushengine/kis_paintop_settings.h>
+#include <kis_abr_brush.h>
 #include <kis_distance_information.h>
 #include <kis_filter_strategy.h>
 #include <kis_image.h>
@@ -55,6 +57,7 @@ private Q_SLOTS:
     void testBrushTipsSaved();
     void testRandomizedBrushesRedraw();
     void testStrokeStartRecorded();
+    void testAbrTipSaved();
 };
 
 namespace
@@ -618,6 +621,73 @@ void KisBrushStrokeLayerTest::testStrokeStartRecorded()
     QCOMPARE(loaded.first()->starts.size(), 1);
     QCOMPARE(loaded.first()->starts.first().lastPosition, QPointF(16.3, 52.7));
     QCOMPARE(loaded.first()->starts.first().lastAngle, 0.4);
+}
+
+/// An ABR brush tip has no file of its own: it is saved with the strokes as
+/// a PNG, so the strokes redraw where the .abr file is not installed
+void KisBrushStrokeLayerTest::testAbrTipSaved()
+{
+    // an ABR tip, as KisAbrBrushCollection makes one: a gray mask image
+    QImage tipImage(24, 24, QImage::Format_RGB32);
+    tipImage.fill(Qt::white);
+    for (int y = 0; y < 24; y++) {
+        for (int x = 0; x < 24; x++) {
+            if ((x - 12) * (x - 12) + (y - 12) * (y - 12) < 100 && (x + y) % 3) {
+                tipImage.setPixel(x, y, qRgb(40, 40, 40));
+            }
+        }
+    }
+    KisAbrBrushSP tip(new KisAbrBrush(QStringLiteral("solstice_test_abr_1"), nullptr));
+    tip->setBrushTipImage(tipImage);
+    tip->setName(QStringLiteral("solstice_test_abr_1"));
+    tip->setMD5Sum(QStringLiteral("0123456789abcdef0123456789abcdef"));
+    tip->setValid(true);
+    QVERIFY(!KisGlobalResourcesInterface::instance()
+                 ->source(ResourceType::Brushes)
+                 .bestMatch(tip->md5Sum(), tip->filename(), tip->name()));
+
+    // a Pixel Brush preset using it, with the tip in its own resources
+    KisPaintOpPresetSP preset =
+        loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp"))->clone().dynamicCast<KisPaintOpPreset>();
+    QDomDocument doc;
+    QDomElement element = doc.createElement(QStringLiteral("Brush"));
+    tip->toXML(doc, element);
+    doc.appendChild(element);
+    preset->settings()->setProperty(QStringLiteral("brush_definition"), doc.toString());
+    preset->setResourcesInterface(QSharedPointer<KisLocalStrokeResources>::create(QList<KoResourceSP>{tip}));
+
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisImageSP image = new KisImage(new KisSurrogateUndoStore(), imageBounds.width(), imageBounds.height(), cs, "abr");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    paintStroke(image, layer, preset, KoColor(Qt::black, cs));
+    QCOMPARE(layer->strokes().size(), 1);
+    const QImage live = toImage(layer->paintDevice()).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    QVERIFY(coveredPixels(live) > 300);
+
+    QBuffer buffer;
+    buffer.open(QBuffer::WriteOnly);
+    QVERIFY(KisBrushStrokeLayer::saveStrokes(layer->strokes(), &buffer));
+    buffer.close();
+    buffer.open(QBuffer::ReadOnly);
+    QVector<KisRecordedBrushStrokeSP> loaded;
+    QVERIFY(KisBrushStrokeLayer::loadStrokes(&buffer, &loaded));
+    QCOMPARE(loaded.size(), 1);
+
+    // the loaded stroke draws with the saved tip
+    const KisPaintOpPresetSP loadedPreset = loaded.first()->preset;
+    bool found = false;
+    for (const KoResourceLoadResult &link : loadedPreset->linkedResources(loadedPreset->resourcesInterface())) {
+        if (KisAbrBrushSP saved = link.resource<KisAbrBrush>()) {
+            found = true;
+            QCOMPARE(saved->md5Sum(), tip->md5Sum());
+            QCOMPARE(saved->brushTipImage(), tip->brushTipImage());
+        }
+    }
+    QVERIFY(found);
+    QCOMPARE(toImage(KisBrushStrokeLayer::renderStrokes(loaded, cs, imageBounds, QPoint()))
+                 .convertToFormat(QImage::Format_ARGB32_Premultiplied),
+             live);
 }
 
 SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(KisBrushStrokeLayerTest, QStringLiteral("Krita_4_Default_Resources.bundle"))

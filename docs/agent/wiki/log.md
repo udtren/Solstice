@@ -436,3 +436,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   multithreaded dab rendering nondeterministic, so exact replay needs
   sequential dabs. `FreehandStrokeTest` has four failures that predate this
   work (textured 17, Mix dull, two LOD strokes).
+
+## 2026-10-10 ingest: ABR import plan, phase 1
+
+- `abr-import-plan.md` (new, from the todo backlog): photocraft (MIT or
+  Apache-2.0, Rust) reads ABR tips, preset descriptors, patterns and folders;
+  Solstice reads only the tips (versions 1, 2, 6), misreads 16-bit tips and
+  drops presets and patterns. Phase 1 saves ABR tips with brush stroke layers
+  as PNG (`KisAbrBrush` has no file of its own). Lesson: preset brush tips are
+  found by md5 and file name (`KisPredefinedBrushFactory`), so any resource
+  class with the same signature can stand in for the original. ABR files are
+  already storages (`AdobeBrushLibrary`); the Brush Presets bundle filter
+  lists only storages with presets, so ABR files appear there once ABR
+  presets exist (phase 4).

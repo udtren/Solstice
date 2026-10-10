@@ -51,11 +51,9 @@ with the same pixels; saving the file again from Krita drops the remembered
 strokes.
 
 The file stores each stroke's brush settings and colors, and the brush tip
-images, textures, patterns and gradients the strokes use, so the file
-enlarges sharply on a computer that does not have those brushes installed.
-Brush tips imported from Photoshop ABR files cannot be stored; strokes
-drawn with them are drawn again only where that brush is installed, and
-otherwise the layer keeps its pixels and enlarges like a paint layer.
+images, textures, patterns and gradients the strokes use, including brush
+tips imported from Photoshop ABR files, so the file enlarges sharply on a
+computer that does not have those brushes installed.
 Other formats (PSD, ORA, PNG and so on) store the pixels only.
 
 ## Current limitations

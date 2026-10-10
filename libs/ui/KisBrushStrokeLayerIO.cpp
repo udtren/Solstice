@@ -20,6 +20,7 @@
 #include <KoColorSpace.h>
 #include <KoColorSpaceRegistry.h>
 #include <KoLocalStrokeCanvasResources.h>
+#include <kis_abr_brush.h>
 #include <kis_debug.h>
 #include <kis_paintop_preset.h>
 #include <kis_paintop_settings.h>
@@ -161,13 +162,18 @@ snapshotPreset(KisPaintOpPresetSP preset, const KisRecordedBrushStroke &stroke, 
     return preset->cloneWithResourcesSnapshot(lookup, canvasResources, nullptr);
 }
 
-/// A resource with its file, so that it loads where it is not installed;
-/// without it when it cannot be saved (ABR brush tips)
+/// A resource with its file, so that it loads where it is not installed.
+/// An ABR brush tip has no file of its own (it lives in its .abr file): its
+/// tip image is stored as a PNG.
 void writeResource(QDataStream &stream, KoResourceSP resource)
 {
     QBuffer buffer;
     buffer.open(QBuffer::WriteOnly);
-    if (!resource->isSerializable() || !resource->saveToDevice(&buffer)) {
+    if (KisAbrBrushSP abrBrush = resource.dynamicCast<KisAbrBrush>()) {
+        if (!abrBrush->brushTipImage().save(&buffer, "PNG")) {
+            buffer.buffer().clear();
+        }
+    } else if (!resource->isSerializable() || !resource->saveToDevice(&buffer)) {
         buffer.buffer().clear();
     }
     stream << resource->resourceType().first << resource->resourceType().second << resource->md5Sum()
@@ -183,6 +189,18 @@ KoResourceSP readResource(QDataStream &stream)
     QString name;
     QByteArray data;
     stream >> type >> subType >> md5 >> filename >> name >> data;
+
+    if (subType == ResourceSubType::AbrBrushes && !data.isEmpty()) {
+        const QImage tip = QImage::fromData(data, "PNG");
+        if (!tip.isNull()) {
+            KisAbrBrushSP abrBrush(new KisAbrBrush(filename, nullptr));
+            abrBrush->setBrushTipImage(tip);
+            abrBrush->setName(name);
+            abrBrush->setMD5Sum(md5);
+            abrBrush->setValid(true);
+            return abrBrush;
+        }
+    }
 
     KoResourceSP resource;
     KisResourceLoaderBase *loader =
