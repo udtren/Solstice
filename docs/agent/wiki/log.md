@@ -470,3 +470,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   of length-prefixed blocks is best split by the caller; a storage plugin can
   serve several resource types if its iterator, `resourceItem()` and
   `resource()` agree on the type of each URL.
+
+## 2026-10-10 ingest: brush tip bundle filter
+
+- `brush-preset-grouping.md`: `KisPresetDockerFilters` takes a resource type;
+  the Brush Editor's predefined tips get the bundle facet and grouping, and
+  ABR libraries count as bundles. The tip list now shares the editor's extra
+  width (stretch 3:2). Lesson: a Qt box layout without stretch factors gives
+  extra width to the widgets with expanding policies, so a list next to
+  expanding spin boxes never grows.

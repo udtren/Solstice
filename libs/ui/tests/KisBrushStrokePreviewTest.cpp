@@ -463,6 +463,52 @@ private Q_SLOTS:
         docker.hide();
         QTRY_VERIFY_WITH_TIMEOUT(!KisBrushStrokePreviewCache::instance()->isBusy(), 15000);
     }
+    void testBrushTipFilters()
+    {
+        // The brush tips of the Brush Editor get the bundle facet and
+        // grouping by bundle, without the engine facet
+        KisResourceItemChooser chooser(ResourceType::Brushes, false);
+        auto *filters =
+            new KisPresetDockerFilters(chooser.tagFilterModel(), chooser.itemView(), nullptr, ResourceType::Brushes);
+        chooser.setBottomBarWidget(filters);
+        auto *engines = filters->findChild<QToolButton *>("PresetEngineFilter");
+        auto *bundles = filters->findChild<QToolButton *>("PresetBundleFilter");
+        auto *grouping = filters->findChild<QComboBox *>("PresetGrouping");
+        QVERIFY(engines && bundles && grouping);
+        QVERIFY(engines->isHidden());
+        QCOMPARE(grouping->count(), 2);
+        QCOMPARE(grouping->itemData(0).toInt(), int(KisPresetDockerFilters::NoGrouping));
+        QCOMPARE(grouping->itemData(1).toInt(), int(KisPresetDockerFilters::GroupByBundle));
+        QCOMPARE(bundles->text(), i18n("Bundles: All"));
+
+        auto *model = chooser.tagFilterModel();
+        const int allCount = model->rowCount();
+        // the bundles of this test's resources hold presets only
+        if (allCount > 0) {
+            bundles->menu()->popup(QPoint(20, 20));
+            QTRY_VERIFY(bundles->menu()->isVisible());
+            int bundleEntries = 0;
+            for (auto *action : bundles->menu()->actions())
+                bundleEntries += action->isCheckable();
+            QVERIFY(bundleEntries > 0);
+            bundles->menu()->findChild<QAction *>("ClearAll")->trigger();
+            QCOMPARE(model->rowCount(), 0);
+            bundles->menu()->findChild<QAction *>("SelectAll")->trigger();
+            QCOMPARE(model->rowCount(), allCount);
+            bundles->menu()->hide();
+        }
+
+        // the tips' grouping is kept apart from the presets'
+        const int presetGrouping = KisConfig(true).readEntry<int>("Solstice/BrushPresetGrouping", 0);
+        const int initial = grouping->currentIndex();
+        grouping->setCurrentIndex(1);
+        QCOMPARE(KisConfig(true).readEntry<int>("Solstice/brushesGrouping", 0),
+                 int(KisPresetDockerFilters::GroupByBundle));
+        QCOMPARE(KisConfig(true).readEntry<int>("Solstice/BrushPresetGrouping", 0), presetGrouping);
+        if (allCount > 0)
+            QVERIFY(!filters->groupOf(model->index(0, 0)).second.isEmpty());
+        grouping->setCurrentIndex(initial);
+    }
     void testFilterCombinations()
     {
         QStandardItemModel source;

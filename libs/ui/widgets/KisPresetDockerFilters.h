@@ -24,6 +24,10 @@ class QToolButton;
  * Per-docker facets and grouping; never modifies storage activation or
  * preset resources. Grouping (docs/agent/brush-preset-grouping.md) shows
  * @p view in groups by brush engine or bundle.
+ *
+ * For another @p resourceType than brush presets (the brush tips of the
+ * Brush Editor), only the bundle facet and grouping by bundle are shown.
+ * Photoshop brush libraries (.abr) count as bundles.
  */
 class KRITAUI_EXPORT KisPresetDockerFilters : public QWidget
 {
@@ -36,7 +40,8 @@ public:
 
     explicit KisPresetDockerFilters(KisTagFilterResourceProxyModel *model,
                                     KisResourceItemListView *view = nullptr,
-                                    QWidget *parent = nullptr);
+                                    QWidget *parent = nullptr,
+                                    const QString &resourceType = QStringLiteral("paintoppresets"));
     ~KisPresetDockerFilters() override;
 
     /// (sort key, header label) of the group of a preset index.
@@ -47,6 +52,8 @@ private:
     void apply();
     void applyGrouping();
     void populate(QMenu *menu, bool engines);
+    bool m_presets;
+    QString m_groupingKey;
     KisTagFilterResourceProxyModel *m_model;
     KisResourceModel *m_resources;
     QToolButton *m_engines;

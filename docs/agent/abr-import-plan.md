@@ -78,7 +78,9 @@ Todo(2026年10月8日登録)から、2026年10月10日にユーザーの依頼�
 バンドルの2つの絞り込みを `KisTagFilterResourceProxyModel` の上に作っている
 ので、エンジンを外してバンドルだけにした形を、先端の一覧
 (`plugins/paintops/libpaintop/kis_predefined_brush_chooser.cpp` の
-`KisResourceItemChooser`)の下に付ける。段階3の後に行う。
+`KisResourceItemChooser`)の下に付ける。2026年10月10日に実装
+(`docs/agent/brush-preset-grouping.md` の「Brush tips」)。ABRの保管場所は、
+プリセットと先端の両方の絞り込みでバンドルとして扱う。
 
 段階2〜5はすべて実施する(ユーザー、2026年10月10日)。2から順に進める。
 

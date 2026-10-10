@@ -62,6 +62,7 @@
 #include <lager/state.hpp>
 #include <kis_predefined_brush_factory.h>
 #include <KisPredefinedBrushModel.h>
+#include <KisPresetDockerFilters.h>
 
 using namespace KisBrushModel;
 using namespace KisWidgetConnectionUtils;
@@ -172,6 +173,11 @@ KisPredefinedBrushChooser::KisPredefinedBrushChooser(int maxBrushSize,
     setObjectName(name);
 
     setupUi(this);
+    // Solstice: the tip list shares the extra width with the settings,
+    // which would otherwise take all of it and keep the list at four
+    // columns
+    horizontalLayout_2->setStretch(0, 3);
+    horizontalLayout_2->setStretch(1, 2);
 
     brushSizeSpinBox->setRange(0, maxBrushSize, 2);
     brushSizeSpinBox->setValue(5);
@@ -208,6 +214,12 @@ KisPredefinedBrushChooser::KisPredefinedBrushChooser(int maxBrushSize,
     m_itemChooser->setMinimumWidth(100);
     m_itemChooser->setMinimumHeight(150);
     m_itemChooser->showImportExportBtns(false); // turn the import and delete buttons since we want control over them
+    // Solstice: filter and group the tips by bundle, as the brush presets
+    // (docs/agent/brush-preset-grouping.md)
+    m_itemChooser->setBottomBarWidget(new KisPresetDockerFilters(m_itemChooser->tagFilterModel(),
+                                                                 m_itemChooser->itemView(),
+                                                                 nullptr,
+                                                                 ResourceType::Brushes));
 
     presetsLayout->addWidget(m_itemChooser);
 

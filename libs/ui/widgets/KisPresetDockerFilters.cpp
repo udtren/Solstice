@@ -3,6 +3,8 @@
 #include "KisPresetDockerFilters.h"
 #include <KisResourceItemListView.h>
 #include <KisResourceModel.h>
+#include <KisResourceStorage.h>
+#include <KisResourceTypes.h>
 #include <KisStorageModel.h>
 #include <KisTagFilterResourceProxyModel.h>
 #include <QComboBox>
@@ -53,10 +55,14 @@ protected:
 
 KisPresetDockerFilters::KisPresetDockerFilters(KisTagFilterResourceProxyModel *model,
                                                KisResourceItemListView *view,
-                                               QWidget *parent)
+                                               QWidget *parent,
+                                               const QString &resourceType)
     : QWidget(parent)
+    , m_presets(resourceType == ResourceType::PaintOpPresets)
+    , m_groupingKey(m_presets ? QStringLiteral("Solstice/BrushPresetGrouping")
+                              : QStringLiteral("Solstice/%1Grouping").arg(resourceType))
     , m_model(model)
-    , m_resources(new KisResourceModel(ResourceType::PaintOpPresets, this))
+    , m_resources(new KisResourceModel(resourceType, this))
     , m_view(view)
 {
     setObjectName("PresetDockerFilters");
@@ -78,18 +84,25 @@ KisPresetDockerFilters::KisPresetDockerFilters(KisTagFilterResourceProxyModel *m
     m_engines = makeButton("PresetEngineFilter", true);
     m_bundles = makeButton("PresetBundleFilter", false);
     m_engines->setToolTip(i18n("Show presets from the checked brush engines."));
-    m_bundles->setToolTip(i18n("Show presets stored in the checked bundles. This does not enable or disable bundles."));
+    m_engines->setVisible(m_presets);
+    m_bundles->setToolTip(
+        m_presets ? i18n("Show presets stored in the checked bundles. This does not enable or disable bundles.")
+                  : i18n("Show the items stored in the checked bundles. This does not enable or disable bundles."));
     m_grouping = new QComboBox(this);
     m_grouping->setObjectName("PresetGrouping");
     m_grouping->addItem(i18n("No Grouping"), NoGrouping);
-    m_grouping->addItem(i18n("Group by Engine"), GroupByEngine);
+    if (m_presets) {
+        m_grouping->addItem(i18n("Group by Engine"), GroupByEngine);
+    }
     m_grouping->addItem(i18n("Group by Bundle"), GroupByBundle);
-    m_grouping->setToolTip(i18n("Show the presets in groups by brush engine or by bundle."));
-    m_grouping->setCurrentIndex(qBound(0, KisConfig(true).readEntry<int>("Solstice/BrushPresetGrouping", 0), 2));
+    m_grouping->setToolTip(m_presets ? i18n("Show the presets in groups by brush engine or by bundle.")
+                                     : i18n("Show the items in groups by bundle."));
+    const int grouping = KisConfig(true).readEntry<int>(m_groupingKey, 0);
+    m_grouping->setCurrentIndex(qMax(0, m_grouping->findData(grouping)));
     m_grouping->setVisible(m_view);
     layout->addWidget(m_grouping);
     connect(m_grouping, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
-        KisConfig(false).writeEntry<int>("Solstice/BrushPresetGrouping", index);
+        KisConfig(false).writeEntry<int>(m_groupingKey, m_grouping->itemData(index).toInt());
         applyGrouping();
     });
     m_refresh.setSingleShot(true);
@@ -127,10 +140,12 @@ void KisPresetDockerFilters::refresh()
     QSet<int> usedStorages;
     for (int row = 0; row < m_resources->rowCount(); ++row) {
         const auto index = m_resources->index(row, 0);
-        const QString engine =
-            index.data(Qt::UserRole + KisAbstractResourceModel::MetaData).toMap().value("paintopid").toString();
-        auto *factory = KisPaintOpRegistry::instance()->value(engine);
-        m_engineNames[engine] = factory ? factory->name() : (engine.isEmpty() ? i18n("Unknown engine") : engine);
+        if (m_presets) {
+            const QString engine =
+                index.data(Qt::UserRole + KisAbstractResourceModel::MetaData).toMap().value("paintopid").toString();
+            auto *factory = KisPaintOpRegistry::instance()->value(engine);
+            m_engineNames[engine] = factory ? factory->name() : (engine.isEmpty() ? i18n("Unknown engine") : engine);
+        }
         usedStorages.unite(KisTagFilterResourceProxyModel::activeStorageIdsForIndex(index));
     }
     auto *storages = KisStorageModel::instance();
@@ -138,7 +153,13 @@ void KisPresetDockerFilters::refresh()
         const int id = storages->index(row, KisStorageModel::Id).data().toInt();
         if (!usedStorages.contains(id))
             continue;
-        if (storages->index(row, KisStorageModel::StorageType).data().toString() == "Bundle") {
+        // Photoshop brush libraries are bundles of their tips, patterns and
+        // presets
+        const QString type = storages->index(row, KisStorageModel::StorageType).data().toString();
+        if (type == "Bundle"
+            || type
+                == KisResourceStorage::storageTypeToUntranslatedString(
+                    KisResourceStorage::StorageType::AdobeBrushLibrary)) {
             const QString location = storages->index(row, KisStorageModel::Location).data().toString();
             const QString filename = QFileInfo(location).fileName();
             QString label = storages->index(row, KisStorageModel::DisplayName).data().toString();

@@ -20,7 +20,8 @@ until an entry is checked again. The button shows the number selected.
 
 Bundle filtering uses the preset's registered storage memberships. Identical
 copies shared by multiple bundles match any checked member bundle and remain
-a single item in the list. **Not in a bundle** covers
+a single item in the list. Photoshop brush libraries (`.abr`) count as
+bundles. **Not in a bundle** covers
 local/imported presets and other non-bundle storage; it does not infer which
 bundle a copied preset originally came from. Filtering never changes bundle
 activation. These filters are specific to each Brush Presets docker. New
@@ -90,3 +91,11 @@ the stored icon is never substituted. A five-second timeout requests
 cancellation, but an individual paint-engine job cannot be forcibly stopped.
 Cache files are disposable, limited to 256 MB, and unused entries are removed
 after 60 days. The feature uses the CPU and does not require the GPU engine.
+
+## Brush tips in the Brush Editor
+
+The list of predefined brush tips in the Brush Editor has the same
+**Bundles** dropdown and a grouping choice (**No Grouping** or **Group by
+Bundle**), so the tips of one bundle or Photoshop brush library can be shown
+on their own. The tips' grouping is remembered separately from the presets'.
+The tip list widens with the Brush Editor and shows more columns.

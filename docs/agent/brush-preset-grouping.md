@@ -87,4 +87,30 @@ bar; the filter bar's destructor clears it (`QPointer` to the view).
 - Group headers cannot be collapsed.
 - Grouping is available in the Brush Presets docker, the toolbar brush popup
   and the Quick Access Resources dialog (all with the docker filter bar), not
-  in the Brush Editor list.
+  in the Brush Editor's preset list.
+
+## Brush tips (2026-10-10)
+
+`KisPresetDockerFilters` takes a resource type (default
+`ResourceType::PaintOpPresets`). For another type it hides the engine facet,
+offers only No Grouping and Group by Bundle (the combo items carry the
+`Grouping` value as data; the stored value is the enum, not the index) and
+stores the grouping as `Solstice/<type>Grouping` (`Solstice/brushesGrouping`
+for brush tips). `KisPredefinedBrushChooser`
+(`plugins/paintops/libpaintop/kis_predefined_brush_chooser.cpp`) puts one for
+`ResourceType::Brushes` under its tip list. Storages of type Adobe Brush
+Library (`.abr`) count as bundles for both presets and tips
+(`docs/agent/abr-import-plan.md`). Test: `testBrushTipFilters` in
+`libs/ui/tests/KisBrushStrokePreviewTest.cpp` (the test resources hold no
+tips, so the filtering itself is checked only when tips exist).
+
+The tip list also gets more of the editor's width: the form's top
+`horizontalLayout_2` had no stretch factors, so the settings column (spin
+boxes with expanding policies) took all extra width and the list stayed at
+four columns; `KisPredefinedBrushChooser` now sets stretch 3 (list) to 2
+(settings).
+
+Manual checks: in the Brush Editor's Predefined tips, the Bundles dropdown
+lists the bundles and ABR libraries that hold tips, unchecking one hides its
+tips, and Group by Bundle shows the tips under bundle headers; the presets'
+grouping is unaffected.
