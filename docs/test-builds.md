@@ -10,6 +10,10 @@ download its **Solstice-windows-x64** artifact. Extract the artifact, then extra
 the application ZIP inside it. Launch `bin/krita.exe` from the extracted folder;
 the internal executable name remains unchanged for compatibility.
 
+The ZIP includes a `shellex` folder with the Krita Shell Extension. Run
+`shellex/register-thumbnails.cmd` to show `.kra` and `.krz` thumbnails in
+Explorer for your account; see [Explorer thumbnails](windows-shell-thumbnails.md).
+
 These are temporary development artifacts, not signed releases or an installer.
 Artifacts expire after seven days. `BUILD-INFO.txt`, the dependency lock file,
 and `SHA256SUMS.txt` accompany the ZIP. Windows may show a warning for an

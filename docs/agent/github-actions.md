@@ -56,7 +56,10 @@ Debug splitting, like copying, skips optional CLI tools when they are absent
 (notably `kritarunner` when Python support is disabled).
 
 Packaging reuses `packaging/windows/package-complete.py`, with noninteractive
-arguments and LLVM-MinGW runtime DLLs. It uploads the ZIP and dependency/build
+arguments and LLVM-MinGW runtime DLLs. Its `--pre-zip-hook` runs
+`build-tools/windows-shellex/add-shellex.py`, which downloads the pinned Krita
+Shell Extension, verifies its checksums and adds the `shellex` folder
+(`windows-shell-thumbnails.md`); a checksum mismatch fails the package stage. It uploads the ZIP and dependency/build
 metadata as an artifact, not a GitHub Release. Build logs and CMake diagnostics
 are uploaded even if a later stage fails. Retention is seven days.
 

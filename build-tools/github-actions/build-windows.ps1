@@ -70,7 +70,9 @@ if ($Stage -eq 'configure') {
             (Join-Path $Source 'packaging/windows/package-complete.py'),
             '--no-interactive', '--package-name', $PackageName,
             '--src-dir', $Source, '--deps-install-dir', $Deps,
-            '--krita-install-dir', $Install
+            '--krita-install-dir', $Install,
+            # Explorer thumbnails of .kra/.krz (docs/agent/windows-shell-thumbnails.md)
+            '--pre-zip-hook', (Join-Path $Source 'build-tools/windows-shellex/add-shellex.py')
         ) 'package.log'
     } finally { Pop-Location }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'windows-dependencies.lock.json') -Destination $PackageDir
@@ -80,6 +82,7 @@ Commit: $env:GITHUB_SHA
 Run: https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
 GPU engine: compiled; GPU runtime and interactive tests were not run.
 Dependency versions and source revisions: windows-dependencies.lock.json
+Explorer thumbnails: shellex\register-thumbnails.cmd (Krita Shell Extension 1.2.4d, MIT)
 "@ | Set-Content -Path (Join-Path $PackageDir 'BUILD-INFO.txt') -Encoding utf8
     Get-ChildItem -LiteralPath $PackageDir -Filter '*.zip' | ForEach-Object {
         $Hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()

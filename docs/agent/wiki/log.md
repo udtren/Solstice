@@ -592,3 +592,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   full size (3146x1920); it is compiled into `krita.dll` through `splash.qrc`.
 - The README main image `docs/images/solstice-main-window.webp` is the user's
   new screenshot, used as supplied.
+
+## 2026-10-10 ingest: Explorer thumbnails (Krita Shell Extension)
+
+- Windows packages ship the Krita Shell Extension 1.2.4d (MIT) in `shellex/`
+  with per-user registration scripts
+  ([windows-shell-thumbnails.md](../windows-shell-thumbnails.md)); the todo
+  item moved there.
+- Decision: register in HKCU only (no administrator rights, Krita's HKLM
+  registration stays intact and wins again after unregistering); thumbnails
+  only, no file association or property handler.
+- Lesson: `package-complete.py --pre-zip-hook` adds files to the ZIP without
+  changing the upstream packager.
+- Lesson: registry scripts get a `-TestRoot` so the real write/delete code
+  can be tested under a throwaway HKCU key; only `Software\Classes` is
+  redirected for the 32-bit view.
+- User manual check OK on 2026-10-10.

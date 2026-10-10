@@ -3,22 +3,7 @@
 ユーザーが登録した、未着手の作業候補。着手したら該当する機能文書に
 計画を移し、ここから消す。
 
-## Solsticeの配布物にKra サムネイル用シェル拡張を同梱する
+現在、未着手の候補はない。
 
-- 登録: 2026年10月8日
-- 背景: Windowsのエクスプローラー(およびXYplorerなどシェルのサムネイルを
-  使うファイラー)は、`.kra` のサムネイルをKritaのシェル拡張
-  (`kritashellex`、`.kra` 内の `preview.png` を読む)で作る。Kritaの
-  インストーラー(`packaging/windows/installer/installer_krita.nsi` の
-  `SEC_shellex`)が登録するが、Solsticeは開発ビルドから起動しており
-  インストーラーがないため未登録。Kritaをアンインストールした環境では、
-  Solsticeで保存した新しい `.kra` にサムネイルが出ない(古いファイルは
-  Windowsのサムネイルキャッシュで表示されているだけ)。保存内容は正常
-  (2026年10月8日に確認)。
-- 内容: Windowsの配布物(`docs/agent/github-actions.md` の試験ビルドなど)に
-  シェル拡張を含め、インストール時またはスクリプトで登録・解除できるように
-  する。Kritaと同居する環境での `.kra` の関連付けやシェル拡張の二重登録の
-  扱いを決める。シェル拡張の入手元(Kritaの依存ビルド
-  `_installer/krita-nsis`、`build-tools/ci-scripts/build-windows-package.py`
-  の `KRITA_SHELLEX`)とライセンスを確認する。
-- 状態: 未調査
+（2026年10月10日: 「Solsticeの配布物にKra サムネイル用シェル拡張を同梱する」に着手し、
+`docs/agent/windows-shell-thumbnails.md` へ移した。）

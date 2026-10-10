@@ -111,7 +111,8 @@ Solstice is available as source code and as unsigned Windows x64 trial ZIPs
 from successful manual [GitHub Actions builds](https://github.com/udtren/Solstice/actions/workflows/windows-build.yml).
 These temporary artifacts expire after seven days and are development builds,
 not stable releases. See [Experimental Windows builds](docs/test-builds.md)
-for download instructions and packaging limitations.
+for download instructions and packaging limitations. To show `.kra`
+thumbnails in Explorer, see [Explorer thumbnails](docs/windows-shell-thumbnails.md).
 
 [Temporary visual branding](docs/visual-branding.md)
 
