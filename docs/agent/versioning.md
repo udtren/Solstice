@@ -105,7 +105,7 @@ appears in the version strings.
 | `0.2.0-beta` | 2026-10-13 | Beta for publication (user request), after the pre-release review; only the label changes. Released 2026-10-14 as GitHub Release `v0.2.0-beta` (prerelease, commit `a442a5ce25`); its CI build lacked the Python plugins. |
 | `0.2.0-beta.2` | 2026-10-14 | Second beta (user request): the CI build includes the Python plugins (Python Plugin Manager, pykrita) again; new Puppet Warp and Brush Stroke Layer images. GitHub Release `v0.2.0-beta.2`. |
 | `0.2.0-beta.3` | 2026-10-14 | Third beta (user request): first upstream Krita intake (2026-W42: thumbnail cache crash, animation curves scrolling, second-wheel horizontal scrolling, perspective transform conditions, PSD group collapse and layer locks). Released 2026-10-14 as GitHub Release `v0.2.0-beta.3` (prerelease, commit `c89bc02475`, run 38503291774); website updated the same day. |
-| `0.2.0-beta.4` | 2026-10-14 | Fourth beta (user request): fixes the crash in `KisImage::enableDirtyRequests()` during repeated Python `Node.save()` (thread-safe projection updates filter stack), and Python `Node.save()`, `Filter.apply()`, `Scratchpad.setScale()` return `bool`. |
+| `0.2.0-beta.4` | 2026-10-14 | Fourth beta (user request): fixes the crash in `KisImage::enableDirtyRequests()` during repeated Python `Node.save()` (thread-safe projection updates filter stack), and Python `Node.save()`, `Filter.apply()`, `Scratchpad.setScale()` return `bool`. Released 2026-10-15 as GitHub Release `v0.2.0-beta.4` (prerelease, commit `3575bbb59c`, run 38584970834); website updated the same day. |
 
 ## Checks
 

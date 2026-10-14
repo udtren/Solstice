@@ -1086,3 +1086,10 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   [qt6-detach-on-iteration](pitfalls/qt6-detach-on-iteration.md).
 - Checked in the dev build: 560 `Node.save()` calls (29 layers, 20 rounds)
   on an F32 document converted on open, 0 failures, no crash.
+
+## 2026-10-15 release: 0.2.0-beta.4
+
+- GitHub Release `v0.2.0-beta.4` (prerelease, commit `3575bbb59c`, Actions
+  run 38584970834): the `Node.save()` crash fix and the Python `bool` return
+  types. Package checked: checksums, 5,300 ZIP entries intact, Python
+  plugins present. Website `site.ts` updated and published the same day.
