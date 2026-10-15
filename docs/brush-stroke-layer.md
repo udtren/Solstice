@@ -15,7 +15,9 @@ Stroke Layer**. It appears below Paint Layer in the menu.
 - Paint with the brush tools (Freehand Brush, Dynamic Brush, Multibrush).
   Each stroke looks exactly as on a paint layer, and is remembered with the
   brush, colors and settings it was drawn with. The eraser is remembered as
-  an erasing stroke.
+  an erasing stroke. The canvas mirror (**Mirror Horizontally** and
+  **Mirror Vertically**) is remembered with each stroke, together with where
+  its axes were, and so are all the copies the Multibrush paints.
 - Other tools that paint pixels (shapes, fill, gradient and so on) refuse the
   layer, as they do a vector layer.
 - Undo and redo remove and restore a stroke together with what it
@@ -35,8 +37,10 @@ Stroke Layer**. It appears below Paint Layer in the menu.
 in Free mode draw the remembered strokes again at the new size with the
 same brush, so enlarged line art stays sharp; the brush size grows with the
 scale. With the Transform tool the preview while dragging shows the scaled
-pixels, and the strokes are drawn again when the transform is applied.
-Undo returns the layer to its earlier size and strokes.
+pixels, and the strokes are drawn again when the transform is applied (also
+when the tool is opened again on the same layer and then cancelled, which
+applies the previous transform again). Undo returns the layer to its earlier
+size and strokes.
 
 Only the parts of the layer that are still exactly its remembered strokes
 are drawn again. Where something else changed the pixels (a filter, a
@@ -51,14 +55,16 @@ strokes then no longer match, and later enlarging scales those pixels.
 
 The check includes deleted edges outside the layer's remaining pixels, so
 enlarging does not bring those edges back. In 16-bit and 32-bit floating-point
-RGBA documents, it also preserves edits to HDR and negative color values.
+documents (RGBA, grayscale and the other color models), it also preserves
+edits to HDR and negative color values.
 
 ## When the strokes no longer match
 
 After an edit that is not a brush stroke, the layer checks in the
 background whether its pixels are still its remembered strokes (it draws
 them again, which can take a few seconds for a layer with many strokes). It
-also checks when a file is opened. If they no longer match:
+also checks when a file is opened, and after an edit even when brush strokes
+follow it right away. If they no longer match:
 
 - a message on the canvas names the layer and says that scaling it will now
   scale the pixels that no longer match;
@@ -103,3 +109,7 @@ pixels without replaying those records.
 - A brush texture with a random offset per stroke does not follow the
   stroke when the layer or a selection is moved, so the layer stops
   matching its strokes. Textures without a random offset follow it.
+- A selection that holds a stroke but not its mirrored copies cuts the
+  stroke: moving it with the Move tool is not remembered.
+- On an animated layer (one with keyframes), strokes are not remembered
+  and the layer is not checked; it enlarges like a paint layer.

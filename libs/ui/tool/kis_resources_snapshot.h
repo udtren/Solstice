@@ -66,6 +66,12 @@ public:
 
     void setOpacity(qreal opacity);
     void setMirroring(bool horizontal, bool vertical);
+    /// Solstice: mirroring around @p axesCenter (image pixels) instead of
+    /// the image's mirror axes (a brush stroke layer redraws its strokes)
+    void setMirroring(bool horizontal, bool vertical, const QPointF &axesCenter);
+    bool mirrorMaskHorizontal() const;
+    bool mirrorMaskVertical() const;
+    QPointF axesCenter() const;
     qreal opacity() const;
     QString compositeOpId() const;
 

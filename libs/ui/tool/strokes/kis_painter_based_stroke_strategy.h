@@ -115,8 +115,9 @@ protected:
 
     /// Solstice: @p command becomes part of the stroke's undo command, done
     /// and undone with the painting (e.g. recording the stroke on a brush
-    /// stroke layer). Call it before finishStrokeCallback().
-    void setAdditionalUndoCommand(KUndo2Command *command);
+    /// stroke layer); it comes first, and @p closingCommand, if any, comes
+    /// after the painting's commands. Call it before finishStrokeCallback().
+    void setAdditionalUndoCommand(KUndo2Command *command, KUndo2Command *closingCommand = nullptr);
 
 private:
     void init();
@@ -147,6 +148,7 @@ private:
 
     std::unique_ptr<KUndo2Command> m_autokeyCommand;
     std::unique_ptr<KUndo2Command> m_additionalUndoCommand;
+    std::unique_ptr<KUndo2Command> m_closingUndoCommand;
     bool m_sequentialDabRendering{false};
     QScopedPointer<KisRunnableStrokeJobsInterface> m_sequentialJobs;
 

@@ -179,7 +179,9 @@ Read these before adding or updating any feature:
   moves carry the strokes and a background record check warns when the
   pixels stop matching, done and manually checked 2026-10-13; scaling
   redraws all but the mismatching part, done and manually checked
-  2026-10-13):
+  2026-10-13; audit fixes (canvas mirror recorded, Multibrush records load,
+  Instant Preview selection moves, cancelled continued transforms, record
+  check) done and manually checked 2026-10-15):
   `docs/agent/brush-stroke-layer-plan.md`
 - Photoshop brush (ABR) import improvements (phase 1, ABR tips saved with
   brush stroke layers, done and manually checked 2026-10-10; phase 2, new

@@ -563,8 +563,8 @@ differ ...)」。ファイルの写しで記録を描き直して照合すると
 - 部分的な画素の合成も、浮動小数点 RGBA では `KoMixColorsOp` と選択の
   重みを使う。完全選択は直接コピーする。マスク付き `COMPOSITE_COPY` の
   SIMD 経路が HDR を切り詰めるため、この経路を使わない。
-- `loadStrokes()` は `strokeInfoCount` を 1〜64 に制限する (開始状態の
-  配列と同じ上限)。各ジョブの番号がその範囲内で、種類が POINT/LINE/CURVE
+- `loadStrokes()` は `strokeInfoCount` を制限する(この時点では1〜64。
+  Multibrushの記録を捨てていたので、下の監査の修正で1〜4096にした)。各ジョブの番号がその範囲内で、種類が POINT/LINE/CURVE
   であることを、再生前に確認する。不正なら読み込みを失敗させ、既存の
   `.kra` ローダーが警告して保存画素を残す。ファイルの版は2のままで、
   既存の版1/2の正常な記録は引き続き読める。
@@ -575,6 +575,87 @@ differ ...)」。ファイルの写しで記録を描き直して照合すると
 手動確認: 線の端を選択して削除してから拡大しても復活しないこと、浮動小数点
 RGBA の一部に HDR の編集を加えて拡大しても色が保たれること、Undo/Redo で
 画素と記録が戻ることを確認する。
+
+## 監査の修正 (2026年10月15日)
+
+読み取りだけの監査(複数のエージェント)で見つかった問題を、コードで確かめて
+直した。
+
+| 問題 | 対応 | 場所 |
+| --- | --- | --- |
+| 1. `loadStrokes()` が `strokeInfoCount > 64` を拒否し、Multibrushの記録(Snowflakeは手の数×4で最大200、Copy Translateは上限なし)を丸ごと捨てていた(4974adc890で入った) | 上限を4096にし、開始状態の数は0〜`strokeInfoCount`(版1から読んだ線は0)。誤ったコメントを直した | `KisBrushStrokeLayerIO.cpp` |
+| 2. キャンバスのミラー描画(Mirror Horizontally/Vertically)を記録せず、描き直しはミラーを切っていた | 線ごとに `mirrorHorizontal`、`mirrorVertical`、`mirrorAxesCenter`(画像の画素の絶対位置)を記録する。描き直しは `KisResourcesSnapshot::setMirroring(h, v, axesCenter)` で同じ軸を使う。`transformedStrokes()` は軸も点と同じく写す。保存形式は版3(版2の後に3つを追加。版1/2はミラーなしで読む) | `KisBrushStrokeLayer.{h,cpp}`、`KisBrushStrokeLayerIO.cpp`、`freehand_stroke.cpp`、`libs/ui/tool/kis_resources_snapshot.{h,cpp}`(取得と設定) |
+| 3. 選択範囲の移動の `finishStrokeCallback()` は、Instant Previewの詳細度(LOD)の複製でも走り、縮小した移動量で `createSelectionMoveCommand()` を呼んでいた | レイヤーのデバイスの `currentLevelOfDetail()` が0のときだけ記録を動かす。調べると、今は害が出ていなかった: LODの複製では選択範囲の写し(画像の境界を共有)が自分の空のLODの面を読み、範囲が空で「外」になって nullptr が返る。偶然に頼らないための防御の修正 | `move_selection_stroke_strategy.cpp` |
+| 4. 続けて変形(直前の変形を取り消して始まる)を中止(Ctrl+Z)すると、直前の変形を画素だけで掛け直し、記録は変形前のままだった | `cancelAction()` の `overriddenCommand` の場合に `redrawRecordedStrokes(mutatedJobs, true)`(開始時の引数 `initialTransformArgs` で描き直す)。`finishAction()` は `false`(ジョブの中で `currentTransformArgs`) | `inplace_transform_stroke_strategy.{h,cpp}` |
+| 5. 照合の省略の印(`m_changeRecorded`)が、同じ間に入った記録されない変更(フィルタなど)まで省略させた | 記録された変更の範囲(`beginRecordedChange()`/`endRecordedChange()`)の外の `setDirty()` は `m_unrecordedChange` を立てる。省略は「記録された変更があり、記録されない変更がない」ときだけ。照合中に変更があって結果を捨てたときは、もう一度照合する | `KisBrushStrokeLayer.{h,cpp}` |
+| 6. 照合用のデバイスの写しが画像の `KisDefaultBounds` を共有し、LOD(Instant Preview)の状態が背景の照合に漏れていた(閉じた文書の画像にも触れうる) | 写しに画像のない `KisDefaultBounds` を与える。`m_generation` は写す前に読む | `KisBrushStrokeLayer.cpp`(`startCheck()`) |
+| 7. グラデーションツールが `nodePaintAbility()` を確かめず、このレイヤーに描けた | `VECTOR` なら断りの表示をして描かない | `plugins/tools/basictools/kis_tool_gradient.cc` |
+| 8. 開いた文書にないレイヤー(削除して元に戻す)の照合の依頼が立ったままになり、以後の依頼がモニターを起こさなかった | 起こすかどうかはモニター全体の印(`scheduled()`)で決める。`process()` の始めに下ろすので、見つからなかったレイヤーの依頼は次の機会に処理される | `KisBrushStrokeLayer.cpp` |
+| 9a. 順番の描画(`SequentialRunnableJobs`)が `FreehandStrokeRunnableJobDataWithUpdate` を普通のジョブに包み、キャンバスの更新が遅れていた | 同じ型で包む | `kis_painter_based_stroke_strategy.cpp` |
+| 9b. `sameContent()` が巨大なレイヤーで画像全体の `QImage`(失敗すると null の参照)と32ビットの画素数を使っていた | 約400万画素の帯ごとに比べ、数は64ビット。`QImage` が作れなければ「一致しない」 | `KisBrushStrokeLayer.cpp` |
+| 9c. 読み込みが NaN/無限大/巨大な位置を受け付けた | 点・制御点・始まり・デバイスの位置・ミラーの軸が有限で絶対値1e7未満、不透明度と表示倍率が有限でなければ失敗 | `KisBrushStrokeLayerIO.cpp` |
+| 9d. `transformedStrokes()` が倍率1(移動だけ)でも `setPaintOpSize()` を呼んでいた | 倍率が1でないときだけ | `KisBrushStrokeLayer.cpp` |
+| 9e. RGBA以外の浮動小数点の色空間(GrayA F32など)が8ビットで比べられ、HDRの編集を見逃した | アルファのある浮動小数点(F16/F32/F64)の色空間はすべてネイティブのチャンネルで比べ、部分の合成も `KoMixColorsOp` で行う(`comparesNativeChannels()`) | `KisBrushStrokeLayer.cpp` |
+| 9f. アニメーションのレイヤー(キーフレームあり)でも記録と照合をしていた | 記録しない(`initRecording()`)、照合しない(`process()`)。描き直しはもともとしない | `freehand_stroke.cpp`、`KisBrushStrokeLayer.cpp` |
+| 9g. 描画時のデバイスの位置を、ストロークの作成時(GUIスレッド)に読んでいた。先に並んだレイヤーの移動の前の位置になりうる | `initStrokeCallback()` で読む | `freehand_stroke.cpp` |
+
+記録された変更の範囲(5の詳細):
+
+- 描画中: 記録する線は `FreehandStrokeStrategy::initStrokeCallback()` で
+  範囲を開く(LOD0のストロークだけ。LODの複製は記録しない)。線の記録が
+  あれば、元に戻すのコマンドを [`KisRecordedChangeScopeCommand`(Opening)、
+  `KisRecordBrushStrokeCommand`] … 画素のコマンド … [Closing] の順に並べる
+  (`KisPainterBasedStrokeStrategy::setAdditionalUndoCommand(command,
+  closingCommand)`。Closing は間接描画の合成のジョブの後、親コマンドの最初の
+  redo の直前に加える)。範囲は描画中に開いているので、Opening の最初の redo
+  は何もせず、Closing の最初の redo が閉じる。以後の undo/redo では、undo が
+  逆順に走るので Closing が開き Opening が閉じ、redo は逆。
+- 記録できないジョブで記録をやめた線は `markChangeUnrecorded()`。中止と
+  記録のない終了は、その場で範囲を閉じる(以後の変更は照合される)。
+  デストラクタも念のため閉じる。
+- 描き直し(`createTransformRedrawCommand()`)のコマンドも Opening/Closing で
+  囲み、作成時の `setDirty()` も範囲の中で呼ぶ。
+- LOD(Instant Preview)の `setDirty()` は数えない(LOD0の画素は変わらず、
+  後でLOD0の変更が来る)。
+- 範囲の外の `setDirty()` は、レイヤーの性質の変更(不透明度など)でも
+  照合を起こす(前と同じ。害は計算の時間だけ)。画像の拡大縮小の処理が
+  レイヤーに `setDirty()` を送ると、拡大の後に1回照合が走る。
+
+テスト `KisBrushStrokeLayerTest` に追加: `testManyCopiesLoad`(200本の写しの
+記録が読める)、`testRejectDamagedStrokeData`(開始状態が写しより多い、NaN、
+無限大、巨大な位置、NaNのミラーの軸)、`testMirroredStrokeRecorded`(縦横の
+ミラーで描いた線の記録が軸とともに残り、描き直しが一致し、ミラーを外すと
+一致しない。保存と読み込みで残る。ミラーの写しを含まない選択範囲は線を切る。
+2倍の拡大で軸も2倍になり描き直しが画素と一致)、
+`testRecordCheckFindsEditsBesideStrokes`(塗りつぶしの直後にブラシの線を
+描いても不一致を見つける)、`testRecordCheckAfterLayerReturns`(画像から外して
+照合を頼み、戻した後の編集を照合する)、`testFloatGrayEditsDetected`(GrayA F32の
+HDRの編集を見つける)、`testDeviceOffsetReadAtStart`(先に並んだレイヤーの移動の
+後の位置を記録する)。`testRejectInvalidStrokeJobs` の本数の上限の行は4097に。
+`KisBrushStrokeLayerTransformTest` に追加(`kritadefaulttools_static` をリンク):
+`testCancelledContinuedTransformRedraws`(1.8倍の変形を続けて開いて中止すると、
+記録と画素が最初の変形のまま)、`testSelectionMoveWithInstantPreview`
+(LOD 2 で選択範囲を動かすと、記録は1回だけ移動量どおりに動く。LODの複製の
+終了が LOD 2、移動量 (40,10) で走ることを一時的なログで確かめた。上の理由で、
+防御の条件を外しても通る)。
+6(LODの漏れ)と7(グラデーションツール)と9a(更新の遅れ)は自動テストを
+作っていない(タイミングとキャンバスが要る)。手動で確かめる。
+
+手動確認の項目(監査の修正。2026年10月15日に確認済み):
+
+1. ミラー描画(横、縦、両方)でブラシストロークレイヤーに描き、
+   Image > Scale Image で拡大すると、写しも含めてくっきりする。警告が出ない。
+   `.kra` に保存して開き直しても同じ。
+2. Multibrush(Snowflake、手の数を多く)で描いて保存し、開き直すと記録が
+   残る(拡大でくっきり)。
+3. Instant Preview を有効にして、選択範囲で線を丸ごと動かしてから拡大すると、
+   くっきりする(警告が出ない)。
+4. 変形ツールで拡大して適用し、もう一度変形ツールを開いてすぐ Ctrl+Z
+   (またはEsc)で中止すると、くっきりしたまま。警告が出ない。
+5. フィルタを掛けてすぐ(1秒以内に)ブラシで描いても、数秒後に「no longer
+   matches」が出る。
+6. グラデーションツールはこのレイヤーに描けず、メッセージが出る。
+7. 大きなブラシで描くとき、描画中の画面の更新が遅れない。
 
 ## 段階1: 技術検証
 

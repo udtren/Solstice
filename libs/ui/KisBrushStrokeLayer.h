@@ -56,6 +56,11 @@ struct KRITAUI_EXPORT KisRecordedBrushStroke {
     int strokeInfoCount = 1;
     /// the offset of the layer's paint device when the stroke was drawn
     QPoint deviceOffset;
+    /// the canvas mirror (Mirror Horizontally/Vertically): the painter
+    /// mirrors every dab around @p mirrorAxesCenter, in image pixels
+    bool mirrorHorizontal = false;
+    bool mirrorVertical = false;
+    QPointF mirrorAxesCenter;
 
     /// Where the dab spacing of each mirrored copy started: the brush tool
     /// starts it from the cursor's last hover position and direction
@@ -111,8 +116,18 @@ public:
 
     /// The next check may be skipped: the change since the last one was a
     /// recorded brush stroke or a redraw, which keep the pixels and the
-    /// record together
+    /// record together, unless another change came with it
     void markChangeRecorded();
+
+    /// Pixel changes between these calls (a recorded brush stroke drawing,
+    /// its undo and redo, a redraw) belong to a recorded change; any other
+    /// change makes the next check run (KisRecordedChangeScopeCommand)
+    void beginRecordedChange();
+    void endRecordedChange();
+
+    /// A change inside a recorded scope that the record does not hold (a
+    /// stroke that turned out not to be recordable): the next check runs
+    void markChangeUnrecorded();
 
     /**
      * The record after the Move Tool moved the pixels inside @p mask (the
@@ -187,7 +202,11 @@ private:
     QAtomicInt m_generation;
     /// a check is requested and not yet started
     QAtomicInt m_checkRequested;
+    /// since the last check: a recorded change, and a change outside one
     QAtomicInt m_changeRecorded;
+    QAtomicInt m_unrecordedChange;
+    /// open recorded scopes (beginRecordedChange())
+    QAtomicInt m_recordedChanges;
     QAtomicInt m_recordState{int(RecordState::Unknown)};
 };
 
@@ -205,6 +224,34 @@ public:
 private:
     KisBrushStrokeLayerSP m_layer;
     KisRecordedBrushStrokeSP m_stroke;
+};
+
+/**
+ * Brackets a recorded change in its undo command: an Opening command goes
+ * first and a Closing one last, so that the pixel changes of the commands
+ * between them happen inside KisBrushStrokeLayer::beginRecordedChange() and
+ * endRecordedChange(), in redo and in undo (which runs the commands in
+ * reverse). With @p scopeOpen, the stroke that makes the command has opened
+ * the scope already: the first redo of the Opening command does nothing,
+ * and the first redo of the Closing command (or its destruction without
+ * one) closes it.
+ */
+class KRITAUI_EXPORT KisRecordedChangeScopeCommand : public KUndo2Command
+{
+public:
+    enum Position {
+        Opening,
+        Closing,
+    };
+    KisRecordedChangeScopeCommand(KisBrushStrokeLayer *layer, Position position, bool scopeOpen = false);
+    ~KisRecordedChangeScopeCommand() override;
+    void redo() override;
+    void undo() override;
+
+private:
+    KisBrushStrokeLayerSP m_layer;
+    Position m_position;
+    bool m_scopeOpen;
 };
 
 #endif // KISBRUSHSTROKELAYER_H
