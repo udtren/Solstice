@@ -66,6 +66,11 @@ private Q_SLOTS:
     void testSelectionMoveMovesStrokes();
     void testRecordCheckFindsOtherEdits();
     void testTextureFollowsMovedStrokes();
+    void testScaleKeepsDeletedEdges();
+    void testScaleKeepsHdrEdits_data();
+    void testScaleKeepsHdrEdits();
+    void testRejectInvalidStrokeJobs_data();
+    void testRejectInvalidStrokeJobs();
 };
 
 namespace
@@ -894,6 +899,127 @@ void KisBrushStrokeLayerTest::testTextureFollowsMovedStrokes()
     command->redo();
     QVERIFY2(KisBrushStrokeLayer::strokesMatchPixels(layer->strokes(), layer->paintDevice(), &difference),
              qPrintable(difference));
+}
+
+void KisBrushStrokeLayerTest::testScaleKeepsDeletedEdges()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    auto *undo = new KisSurrogateUndoStore();
+    KisImageSP image = new KisImage(undo, 200, 100, cs, "deleted edges");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    paintStroke(image, layer, loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp")), KoColor(Qt::black, cs));
+    layer->paintDevice()->clear(QRect(100, -100, 1000, 1000));
+    const QImage before = toImage(layer->paintDevice());
+    QString difference;
+    QVERIFY(!KisBrushStrokeLayer::strokesMatchPixels(layer->strokes(), layer->paintDevice(), &difference));
+    scaleImage4x(image);
+    QCOMPARE(coveredPixels(toImage(layer->paintDevice(), QRect(440, 0, 360, 400))), 0);
+    undo->undo();
+    image->waitForDone();
+    QCOMPARE(toImage(layer->paintDevice()), before);
+    undo->redo();
+    image->waitForDone();
+    QCOMPARE(coveredPixels(toImage(layer->paintDevice(), QRect(440, 0, 360, 400))), 0);
+}
+
+void KisBrushStrokeLayerTest::testScaleKeepsHdrEdits_data()
+{
+    QTest::addColumn<QString>("depth");
+    QTest::addColumn<float>("value");
+    for (const QString &depth : {QStringLiteral("F16"), QStringLiteral("F32")}) {
+        QTest::newRow(qPrintable(depth + "-HDR")) << depth << 4.0f;
+        QTest::newRow(qPrintable(depth + "-negative")) << depth << -2.0f;
+    }
+}
+
+void KisBrushStrokeLayerTest::testScaleKeepsHdrEdits()
+{
+    QFETCH(QString, depth);
+    QFETCH(float, value);
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->colorSpace("RGBA", depth, QString());
+    QVERIFY(cs);
+    auto *undo = new KisSurrogateUndoStore();
+    KisImageSP image = new KisImage(undo, 200, 100, cs, "HDR edits");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    paintStroke(image, layer, loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp")), KoColor(Qt::white, cs));
+    const QRect bounds = layer->paintDevice()->exactBounds();
+    QByteArray pixels(bounds.width() * bounds.height() * cs->pixelSize(), '\0');
+    layer->paintDevice()->readBytes(reinterpret_cast<quint8 *>(pixels.data()), bounds);
+    QVector<float> channels(cs->channelCount());
+    int changed = 0;
+    for (int y = 0; y < bounds.height(); ++y) {
+        for (int x = 0; x < bounds.width(); ++x) {
+            quint8 *pixel = reinterpret_cast<quint8 *>(pixels.data()) + (y * bounds.width() + x) * cs->pixelSize();
+            cs->normalisedChannelsValue(pixel, channels);
+            // A small patch exercises partial redraw, including translucent edges.
+            if (bounds.x() + x >= 65 && bounds.x() + x < 85 && channels[3] > 0.1f) {
+                channels[0] = channels[1] = channels[2] = value;
+                cs->fromNormalisedChannelsValue(pixel, channels);
+                ++changed;
+            }
+        }
+    }
+    QVERIFY(changed > 0);
+    layer->paintDevice()->writeBytes(reinterpret_cast<const quint8 *>(pixels.constData()), bounds);
+    QString difference;
+    QVERIFY(!KisBrushStrokeLayer::strokesMatchPixels(layer->strokes(), layer->paintDevice(), &difference));
+    const QPointF firstPoint = layer->strokes().first()->jobs.first().pi1.pos();
+    scaleImage4x(image);
+    QCOMPARE(layer->strokes().first()->jobs.first().pi1.pos(), firstPoint * 4);
+    const QRect large = layer->paintDevice()->exactBounds();
+    QByteArray scaled(large.width() * large.height() * cs->pixelSize(), '\0');
+    layer->paintDevice()->readBytes(reinterpret_cast<quint8 *>(scaled.data()), large);
+    int preserved = 0;
+    for (int i = 0; i < large.width() * large.height(); ++i) {
+        cs->normalisedChannelsValue(reinterpret_cast<const quint8 *>(scaled.constData()) + i * cs->pixelSize(),
+                                    channels);
+        if (channels[3] > 0.1f && qAbs(channels[0] - value) < 0.05f)
+            ++preserved;
+    }
+    QVERIFY(preserved > changed);
+    undo->undo();
+    image->waitForDone();
+    QByteArray restored(pixels.size(), '\0');
+    layer->paintDevice()->readBytes(reinterpret_cast<quint8 *>(restored.data()), bounds);
+    QCOMPARE(restored, pixels);
+}
+
+void KisBrushStrokeLayerTest::testRejectInvalidStrokeJobs_data()
+{
+    QTest::addColumn<int>("count");
+    QTest::addColumn<int>("index");
+    QTest::addColumn<int>("type");
+    QTest::newRow("negative-index") << 1 << -1 << int(FreehandStrokeStrategy::Data::POINT);
+    QTest::newRow("past-end-index") << 1 << 1 << int(FreehandStrokeStrategy::Data::POINT);
+    QTest::newRow("zero-count") << 0 << 0 << int(FreehandStrokeStrategy::Data::POINT);
+    QTest::newRow("negative-count") << -1 << 0 << int(FreehandStrokeStrategy::Data::POINT);
+    QTest::newRow("excessive-count") << 65 << 0 << int(FreehandStrokeStrategy::Data::POINT);
+    QTest::newRow("invalid-type") << 1 << 0 << -1;
+    QTest::newRow("unrecordable-type") << 1 << 0 << int(FreehandStrokeStrategy::Data::POLYGON);
+}
+
+void KisBrushStrokeLayerTest::testRejectInvalidStrokeJobs()
+{
+    QFETCH(int, count);
+    QFETCH(int, index);
+    QFETCH(int, type);
+    auto stroke = QSharedPointer<KisRecordedBrushStroke>::create();
+    stroke->preset = loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp"));
+    QVERIFY(stroke->preset);
+    stroke->strokeInfoCount = count;
+    KisRecordedBrushStroke::Job job;
+    job.type = type;
+    job.strokeInfoId = index;
+    stroke->jobs << job;
+    QBuffer buffer;
+    QVERIFY(buffer.open(QIODevice::ReadWrite));
+    QVERIFY(KisBrushStrokeLayer::saveStrokes({stroke}, &buffer));
+    buffer.seek(0);
+    QVector<KisRecordedBrushStrokeSP> result{stroke};
+    QVERIFY(!KisBrushStrokeLayer::loadStrokes(&buffer, &result));
+    QCOMPARE(result, QVector<KisRecordedBrushStrokeSP>{stroke});
 }
 
 SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(KisBrushStrokeLayerTest, QStringLiteral("Krita_4_Default_Resources.bundle"))

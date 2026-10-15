@@ -555,11 +555,13 @@ Continuous and Modulo Continuous ("All other blend modes").
   the view is shown) calls `KisGpuEngineUi::offerConversion()`: if the
   engine is enabled and usable (Vulkan context created, not failed) and the
   image is not RGBA float, `Solstice/GpuEngineConvertDocuments` decides:
-  Ask (default; Convert / Keep, with "Do not ask again" storing the
-  answer), Convert, or Keep. The conversion is
+  Ask (default; Convert to RGBA 16-bit float / Convert to RGBA 32-bit float /
+  Keep, with "Do not ask again" storing the answer including depth), Convert
+  to RGBA 16-bit float, Convert to RGBA 32-bit float, or Keep. The conversion is
   `KisImage::convertImageColorSpace()` to
-  `KisGpuEngineSettings::conversionTarget()`: RGBA F32 with the same profile
-  for RGB documents (same values, same appearance), RGBA F32 with the
+  `KisGpuEngineSettings::conversionTarget(colorSpace, policy)`: RGBA F16 for
+  `Convert16`, otherwise F32, with the same profile for RGB documents (F16
+  rounds values to half precision), or the selected depth with the
   default profile otherwise; internal rendering intent and flags. It is
   undoable and marks the document modified; saving keeps the new color
   space. New documents are not affected (choose RGBA float in the New
@@ -1190,7 +1192,7 @@ clean runs, and a benchmark entry in this document.
 | 2 | Projection on the GPU: batched layer compositing in `KisAsyncMerger`, 11 blend modes, alpha lock, adjustment layers and filter masks as split points, CPU fallback. | Done: `KisGpuProjectionTest` (every blend mode with and without alpha lock, full refresh, partial unaligned updates, adjustment layer, filter mask, F16) matches the CPU projection within the parity criteria, validation-clean with exit code 0; existing merger/projection/walker/layer tests pass with `KRITA_GPU_PROJECTION=1`. |
 | 3.1 | GPU-authoritative projection: in-place GPU compositing, tile-aligned merge job exclusivity, uploads decided at submission, COW clones by GPU copies, batched canvas downloads. | Done: `KisGpuProjectionTest` (incl. projection residency and concurrent updates sharing tiles) and all `libs/image` tests except four unrelated ones pass with and without `KRITA_GPU_PROJECTION=1`. |
 | 3.2 | Canvas from the GPU: projection tiles → display-converted pixels in a Vulkan buffer shared with GL (PBO) → existing `KisTextureTile` uploads without CPU copies; GPU display conversion for matrix-shaper profiles. | Done: `KisGpuCanvasUploadTest` writes the same texture tiles through the CPU and the GPU path and compares them: identical for equal profiles, ≤ 1 half ULP for F32→F16, ≤ 1.2e-4 for matrix-shaper conversions (sRGB/Rec.2020 linear ↔ sRGB TRC, and different white points: LargeRGB/CIE RGB ↔ sRGB; F16 image to an sRGB TRC F16 texture). `testLutProfilesUseCpu` covers the LUT fallback; `testGLImportFailureFallsBackToCpu` runs the GL-import recovery for all those conversion rows (one failed upload, an edge update, and a merged update where one upload is read back and the other uploaded by GL) with the same tolerances. |
-| 3.3 | `Solstice/GpuEngine` gate and Preferences UI; conversion of documents in other color spaces to RGBA float when opened; failure warning, pre-save warning, and no file replacement after a loss during the save. | Code done: `KisGpuProjectionTest::testConvertedDocumentUsesGpu` (conversion targets; an RGBA8 document converted to the target composites on the GPU with an identical 8-bit appearance), `KisGpuPaintDeviceTest::testPersistentDownloadFailureIsReported` (the failure listener fires once for two losses), `KisGpuSaveTest::testLossDuringSaveKeepsTarget` (a `.kra` save that loses the GPU-only projection fails and leaves the target file unchanged; after acknowledging, the save succeeds; fails without the guard). The dialogs themselves are not unit-tested. Open: the manual checklist below (first user-visible build). |
+| 3.3 | `Solstice/GpuEngine` gate and Preferences UI; conversion of documents in other color spaces to RGBA float when opened; failure warning, pre-save warning, and no file replacement after a loss during the save. | Code done: `KisGpuProjectionTest::testConvertedDocumentUsesGpu` (F16/F32 conversion targets; an RGBA8 document converted to the target composites on the GPU with an identical 8-bit appearance), `KisGpuPaintDeviceTest::testPersistentDownloadFailureIsReported` (the failure listener fires once for two losses), `KisGpuSaveTest::testLossDuringSaveKeepsTarget` (a `.kra` save that loses the GPU-only projection fails and leaves the target file unchanged; after acknowledging, the save succeeds; fails without the guard). Conversion preferences and dialogs are covered by `KisGpuEngineUiTest` (2026-10-15); the failure/save dialogs still need the manual checklist below. |
 | 3.4 | Bounded image tile pools, idle tile eviction, and normal disk swap for evicted GPU tile data. | Done: low-budget, rollback, concurrency, disk swap, and Undo tests; the user confirmed painting, Undo/Redo, zoom, save and reopen under a 16 MiB tile budget. |
 | 3.5 | Bounded canvas transfer buffers and safe GL/Vulkan retirement; cap idle canvas work contexts. | Done: automated budget/parity/lifecycle tests; the user confirmed correct operation under a 16 MiB canvas budget. Its log confirms budget fallback with interop still enabled. Other transient allocations and stale CPU snapshots remain separate work. |
 | 4.1 | Opt-in RGBA32F Normal/Alpha Darken pixel-brush dab compositing, retaining CPU dab generation. | Sequential brush update job. GPU/CPU parity, COW/Undo/Redo, CPU-after-GPU writes, failed submit, and low-budget rollback tests. Normal and Alpha Darken/Wash manually confirmed, with successful GPU batches in both logs. Full stroke latency remains unverified. |
@@ -1300,6 +1302,12 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 - Phase 3.2 test: target `KisGpuCanvasUploadTest`, ctest name
   `libs-ui-KisGpuCanvasUploadTest` (needs a desktop OpenGL context on the
   Vulkan GPU; skips otherwise).
+- Conversion UI: `KisGpuEngineUiTest` checks preference round trips (including
+  legacy numeric policies), Ask choices with/without remembering, Escape,
+  automatic conversion, profile retention, and Undo/Redo. It runs offscreen
+  with a usable GPU and creates no canvases. `KisGpuProjectionTest::
+  testConvertedDocumentUsesGpu` covers both F16 and F32 conversion targets,
+  including Lab input and the GPU projection after converting an RGB8 image.
 - Phase 2 test: target `KisGpuProjectionTest`, ctest name
   `libs-image-KisGpuProjectionTest`. Changes to the merger must also pass
   `kis_async_merger_test`, `kis_projection_test`, `kis_update_scheduler_test`,
@@ -1381,7 +1389,8 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 - kritarc (default group): `Solstice/GpuEngine` (bool; the embedded default
   `krita/data/kritarc` sets true since 2026-10-07, the code fallback is
   false) and
-  `Solstice/GpuEngineConvertDocuments` (int: 0 Ask, 1 Convert, 2 Keep;
+  `Solstice/GpuEngineConvertDocuments` (int: 0 Ask, 1 Convert to F32, 2 Keep,
+  3 Convert to F16; values 0/1/2 retained for compatibility, 2026-10-15;
   default 0). See "Feature gate and user interface".
 - Environment `KRITA_GPU_PROJECTION=1` or `0` overrides `Solstice/GpuEngine`
   (development switch; `KisGpuMergeBatch::setEnabled()` in tests).
@@ -1473,10 +1482,11 @@ Phase 0 has no user-visible behavior. From phase 3 on:
 3. Save, reopen in CPU mode and in upstream Krita.
 4. Enable Preferences → Performance → GPU Engine, restart: the status shows
    the active GPU after opening an RGBA float document.
-5. Open an RGBA 8-bit PNG: the conversion question appears; Convert keeps
-   the appearance and undo restores 8-bit; Keep leaves it on the CPU path;
+5. Open an RGBA 8-bit PNG: the conversion question offers F16 and F32;
+   each produces the selected depth, and undo restores 8-bit; Keep leaves it on the CPU path;
    "Do not ask again" is honored on the next open and changeable in
-   Preferences.
+   Preferences, including the chosen depth. Existing RGBA F16/F32 documents
+   keep their depth regardless of this setting.
 6. Disable the setting and restart: no question, no GPU use
    (`KRITA_GPU_PROJECTION=0` likewise).
 7. Gaussian Blur, Unsharp Mask and Gaussian High Pass on RGBA32F and RGBA16F

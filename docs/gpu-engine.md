@@ -130,15 +130,18 @@ float**. When you open a document in another color space (for example an
 8-bit PNG, a 16-bit integer, CMYK, Lab, or grayscale document), Solstice asks
 whether to convert it:
 
-- **Convert** changes the document to RGBA 32-bit float. RGB documents keep
-  their color profile, so they look the same. The conversion can be undone,
-  and saving keeps the new color space.
+- **Convert to RGBA 16-bit float** or **Convert to RGBA 32-bit float** changes
+  the document to the selected depth. RGB documents keep their color profile.
+  16-bit float uses half the pixel storage of 32-bit float, with less precision.
+  The conversion can be undone, and saving keeps the new color space.
 - **Keep** leaves the document as it is. It works exactly as before, without
   GPU acceleration.
 
 Check **Do not ask again** to remember the answer. You can change it later
-in **Opening other documents** next to the GPU engine option (Ask, Convert,
-or Keep). New documents default to RGBA 32-bit float, which the GPU engine
+in **Opening other documents** next to the GPU engine option (Ask, Convert to
+RGBA 16-bit float, Convert to RGBA 32-bit float, or Keep). Remembering a
+conversion also remembers its depth. Existing automatic-conversion settings
+continue to select 32-bit float. New documents default to RGBA 32-bit float, which the GPU engine
 accelerates; the New Document dialog offers the other color spaces too and
 remembers the last choice.
 

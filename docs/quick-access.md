@@ -33,6 +33,13 @@ and in the popup the angle dial and value of Tool Options for brush rotation,
 with its flip options in one menu button so the row fits the panel. The size bar covers the full brush size range and moves
 in finer steps at small sizes, like the brush tip's Diameter.
 
+## Temporary shortcuts
+
+Hold shortcuts for erasing, preserving alpha, freehand selection and temporary
+brushes apply to the active main window. Releasing the key, switching to another
+window or leaving the application restores the state in the original window.
+Opening several windows does not apply the same shortcut more than once.
+
 ## Arranging items
 
 - **Ctrl + drag** an item to move it to another cell of the palette without

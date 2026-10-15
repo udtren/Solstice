@@ -63,6 +63,13 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   brush keys to miss events.
 - Do not create a key controller for compact HueSVC popup instances of
   `QuickAdjustDock`, or multiple global event filters will be installed.
+- Each main window has its own persistent controller. Accept presses only
+  when its owning `KisMainWindow` is active; capture that window and its
+  `KisViewManager` with `QPointer` for the entire hold. Restore through that
+  captured manager, never through `currentMainwindow()` on release.
+  Restore on application/window deactivation and controller destruction too.
+  The manager needs its own weak pointer: `KisMainWindow` deletes its manager
+  before its dockers, while the window's `QPointer` can still be non-null.
 - Normalize spaces in configured key sequences: `Alt + A` must behave as
   `Alt+A`. Release handling must restore state even if focus changes while a
   key is held.
@@ -210,3 +217,20 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
 
 Preserve existing source and binary assets under
 `plugins/dockers/quickaccess/resources`.
+
+## Hold-key regression checks (2026-10-15)
+
+Build `QuickAdjustKeyControllerTest` and run it alongside `QuickAccessCoreTest`.
+It creates two main windows and checks eraser and alpha-lock holds, release in
+another window, application deactivation, docker destruction and main-window
+destruction. Use Qt's offscreen platform for automated runs.
+The test uses `KisApplication`: `KisInputManager` assumes that application type
+when querying extended modifiers. It supplies clipboard MIME data for the
+offscreen platform and an independent preset per window (eraser mode is a
+derived preset resource). It disables installed controllers' event filters
+before adding the compiled test controllers, so each window has only one.
+
+For interactive verification, open two windows and repeat holds for eraser,
+alpha lock, selection and temporary brushes. Check ordinary release, switching
+windows, Alt+Tab and closing a window while holding a key. Confirm restoration
+in the original window, and confirm editable fields do not activate holds.

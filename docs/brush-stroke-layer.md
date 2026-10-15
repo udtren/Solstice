@@ -49,6 +49,10 @@ selection, and the Transform tool's other modes (Warp, Cage, Liquify, Mesh,
 Puppet Warp) transform the pixels as on a paint layer; the remembered
 strokes then no longer match, and later enlarging scales those pixels.
 
+The check includes deleted edges outside the layer's remaining pixels, so
+enlarging does not bring those edges back. In 16-bit and 32-bit floating-point
+RGBA documents, it also preserves edits to HDR and negative color values.
+
 ## When the strokes no longer match
 
 After an edit that is not a brush stroke, the layer checks in the
@@ -76,6 +80,9 @@ images, textures, patterns and gradients the strokes use, including brush
 tips imported from Photoshop ABR files, so the file enlarges sharply on a
 computer that does not have those brushes installed.
 Other formats (PSD, ORA, PNG and so on) store the pixels only.
+
+If a file contains invalid stroke records, Solstice warns and keeps the saved
+pixels without replaying those records.
 
 ## Current limitations
 

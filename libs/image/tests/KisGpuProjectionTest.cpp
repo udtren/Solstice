@@ -70,6 +70,7 @@ private Q_SLOTS:
     void testConcurrentUpdatesSharingTilesMatchCpu();
     void testMemoryBudgetFallsBackToCpu();
     void testFloatGroupInIntegerImageStaysOnCpu();
+    void testConvertedDocumentUsesGpu_data();
     void testConvertedDocumentUsesGpu();
     void benchmarkRefresh();
 };
@@ -1164,22 +1165,32 @@ void KisGpuProjectionTest::testFloatGroupInIntegerImageStaysOnCpu()
     QVERIFY(!KisGpuMergeBatch::mayCompositeOnGpu(group));
 }
 
+void KisGpuProjectionTest::testConvertedDocumentUsesGpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::newRow("RGBA32F") << false;
+    QTest::newRow("RGBA16F") << true;
+}
+
 void KisGpuProjectionTest::testConvertedDocumentUsesGpu()
 {
+    QFETCH(bool, f16);
     REQUIRE_GPU();
     KoColorSpaceRegistry *registry = KoColorSpaceRegistry::instance();
 
     // Conversion targets (phase 3.3, KisGpuEngineSettings).
     const KoColorSpace *rgb8 = registry->rgb8();
-    const KoColorSpace *target = KisGpuEngineSettings::conversionTarget(rgb8);
+    const auto policy = f16 ? KisGpuEngineSettings::Convert16 : KisGpuEngineSettings::Convert;
+    const KoColorSpace *target = KisGpuEngineSettings::conversionTarget(rgb8, policy);
     QVERIFY(target);
     QVERIFY(KisGpuEngineSettings::isGpuColorSpace(target));
-    QCOMPARE(target->colorDepthId(), Float32BitsColorDepthID);
+    QCOMPARE(target->colorDepthId(), f16 ? Float16BitsColorDepthID : Float32BitsColorDepthID);
     QCOMPARE(target->profile()->name(), rgb8->profile()->name()); // same profile: same appearance
-    QVERIFY(!KisGpuEngineSettings::conversionTarget(rgbaFloat()));
-    QVERIFY(!KisGpuEngineSettings::conversionTarget(rgbaFloat(true)));
-    const KoColorSpace *labTarget = KisGpuEngineSettings::conversionTarget(registry->lab16());
+    QVERIFY(!KisGpuEngineSettings::conversionTarget(rgbaFloat(), policy));
+    QVERIFY(!KisGpuEngineSettings::conversionTarget(rgbaFloat(true), policy));
+    const KoColorSpace *labTarget = KisGpuEngineSettings::conversionTarget(registry->lab16(), policy);
     QVERIFY(labTarget && KisGpuEngineSettings::isGpuColorSpace(labTarget));
+    QCOMPARE(labTarget->colorDepthId(), target->colorDepthId());
 
     // An RGBA8 document composites on the CPU; after the conversion that
     // KisGpuEngineUi offers on opening, the same document uses the GPU.

@@ -12,6 +12,8 @@
 #include <QTimer>
 #include <QtMath>
 #include <algorithm>
+#include <cmath>
+#include <cstring>
 
 #include <KisAsynchronousStrokeUpdateHelper.h>
 #include <KisDocument.h>
@@ -20,8 +22,10 @@
 #include <KisUsageLogger.h>
 #include <KisView.h>
 #include <KoCanvasResourceProvider.h>
+#include <KoColorModelStandardIds.h>
 #include <KoColorSpace.h>
 #include <KoCompositeOpRegistry.h>
+#include <KoMixColorsOp.h>
 #include <kis_command_utils.h>
 #include <kis_debug.h>
 #include <kis_distance_information.h>
@@ -38,6 +42,7 @@
 #include <kis_resources_snapshot.h>
 #include <kis_selection.h>
 #include <kis_selection_filters.h>
+#include <kis_sequential_iterator.h>
 #include <kis_transaction.h>
 #include <klocalizedstring.h>
 #include <strokes/KisFreehandStrokeInfo.h>
@@ -496,46 +501,89 @@ KisPaintDeviceSP KisBrushStrokeLayer::renderStrokes(const QVector<KisRecordedBru
 
 namespace
 {
-/// Whether two devices hold the same pixels in @p rect, allowing a
-/// difference of 3 in each 8-bit channel; otherwise @p difference describes
+bool isRgbaFloat(const KoColorSpace *cs)
+{
+    return cs->colorModelId() == RGBAColorModelID
+        && (cs->colorDepthId() == Float16BitsColorDepthID || cs->colorDepthId() == Float32BitsColorDepthID);
+}
+
+/// Whether two devices hold the same pixels across their combined bounds,
+/// allowing a difference of 3/255 per channel; otherwise @p difference describes
 /// how they differ. The colors are compared premultiplied by alpha: the
 /// color of a transparent pixel does not show, and smudging brushes leave
 /// it different from what drawing again gives.
 bool sameContent(KisPaintDeviceSP a,
                  KisPaintDeviceSP b,
-                 const QRect &rect,
                  QString *difference,
                  KisPixelSelectionSP mismatch = nullptr,
                  int *differingCount = nullptr,
                  int *coveredCount = nullptr)
 {
+    // A deletion can shrink a's bounds. Pixels remaining only in the record
+    // must still contribute to the mismatch mask, or a redraw restores them.
+    const QRect rect = a->exactBounds() | b->exactBounds();
     if (rect.isEmpty()) {
-        *difference = QStringLiteral("the layer is empty, the redrawn strokes are not");
-        return b->exactBounds().isEmpty();
+        *difference = QStringLiteral("both the layer and redrawn strokes are empty");
+        if (differingCount) {
+            *differingCount = 0;
+        }
+        if (coveredCount) {
+            *coveredCount = 0;
+        }
+        return true;
     }
-    const QImage first = a->convertToQImage(nullptr, rect).convertToFormat(QImage::Format_ARGB32);
-    const QImage second = b->convertToQImage(nullptr, rect).convertToFormat(QImage::Format_ARGB32);
+    const KoColorSpace *cs = a->colorSpace();
+    const bool floating = isRgbaFloat(cs);
+    const QImage first = floating ? QImage() : a->convertToQImage(nullptr, rect).convertToFormat(QImage::Format_ARGB32);
+    const QImage second =
+        floating ? QImage() : b->convertToQImage(nullptr, rect).convertToFormat(QImage::Format_ARGB32);
+    KisHLineConstIteratorSP iterA =
+        floating ? a->createHLineConstIteratorNG(rect.x(), rect.y(), rect.width()) : nullptr;
+    KisHLineConstIteratorSP iterB =
+        floating ? b->createHLineConstIteratorNG(rect.x(), rect.y(), rect.width()) : nullptr;
+    QVector<float> channelsA(cs->channelCount());
+    QVector<float> channelsB(cs->channelCount());
     int differing = 0;
     int covered = 0;
-    int largest = 0;
+    qreal largest = 0;
     QRect area;
     QVector<quint8> selected(mismatch ? rect.width() * rect.height() : 0, MIN_SELECTED);
-    for (int y = 0; y < first.height(); y++) {
-        const QRgb *lineA = reinterpret_cast<const QRgb *>(first.constScanLine(y));
-        const QRgb *lineB = reinterpret_cast<const QRgb *>(second.constScanLine(y));
-        for (int x = 0; x < first.width(); x++) {
-            const QRgb p = lineA[x];
-            const QRgb q = lineB[x];
-            const int alphaP = qAlpha(p);
-            const int alphaQ = qAlpha(q);
-            auto premultiplied = [](int channel, int alpha) {
-                return channel * alpha / 255;
-            };
-            const int channel =
-                qMax(qMax(qAbs(alphaP - alphaQ), qAbs(premultiplied(qRed(p), alphaP) - premultiplied(qRed(q), alphaQ))),
-                     qMax(qAbs(premultiplied(qGreen(p), alphaP) - premultiplied(qGreen(q), alphaQ)),
-                          qAbs(premultiplied(qBlue(p), alphaP) - premultiplied(qBlue(q), alphaQ))));
-            covered += qMax(alphaP, alphaQ) > 3;
+    for (int y = 0; y < rect.height(); y++) {
+        const QRgb *lineA = floating ? nullptr : reinterpret_cast<const QRgb *>(first.constScanLine(y));
+        const QRgb *lineB = floating ? nullptr : reinterpret_cast<const QRgb *>(second.constScanLine(y));
+        for (int x = 0; x < rect.width(); x++) {
+            qreal channel = 0;
+            if (floating) {
+                cs->normalisedChannelsValue(iterA->rawDataConst(), channelsA);
+                cs->normalisedChannelsValue(iterB->rawDataConst(), channelsB);
+                const int alpha = cs->alphaPos();
+                const qreal alphaA = channelsA[alpha];
+                const qreal alphaB = channelsB[alpha];
+                covered += qMax(alphaA, alphaB) > 3.0 / 255.0;
+                for (int c = 0; c < channelsA.size(); ++c) {
+                    // Ignore the undefined color of transparent pixels, but
+                    // retain HDR/negative values instead of clipping to RGB8.
+                    const qreal p = c == alpha ? alphaA : (alphaA == 0 ? 0 : channelsA[c] * alphaA);
+                    const qreal q = c == alpha ? alphaB : (alphaB == 0 ? 0 : channelsB[c] * alphaB);
+                    const qreal delta = p == q ? 0 : qAbs(p - q) * 255.0;
+                    channel = qMax(channel, std::isfinite(delta) ? delta : 255.0);
+                }
+                iterA->nextPixel();
+                iterB->nextPixel();
+            } else {
+                const QRgb p = lineA[x];
+                const QRgb q = lineB[x];
+                const int alphaP = qAlpha(p);
+                const int alphaQ = qAlpha(q);
+                auto premultiplied = [](int channel, int alpha) {
+                    return channel * alpha / 255;
+                };
+                channel = qMax(
+                    qMax(qAbs(alphaP - alphaQ), qAbs(premultiplied(qRed(p), alphaP) - premultiplied(qRed(q), alphaQ))),
+                    qMax(qAbs(premultiplied(qGreen(p), alphaP) - premultiplied(qGreen(q), alphaQ)),
+                         qAbs(premultiplied(qBlue(p), alphaP) - premultiplied(qBlue(q), alphaQ))));
+                covered += qMax(alphaP, alphaQ) > 3;
+            }
             if (channel > 3) {
                 differing++;
                 largest = qMax(largest, channel);
@@ -544,6 +592,10 @@ bool sameContent(KisPaintDeviceSP a,
                     selected[y * rect.width() + x] = MAX_SELECTED;
                 }
             }
+        }
+        if (floating) {
+            iterA->nextRow();
+            iterB->nextRow();
         }
     }
     if (mismatch && differing) {
@@ -679,7 +731,7 @@ bool KisBrushStrokeLayer::strokesMatchPixels(const QVector<KisRecordedBrushStrok
     const QPoint offset(original->x(), original->y());
     const QRect bounds = original->exactBounds();
     KisPaintDeviceSP current = renderStrokes(strokes, original->colorSpace(), bounds | QRect(0, 0, 1, 1), offset);
-    return sameContent(original, current, bounds, difference);
+    return sameContent(original, current, difference);
 }
 
 KUndo2Command *KisBrushStrokeLayer::createSelectionMoveCommand(KisPaintDeviceSP mask, const QPoint &offset)
@@ -784,7 +836,7 @@ KUndo2Command *KisBrushStrokeLayer::createTransformRedrawCommand(const QTransfor
     QString difference;
     int differing = 0;
     int covered = 0;
-    const bool same = sameContent(original, current, bounds, &difference, mismatch, &differing, &covered);
+    const bool same = sameContent(original, current, &difference, mismatch, &differing, &covered);
     // mostly not the record (or nothing to draw): the pixels are
     // transformed as on a paint layer
     if (!same && (bounds.isEmpty() || !transformPixels || differing * 2 > covered)) {
@@ -819,11 +871,29 @@ KUndo2Command *KisBrushStrokeLayer::createTransformRedrawCommand(const QTransfor
         KisFeatherSelectionFilter(feather).process(selection->pixelSelection(), kisGrowRect(regionRect, feather));
 
         const QRect blendRect = selection->pixelSelection()->selectedExactRect();
-        KisPainter gc(redrawn);
-        gc.setCompositeOpId(COMPOSITE_COPY);
-        gc.setSelection(selection);
-        gc.bitBlt(blendRect.topLeft(), pixels, blendRect);
-        gc.end();
+        if (isRgbaFloat(colorSpace)) {
+            // Masked COMPOSITE_COPY can clamp HDR in its SIMD path. Mix in
+            // native channels so the very edits we detected survive the blend.
+            KisSequentialConstIterator src(pixels, blendRect);
+            KisSequentialConstIterator mask(selection->pixelSelection(), blendRect);
+            KisSequentialIterator dst(redrawn, blendRect);
+            while (dst.nextPixel() && src.nextPixel() && mask.nextPixel()) {
+                const quint8 amount = *mask.rawDataConst();
+                if (amount == 255) {
+                    std::memcpy(dst.rawData(), src.rawDataConst(), colorSpace->pixelSize());
+                } else if (amount) {
+                    const quint8 *colors[] = {dst.rawDataConst(), src.rawDataConst()};
+                    const qint16 weights[] = {qint16(255 - amount), qint16(amount)};
+                    colorSpace->mixColorsOp()->mixColors(colors, weights, 2, dst.rawData());
+                }
+            }
+        } else {
+            KisPainter gc(redrawn);
+            gc.setCompositeOpId(COMPOSITE_COPY);
+            gc.setSelection(selection);
+            gc.bitBlt(blendRect.topLeft(), pixels, blendRect);
+            gc.end();
+        }
 
         const int percent = qMax(1, qRound(100.0 * differing / qMax(1, covered)));
         KisUsageLogger::log(QStringLiteral("Brush stroke layer \"%1\": drawn again except where its pixels are not "
