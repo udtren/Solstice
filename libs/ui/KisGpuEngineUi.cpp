@@ -23,6 +23,7 @@
 
 #include <KoColorConversionTransformation.h>
 #include <KoColorSpace.h>
+#include <KoColorSpaceRegistry.h>
 
 #include <kis_debug.h>
 
@@ -132,7 +133,12 @@ bool KisGpuEngineUi::shouldOfferConversion(const KoColorSpace *colorSpace)
 
 bool KisGpuEngineUi::convertForGpu(KisImageSP image)
 {
-    const KoColorSpace *target = image ? KisGpuEngineSettings::conversionTarget(image->colorSpace()) : nullptr;
+    return convertForGpu(image, KisGpuEngineSettings::Convert);
+}
+
+bool KisGpuEngineUi::convertForGpu(KisImageSP image, KisGpuEngineSettings::ConvertPolicy policy)
+{
+    const KoColorSpace *target = image ? KisGpuEngineSettings::conversionTarget(image->colorSpace(), policy) : nullptr;
     if (!target) {
         return false;
     }
@@ -152,27 +158,28 @@ void KisGpuEngineUi::offerConversion(KisDocument *document, QWidget *parent)
     if (policy == KisGpuEngineSettings::Keep) {
         return;
     }
-    if (policy == KisGpuEngineSettings::Convert) {
-        convertForGpu(image);
+    if (policy == KisGpuEngineSettings::Convert || policy == KisGpuEngineSettings::Convert16) {
+        convertForGpu(image, policy);
         return;
     }
 
-    const KoColorSpace *target = KisGpuEngineSettings::conversionTarget(image->colorSpace());
     const QString documentName = document->path().isEmpty()
         ? i18n("This document")
         : QStringLiteral("\"%1\"").arg(QFileInfo(document->path()).fileName());
     QMessageBox box(QMessageBox::Question,
                     i18nc("@title:window", "GPU Engine"),
                     i18n("%1 uses the color space %2.\n\n"
-                         "The GPU engine only accelerates RGBA float documents. Convert this document to %3? "
+                         "The GPU engine only accelerates RGBA float documents. "
+                         "Convert this document to RGBA 16-bit or 32-bit float? "
                          "The conversion can be undone; saving keeps the new color space.\n\n"
                          "Documents that are not converted work as before, without GPU acceleration.",
                          documentName,
-                         image->colorSpace()->name(),
-                         target->name()),
+                         image->colorSpace()->name()),
                     QMessageBox::NoButton,
                     parent);
-    QPushButton *convert = box.addButton(i18n("Convert"), QMessageBox::AcceptRole);
+    QPushButton *convert16 = box.addButton(i18n("Convert to RGBA 16-bit float"), QMessageBox::AcceptRole);
+    convert16->setEnabled(KisGpuEngineSettings::conversionTarget(image->colorSpace(), KisGpuEngineSettings::Convert16));
+    QPushButton *convert = box.addButton(i18n("Convert to RGBA 32-bit float"), QMessageBox::AcceptRole);
     QPushButton *keep = box.addButton(i18n("Keep"), QMessageBox::RejectRole);
     box.setDefaultButton(convert);
     box.setEscapeButton(keep);
@@ -180,12 +187,15 @@ void KisGpuEngineUi::offerConversion(KisDocument *document, QWidget *parent)
     box.setCheckBox(remember);
     box.exec();
 
-    const bool accepted = box.clickedButton() == convert;
+    const bool accepted = box.clickedButton() == convert || box.clickedButton() == convert16;
+    const KisGpuEngineSettings::ConvertPolicy chosenPolicy = box.clickedButton() == convert16
+        ? KisGpuEngineSettings::Convert16
+        : (accepted ? KisGpuEngineSettings::Convert : KisGpuEngineSettings::Keep);
     if (remember->isChecked()) {
-        KisGpuEngineSettings::setConvertPolicy(accepted ? KisGpuEngineSettings::Convert : KisGpuEngineSettings::Keep);
+        KisGpuEngineSettings::setConvertPolicy(chosenPolicy);
     }
     if (accepted) {
-        convertForGpu(image);
+        convertForGpu(image, chosenPolicy);
     }
 }
 
@@ -253,6 +263,10 @@ KisGpuEngineSettingsWidget::KisGpuEngineSettingsWidget(QWidget *parent)
     , m_status(new QLabel(this))
 {
     m_convertPolicy->addItem(i18n("Ask"), int(KisGpuEngineSettings::Ask));
+    if (KisGpuEngineSettings::conversionTarget(KoColorSpaceRegistry::instance()->rgb8(),
+                                               KisGpuEngineSettings::Convert16)) {
+        m_convertPolicy->addItem(i18n("Convert to RGBA 16-bit float"), int(KisGpuEngineSettings::Convert16));
+    }
     m_convertPolicy->addItem(i18n("Convert to RGBA 32-bit float"), int(KisGpuEngineSettings::Convert));
     m_convertPolicy->addItem(i18n("Keep the color space"), int(KisGpuEngineSettings::Keep));
     m_status->setWordWrap(true);

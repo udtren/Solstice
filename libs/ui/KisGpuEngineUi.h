@@ -9,6 +9,7 @@
 #include <QGroupBox>
 #include <QString>
 
+#include "gpu/KisGpuEngineSettings.h"
 #include "kis_types.h"
 #include "kritaui_export.h"
 
@@ -51,6 +52,7 @@ public:
 
     /// Starts converting @p image to KisGpuEngineSettings::conversionTarget(). False if not needed.
     static bool convertForGpu(KisImageSP image);
+    static bool convertForGpu(KisImageSP image, KisGpuEngineSettings::ConvertPolicy policy);
 
     /**
      * Before saving: if the GPU engine lost content in this session, warns

@@ -1093,3 +1093,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   run 38584970834): the `Node.save()` crash fix and the Python `bool` return
   types. Package checked: checksums, 5,300 ZIP entries intact, Python
   plugins present. Website `site.ts` updated and published the same day.
+
+## 2026-10-15 maintenance and beta.5 preparation
+
+- Recorded the findings and regression coverage from the brush-layer, Quick
+  Access, GPU conversion, and document-switch work in
+  [maintenance-review-20261015](queries/maintenance-review-20261015.md).
+- Prepared version `0.2.0-beta.5` for the user-requested push, Windows build,
+  release distribution and corresponding website update. Build/publication
+  outcomes will be recorded after verification.

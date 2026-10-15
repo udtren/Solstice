@@ -113,6 +113,7 @@ Read these before adding or updating any feature:
 
 ### Feature documents
 
+- Document tool state: `docs/agent/document-tool-state.md`
 - Quick Access: `docs/agent/quick-access.md`
 - Rest Note: `docs/agent/rest-note.md`
 - Asset Library: `docs/agent/asset-library.md`

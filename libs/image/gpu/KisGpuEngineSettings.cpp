@@ -51,7 +51,7 @@ void KisGpuEngineSettings::setBrushEnabledInConfig(bool enabled)
 KisGpuEngineSettings::ConvertPolicy KisGpuEngineSettings::convertPolicy()
 {
     const int value = KisImageConfig(true).readEntry<int>(convertPolicyKey(), int(Ask));
-    return value == int(Convert) || value == int(Keep) ? ConvertPolicy(value) : Ask;
+    return value == int(Convert) || value == int(Keep) || value == int(Convert16) ? ConvertPolicy(value) : Ask;
 }
 
 void KisGpuEngineSettings::setConvertPolicy(ConvertPolicy policy)
@@ -68,12 +68,17 @@ bool KisGpuEngineSettings::isGpuColorSpace(const KoColorSpace *colorSpace)
 
 const KoColorSpace *KisGpuEngineSettings::conversionTarget(const KoColorSpace *colorSpace)
 {
+    return conversionTarget(colorSpace, Convert);
+}
+
+const KoColorSpace *KisGpuEngineSettings::conversionTarget(const KoColorSpace *colorSpace, ConvertPolicy policy)
+{
     if (!colorSpace || isGpuColorSpace(colorSpace)) {
         return nullptr;
     }
     KoColorSpaceRegistry *registry = KoColorSpaceRegistry::instance();
     const QString model = RGBAColorModelID.id();
-    const QString depth = Float32BitsColorDepthID.id();
+    const QString depth = policy == Convert16 ? Float16BitsColorDepthID.id() : Float32BitsColorDepthID.id();
     if (colorSpace->colorModelId() == RGBAColorModelID && colorSpace->profile()) {
         if (const KoColorSpace *sameProfile = registry->colorSpace(model, depth, colorSpace->profile())) {
             return sameProfile;

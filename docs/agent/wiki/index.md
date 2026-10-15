@@ -122,4 +122,6 @@ there, under "Phase history"):
 
 ### Queries
 
-None saved yet.
+- [Maintenance review, 2026-10-15](queries/maintenance-review-20261015.md):
+  document/device tool state, float redraw comparison, record validation,
+  key-hold ownership, and conversion-policy compatibility.

@@ -35,6 +35,7 @@ public:
         Ask = 0,
         Convert = 1,
         Keep = 2,
+        Convert16 = 3, // Keep persisted values 0/1/2 compatible.
     };
 
     static QString enabledKey();
@@ -61,6 +62,8 @@ public:
      * color space.
      */
     static const KoColorSpace *conversionTarget(const KoColorSpace *colorSpace);
+    /// As above, but Convert16 selects RGBA F16; other policies retain F32.
+    static const KoColorSpace *conversionTarget(const KoColorSpace *colorSpace, ConvertPolicy policy);
 };
 
 #endif // KISGPUENGINESETTINGS_H

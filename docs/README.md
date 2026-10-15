@@ -36,6 +36,8 @@ Technical notes for developers are in [`agent`](agent/).
 
 ## Workflow and interface
 
+- [Tools when switching documents](document-tool-state.md): tool restoration
+  when moving between canvases with a mouse, pen, or eraser.
 - [Quick Access Manager](quick-access.md): configurable action, docker and
   brush grids, gesture menus, Quick Brush Adjustments and a HueSVC selector.
 - [Asset Library](asset-library.md): browsing asset folders and inserting

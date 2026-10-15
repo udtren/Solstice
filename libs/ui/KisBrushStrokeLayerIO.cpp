@@ -26,6 +26,7 @@
 #include <kis_paintop_settings.h>
 #include <resources/KoSegmentGradient.h>
 #include <resources/KoStopGradient.h>
+#include <strokes/freehand_stroke.h>
 
 /**
  * The brush stroke file of a layer (docs/agent/brush-stroke-layer-plan.md):
@@ -370,6 +371,11 @@ bool KisBrushStrokeLayer::loadStrokes(QIODevice *device, QVector<KisRecordedBrus
             >> stroke->deviceOffset;
         stroke->seed = seed;
         stroke->strokeInfoCount = strokeInfoCount;
+        // Multibrush currently produces at most 50 copies. Match the existing
+        // start-record limit and reject invalid painter indices before replay.
+        if (stream.status() != QDataStream::Ok || strokeInfoCount < 1 || strokeInfoCount > 64) {
+            return false;
+        }
         if (fileVersion >= 2) {
             quint32 startCount = 0;
             stream >> startCount;
@@ -392,6 +398,11 @@ bool KisBrushStrokeLayer::loadStrokes(QIODevice *device, QVector<KisRecordedBrus
             KisRecordedBrushStroke::Job job;
             qint32 type, strokeInfoId;
             stream >> type >> strokeInfoId;
+            if (stream.status() != QDataStream::Ok || strokeInfoId < 0 || strokeInfoId >= strokeInfoCount
+                || (type != FreehandStrokeStrategy::Data::POINT && type != FreehandStrokeStrategy::Data::LINE
+                    && type != FreehandStrokeStrategy::Data::CURVE)) {
+                return false;
+            }
             job.type = type;
             job.strokeInfoId = strokeInfoId;
             job.pi1 = readPaintInformation(stream);
