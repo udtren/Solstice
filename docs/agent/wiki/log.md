@@ -1102,3 +1102,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Prepared version `0.2.0-beta.5` for the user-requested push, Windows build,
   release distribution and corresponding website update. Build/publication
   outcomes will be recorded after verification.
+
+## 2026-10-15 fix: Puppet Warp audit items (manually checked)
+
+- Fixed the read-only audit's Puppet Warp items (stale Fast preview after
+  Order, unlock keeping rotations, uncommitted click deletions, pixels deleted
+  by the solid-triangle cell filter, damaged mesh strings, Accurate preview of
+  transform masks, rotation wrap, and smaller items); details in
+  [puppet-warp.md](../puppet-warp.md).
+- New pitfall [transform-tool-input](pitfalls/transform-tool-input.md).

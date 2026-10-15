@@ -1184,9 +1184,15 @@ void KisToolTransform::slotInplacePreviewDeviceGenerated(KisPaintDeviceSP device
     }
     m_inplacePreviewDevice = device;
     if (m_currentArgs.mode() == ToolTransformArgs::PUPPET) {
-        // Builds the mesh; the stroke renders with it from now on.
+        // Builds the mesh; the stroke renders with it from now on. Record it
+        // only when it is new and no gesture is in progress: the gesture's
+        // release commits it, and a mid-drag commit would split the gesture
+        // into two undo steps.
+        const KisPuppetTransformWorker::Mesh meshBefore = m_currentArgs.puppetMesh();
         initGuiAfterTransformMode();
-        commitChanges();
+        if (mode() != KisTool::PAINT_MODE && m_currentArgs.puppetMesh() != meshBefore) {
+            commitChanges();
+        }
     }
 }
 

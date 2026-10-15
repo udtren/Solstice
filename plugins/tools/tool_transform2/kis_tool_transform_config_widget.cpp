@@ -367,7 +367,7 @@ KisToolTransformConfigWidget::KisToolTransformConfigWidget(TransformTransactionP
         m_puppetClickActionCombo->addItem(i18nc("@item:inlistbox Puppet Warp click action", "Select pin"));
         m_puppetClickActionCombo->addItem(i18nc("@item:inlistbox Puppet Warp click action", "Delete pin"));
         m_puppetClickActionCombo->setToolTip(i18n(
-            "What a click on a pin does. Alt-click always deletes a pin.\n"
+            "What a click on a pin does. Ctrl+Alt-click always deletes a pin.\n"
             "Shift- or Ctrl-click adds a pin to the selection; drag on the canvas to select pins in a rectangle."));
         pinLayout->addWidget(m_puppetClickActionCombo);
         pinLayout->addSpacing(8);
@@ -702,7 +702,7 @@ void KisToolTransformConfigWidget::updateConfig(const ToolTransformArgs &config)
         customRadioButton->setChecked(true);
         customWarpWidget->setEnabled(true);
         groupBox->setToolTip(
-            i18n("Click the canvas to add pins. Alt-click a pin to delete it. "
+            i18n("Click the canvas to add pins. Ctrl+Alt-click a pin to delete it. "
                  "Shift-click or drag a rectangle to select several pins and move them together."));
         cmbWarpType->setCurrentIndex((int)config.warpType());
         puppetShowMeshCheckBox->setChecked(config.puppetShowMesh());
@@ -1372,6 +1372,9 @@ void KisToolTransformConfigWidget::slotWarpLockPointsButtonClicked()
         int nbPoints = config->origPoints().size();
         for (int i = 0; i < nbPoints; ++i) {
             config->transfPoint(i) = config->origPoint(i);
+            // Puppet: pin rotations deform too; keeping them left the
+            // unlocked transform non-identity (Apply still rotated).
+            config->setPuppetRotation(i, 0.0);
         }
     }
 
