@@ -1121,3 +1121,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   scopes), LOD state leaking into the check, the Gradient tool, stalled
   checks of removed layers, and smaller items; details in
   [brush-stroke-layer-plan.md](../brush-stroke-layer-plan.md) ("監査の修正").
+
+## 2026-10-15 release: 0.2.0-beta.5
+
+- GitHub Release `v0.2.0-beta.5` (prerelease, commit `dd9e48c152`, Actions
+  run 38669973004): RGBA16F conversion, per-canvas tool state, Quick Access
+  hold ownership, and the Brush Stroke Layer and Puppet Warp audit fixes.
+  Package checked: checksums, 5,300 ZIP entries intact, Python plugins
+  present. Website `site.ts` updated and published the same day.
