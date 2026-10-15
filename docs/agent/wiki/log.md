@@ -1111,3 +1111,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   transform masks, rotation wrap, and smaller items); details in
   [puppet-warp.md](../puppet-warp.md).
 - New pitfall [transform-tool-input](pitfalls/transform-tool-input.md).
+
+## 2026-10-15 fix: brush stroke layer audit items (manually checked)
+
+- Fixed the read-only audit's brush stroke layer items: Multibrush records
+  rejected on load (limit 64, now 4096), canvas mirror recorded (format
+  version 3), Instant Preview selection moves, cancelled continued
+  transforms, the record check skipping unrecorded edits (recorded-change
+  scopes), LOD state leaking into the check, the Gradient tool, stalled
+  checks of removed layers, and smaller items; details in
+  [brush-stroke-layer-plan.md](../brush-stroke-layer-plan.md) ("監査の修正").

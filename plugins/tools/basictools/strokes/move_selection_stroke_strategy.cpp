@@ -21,6 +21,7 @@
 #include "kis_lod_transform.h"
 #include "KisAnimAutoKey.h"
 #include "KisBrushStrokeLayer.h"
+#include "kis_default_bounds_base.h"
 #include "kis_pixel_selection.h"
 
 
@@ -119,8 +120,11 @@ void MoveSelectionStrokeStrategy::finishStrokeCallback()
     indirect->setTemporaryTarget(0);
 
     // Solstice: the recorded strokes inside the selection move with the
-    // pixels; the selection has moved already, so look where it was
-    if (KisBrushStrokeLayer *strokeLayer = dynamic_cast<KisBrushStrokeLayer *>(m_paintLayer.data())) {
+    // pixels; the selection has moved already, so look where it was. Only
+    // the full resolution stroke moves them: the level of detail preview
+    // (Instant Preview) runs this too, with its scaled offset
+    KisBrushStrokeLayer *strokeLayer = dynamic_cast<KisBrushStrokeLayer *>(m_paintLayer.data());
+    if (strokeLayer && !m_paintLayer->paintDevice()->defaultBounds()->currentLevelOfDetail()) {
         KisPaintDeviceSP mask = new KisPaintDevice(*m_selection->projection());
         mask->moveTo(mask->offset() - m_finalOffset);
         if (KUndo2Command *recordCommand = strokeLayer->createSelectionMoveCommand(mask, m_finalOffset)) {

@@ -36,6 +36,7 @@
 #include "KisInterstrokeDataTransactionWrapperFactory.h"
 #include "KisRunnableStrokeJobsInterface.h"
 #include "KisRunnableStrokeJobUtils.h"
+#include "FreehandStrokeRunnableJobDataWithUpdate.h"
 #include <KisStrokeCompatibilityInfo.h>
 #include "KisAnimAutoKey.h"
 
@@ -64,12 +65,14 @@ public:
             // owned by the wrapper, so that a job dropped by cancelling
             // the stroke is deleted too
             QSharedPointer<KisRunnableStrokeJobDataBase> wrapped(job);
-            KisRunnableStrokeJobData *sequential = new KisRunnableStrokeJobData(
-                [wrapped]() {
-                    wrapped->run();
-                },
-                KisStrokeJobData::SEQUENTIAL,
-                job->exclusivity());
+            auto run = [wrapped]() {
+                wrapped->run();
+            };
+            // a dab job that asks for a canvas update when it is done
+            // (FreehandStrokeStrategy) still does
+            KisRunnableStrokeJobData *sequential = dynamic_cast<FreehandStrokeRunnableJobDataWithUpdate *>(job)
+                ? new FreehandStrokeRunnableJobDataWithUpdate(run, KisStrokeJobData::SEQUENTIAL, job->exclusivity())
+                : new KisRunnableStrokeJobData(run, KisStrokeJobData::SEQUENTIAL, job->exclusivity());
             sequential->setLevelOfDetailOverride(job->levelOfDetailOverride());
             jobs << sequential;
         }
@@ -519,8 +522,17 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
                                -1,
                                &jobs);
 
+        // Solstice: after the merge's commands (deleted with the job if
+        // it never runs)
+        auto closingCommand = std::make_shared<std::unique_ptr<KUndo2Command>>(std::move(m_closingUndoCommand));
+
         KritaUtils::addJobBarrier(jobs,
-            [parentCommand, undoAdapter] () {
+            [parentCommand, undoAdapter, closingCommand] () {
+                if (*closingCommand) {
+                    KisCommandUtils::CompositeCommand *wrapper =
+                        new KisCommandUtils::CompositeCommand(parentCommand.data());
+                    wrapper->addCommand(closingCommand->release());
+                }
                 parentCommand->redo();
 
                 if (undoAdapter) {
@@ -541,6 +553,9 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
     else {
         KisCommandUtils::CompositeCommand *wrapper = new KisCommandUtils::CompositeCommand(parentCommand.data());
         wrapper->addCommand(m_transaction->endAndTake());
+        if (m_closingUndoCommand) {
+            wrapper->addCommand(m_closingUndoCommand.release());
+        }
 
         m_transaction.reset();
         deletePainters();
@@ -554,9 +569,10 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
 
 }
 
-void KisPainterBasedStrokeStrategy::setAdditionalUndoCommand(KUndo2Command *command)
+void KisPainterBasedStrokeStrategy::setAdditionalUndoCommand(KUndo2Command *command, KUndo2Command *closingCommand)
 {
     m_additionalUndoCommand.reset(command);
+    m_closingUndoCommand.reset(closingCommand);
 }
 
 void KisPainterBasedStrokeStrategy::setSequentialDabRendering(bool value)
@@ -567,6 +583,7 @@ void KisPainterBasedStrokeStrategy::setSequentialDabRendering(bool value)
 void KisPainterBasedStrokeStrategy::cancelStrokeCallback()
 {
     m_additionalUndoCommand.reset();
+    m_closingUndoCommand.reset();
     if (!m_transaction) return;
 
     if (m_autokeyCommand) {

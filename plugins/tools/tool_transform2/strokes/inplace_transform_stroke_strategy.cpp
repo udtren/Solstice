@@ -1133,7 +1133,7 @@ void InplaceTransformStrokeStrategy::finishAction(QVector<KisStrokeJobData *> &m
         }
     }
 
-    redrawRecordedStrokes(mutatedJobs);
+    redrawRecordedStrokes(mutatedJobs, false);
 
     mutatedJobs << new UpdateTransformData(m_d->currentTransformArgs,
                                            UpdateTransformData::SELECTION);
@@ -1159,7 +1159,8 @@ void InplaceTransformStrokeStrategy::finishAction(QVector<KisStrokeJobData *> &m
     });
 }
 
-void InplaceTransformStrokeStrategy::redrawRecordedStrokes(QVector<KisStrokeJobData *> &mutatedJobs)
+void InplaceTransformStrokeStrategy::redrawRecordedStrokes(QVector<KisStrokeJobData *> &mutatedJobs,
+                                                           bool initialArgs)
 {
     // Solstice: a brush stroke layer draws its strokes again for the final
     // transform, over the transformed pixels of the preview; when it cannot
@@ -1174,11 +1175,12 @@ void InplaceTransformStrokeStrategy::redrawRecordedStrokes(QVector<KisStrokeJobD
         if (!redrawable || !node->paintDevice())
             continue;
 
-        KritaUtils::addJobSequential(mutatedJobs, [this, node, redrawable]() {
+        KritaUtils::addJobSequential(mutatedJobs, [this, node, redrawable, initialArgs]() {
             // the arguments of the last update, which has run by now
-            if (m_d->currentTransformArgs.mode() != ToolTransformArgs::FREE_TRANSFORM)
+            const ToolTransformArgs args = initialArgs ? m_d->initialTransformArgs : m_d->currentTransformArgs;
+            if (args.mode() != ToolTransformArgs::FREE_TRANSFORM)
                 return;
-            const QTransform transform = KisTransformUtils::MatricesPack(m_d->currentTransformArgs).finalTransform();
+            const QTransform transform = KisTransformUtils::MatricesPack(args).finalTransform();
 
             KisPaintDeviceSP device = node->paintDevice();
             KisPaintDeviceSP original;
@@ -1188,7 +1190,6 @@ void InplaceTransformStrokeStrategy::redrawRecordedStrokes(QVector<KisStrokeJobD
             }
 
             const QRect oldRect = device->extent();
-            const ToolTransformArgs args = m_d->currentTransformArgs;
             auto transformPixels = [args, node](KisPaintDeviceSP source) {
                 KisPaintDeviceSP pixels = new KisPaintDevice(source->colorSpace());
                 KisProcessingVisitor::ProgressHelper helper(node);
@@ -1272,6 +1273,13 @@ void InplaceTransformStrokeStrategy::cancelAction(QVector<KisStrokeJobData *> &m
              */
             KritaUtils::addJobBarrier(mutatedJobs, [this]() { Q_UNUSED(this) });
             repopulateUI(mutatedJobs, m_d->updatesFacade, m_d->updatesFacade->bounds());
+        }
+
+        // Solstice: the previous transform, applied again, draws a brush
+        // stroke layer's strokes again as it did (undoing it at the start
+        // returned the record to before it)
+        if (m_d->overriddenCommand) {
+            redrawRecordedStrokes(mutatedJobs, true);
         }
 
         mutatedJobs << new UpdateTransformData(m_d->initialTransformArgs,
