@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-14
+updated: 2026-10-15
 ---
 
 # Agent wiki
@@ -98,6 +98,10 @@ matches the task.
   a non-const `begin()`/`rbegin()` detaches even a never-allocated list;
   a GUI-thread loop over `KisImage`'s filter stack lost a worker's filter
   (crash in `enableDirtyRequests()` during repeated `Node.save()`).
+- [Transform Tool input](pitfalls/transform-tool-input.md): click-only
+  changes need `acceptsClicks()` to be committed; the strategies' "Alt" flag
+  is the SampleFgNode action (Ctrl+Alt by default); cache keys must hold every
+  input.
 
 ### Benchmarks
 

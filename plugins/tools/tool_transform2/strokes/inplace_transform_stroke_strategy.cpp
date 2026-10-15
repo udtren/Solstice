@@ -612,12 +612,14 @@ void InplaceTransformStrokeStrategy::initStrokeCallback()
     }
 
     // Solstice: hand the original pixels to the tool for Puppet Warp's mesh
-    // (a copy-on-write copy, so the tool reads its own tiles).
+    // (a copy-on-write copy, so the tool reads its own tiles). A transform
+    // mask keeps its source in transformMaskCacheHash instead.
     KritaUtils::addJobBarrier(extraInitJobs, [this]() {
         KisPaintDeviceSP preview;
         {
             QMutexLocker l(&m_d->devicesCacheMutex);
-            const QList<KisPaintDeviceSP> caches = m_d->devicesCacheHash.values();
+            const QList<KisPaintDeviceSP> caches =
+                m_d->devicesCacheHash.values() + m_d->transformMaskCacheHash.values();
             if (caches.size() == 1) {
                 preview = new KisPaintDevice(*caches.first());
             } else if (!caches.isEmpty()) {

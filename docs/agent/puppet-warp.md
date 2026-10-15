@@ -44,11 +44,20 @@ State consists of:
   the rotations;
 - `m_puppetClickAction`: what a click on a pin does (Select or Delete). This is
   a tool preference stored in the `KisToolTransform` KConfig group key
-  `puppetClickAction`. It is copied with the arguments but not compared,
+  `puppetClickAction`. The copy constructor copies it, but `operator=` keeps
+  the destination's value (2026-10-15), so undo
+  (`KisToolTransform::slotTrackerChangedConfig()`) and
+  `restoreContinuedState()` never change the preference. It is not compared,
   serialized or part of identity.
 
-`setPoints()` keeps the rotation and order vectors aligned with the pin
-vectors. `removePuppetPoint()` removes all values at the same index.
+`setPoints()` replaces the pins, so it resets the rotation and order vectors
+to zeros of the new pin count (2026-10-15; it used to keep stale values of
+the old pins). `removePuppetPoint()` removes all values at the same index.
+
+`isSameMode()` (Reset's "transform differs" test and
+`KisTransformMaskAdapter::compareTransform()`) compares points, rotations,
+orders and, when both sides have one, the mesh. A legacy transform getting
+its first mesh is not a difference, or Reset would only ever restore it.
 `changePuppetOrder(indexes, change)` implements Order:
 - To front: just above every other pin.
 - Forward: +1.
@@ -63,6 +72,18 @@ significant digits), columns, rows, the expansion the mesh was built with, and
 the solid-triangle bits in hex. `orders` is saved for Puppet transforms;
 missing orders load as 0. A missing or invalid `mesh` leaves the
 transform on the legacy MLS path, so older documents render as before.
+
+Validation of damaged documents (2026-10-15):
+- `Mesh::fromString()` parses every field with its own success flag (an
+  integer parsed after a bad number used to overwrite the failure), rejects
+  non-finite numbers and more than `MaximumCells` (64) columns or rows, the
+  most `Mesh::build()` makes.
+- `Mesh::isValid()` also requires finite origin and steps and at most 64
+  cells per side.
+- Non-finite rotations load as 0; the expansion is clamped to 0-64.
+- `KisPuppetTransformWorker` treats a non-finite pin position or rotation as
+  identity (with a warning) instead of spreading NaN through the solve, and
+  warns when the ARAP system cannot be factorized (the rest mesh stays).
 Mesh visibility and expansion default from the `KisToolTransform` KConfig group
 keys `puppetShowMesh` and `puppetExpansion`.
 
@@ -86,7 +107,14 @@ draw the old display grid, which is not solver topology.
   `KisWarpTransformStrategy::setPuppetMaskSource()`. It is used only for the
   mask, never drawn (the strategies would draw a thumbnail as an overlay at
   0.9 opacity over the in-place result). When the device arrives in Puppet
-  mode, the tool rebuilds the mesh and commits the arguments.
+  mode, the tool rebuilds the mesh. It commits the arguments only when the
+  mesh changed and no gesture is in progress (2026-10-15); a mid-drag commit
+  split the gesture into two undo steps, and the release commits it anyway.
+- The device is merged from the layer caches (`devicesCacheHash`) and, when
+  transforming a transform mask, the mask's source
+  (`transformMaskCacheHash`). Before 2026-10-15 only the layer caches were
+  used, so the Accurate preview of a Puppet transform mask never built a
+  mesh.
 - Before this, Accurate previews never had a mesh: Puppet Warp fell back to
   the legacy MLS model without a mesh overlay, and with no pins the layer
   disappeared (next point).
@@ -169,7 +197,7 @@ stored mesh keeps preview, overlay, final rendering and bounds identical.
 - **Soft joints were tried and dropped.** Lower stiffness within 1.5-3 cells of
   a pin left the fold gap at 430-1166 px.
 - **Remaining limitation:** folding a joint far still pushes the artwork
-  around the joint aside and leaves a gap (558 px in the upper arm at 137
+  around the joint aside and leaves a gap (556 px in the upper arm at 137
   degrees in `testFoldedElbowGap`). See "Open issue: folded joints" below.
 - **Initial guess:** every vertex starts with the rigid motion of the pin
   nearest to it along the mesh. That is a multi-source Dijkstra over triangle
@@ -202,11 +230,26 @@ stored mesh keeps preview, overlay, final rendering and bounds identical.
 - Each part of the artwork belongs to the pin nearest to it along the artwork
   (the Dijkstra owner kept as `m_owner`). `ownerAt()` and `orderAt()` use the
   mesh vertex with the largest barycentric weight.
-- **Only cells that touch artwork are rendered** (`touchesArtwork()`: a corner
-  or the center lies in a solid triangle). Empty space squeezed by a bend
-  rendered transparent cells over folded artwork, because the grid polygon ops
-  overwrite pixels. In the reported case (a forearm bent onto the hip), these
-  cells cut jagged white holes.
+- **Only cells over non-transparent source pixels are rendered**
+  (`SourceCoverage` in `KisPuppetTransformWorker.cpp`). Empty space squeezed by
+  a bend rendered transparent cells over folded artwork, because the grid
+  polygon ops overwrite pixels. In the reported case (a forearm bent onto the
+  hip), these cells cut jagged white holes.
+  - `SourceCoverage` marks 8x8 blocks of the source holding a pixel with
+    `opacityU8() > 0` (one pass with `copyOpacityU8()` over the source
+    bounds; the preview scans the thumbnail). A rendering cell is drawn when
+    its rect, grown by 2 px for the bilinear sampling footprint, overlaps a
+    marked block. Skipping a fully transparent cell loses nothing.
+  - Until 2026-10-15 the test was `touchesArtwork()`: a corner or the center
+    of the cell in a solid mesh triangle. Solid triangles come from the
+    2000 px thumbnail mask with alpha > 8, so applying deleted faint pixels,
+    thin lines lost in the thumbnail, specks between triangles near
+    vertices, and content painted later under a Puppet transform mask.
+  - Both the CPU path and the GPU recorders use the same filter, so GPU/CPU
+    parity is unchanged.
+  - `srcBounds` stays the source device's bounds, not the mesh rect: content
+    outside the mesh (painted later under a transform mask) is rendered with
+    the extrapolated border cells. Transparent cells there are skipped.
 - **Each owning pin renders into its own layer** (`stackingGroups()`). The
   layers composite bottom to top with `COMPOSITE_OVER` (QPainter source-over
   for the preview).
@@ -220,8 +263,19 @@ stored mesh keeps preview, overlay, final rendering and bounds identical.
 - Orders do not affect the solve.
 
 Timing: a 17x14 grid solves in about 1 ms, the largest 64x64 grid in about
-16 ms. The strategy caches the solved worker between repaints, keyed by mesh,
-pins and rotations.
+16 ms.
+
+Caches of the solved worker:
+- The strategy (`cachedPuppetWorker()`) caches it between repaints, keyed by
+  mesh, pins, rotations and orders. Before 2026-10-15 orders were missing from
+  the key, so the Order buttons (and their undo) did not change the Fast
+  preview while Apply used the new order.
+- `KisTransformUtils` (`cachedPuppetWorker()` in `kis_transform_utils.cpp`)
+  keeps the last four solved workers, keyed the same way and guarded by a
+  mutex, for `changeRect()` (every update of a Puppet transform mask) and
+  `transformDeviceImpl()` (once per processed node). Both used to solve again
+  on every call. `run()` is const and keeps no state, so one worker may run on
+  several nodes at once.
 
 ### Legacy MLS model
 
@@ -273,16 +327,39 @@ Add Puppet-specific multi-layer regression coverage before changing this path.
 - Drag centers to move pins.
 - Hit-test the locked pin annulus for `ROTATE_PIN`; accumulate the incremental
   angle between previous and current mouse vectors about the pin center.
-- **Deleting pins.** Alt-click pin centers for `DELETE_POINT`. The "Click
-  pin" option set to Delete pin makes a plain click delete as well, in Draw
-  and locked modes.
+  - The hit ring is at `3.0 * effectiveHandleGrabRadius()` (24 screen pixels,
+    the drawn ring) with a tolerance of 0.65 x the grab radius. It was at 2.4x
+    (19.2 px) until 2026-10-15, so the outer half of the drawn ring missed.
+  - The increment is wrapped with `std::remainder(angle, 2 * M_PI)`:
+    `KisAlgebra2D::angleBetweenVectors()` returns a difference of `atan2()`
+    values, and crossing the -pi/pi cut added a full turn to the stored
+    rotation, which broke raw-value checks (identity, hinge rule).
+- **Deleting pins.** `DELETE_POINT` comes from the strategy's
+  `altModifierActive`, which `KisSimplifiedActionPolicyStrategy` sets for the
+  SampleFgNode/SampleBgNode alternate actions, not for the Alt key. In the
+  default input profile that is Ctrl+Alt-click (verified 2026-10-15 in
+  `krita/data/input/kritadefault.profile`; the docs and tooltips said
+  Alt-click). The "Click pin" option set to Delete pin makes a plain click
+  delete as well, in Draw and locked modes.
+  - The pin is removed on press. `acceptsClicks()` is true for
+    `DELETE_POINT`, so the release commits it even without mouse movement;
+    before 2026-10-15 a click deletion in locked mode was never committed and
+    undo skipped it.
 - **Hit priority.** Center hits take priority over ring hits.
 - **Selection** (locked mode, `pointsInAction`):
   - Shift- or Ctrl-click toggles a pin (`MULTIPLE_POINT_SELECTION`).
   - Dragging on empty canvas selects the pins inside a rectangle
     (`RUBBER_BAND`); with Shift held at press, it adds to the selection.
-  - A plain click on empty canvas clears the selection.
-  - The rubber band only repaints; it does not recalculate.
+  - A plain click on empty canvas clears the selection. `acceptsClicks()` is
+    true for `RUBBER_BAND` so a click without movement reaches
+    `endPrimaryAction()`; before 2026-10-15 it did not, the selection was not
+    cleared and `rubberBandActive` stayed set.
+  - The rubber band only repaints; it does not recalculate, and its
+    `endPrimaryAction()` returns false, so it commits no (no-op) undo step.
+- **Unlocking** (`slotWarpLockPointsButtonClicked()`) resets transformed
+  points to the original points and every pin rotation to 0 (orders are
+  kept). Until 2026-10-15 rotations survived, so the transform stayed
+  non-identity: the Accurate preview kept showing it and Apply applied it.
 - **Moving and rotating a selection.** Dragging a pin of a multiple selection
   moves all selected pins by the same delta. Rotating the ring of a selected
   pin rotates every selected pin's rotation by the angle and orbits the other
@@ -410,7 +487,11 @@ cmd.exe /d /s /c "call <krita-dev-root>\env.bat && <krita-dev-root>\_build\bin\t
 
 `KisPuppetTransformWorkerTest` (`libs/image/tests`):
 - mesh marking and serialization;
+- damaged mesh strings (bad or non-finite numbers, more than 64 cells) and
+  non-finite pins (rendered unchanged);
 - identity;
+- applying keeps a speck and faint (alpha 5) pixels that lie in empty mesh
+  triangles (`testRenderKeepsPixelsOutsideSolidTriangles`);
 - pin order stacking of an overlapping forearm (front, back, equal), with no
   transparent pixels left inside the torso;
 - a rotated elbow turning a free forearm rigidly;
@@ -420,6 +501,13 @@ cmd.exe /d /s /c "call <krita-dev-root>\env.bat && <krita-dev-root>\_build\bin\t
 - (in `KisGpuPaintDeviceTest`) `testGpuPuppetMatchesCpu`: the GPU rendering
   against the CPU;
 - 64x64 solve time.
+
+`test_animated_transform_parameters` covers serialization and
+(`testPuppetArgsState`) `setPoints()` resetting rotations and orders,
+`isSameMode()` with orders and meshes, `operator=` keeping the click action,
+and non-finite rotations loading as 0. The strategy-level fixes (preview
+cache key, click deletion commit, rubber band, ring hit radius, rotation
+wrap, unlock) have no automated test; check them manually.
 
 `test_animated_transform_parameters` loads the installed tool plugin: install
 `libs/image` and `tool_transform2` before running it after a
@@ -443,10 +531,25 @@ Restart after installing. Format modified C++ and run `git diff --check`.
   rigid piece (no twisting or smearing), while other pins hold.
 - A terminal hip/shoulder rotates the unpinned branch beyond it.
 - Adding another pin limits previous terminal propagation.
-- Alt-click removes exactly one pin and keeps rotation and order indices aligned.
+- Ctrl+Alt-click removes exactly one pin and keeps rotation and order indices aligned.
 - "Click pin: Delete pin" deletes with a plain click; "Select pin" restores selection.
+- A click deletion without mouse movement (locked mode) is one undo step;
+  undo brings the pin back and redo removes it again.
+- Undo does not change the "Click pin" combo.
 - Shift-click and rectangle selection select several pins; dragging one moves all; ring rotation turns them together.
-- Order buttons change which overlapping part is on top, in the preview and the applied result.
+- A plain click on empty canvas clears the selection, leaves no rubber band
+  drawn and adds no undo step.
+- The whole drawn ring (inner and outer edge) starts a rotation.
+- Rotating a pin's ring through the left side (the -180/180 degree cut) turns
+  smoothly and does not jump.
+- Order buttons change which overlapping part is on top, in the Fast and
+  Accurate previews and the applied result; undoing an order change updates
+  the Fast preview.
+- Rotate a pin, then unlock: the artwork returns undeformed in both preview
+  styles and Apply leaves it unchanged.
+- A Puppet transform mask with the Accurate preview builds and shows the mesh.
+- Faint pixels and specks away from the mesh, and content painted later under
+  a Puppet transform mask, survive Apply.
 - The 0 px mesh follows the silhouette without cell protrusion.
 - Expansion changes the boundary correctly.
 - Closed line art fills while open contours remain open.
@@ -463,6 +566,12 @@ Restart after installing. Format modified C++ and run `git diff --check`.
 - Build the mesh once and share it through `ToolTransformArgs`; never rebuild it
   separately for the final rendering.
 - Keep transforms without a mesh on the legacy MLS path.
+- Filter rendering cells by the source's own alpha (`SourceCoverage`), the
+  same way on the CPU, the GPU recorders and the preview; never by the mesh's
+  solid triangles, which come from a thresholded thumbnail and would delete
+  pixels.
+- Key every cache of a solved worker by everything the worker takes: mesh,
+  pins, rotations and orders.
 - Missing serialized fields retain safe backwards-compatible defaults.
 - Both preview styles (Fast and Accurate) must build the mesh from the same
   kind of thumbnail; the Accurate mask source is never drawn.

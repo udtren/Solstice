@@ -240,6 +240,14 @@ Phase 4.96 adds GPU rendering of Puppet Warp's mesh model:
 - the GPU branches, `GroupRecordersOp` and `isGpuEnabled()` in `libs/image/KisPuppetTransformWorker.{h,cpp}`
   (reusing `KisGpuGridWarpWorker`); group layers take the destination's offset;
 - tests: `KisGpuPaintDeviceTest::testGpuPuppetMatchesCpu` and the benchmark's mesh Puppet Warp rows.
+Puppet Warp audit fixes (2026-10-15):
+- `SourceCoverage` (replaces `touchesArtwork()`) and mesh/pin validation in `libs/image/KisPuppetTransformWorker.{h,cpp}`;
+- the shared solved-worker cache `cachedPuppetWorker()` in `kis_transform_utils.cpp`;
+- `operator=` keeping the click action, `setPoints()` resets and `isSameMode()` orders/mesh in `tool_transform_args.cc`;
+- the rotation reset on unlock and Ctrl+Alt tooltips in `kis_tool_transform_config_widget.cpp`;
+- the transform mask source in the preview device of `strokes/inplace_transform_stroke_strategy.cpp`;
+- the preview device commit condition in `kis_tool_transform.cc`;
+- `testPuppetArgsState` in `tests/test_animated_transform_parameters.{h,cpp}`.
 Phase 4.98 adds the GPU Gaussian convolution (Gaussian Blur, Unsharp Mask, Gaussian High Pass):
 - new `libs/gpu/KisGpuSeparableConvolutionPass.*` and `libs/gpu/shaders/separable_convolution.comp`
   (four shaders in `libs/gpu/CMakeLists.txt`);

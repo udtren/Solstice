@@ -19,8 +19,10 @@ The behavior reference is Clip Studio Paint's Puppet Warp feature:
 4. Click **Lock Points** when the pins are ready.
 5. Drag a pin's center to move that part of the artwork.
 6. Drag the pin's outer ring to rotate the artwork around the pin.
-7. Remove a pin by Alt-clicking its center. With **Click pin** set to
-   **Delete pin**, a plain click on a pin removes it.
+7. Remove a pin by Ctrl+Alt-clicking its center (the "sample color from the
+   current layer" shortcut of the default input profile). With **Click pin**
+   set to **Delete pin**, a plain click on a pin removes it. A deletion is one
+   undo step.
 8. Apply or reset the transform with the normal Transform Tool controls.
 
 ## How the artwork bends
@@ -69,6 +71,11 @@ later is drawn on top. The order is saved with the transform and applies to
 both the preview and the result. Only the artwork itself is drawn, so empty
 space around a bent part never cuts into the parts behind it.
 
+Every visible pixel is kept, including faint pixels, thin lines and specks
+that lie outside the displayed mesh, and content painted later under a
+Puppet transform mask; such pixels follow the deformation of the empty area
+around them.
+
 ## Options
 
 - **Show mesh** toggles the mesh overlay without changing the result. The
@@ -79,8 +86,11 @@ space around a bent part never cuts into the parts behind it.
 - Closed line art receives a filled mesh. Gaps in a contour can prevent the
   enclosed area from being detected.
 - **Click pin** sets what a click on a pin does: **Select pin** (default) or
-  **Delete pin**. Alt-click always deletes. This is a tool preference and does
-  not change the transform.
+  **Delete pin**. Ctrl+Alt-click always deletes. This is a tool preference and
+  does not change the transform, and undo does not change it either.
+- **Unlocking the pins** (to place or move them in Draw mode) returns every
+  pin to its original position and rotation, so the artwork is undeformed
+  while you edit the pins.
 
 ## Multiple layers and groups
 
