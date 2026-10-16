@@ -137,6 +137,10 @@ Document ownership and lifecycle are defined in
 
 ### History
 
+- [CPU effects and G'MIC development](history/cpu-effects-and-gmic-development.md):
+  original plan, phase results and measurements; native effects and the
+  separately built G'MIC runtime have their own maintained references.
+
 - [Settings location and profile migration](history/settings-location-development.md):
   pre-migration inventory, provisional design and dated implementation checks;
   the stable settings reference owns current paths and startup behavior.

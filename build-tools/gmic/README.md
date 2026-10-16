@@ -2,7 +2,7 @@
 
 Build after installing Solstice's `kritaqmicinterface` library and public
 headers. Use Python 3.13+, CMake, Ninja, LLVM-MinGW and the same Qt6/KF6
-dependency prefix as Solstice. See `docs/agent/cpu-effects-and-gmic-plan.md`.
+dependency prefix as Solstice. See the [G'MIC maintenance reference](../../docs/agent/gmic.md).
 
 `build-runtime.py --work <scratch> --install <application-prefix>
 --deps <dependency-prefix> --compiler-bin <llvm-mingw>/bin --jobs 2`
