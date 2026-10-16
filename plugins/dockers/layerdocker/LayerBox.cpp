@@ -654,7 +654,7 @@ void LayerBox::setCanvas(KoCanvasBase *canvas)
         updateAvailableLabels();
 
         addActionToMenu(m_newLayerMenu, "add_new_paint_layer");
-        // Solstice: docs/agent/brush-stroke-layer-plan.md
+        // Solstice: docs/agent/brush-stroke-layer.md
         addActionToMenu(m_newLayerMenu, "add_new_brush_stroke_layer");
         addActionToMenu(m_newLayerMenu, "add_new_group_layer");
         addActionToMenu(m_newLayerMenu, "add_new_clone_layer");

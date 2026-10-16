@@ -312,7 +312,14 @@ bool KisToolMove::tryEndPreviousStroke(const KisNodeList &nodes)
 
 void KisToolMove::commitChanges()
 {
-    KIS_SAFE_ASSERT_RECOVER_RETURN(m_strokeId);
+    /**
+     * Solstice: the X/Y boxes request a commit on every editingFinished()
+     * (focus out, Enter), also when no stroke runs: the value was unchanged,
+     * or moveBySpinX/Y() could not start one. Nothing to commit then
+     * (upstream asserts here).
+     */
+    if (!m_strokeId)
+        return;
 
     QSharedPointer<KisToolMoveState> newState(new KisToolMoveState(m_accumulatedOffset));
     KisToolMoveState *lastState = dynamic_cast<KisToolMoveState*>(m_changesTracker.lastState().data());
@@ -368,6 +375,8 @@ void KisToolMove::moveDiscrete(MoveDirection direction, bool big)
     if (startStrokeImpl(MoveSelectedLayer, nullptr)) {
         setMode(KisTool::PAINT_MODE);
     }
+    if (!m_strokeId)
+        return; // Solstice: no stroke could be started
 
     // Larger movement if "shift" key is pressed.
     qreal scale = big ? m_optionsWidget->moveScale() : 1.0;
@@ -752,6 +761,8 @@ void KisToolMove::moveBySpinX(int newX)
     if (startStrokeImpl(MoveSelectedLayer, nullptr)) {
         setMode(KisTool::PAINT_MODE);
     }
+    if (!m_strokeId)
+        return; // Solstice: no stroke could be started
 
     m_accumulatedOffset.rx() =  newX - handlesRectX;
 
@@ -776,6 +787,8 @@ void KisToolMove::moveBySpinY(int newY)
     if (startStrokeImpl(MoveSelectedLayer, nullptr)) {
         setMode(KisTool::PAINT_MODE);
     }
+    if (!m_strokeId)
+        return; // Solstice: no stroke could be started
 
     m_accumulatedOffset.ry() =  newY - handlesRectY;
 

@@ -6,7 +6,7 @@ sources:
   - docs/agent/upstream-intake.md
   - \\192.168.1.37\share\upstream-krita-check (README.md, hermes/SKILL.md, reports/2026-W42.md)
 related:
-  - decisions/versioning.md
+  - versioning.md
 ---
 
 # Upstream Krita: weekly review, selective cherry-picks

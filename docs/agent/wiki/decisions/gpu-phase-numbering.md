@@ -1,9 +1,9 @@
 ---
 type: decision
-updated: 2026-10-13
+updated: 2026-10-16
 sources:
-  - docs/agent/gpu-engine-handoff.md (phase 4.95 entry: "次のフェーズ4.96（メッシュ変形のGPU描画）")
-  - docs/agent/gpu-work-priorities.md (phase 4.95 and 4.97 entries)
+  - 'docs/agent/wiki/history/gpu-engine-handoff.md (phase 4.95 entry: "次のフェーズ4.96（メッシュ変形のGPU描画）")'
+  - docs/agent/wiki/history/gpu-work-priorities-development.md (phase 4.95 and 4.97 entries)
   - docs/agent/puppet-warp.md ("Mesh (phase 4.95)")
 related:
   - ../history/gpu-phases-4.93-.md
@@ -12,7 +12,7 @@ related:
 # GPU engine phase numbering
 
 **Decision.** Work on the Vulkan GPU engine is numbered as phases of the
-overall plan (`docs/agent/gpu-engine.md`, "Phase plan"). Increments of phase
+[original phase plan](../history/gpu-engine-development.md#phase-plan). Increments of phase
 4 use `4.N` in order of start. A number mentioned as the planned next step
 stays reserved for that step, even when other work happens first.
 
@@ -26,14 +26,15 @@ stays reserved for that step, even when other work happens first.
 | 4.97 | GPU Liquify grid warp | done, manual check OK |
 | 4.98 | GPU Gaussian blur family | done, manual check OK |
 
-Later phases (4.99-4.109, through 2026-10-13) are listed in the history
-page; the last is 4.109 (the precise contraction audit). The next new phase
-is **4.110**.
+Later results are in the [phase history](../history/gpu-phases-4.93-.md).
+This decision does not maintain a second "next free number": check current
+records and any concurrent work reservations before allocating one.
 
 **Why.** The handoff and the priority documents already referred to 4.96
 as Puppet Warp's GPU rendering. Reusing the number for Liquify would have
 made those references point at the wrong work.
 
 **How to apply.** Before naming a phase, search the agent documents for the
-next number (`grep -rn "4\.1[0-9][0-9]" docs/agent`). Record the phase in the
-newest `history/gpu-phases-*.md` page and in `gpu-work-priorities.md`.
+number (`rg -n "4\.1[0-9][0-9]" docs/agent`) and check concurrent work.
+Record results in the newest `history/gpu-phases-*.md` page; update disposition
+and remaining work in [GPU priorities](../../gpu-work-priorities.md).

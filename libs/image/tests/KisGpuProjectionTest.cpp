@@ -28,6 +28,7 @@
 #include "gpu/KisGpuTileAccess.h"
 #include "gpu/KisGpuTileBackend.h"
 #include "kis_adjustment_layer.h"
+#include "kis_clone_layer.h"
 #include "kis_datamanager.h"
 #include "kis_filter_mask.h"
 #include "kis_group_layer.h"
@@ -35,7 +36,9 @@
 #include "kis_paint_device.h"
 #include "kis_paint_layer.h"
 #include "kis_painter.h"
+#include "kis_pixel_selection.h"
 #include "kis_selection.h"
+#include "kis_transparency_mask.h"
 #include "tiles3/kis_tile.h"
 
 #include <algorithm>
@@ -65,6 +68,9 @@ private Q_SLOTS:
     void testChannelFlagBoundaries_data();
     void testChannelFlagBoundaries();
     void testPartialUpdateMatchesCpu();
+    void testUnalignedUpdateDownloadsNothing_data();
+    void testUnalignedUpdateDownloadsNothing();
+    void testAdjustmentLayerFirstMatchesCpu();
     void testF16Image();
     void testProjectionStaysOnGpu();
     void testConcurrentUpdatesSharingTilesMatchCpu();
@@ -72,6 +78,10 @@ private Q_SLOTS:
     void testFloatGroupInIntegerImageStaysOnCpu();
     void testConvertedDocumentUsesGpu_data();
     void testConvertedDocumentUsesGpu();
+    void testShiftedCopyMatchesCpu_data();
+    void testShiftedCopyMatchesCpu();
+    void testCloneLayerMatchesCpu_data();
+    void testCloneLayerMatchesCpu();
     void benchmarkRefresh();
 };
 
@@ -941,6 +951,129 @@ void KisGpuProjectionTest::testPartialUpdateMatchesCpu()
                             .arg(pixelReport(expected, actual, where, image->width()))));
 }
 
+void KisGpuProjectionTest::testUnalignedUpdateDownloadsNothing_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::newRow("f32") << false;
+    QTest::newRow("f16") << true;
+}
+
+void KisGpuProjectionTest::testUnalignedUpdateDownloadsNothing()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    // Phase 4.111: KisAsyncMerger::setupProjection() clears the dirty rect of
+    // the root and the group projection with the first GPU composite. A CPU
+    // clear of an unaligned rect downloaded its partly covered border tiles.
+    const QRect bounds(0, 0, 700, 500);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "unaligned");
+    const float background[4] = {0.2f, 0.3f, 0.4f, 1.0f};
+    KoColor backgroundColor(rgbaFloat());
+    std::memcpy(backgroundColor.data(), background, sizeof(background));
+    backgroundColor.convertTo(rgbaFloat(f16));
+    image->setDefaultProjectionColor(backgroundColor); // not transparent: the clear fills it
+    addPaintLayer(image, image->root(), COMPOSITE_OVER, 200, 50, QRect(0, 0, 640, 448));
+    KisGroupLayerSP group = new KisGroupLayer(image, "group", 230);
+    image->addNode(group, image->root());
+    KisPaintLayerSP painted = addPaintLayer(image, group, COMPOSITE_SCREEN, 255, 51, QRect(64, 32, 500, 400));
+    addPaintLayer(image, group, COMPOSITE_MULT, 180, 52, QRect(100, 60, 300, 300));
+    addPaintLayer(image, image->root(), COMPOSITE_OVER, 128, 53, QRect(200, 100, 256, 256));
+
+    // A dab: unaligned rect, partly erased so the clear matters.
+    const QRect dirty(123, 77, 150, 90);
+    image->refreshGraphAsync();
+    image->waitForDone();
+    fillRandom(painted->paintDevice(), dirty, 54);
+    painted->paintDevice()->clear(QRect(150, 100, 40, 30));
+
+    KisGpuMergeBatch::setEnabled(false);
+    painted->setDirty(dirty);
+    image->waitForDone();
+    const std::vector<float> expected = readFloats(image->projection(), image->bounds());
+
+    KisGpuMergeBatch::setEnabled(true);
+    image->refreshGraphAsync(); // the projections become GPU-resident
+    image->waitForDone();
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    backend->flush();
+    const quint64 downloadsBefore = backend->downloadedTileCount();
+    const quint64 compositesBefore = KisGpuMergeBatch::gpuCompositeCount();
+    painted->setDirty(dirty);
+    image->waitForDone();
+    backend->flush();
+    QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > compositesBefore);
+    QCOMPARE(backend->downloadedTileCount(), downloadsBefore);
+
+    // The partly covered border tiles stay GPU-valid and CPU-stale.
+    for (KisPaintDeviceSP projection : {image->projection(), group->original()}) {
+        KisTileSP tile = projection->dataManager()->getTile(dirty.left() / 64, dirty.top() / 64, false);
+        KisTileGpuState *state = tile->tileData()->gpuState();
+        QVERIFY(state);
+        QVERIFY(state->gpuValid());
+        QVERIFY(!state->cpuValid());
+    }
+
+    const std::vector<float> actual = readFloats(image->projection(), image->bounds());
+    QVERIFY(backend->downloadedTileCount() > downloadsBefore);
+    QPoint where;
+    if (f16) {
+        const float ulps = maxHalfUlpDifference(expected, actual, &where, image->width());
+        QVERIFY2(
+            ulps <= 4.0f,
+            qPrintable(
+                QStringLiteral("max difference %1 half ULPs at (%2, %3)").arg(ulps).arg(where.x()).arg(where.y())));
+    } else {
+        const float difference = maxDifference(expected, actual, &where, image->width());
+        QVERIFY2(difference <= 2e-5f,
+                 qPrintable(QStringLiteral("max difference %1 at (%2, %3): %4")
+                                .arg(difference)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(expected, actual, where, image->width()))));
+    }
+}
+
+void KisGpuProjectionTest::testAdjustmentLayerFirstMatchesCpu()
+{
+    REQUIRE_GPU();
+    // The bottom leaf of the group filters the cleared rect on the CPU: its
+    // clear must not wait for the first GPU composite (phase 4.111).
+    const QRect bounds(0, 0, 400, 300);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(), "adjustment first");
+    addPaintLayer(image, image->root(), COMPOSITE_OVER, 255, 55, bounds);
+    KisGroupLayerSP group = new KisGroupLayer(image, "group", 255);
+    image->addNode(group, image->root());
+    KisFilterSP blur = KisFilterRegistry::instance()->value("blur");
+    QVERIFY(blur);
+    KisAdjustmentLayerSP adjustment = new KisAdjustmentLayer(
+        image,
+        "blur",
+        blur->defaultConfiguration(KisGlobalResourcesInterface::instance())->cloneWithResourcesSnapshot(),
+        nullptr);
+    image->addNode(adjustment, group);
+    addPaintLayer(image, group, COMPOSITE_OVER, 255, 56, QRect(20, 10, 350, 260));
+
+    const QRect dirty(37, 41, 150, 100);
+    render(image, false);
+    adjustment->setDirty(dirty);
+    image->waitForDone();
+    const std::vector<float> expected = readFloats(image->projection(), image->bounds());
+
+    render(image, true);
+    adjustment->setDirty(dirty);
+    image->waitForDone();
+    const std::vector<float> actual = readFloats(image->projection(), image->bounds());
+
+    QPoint where;
+    const float difference = maxDifference(expected, actual, &where, image->width());
+    QVERIFY2(difference <= 2e-5f,
+             qPrintable(QStringLiteral("max difference %1 at (%2, %3): %4")
+                            .arg(difference)
+                            .arg(where.x())
+                            .arg(where.y())
+                            .arg(pixelReport(expected, actual, where, image->width()))));
+}
+
 void KisGpuProjectionTest::testF16Image()
 {
     REQUIRE_GPU();
@@ -1040,6 +1173,166 @@ void KisGpuProjectionTest::testConcurrentUpdatesSharingTilesMatchCpu()
                             .arg(where.x())
                             .arg(where.y())
                             .arg(pixelReport(expected, actual, where, image->width()))));
+}
+
+void KisGpuProjectionTest::testShiftedCopyMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QPoint>("offset");
+    QTest::addColumn<QPoint>("sourceDeviceOffset");
+    for (bool f16 : {false, true}) {
+        for (const QPoint &offset : {QPoint(37, 23), QPoint(64, 128), QPoint(-50, -71), QPoint(0, 0), QPoint(700, 0)}) {
+            for (const QPoint &deviceOffset : {QPoint(0, 0), QPoint(10, 7)}) {
+                QTest::newRow(qPrintable(QString("f16%1-offset%2,%3-device%4,%5")
+                                             .arg(f16)
+                                             .arg(offset.x())
+                                             .arg(offset.y())
+                                             .arg(deviceOffset.x())
+                                             .arg(deviceOffset.y())))
+                    << f16 << offset << deviceOffset;
+            }
+        }
+    }
+}
+
+void KisGpuProjectionTest::testShiftedCopyMatchesCpu()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QPoint, offset);
+    QFETCH(QPoint, sourceDeviceOffset);
+    const KoColorSpace *cs = rgbaFloat(f16);
+
+    KisPaintDeviceSP source = new KisPaintDevice(cs);
+    fillRandom(source, QRect(0, 0, 300, 260), 61, true);
+    source->moveTo(sourceDeviceOffset);
+    // The destination keeps its content outside the copied rect.
+    KisPaintDeviceSP expected = new KisPaintDevice(cs);
+    fillRandom(expected, QRect(0, 0, 640, 448), 62);
+    KisPaintDeviceSP actual = new KisPaintDevice(cs);
+    fillRandom(actual, QRect(0, 0, 640, 448), 62);
+
+    const QRect bounds(-128, -128, 1024, 768);
+    // Partly or wholly outside the source: those pixels become its default pixel.
+    for (const QRect &rect : {QRect(20, 30, 250, 200), QRect(150, 100, 260, 300), QRect(900, 600, 50, 40)}) {
+        KisPainter::copyAreaOptimized(rect.topLeft(), source, expected, rect.translated(-offset));
+        QString error;
+        QVERIFY2(KisGpuProjectionCompositor::copyShifted(actual, rect, source, offset, &error), qPrintable(error));
+        QPoint where;
+        const float difference =
+            maxDifference(readFloats(expected, bounds), readFloats(actual, bounds), &where, bounds.width());
+        QVERIFY2(difference == 0.0f,
+                 qPrintable(QString("rect %1,%2 %3x%4: difference %5 at %6,%7")
+                                .arg(rect.x())
+                                .arg(rect.y())
+                                .arg(rect.width())
+                                .arg(rect.height())
+                                .arg(difference)
+                                .arg(where.x() + bounds.x())
+                                .arg(where.y() + bounds.y())));
+    }
+
+    // Unsupported cases refuse and leave the destination unchanged.
+    KisPaintDeviceSP rgba8 = new KisPaintDevice(KoColorSpaceRegistry::instance()->rgb8());
+    QVERIFY(!KisGpuProjectionCompositor::copyShifted(rgba8, QRect(0, 0, 64, 64), source, offset));
+    QVERIFY(!KisGpuProjectionCompositor::copyShifted(source, QRect(0, 0, 64, 64), source, offset));
+}
+
+void KisGpuProjectionTest::testCloneLayerMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QPoint>("offset");
+    QTest::addColumn<QString>("mask");
+    for (bool f16 : {false, true}) {
+        for (const QPoint &offset : {QPoint(37, 23), QPoint(64, 128), QPoint(-45, 70), QPoint(0, 0)}) {
+            for (const QString &mask : {QString("none"), QString("transparency"), QString("blur")}) {
+                if (offset.isNull() && mask == "none")
+                    continue; // no clone projection: the source device is composited directly
+                QTest::newRow(
+                    qPrintable(QString("f16%1-offset%2,%3-%4").arg(f16).arg(offset.x()).arg(offset.y()).arg(mask)))
+                    << f16 << offset << mask;
+            }
+        }
+    }
+}
+
+void KisGpuProjectionTest::testCloneLayerMatchesCpu()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QPoint, offset);
+    QFETCH(QString, mask);
+    const QRect bounds(0, 0, 512, 384);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "clone");
+    addPaintLayer(image, image->root(), COMPOSITE_OVER, 255, 71, bounds);
+    KisPaintLayerSP source = addPaintLayer(image, image->root(), COMPOSITE_OVER, 255, 72, QRect(40, 50, 300, 220));
+    KisCloneLayerSP clone = new KisCloneLayer(source, image, "clone", 200);
+    clone->setX(offset.x());
+    clone->setY(offset.y());
+    clone->setCompositeOpId(COMPOSITE_MULT);
+    image->addNode(clone, image->root());
+    if (mask == "transparency") {
+        KisTransparencyMaskSP transparency = new KisTransparencyMask(image, "transparency");
+        transparency->initSelection(KisLayerSP(clone));
+        transparency->selection()->pixelSelection()->clear(QRect(100, 90, 120, 80));
+        transparency->selection()->updateProjection();
+        image->addNode(transparency, clone);
+    } else if (mask == "blur") {
+        KisFilterSP blur = KisFilterRegistry::instance()->value("blur");
+        QVERIFY(blur);
+        KisFilterMaskSP filterMask = new KisFilterMask(image, "blur");
+        filterMask->initSelection(KisLayerSP(clone));
+        filterMask->setFilter(
+            blur->defaultConfiguration(KisGlobalResourcesInterface::instance())->cloneWithResourcesSnapshot());
+        image->addNode(filterMask, clone);
+    }
+
+    auto compare = [&](const char *stage) {
+        const std::vector<float> gpu = readFloats(image->projection(), bounds);
+        const std::vector<float> cpu = render(image, false);
+        QPoint where;
+        const float error = f16 ? maxHalfUlpDifference(cpu, gpu, &where, bounds.width())
+                                : maxDifference(cpu, gpu, &where, bounds.width());
+        QVERIFY2(error <= (f16 ? 4.0f : 2e-5f),
+                 qPrintable(QString("%1: difference %2 at %3,%4, %5")
+                                .arg(stage)
+                                .arg(error)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(cpu, gpu, where, bounds.width()))));
+    };
+
+    // Effect masks run on the CPU: the clone then copies on the CPU too.
+    const bool gpuCopy = mask == "none";
+    const quint64 copiesBefore = KisGpuProjectionCompositor::shiftedCopyCount();
+    render(image, true);
+    QCOMPARE(KisGpuProjectionCompositor::shiftedCopyCount() > copiesBefore, gpuCopy);
+    compare("full refresh");
+
+    // GPU strokes on the source: its tiles become GPU-valid and CPU-stale,
+    // and the clone's GPU copy must not read them back.
+    KisGpuMergeBatch::setEnabled(true);
+    for (int i = 0; i < 3; ++i) {
+        const QRect dab(64 + i * 64, 64, 128, 128);
+        KisPaintDeviceSP dabDevice = new KisPaintDevice(rgbaFloat(f16));
+        fillRandom(dabDevice, dab, 80 + i);
+        KisGpuProjectionCompositor::Layer layer;
+        layer.device = dabDevice;
+        layer.opacity = 0.7f;
+        QString error;
+        QVERIFY2(KisGpuProjectionCompositor::composite(source->paintDevice(), dab, {layer}, &error), qPrintable(error));
+        const quint64 copies = KisGpuProjectionCompositor::shiftedCopyCount();
+        source->setDirty(dab);
+        image->waitForDone();
+        QCOMPARE(KisGpuProjectionCompositor::shiftedCopyCount() > copies, gpuCopy);
+        if (gpuCopy) {
+            KisTileSP tile = source->paintDevice()->dataManager()->getTile(dab.x() / 64 + 1, 1, false);
+            KisTileGpuState *state = tile->tileData()->gpuState();
+            QVERIFY(state);
+            QVERIFY(!state->cpuValid());
+        }
+    }
+    compare("partial updates");
 }
 
 void KisGpuProjectionTest::benchmarkRefresh()

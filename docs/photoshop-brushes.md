@@ -7,11 +7,11 @@ its own.
 ## What is read now
 
 - The brush tip images of ABR versions 1, 2 and 6 to 10, including 16-bit
-  tips and compressed tips. They appear among the predefined brush tips in
-  the Brush Editor.
-- Tips are named after the Photoshop preset that uses them. Tips that no
-  preset uses, and tips of older files, are named after the file and a
-  number (`brushes_12`).
+  tips and compressed tips. A 16-bit tip is reduced to 8-bit precision. They
+  appear among the predefined brush tips in the Brush Editor.
+- Tips use their stored name when present (version 2), otherwise the name of
+  the first Photoshop preset that uses them. Tips without either name use the
+  file name and a number (`brushes_12`).
 - Damaged files are read as far as possible; unreadable tips are skipped
   and reported in the log.
 - Patterns stored in ABR files appear with the other patterns, for fills and
@@ -38,13 +38,20 @@ its own.
 
 ## Not read yet
 
-- Some Photoshop settings have no counterpart and are left out (the log
-  lists them for each file): the dual brush's scatter count, flipping and
-  flip jitter, wet edges, noise, brush pose, texture protection and
-  smoothing.
+- Some Photoshop settings are not mapped: the dual brush's scatter count,
+  flipping and flip jitter, wet edges, noise, brush pose, texture protection
+  and smoothing. Recognized unsupported options are reported in the log;
+  the log is not a complete list of every setting left out.
 - Computed (round) brushes of ABR versions 1 and 2.
 
 ## Known limitations
+
+- Preset import requires at least one readable image-based tip in the ABR.
+  A file containing only computed round brushes does not produce presets,
+  even in a supported modern ABR version.
+
+- Folder tags have automated coverage, but importing a real exported ABR
+  containing folders has not yet been verified.
 
 - Presets with a dual brush in Darken or Color Burn mode, or with a dual
   brush much larger than the tip, may paint very faintly.

@@ -692,3 +692,36 @@ multiply-adds elsewhere. Details: [gpu-engine.md](../../gpu-engine.md),
   called from a probe reproduced it, with identical inputs and decorations.
   The risk is therefore treated as context-dependent: products feeding a sum
   before a rounding step now use `roundedProduct()`.
+
+## Clone Layer offsets (phase 4.110)
+
+2026-10-16, user request. Offset Clone Layers without effect masks copy
+their source on the GPU. Details: [clone-layer.md](../../clone-layer.md);
+numbers: [Clone Layer updates](../benchmarks/clone-layer-updates.md).
+
+- Measured first: a benchmark test with a GPU download counter showed the
+  CPU copy downloading the GPU brush's source tiles on every update.
+- A first version also copied on the GPU for masked clones; transparency
+  masks became slower because the CPU mask then downloaded the copy.
+  Masked clones were returned to the CPU copy.
+- Found, not changed: CPU clears of non-aligned dirty rects in
+  `KisAsyncMerger::setupProjection()` download partial projection tiles in
+  every GPU merge.
+
+## Partial-tile projection clears (phase 4.111)
+
+2026-10-16, user request (the first remaining candidate of phase 4.110).
+`KisAsyncMerger::setupProjection()` no longer clears unaligned dirty rects
+of GPU-resident projections on the CPU; the first GPU composite of the
+batch fills the rect with the default pixel (a leading replace layer
+without tiles). Details: `docs/agent/gpu-engine.md`, "Partial-tile
+projection clears (phase 4.111)"; numbers:
+[Clone Layer updates](../benchmarks/clone-layer-updates.md).
+
+- Confirmed first with the new regression test: one unaligned update of a
+  root and a group projection downloaded 16 tiles; 0 after the fix.
+- Pitfall found while reviewing the deferral: the merger flushes for
+  `dependsOnLowerNodes()` before `setupProjection()`, so an adjustment
+  layer as the first leaf would have filtered the uncleared rect. That case
+  keeps the CPU clear; `testAdjustmentLayerFirstMatchesCpu` fails (0.9999)
+  without the rule.

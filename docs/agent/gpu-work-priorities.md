@@ -1,607 +1,94 @@
-# GPUエンジン 今後の作業順序
+# GPU Engine — current work priorities
 
-作成日: 2026年10月5日
+This page owns remaining work and deferrals. The
+[maintenance reference](gpu-engine.md) owns implementation, compatibility and
+regression rules; the [phase records](gpu-engine.md#phase-history) own detailed
+results. The complete previous plan, priority rationale, measurements and session
+diary are preserved in the
+[work-order snapshot](wiki/history/gpu-work-priorities-development.md).
 
-Claude向けの現状・ログ・次の作業・検証手順は
-[gpu-engine-handoff.md](gpu-engine-handoff.md) を参照（2026年10月6日）。
+## Scope and evidence
 
-状態: 順位1のソフトウェア計測基盤と9回の手動比較を完了（2026年10月6日）。
-3設定×3プロセス、ウォームアップ除外後108ストローク・2,078入力を集計。
-入力・ジョブ・ダブ・更新領域・転送・Qtフレーム交換の対応を照合し、
-全採取で記録欠落なし。実効GPU送信、CPU分岐、画像再利用も記録した。
+Initially extracted on 2026-10-16 at
+`cc2445cc4a521d58ae0904079ee67354667b3eb6` (through 4.109), then updated
+for the integration of PRs #5/#7 (4.110/4.111). Follow
+[the branch policy](../../AGENTS.md#branch-policy) for new work.
+Later work in other checkouts/branches must be reconciled when it merges;
+this page neither imports it nor marks its manual checks complete.
 
-64pxでは設定間のプロセス範囲が重なり、GPU優位を確認できなかった。
-256pxではCPU設定の代表値が小さい。共有バッファを使う2設定の待ち時間が
-長いため、次は順位2として転送準備・同期・更新領域・スケジューリングの
-内訳を調べる。現時点で原因を共有バッファ転送に断定しない。
+The original numbered priorities remain useful as a map, not a new instruction
+to repeat completed work:
 
-今回の文書は子画像を再利用し、層合成を省略する。したがって層合成の
-GPU性能比較とは扱わない。計測終点はQtのフレーム交換通知であり、
-物理的な入力から発光までの時間、全画素の可視性は検証していない。
-手入力・未記録の表示条件・トレース負荷の限界を伴う観測結果である。
-順位1の強いinput-to-pixel要件を満たしたとはせず、同じ9回の再採取は求めない。
-
-順位2に着手。既存9ログを、最後の関連アップロード発行まで／その後の
-Qt交換通知までに分ける解析を追加。39テスト合格、2,078計測入力をすべて保持。
-256pxの差は主に発行前に現れ、その後の交換待ちの増大では説明できない。
-前半にはキュー待ち・描画・投影・転送準備・同期が混在するため原因は未確定。
-次は発行前の区間を更新IDで細分化する。GPU実行時間・送信回数・転送量の
-内訳調査は未完了。順位3〜5は未着手。今回の解析に追加の実機採取は不要。
-採取順・バイナリハッシュ・各ストロークと比較結果は
-`paint-trace-baseline-runs.md`、ユーザー向け結果は `../gpu-engine.md`、
-技術経緯は `wiki/history/gpu-phases-4.58-4.81.md`（フェーズ4.58〜4.80）を参照。
-
-順位2の追加解析（フェーズ4.74）: 既存9ログについて、更新準備完了から
-直接対応するアップロード発行までの区間を集計。共有アップロードを重複計上せず、
-対象はすべて照合できた。42テスト合格。各プロセスの中央値は約1.7〜3.0msだが、
-条件混在・ウォームアップ込みの参考値であり、256pxの遅延原因は未確定。
-圧縮前の更新滞留時間と準備以前の描画・投影・スケジューリングの内訳は引き続き未解決。
-ネイティブ変更・インストール・追加の手動採取はない。
-
-順位2の追加解析（フェーズ4.75）: 投影終了→更新準備完了をwalker IDで照合。
-既存9ログすべて除外なし、45テスト合格。記録済みの測定ストロークIDで
-ウォームアップを除外して比較したところ、256px Buildupの同区間はCPU約0.72ms、
-GPUブラシ約5.03ms。256px WashのGPUブラシでは同区間約0.25ms、投影CPU区間約2.02ms。
-次の計測対象はキャンバスの転送元準備・コマンド再利用待ちとWashの合成処理。
-待機箇所の原因断定や実行処理の変更はまだ行っていない。
-
-順位2の計測細分化（フェーズ4.76）: キャンバスと合成処理に計10種類の
-CPU区間計測を追加。描画順序・同期処理は維持。計測有効テスト正常終了、
-無効時はキャンバス28件・ストローク6件合格。image/uiをインストール済み。
-次はGPUブラシ設定で256px Buildup／Washを各3ストロークだけ採取する。
-これは原因候補を分ける診断であり、9プロセスのベースライン再採取ではない。
-実機採取はPID 43812で完了。6ストローク・112計測入力、記録欠落なし。
-各条件の先頭を除外すると、Buildupの送信・後処理中央値は1.16〜1.40ms、
-コマンド開始は0.013〜0.015ms。Washの合成先準備は0.48〜0.51ms。
-次はsubmitAndFinish内部のロック取得・アップロード記録・送信・状態公開・
-完了処理、およびWashの合成先準備を調べる。原因の断定・高速化は未完了。
-
-順位2の内部計測（フェーズ4.77）: タイル取得・COW・pinと転送準備、
-送信時のロック取得・転送命令記録・キュー送信・状態公開・完了処理を計測。
-同期範囲と処理順序は維持。計測有効／無効ともキャンバス28件、
-ストローク6件合格。画像ライブラリをインストール済み。
-実機PID 11944で各3ストロークの採取完了。108計測入力、記録欠落なし。
-Buildupは共有ロック取得中央値0.59〜0.92msに対しキュー送信0.055〜0.090ms。
-Washでは同じ典型的な待ちは見られない。次はresidencyロックを保持する
-pin／スロット割当／退避／他の送信処理を調べる。保持元の特定と高速化は未完了。
-
-順位2の保持元計測（フェーズ4.78）: 全residencyロック保持箇所を計測し、
-別スレッドの待ちとの重なりを照合する解析を追加。短い保持が大量に発生するため
-10µs未満は記録対象外とし、メタデータに閾値を明示。最終ログは欠落なし。
-解析50件、GPUキャンバス28件・ストローク6件合格、画像ライブラリを反映済み。
-自動テストでは他スレッドの送信保持との重なりが大半だが、実機での保持元は未確定。
-実機PID 44756の照合完了。109計測入力、記録欠落なし。
-Buildup測定2本のキャンバスロック待ち時間の約97%が、他スレッドの送信保持と重なる。
-次は並行送信のクリティカルセクションを調査し、アップロード順序・世代管理・
-失敗時の整合性を保ったまま保持時間を短縮できるか検討する。
-ロック削除や順序変更は未実施。高速化の効果はまだ未検証。
-
-順位2の短縮実装（フェーズ4.79）: メインコマンドバッファの記録終了を
-residencyロック取得前へ移動。アップロード判定・送信・状態公開はロック内を維持。
-新規テストで後付けアップロードの実行順序、二重終了防止、破棄・失敗後の再利用を検証。
-エンジン6件、整合性13件、キャンバス28件、ストローク6件合格。
-計測でも1,191回すべて終了処理がロック取得前。GPU/image/uiをインストール済み。
-実機PID 3704で6ストローク採取完了、117計測入力・記録欠落なし。
-早期終了区間は中央値0.0007〜0.0016msで、Buildupロック待ちは約0.78〜0.90ms残存。
-速度改善は確認できず、表示までの今回の値は前回より長い。手描き・単一プロセス比較の
-ため変更による悪化とは断定しない。次はcontext側キューロックとvkQueueSubmit2を調べる。
-Undo/Redoの操作成功は明示未確認。高速化達成とは扱わない。
-
-順位2の送信内部計測（フェーズ4.80）: context側のキューロック取得、
-送信情報準備、vkQueueSubmit2を直接計測。時刻を保存し、residencyロック解放後に
-ログへ記録。通常起動では時計を読まない。4スレッド128送信で正確なデータと
-タイムラインの一意性・時刻順序・失敗後復帰を検証した。
-エンジン7件、整合性13件、キャンバス28件、ストローク6件、解析50件合格。
-GPU/image/uiを反映済み。自動テストではドライバー区間が主だが、
-実機PID 24148で照合完了。165計測入力（ウォームアップ除外後108）、欠落なし。
-Buildupの共有ロック待ちの約95%が、別スレッドのvkQueueSubmit2区間と重なる。
-context側キューロック取得と送信情報準備は小さい。ドライバー呼び出しが長い理由は未確定。
-次は互換条件を満たすキャンバス更新の集約で送信回数を削減できるか検討する。
-領域被覆・圧縮の来歴・CPUフォールバックと送信順序を維持すること。
-今回の採取で新しい高速化効果は主張しない。
-
-順位2の送信集約（フェーズ4.81）: PID 24148のsubmitを呼び出し元で分類すると、
-キャンバス834回・合成428回・ブラシ62回に対し、GUI側のキャンバス反映は169回。
-キャンバス待ちの重なりは主に他スレッドのキャンバス送信（353.1ms）で、
-合成14.1ms・ブラシ2.2msより大きい。そこで同時に届いたキャンバス更新を
-`KisCanvasUpdateBatcher` で集約し、1回のGPU送信を共有する実装を追加した。
-更新情報・矩形・トレースID・圧縮の意味は更新ごとに維持し、まとめて圧縮器へ入れる。
-各スレッドは自分の更新が送信・投入されるまで戻らないため、後続walkerとの順序を保つ。
-遠い領域は外接矩形へ広げず、領域ごとのタイルアクセスを1回の送信にまとめる。
-GPUキャンバス経路が使えない場合（ソフトプルーフ、チャンネル選択、CPU経路、
-QPainterキャンバス）は従来経路のまま。検証層有効でキャンバス38件（新規10件）、
-集約器8件、解析50件合格。`kritaui` を反映済み。
-手動確認はユーザー報告で問題なし。実機PID 43720（欠落0）では、キャンバス送信が
-834→241回、ロック待ち合計が459.8→73.0ms、Buildupの投影終了→更新準備が
-約3.5〜4.3→0.3〜0.4msに減った。ただし入力→表示の中央値は増えた。
-増加は投影より前で、ダブがブラシバッチに取り込まれるまでの待ち（10〜15→21〜35ms）。
-今回のストロークは短く速く（860〜1,566ダブ/秒）、1バッチ約16〜19ダブの上限で
-ダブ待ち行列が滞留した。手描き速度の違いと交絡しているため、高速化・悪化とも断定しない。
-公平な比較には同程度の長さ・速度のストロークが必要。速いストローク時の
-ブラシバッチ上限は別の調査候補。
-
-順位2のブラシ側滞留（フェーズ4.82）: ダブは要求から約0.6msで描画済みだが、
-バッチ取り込みまで24〜35ms待つ。原因はGPUブラシの1バッチ32MiBのソース上限。
-測定プリセットは描画方向でダブを回転させ、256pxダブの外接矩形が約362px
-（RGBA F32で約2.1MB）になり、1バッチ約16ダブで打ち切られる。その後10msの
-最小更新周期を待つため、速いストロークで滞留した。バイト上限で打ち切られ、
-描画済みダブが残る場合だけ次のバッチを待たずに開始するよう変更（CPU経路は不変）。
-キューテスト12件（トレース有効13件）、GPUストローク16件合格、プラグインを反映済み。
-実機PID 45728（欠落0）: ダブ要求→バッチ取り込みの中央値は約10〜11ms（4.81は25〜37ms、
-4.80は10〜15ms）。上限で打ち切られたバッチの次のバッチは中央値4.8msで開始（4.81は8.7ms）。
-入力→表示はBuildup 18.9/22.1ms、Wash 29.1/28.3msで4.80と同程度。ただしバイト上限に
-達したバッチは30中7件だけで、ストロークの方向・速度は前回と異なる。4.81の滞留解消とは
-整合するが、4.80より速くなったとは断定しない。
-
-順位3に着手（フェーズ4.83、2026年10月6日、ユーザー指示）: 第1段階として、
-RGBA32Fのデフォルト円形オートブラシのダブを、ピクセルを転送せずGPUで評価する。
-CPUは引き続きダブを生成するため、CPUフォールバック・CPUミラー・拒否時の経路は不変。
-ダブ生成ジョブで円の記述を作り、生成画素の中央行・列と1e-6以内で一致した場合だけ使う。
-GPUはpaint_dabs.compで同じfloat演算順に評価し、全ブレンド・選択範囲・ロックを共用する。
-画素を0にしたダブで記述だけからCPUと2e-5以内に一致するテスト、全ストロークテスト306件、
-ブラシ単体4394件が検証層有効で合格。インストール済み。実機確認・効果測定は未実施。
-RGBA16F、Gauss・Softマスク、CPU生成の省略は後続段階。
-
-実機PID 38504では生成ダブ0件。測定プリセットがGaussマスク（id="gauss"）のため、
-4.83の対象外で従来の画素転送のままだった（正しいフォールバック）。
-フェーズ4.84でGauss円形を追加。CPUのAVX2+FMA版マスク関数は-ffp-contract=fastで
-コンパイルされ、乗算と加算が融合されていたため、逆アセンブルで融合箇所を確認し、
-C++参照とシェーダーで同じ演算列（xsimdのexp、VcExtraMathのerfを含む）を再現した。
-GPUの除算と平方根は残差で正しく丸める。CPU生成画素とGPU評価のアルファが全画素で
-ビット単位一致することをテストで確認。ブラシ4395件、ストローク322件（Gauss16件）合格。
-インストール済み。
-実機PID 14156（欠落0）: GPUブラシ送信40件すべてで生成ダブを使用、バイト上限0件。
-ブラシ送信のCPU時間は中央値1.83→0.43ms（P95 7.07→1.19ms）と直接減少。
-入力→表示はBuildup 16.9/17.8ms（4.80は22.9/24.1ms）、Wash 21.5/25.2ms（4.80と同程度）。
-手描き速度が異なる単一プロセス比較のため、全体の高速化とは断定しない。
-残るダブ待ち約10msはブラシの最小更新周期に一致する。
-4.84の手動確認はユーザー報告で問題なし。
-
-順位3の第2段階（フェーズ4.85、ユーザー指示）: 記述できるダブのCPU生成を省略する。
-マスク種別ごとに最初の16ダブを生成画素と完全一致で検証した後にだけ省略し、
-不一致が一度でもあればその種別は省略しない。CPUで画素が必要な場面
-（GPU拒否時のフォールバック、GPU非対応の描画、CPUミラー後の描画、後処理）では、
-ビット一致する参照計算で画素を作ってから使う。ブラシ4396件、ストローク338件
-（GPU拒否を模擬した16件で画素生成1,776件、一致を確認）合格。インストール済み。
-手動確認はユーザー報告で問題なし。実機PID 39228（欠落0）では、検証用の最初の13個以外の
-ストローク中のダブはすべてCPU生成を省略。ダブ生成ジョブは中央値248→19µs、合計220.6→29.0ms。
-入力→表示は4.84と同程度で、全体の遅延改善とは扱わない。残るダブ待ち約10msは
-ブラシの最小更新周期であり、次の改善対象の候補。
-
-順位3の対象拡大（フェーズ4.86〜4.87、ユーザー指示）: RGBA16Fと
-Soft（曲線）円形マスクをGPU生成の対象に追加。F16はImathの最近接偶数丸めを
-シェーダーで整数演算により再現。Softは逆アセンブルで確認したCPUの演算列
-（融合積和、切り捨て添字、倍精度表のfloat変換）を再現し、曲線表を共有して1回だけ転送。
-両方ともGPUのアルファがCPUとビット単位で一致することをテストで確認。
-ブラシ4402件、ストローク354件（Soft16件、F16行の生成・省略も確認）合格。インストール済み。
-実機での効果は未計測。
-
-順位2のブラシ更新周期（フェーズ4.88、ユーザー指示）: GPU経路だけブラシの最小更新周期を
-10ms→-1（前のバッチ完了後、次の契機で即開始）に変更し、ストローク開始時の40msも
-GPU有効時は-1にした。`KRITA_GPU_BRUSH_MIN_UPDATE_MS` で比較用に上書き可能。
-ミラー＋非可換の合成モードでは、バッチの分け方で結果が変わる（CPUでも同様）ため、
-テストのその行だけGPU側も10msにした。ストローク360件合格、インストール済み。
-手動確認はユーザー報告で問題なし。実機PID 45620（欠落0）を4.85のPID 39228と比較:
-- ダブ要求→バッチ取り込みの中央値: 約10ms → 0.3〜0.8ms（1ストロークのみ4.5ms）
-- 入力→表示の中央値: 18〜24ms → 7〜13ms
-- バッチ数は1ストロークあたり4〜7 → 20〜31
-手描きのため値は変動するが、6ストロークすべてで中央値が改善した。
-
-順位2のWash遅延（フェーズ4.89、ユーザー指示）: 4.88の採取を最後の転送から遡って分解した。
-Washは入力→最後の転送の中央値が9.8ms（Buildupは3.9ms）。差の内訳は2つ:
-- バッチ取り込み待ち（3.8ms）: バッチ処理中に完成したダブには、次の入力まで更新の契機がない。
-- Washのプロジェクション合成（中央値3.2ms）: 計測済みの区間で説明できるのは約0.5msだけ。
-
-対応として、GPUブラシ有効時はバッチ終了後に更新を再試行する連鎖ジョブを追加し、
-合成内部にトレース区間を追加した。テスト合格、インストール済み。手動確認OK。
-
-実機PID 24596の結果:
-- Washのバッチ取り込み待ち（中央値）: 3.8ms → 0.39ms
-- Washの入力→最後の転送（中央値）: 9.8ms → 7.75ms
-- 入力→表示（ストロークごとの中央値）: Wash 11.0〜11.5ms（4.88は11.3〜12.7ms）、
-  Buildup 6.5〜8.1ms
-
-Wash合成の内訳では、レイヤー本体をプロジェクションへCPUで複写する処理が最大で、
-中央値1.08msかかる。GPUプレビュー合成は0.43ms。
-次の候補は、この複写をGPUプレビュー合成と同じ送信の中で行うこと。
-
-フェーズ4.90（ユーザー指示）: 元画像の複写をGPUで行うようにした。レイヤー合成シェーダーに
-置換（replace）レイヤーを追加し、`paintWashPreview` が複写とWash合成を1回の送信で行う。
-初期ピクセルが透明0でない場合、位置がずれている場合、未対応の場合は従来のCPU複写に戻る。
-単体ベンチマーク（Washプレビュー）は通常1.15→0.27ms、選択範囲あり1.89→0.51ms。
-全GPUテスト合格、インストール済み。
-
-実機採取PID 55584では、GPUでの合成と複写の同時処理が使われず、すべてCPU複写に戻っていた。
-原因は、新規文書の「背景」レイヤーの初期ピクセルが不透明なこと（初版は透明0のみ対応）。
-修正として、元画像とプロジェクションの初期ピクセルが同じであれば、その色で埋めるようにした。
-テスト合格、インストール済み。修正後は実機で未計測。
-
-最初のWashストロークだけ入力→最後の転送が約36msと突出した。このときは従来の経路で動いており、
-原因は未確定。最初のWashだけで起きる立ち上がりの遅れかどうかを次の採取で確認する。
-
-修正後の実機PID 52420（手動確認OK）: GPU経路が全Wash合成で使われ、CPU複写は消えた。
-- Wash合成の中央値: 1.93ms → 0.33ms
-- 2本目以降のWashの入力→表示: 5.8／6.5ms（4.89は11.0〜11.5ms）。Buildupと同等になった。
-- 最初のWashストロークは今回も遅い（31.6ms、合成1回あたり約12ms）。初回だけ起きると確定した。
-  次の候補は、この初回だけのコストの調査。
-
-フェーズ4.91（ユーザー指示）: 初回Washの遅れの原因は、計算パイプラインのコンパイルだった。
-- 合成用の作業コンテキストごとにパイプラインをコンパイルしていた（1回約60ms）。
-- 最初の並列Wash合成がそれぞれ同じシェーダーをコンパイルしていた。
-
-対応:
-- パイプラインをコンテキスト単位で共有し、1回だけコンパイルするようにした。
-- アプリ起動時に、バックグラウンドで主要なパイプラインを事前にコンパイルするようにした。
-
-全GPUテスト合格、インストール済み。
-
-実機PID 51608（手動確認OK）の結果:
-- 事前コンパイル: 起動直後にバックグラウンドで624ms、最初の入力より十分前に完了した。
-- 最初のWashの入力→表示: 36.2ms → 10.8ms
-- 最初のBuildupの入力→表示: 14.1ms → 5.2ms
-
-最初のWash合成の数回に、1回あたり3〜5msの初回コストが残る（新しいプロジェクションを初めてGPUに載せる処理と推定）。
-
-フェーズ4.92（ユーザー指示、キャンバス表示側）: 更新準備からGUIでの転送開始までが1.6〜2.0msあった。
-原因は、fps上限（fpsLimit=300で3ms）のための圧縮タイマーが更新を待たせていたこと。
-描画の間隔はQtの更新圧縮パッチが画面に合わせているため、この待ちは二重の間引きになっていた。
-GPU共有転送の経路では、更新がGUIに届いた時点ですぐに転送するようにした（CPU経路は従来どおり）。
-テスト合格、インストール済み。手動確認OK。
-
-実機PID 12232の結果:
-- 更新準備→転送の中央値: Buildup 1.74→0.14ms、Wash 2.12→0.15ms
-- 転送→描画送信: Buildup 1.32→3.09ms。浮いた時間の大半は次の画面更新を待つ時間に移った。
-- 入力→表示の中央値: Buildupは5.4→5.6msで変化なし、Washは8.2→5.7msに改善した。
-
-残る約5.5msの内訳は、画面更新（約6.2ms周期）を待つ時間が約2.5〜3ms、処理が約2.5ms。
-キャンバス側をこれ以上縮めるには、待ち行列の短縮ではなく、描画を画面更新の直前に合わせる仕組みが必要になる。
-
-順位4の着手前計測（フェーズ4.93、ユーザー指示）: 2480x3508 RGBA32Fのレイヤーで、各処理のCPU時間を計った。
-- 変形（1回の処理、単一スレッド）: アフィン（バイキュービック）440ms、Puppet Warp 602ms、Liquify 217ms。
-- フィルタ（32スレッドで帯分割）: ガウスぼかし143〜199ms、アンシャープマスク390ms、HSV調整48ms。
-- GPUからの読み戻しは15msで、ボトルネックではない。
-- カーブとレベルの行は設定方法に疑義があり、まだ使わない。
-
-変形はCPUで並列化されておらず、適用時の待ち時間が長い。そのため、変形ツールの描画（アフィンから）を最優先とする案を提示し、
-ユーザーの選択を待つ。詳細は `wiki/history/gpu-phases-4.93-.md` の「Priority 4 baseline」。
-
-フェーズ4.94（ユーザー指示、変形ツールのアフィン変形）:
-- KisTransformWorkerの2回の再サンプリングをGPU化した。固定小数点の演算と倍精度の合成をシェーダーで再現し、CPUとビット単位で一致させた。
-- 58通りのパリティテスト（全フィルタ、F16、オフセット、不透明な初期ピクセル、Undo/Redo）がすべて一致した。
-- 2480x3508のレイヤーで、拡大縮小＋回転の適用が432ms → 63msになった。
-- 編集中のプレビューは縮小解像度で描くため、従来どおりCPUで処理される。
-- 手動確認はユーザー報告で問題なし（2026年10月6日）。
-
-フェーズ4.95（ユーザー指示）: Puppet Warpの変形を、CSPのようなメッシュARAP方式に作り直した（CPU）。
-- 変更前は、関節のピンを回すと先の部分がねじれていた。
-- 変更後は、回したピンの先の自由な部分が一塊で回る。
-- GPU化（4.96）の前提作業。詳細は `puppet-warp.md`。
-
-フェーズ4.97（ユーザー指示、Liquifyの適用）:
-- `KisLiquifyTransformWorker::run()` のグリッドの多角形描画をGPU化した。CPUが描く多角形とコピーを順番どおり記録し、
-  GPUでは「後の操作が上書きする」順序を所有者バッファ（atomicMax）で再現する。CPUとビット単位で一致する。
-- 44通りのパリティテスト（F32/F16、押す・Wash・拡大・縮小・回転・折り返し・範囲外・Undoブラシ、精度1/4/8/16、オフセット、
-  不透明な初期ピクセル、Undo/Redo）がすべて一致した。
-- 2480x3508のレイヤーで、20ストロークの適用が219ms → 56msになった。残りの大半はCPUでの記録（約18ms）と凸判定（約13ms）。
-- 編集中のプレビュー（縮小解像度とQImageのサムネイル）は従来どおりCPU。
-- 手動確認はユーザー報告で問題なし（2026年10月7日）。詳細は `wiki/history/gpu-phases-4.93-.md` の「GPU Liquify grid warp (phase 4.97)」。
-
-フェーズ4.98（ユーザー指示、ガウスぼかし系）:
-- `KisGaussianKernel::applyGaussian()` をGPU化した。ガウスぼかし、アンシャープマスク、ガウシアンハイパスが対象。
-- CPUはFFTで計算するため、ビット単位の一致は不可能。ユーザー承認のうえ、許容誤差（F32で相対1e-5、F16で1e-3）で一致を確認する。
-  実測の差はF32で最大1丸め分（6e-8）、F16は完全一致。
-- 横・縦2回の畳み込みを倍精度で行う。元データの写しから読み、一時デバイスに書いてからCPUで範囲に戻すので、区画の並列処理でも安全。
-- ガウスぼかしは、GPUが使えるとき範囲全体を1回で処理する（新しい仮想関数 `KisFilter::prefersSingleCall()`）。
-- 2480x3508のレイヤーで、ガウスぼかしの適用が150〜398ms（区画並列のCPU）→ 50〜110msになった。アンシャープマスクはCPUの鮮鋭化が大半で、408→378ms。
-- 約180x180画素未満の小さな範囲、縮小プレビュー、8bit、ラップアラウンドはCPUのまま。
-- 手動確認はユーザー報告で問題なし（2026年10月7日）。詳細は `wiki/history/gpu-phases-4.93-.md` の「GPU Gaussian blur family (phase 4.98)」。
-
-フェーズ4.96（ユーザー指示、Puppet Warpのメッシュ描画）:
-- `KisPuppetTransformWorker::run()` の多角形描画をGPU化した。Liquify（4.97）の記録器とGPUパスをそのまま使う。
-- 関節を深く曲げたときの課題（未解決）は、ユーザーの判断どおりそのまま。今回は描画だけを対象にした。
-- 1グループ（ピンが1つなど）はCPUとビット単位で一致する。複数グループのレイヤー合成（over）は、CPUだけで繰り返しても
-  数ulp変わる（F32タイルのmalloc位置でSIMDの区切りが変わる）ため、フェーズ0の合成基準（1e-5）で一致を確認した。
-- 2480x3508のレイヤー（3ピン、3グループ）で、適用が713ms → 190msになった。
-- 編集中のプレビュー（縮小のQImage）と旧形式のMLSは従来どおりCPU。
-- 手動確認はユーザー報告で問題なし（2026年10月7日、Accurateプレビューでのメッシュ生成の修正を含む）。詳細は `wiki/history/gpu-phases-4.93-.md` の「GPU Puppet Warp mesh rendering (phase 4.96)」。
-
-順位1の再計測（フェーズ4.99、2026年10月10日、ユーザー指示）: 4.81〜4.92の改善後の
-ビルド（HEAD `f1aa854247`、全体をインストール）で、3設定を1プロセスずつ採取した
-（PID 44148／50752／51524、欠落0）。入力→表示の中央値は、GPUブラシで約5ms
-（3.7〜6.8ms）、CPUのみで18〜22ms、GPU投影＋CPUブラシで15〜21ms。
-全条件でGPUブラシがCPUより短く、ストロークごとの範囲も重ならない。
-CPUブラシの経路は最後の転送までに12〜21msかかる（4.88・4.92はGPU経路だけの変更）。
-GPUブラシはまだオプトイン（`KRITA_GPU_BRUSH=1`）で、ユーザーの通常の起動では使われない。
-詳細は `paint-trace-baseline-runs.md` と `wiki/history/gpu-phases-4.93-.md` の
-「Re-baseline of input to display」。
-
-順位2の続き（フェーズ4.100、2026年10月10日、ユーザー指示「両方」）:
-- CPUブラシの経路でダブがバッチに入るまでの待ちは中央値約10.4ms（バッチの描画は約0.9ms）で、
-  最小更新周期10msが主因だった。CPU経路の最小周期を10→0msにした（実測に基づく適応周期
-  1.5倍・上限100msは維持、`KRITA_CPU_BRUSH_MIN_UPDATE_MS` で比較用に上書き可能）。
-  ストローク開始時の40ms待ち（4.88）とバッチ後の再試行（4.89）もCPU経路に広げた。
-- GPUブラシを既定で有効にした（設定 `Solstice/GpuBrush`、既定true、Configure Solstice の
-  GPUエンジン欄に「Paint brush strokes on the GPU」。`KRITA_GPU_BRUSH` 1/0が優先）。
-  未対応の条件は従来どおりCPU。
-- テスト: GPUブラシ4451件、GPUストローク360件、GPUブラシジョブ41件、ダブキュー12件合格。
-  FreehandStrokeTestは既存の4件の失敗のみ（変更前と同じ）。インストール済み。
-  CPUブラシの新しい遅延は未計測。
-- ユーザー報告（同日）: テクスチャとマスクブラシのあるブラシ（`z) 线稿 纹理`、画像先端・間隔3%・
-  マスクブラシ乗算・テクスチャ・Wash）をミラーで大きく描くと、GPUブラシでCPUより大きく遅れる。
-  `KisGpuStrokeTest` に同条件の行を一時的に足して再現（40px・両ミラー・マスク・テクスチャで
-  CPU 57ms、GPUキャンバスのみ 80ms、GPUブラシ 136ms、送信518回）。原因は3つ:
-  1. マスクブラシの合成（`KisMaskingBrushRenderer::updateProjection`）はCPUで、GPUが描いた
-     ストロークのタイルを更新ごとに読み戻し・再転送していた。→ マスクブラシのあるストロークは
-     CPUブラシ（`KisBrushOp`、`hasMaskingSettings()`）。マスク（アルファ）に描く側も同様。
-     不要になった `doMaskingBrushUpdates()` の読み戻しを削除。
-  2. その一時描画先のWashプレビューと最後の合成がGPUで、更新・矩形ごとに転送していた。→
-     `KisIndirectPaintingSupport::setTemporaryTargetPaintedOnCpu()` をストロークが設定し、
-     `KisPaintLayer` はその場合CPUのプレビューと合成を使う。
-  3. ダブごとに `KisGpuBrushPainter::isEnabled()` が環境変数を読み（全体ロック）、ダブのスレッド間で
-     競合していた（GPUブラシのオン・オフに関係なく全経路）。→ ブラシ操作がストロークごとに一度だけ
-     判断し（`KisBrushOpResources::gpuDabs`）、ダブのジョブはそれを見る。
-  結果（同じ一時行、中央値）: 40px・両ミラー・マスク・テクスチャは GPUブラシ 136→38ms
-  （CPU 30ms、GPUキャンバスのみ 39ms）。マスクのあるストロークはGPUブラシのオン・オフで同等。
-  CPUだけの経路も速くなった（40px・マスクで約40→17ms）。テスト: GPUストローク360件、GPUブラシ4451件、
-  ジョブ41件、ダブキュー12件、ペイントレイヤー5件、ストロークレイヤー19件、ABR9件合格。
-  FreehandStrokeTestは既存の4件のみ。マスクブラシの合成のGPU化は今後の候補。
-  手動確認はユーザー報告で問題なし（2026年10月10日、GPUブラシの既定化とCPUブラシの待ち短縮を含む）。
-
-マスクブラシ合成のGPU化（フェーズ4.101、2026年10月10日、ユーザー指示「1を進めて」）:
-- RGBA32Fで強度のない10モードのマスク合成を `KisGpuMaskingWorker`（シェーダー `masking_composite.comp`）で
-  GPU化し、CPUとビット単位で一致させた。マスクのあるストロークもGPUブラシを使う。マスク自体の描画はCPUのまま。
-  RGBA16F、強度のあるモード、float64非対応、`KRITA_GPU_MASKING=0` は従来どおりCPUブラシ。
-- マスクのあるストロークはGPUの最小更新周期ではなく適応周期を使う（テクスチャ付きで更新回数が約7倍になり
-  遅くなったため。300px・マスク・テクスチャで113→89ms）。
-- 計測（中央値、ms、CPU / GPUキャンバスのみ / GPUブラシ）: マスク300px 51 / 56 / 30、
-  マスク300px・テクスチャ 78 / 90 / 89、一時行（間隔3%、両ミラー）40px・テクスチャ 29 / 36 / 36、
-  80px・テクスチャ 49 / 55 / 41。詳細は `gpu-engine.md` の「Masking brush」。
-- 手動確認はユーザー報告で問題なし（2026年10月10日）。
-
-テクスチャ付きダブのGPU化（フェーズ4.102、2026年10月11日、ユーザー指示）:
-- RGBA32Fの円形オートブラシで、パターンテクスチャが明度・グラデーション以外の14モード（ハード・ソフト、強度・筆圧込み）の
-  ダブを、円とテクスチャの両方ともGPUで生成するようにした。検証済みの種類ではCPUの生成とテクスチャ処理を省略する。
-  明度・グラデーション、シャープネス、RGBA16F、画像ブラシ先端のテクスチャは従来どおりCPU。
-- 計測（中央値、ms、CPU / GPUキャンバスのみ / GPUブラシ）: 300px・テクスチャ（Buildup）54 / 62 / 16（変更前 57）、
-  Wash 65 / 76 / 19（変更前 53）、300px・マスク・テクスチャ 85 / 99 / 38（変更前 106）、
-  一時行（間隔3%、両ミラー、マスク・テクスチャ）40px 30 / 38 / 31（変更前 36）、80px 51 / 57 / 27（変更前 41）。
-  詳細は `gpu-engine.md` の「Textured dabs」。
-- 手動確認はユーザー報告で問題なし（2026年10月11日）。
-
-画像ブラシ先端のダブのGPU化（フェーズ4.103、2026年10月11日、ユーザー指示「1」、方式「A2」）:
-- RGBA32Fで、アルファマスクとして使う既定義の画像先端（GBR・PNG・SVG・ABR）のダブをGPUで生成する（テクスチャ付きも）。
-  QPainterの結果はCPUによって変わる（Qtの実行時SIMD切り替え）ため、`KisQImagePyramid::createImage()` を
-  CPUとGPUで共通の整数計算（`KisImageTipSampler`）に置き換えた。上流との差は8bitで最大1段階、CPUの変形は約2倍の時間（同日のAVX2化とグレー経路で約1.3倍）。
-  カラー（イメージスタンプ）、明度マップ、グラデーションマップ、.gih、テキスト、RGBA16Fは従来どおりCPU。
-- 計測（中央値、ms、CPU / GPUキャンバスのみ / GPUブラシ、短いストローク）: 160px Buildup 9.6 / 13.7 / 11.0、
-  160px回転・Wash・ミラー 26.2 / 32.2 / 21.8、120px・テクスチャ 17.9 / 22.0 / 17.4、48px 5.1 / 9.1 / 9.3。
-  詳細は `gpu-engine.md` の「Image tip dabs」。
-- 手動確認はユーザー報告で問題なし（2026年10月11日）。
-
-カラー・明度マップ・グラデーションマップの画像先端のGPU化（フェーズ4.104、2026年10月11日、ユーザー指示「1 → 2」の2）:
-- イメージスタンプ、明度マップ、グラデーションマップの画像先端もGPUで生成する。各出力チャンネルは先端画素の
-  8bitチャンネルのいくつかだけで決まるため、CPUの処理そのもので256項目の表を作り、GPUは表を引く。
-  イメージスタンプは色空間の変換がチャンネルごとの場合だけ（既定の浮動小数点プロファイルは該当）。
-  グラデーションマップのCPU処理を変更（完全に透明な画素も自分のグラデーション色を持つ。見た目は変わらない）。
-- 計測（中央値、ms、CPU / GPUキャンバスのみ / GPUブラシ、120px・回転）: スタンプ・テクスチャ（Buildup）26.3 / 29.5 / 10.4、
-  スタンプWash 25.6 / 28.4 / 12.8、明度マップ・テクスチャ 11.1 / 14.9 / 11.1、明度マップWash 13.8 / 16.2 / 12.5。
-  詳細は `gpu-engine.md` の「Image tip dabs」の Applications。
-- 手動確認はユーザー報告で問題なし（2026年10月11日）。
-
-マスクブラシのマスク描画のGPU化（2026年10月11日、調査のみ・見送り）:
-- 現状、GPUブラシ経路のマスク付きストロークでは、マスクのダブをCPUでGrayA8のマスクに合成している
-  （`brush.cpu_composite`、並列ジョブ。300px・テクスチャで1ストロークあたりCPU合計約25ms）。
-- 上限の計測（一時的にマスク合成を省いた場合、中央値、ms、GPUブラシ）: 300px・テクスチャ 32.5→24.2、
-  300px 31.3→24.0、150px 13.7→13.3。ダブ生成もGPU化した場合の上限はさらに約5ms（マスクなしのテクスチャWashは19.4）。
-- 実装には8bit（GrayA8）のGPUタイル形式、整数のAlpha Darken（`KoCompositeOpAlphaDarken<KoGrayU8Traits>`は整数演算なので
-  ビット一致は可能）、マスク合成の入力のGPU化が必要で、効果（300pxで最大約25〜40%、150pxではほぼなし）に比べて
-  変更が大きいため、ユーザー判断で見送った。
-
-RGBA16Fの画像先端とテクスチャのGPU化（フェーズ4.105、2026年10月11日、ユーザー指示「2を進めて」）:
-- 画像先端（全4種）とテクスチャ付きダブを、RGBA16Fのレイヤーでも記述してGPUで生成する。画像先端の表はF16の色空間で
-  CPUの処理そのものから作り、テクスチャはhalfの丸め（倍精度・floatの演算とhalfへの丸め）を全14モードで再現した。
-- テスト: 全モード・ハード/ソフト・3強度でCPUの `KisMaskingBrushCompositeOp<half>` とビット一致
-  （`KisGpuStrokeTest::testHalfTextureModesExact`）、画像先端はRGBA16Fでも全チャンネル一致。
-- 計測（中央値、ms、CPU / GPUキャンバスのみ / GPUブラシ、RGBA16F）: 画像先端120px・ミラーWash 55.4 / 43.3 / 19.9、
-  カラースタンプ 41.8 / 41.4 / 11.6、明度マップ 20.2 / 17.2 / 11.8、80px・テクスチャ（乗算ハード）14.7 / 13.1 / 10.7。
-  詳細は `gpu-engine.md` の「RGBA16F image tips and textures」。
-- 手動確認はユーザー報告で問題なし（2026年10月11日）。
-
-RGBA16Fのマスクブラシ合成のGPU化（フェーズ4.106、2026年10月12日、ユーザー指示「3」）:
-- マスク合成シェーダーのRGBA16F版を追加し、強度のない10モードをhalfの丸め規則（フェーズ4.105と同じ）でCPUとビット一致させた。
-  マスク付きのRGBA16FストロークもGPUブラシを使う。マスク自体の描画はCPUのまま。
-- 計測（中央値、ms、CPU / GPUキャンバスのみ / GPUブラシ、RGBA16F、マスク付き。変更前はCPUブラシのみ）:
-  150px 23.8 / 19.0 / 13.6、150px・テクスチャ 25.7 / 24.2 / 14.3、300px 91.7 / 91.5 / 35.9、300px・テクスチャ 129.5 / 132.4 / 36.4。
-  詳細は `gpu-engine.md` の「Masking brush」。
-- 手動確認はユーザー報告で問題なし（2026年10月12日）。
-
-本書は `krita-sol-gpu` ブランチのGPUエンジンについて、フェーズ4.57以降に
-取り組む作業の順序を定める。技術的な経緯、実装の詳細、計測値の出典は
-`docs/agent/gpu-engine.md` を正とする。本書はその記録に基づく優先順位の
-判断と、各作業の目的・範囲・完了条件をまとめたものである。
-
-`docs/agent/gpu-engine.md` の「Decisions approved by the user」にある決定
-(Vulkan、RGBA浮動小数点のみ、NVIDIA Blackwell専用、関連作業をまとめて
-手動確認に渡す進め方)はそのまま有効であり、本書はこれを変更しない。
-
-## 現状認識
-
-| 領域 | 状態 |
-| --- | --- |
-| レイヤー合成(RGBA32F/16F) | 主要ブレンドモードの大半とチャンネルロックをGPU化。HSI/HSL/HSV系とHDR版の一部はCPU |
-| キャンバス表示(Vulkan→OpenGL相互運用) | 実用段階。相互運用チェック失敗時はCPU経路へフォールバック |
-| ブラシ合成 | オプトイン(`KRITA_GPU_BRUSH=1`)。Buildup/Wash、選択範囲、Alpha Lock、ミラーに対応 |
-| ダブ生成・テクスチャ・マスク | すべてCPU |
-| フィルタ・変形 | CPUのまま。readbackのバッチ化による転送待ちの削減のみ |
-| タイルメモリ管理・障害時の復旧 | メモリ上限、退避、デバイスロスト時のデータ保護と保存警告まで実装済み |
-
-この順序を決めた根拠は次の4点である。
-
-- **短いストロークではGPUのほうが遅い。** 1024x1024・4レイヤーのRGBA32F
-  ドキュメントで、64px Buildupの完了時間はCPUのみが4.27ms、GPU投影+ブラシが
-  7.18msである。64px Washでは5.14msに対して10.49msとなる
-  (`docs/gpu-engine.md` の「Current benchmarks」)。約3〜5msの固定
-  オーバーヘッドがあるように見え、最も一般的な使い方でGPUが負けている。
-- **GPUが勝つのは重いケースに限られる。** 選択範囲、両ミラー、複雑な
-  ブレンドを組み合わせたF16ストロークでは5〜8倍速い(HSY Color Buildupは
-  107.50ms→12.61ms)。CPU側の合成コストが大きいときに固定費を回収している
-  構造であり、オーバーヘッドの原因は解決していない。
-- **最近の最適化は収穫逓減に入りつつある。** readbackのバッチ化、
-  作業バッファの再利用、アップロードバッファの共有はいずれも転送待ちの
-  緩和である。フェーズ4.53のコンテキスト再利用では、改善幅がプロセス間の
-  ばらつきの範囲に収まった。ダブ生成がCPUに残る限り、CPU→GPUの
-  アップロードはなくならない。
-- **体感性能が未計測である。** ペン入力から画面表示までのレイテンシは
-  計測されていない。既存のベンチマークはタブレットイベントとキャンバス表示を
-  計測範囲から除外している。描画アプリの最終指標はこのレイテンシであり、
-  フェーズ4の完了条件(「input-to-pixel latency measured lower than CPU」)も
-  これを要求している。
-
-## 作業順序
-
-| 順位 | 作業 | 主な成果物 |
+| Original priority | Current disposition | Evidence |
 | --- | --- | --- |
-| 1 | ペン入力から表示までのレイテンシ計測の整備 | 再現可能な計測手順とCPU/GPUのベースライン |
-| 2 | 短いストロークの固定オーバーヘッドの分解 | GPUタイムスタンプとCPU側計時による内訳と、改善対象の特定 |
-| 3 | ダブ生成のGPU化(単純な円形ダブから) | 円形ダブのGPU生成とアップロードの削減 |
-| 4 | フィルタ・変形計算のGPU化（全体計画のフェーズ5） | CPUとの結果一致、プレビュー／確定描画とUndo/Redoの整合性 |
-| 5 | 残りのブレンドモードの対応拡大（最終順位） | 1〜4が片付いた後に実施 |
+| 1. Input-to-display measurement | Protocol and comparison completed; repeat for a relevant change, not automatically | [Baseline and re-baseline](paint-trace-baseline-runs.md) |
+| 2. Short-stroke overhead | Implemented batching, update scheduling, shared pipelines and canvas handoff improvements; further optimization needs fresh evidence | [Latency history](wiki/history/gpu-phases-4.58-4.81.md), [brush latency](wiki/history/gpu-phases-4.82-4.92.md) |
+| 3. GPU dab generation | Delivered circles, textures and predefined image applications at both float depths; supported masking composite also delivered | [Current brush contract](gpu-engine.md#pixel-brush-integration) |
+| 4. Filters and transforms | Partially delivered: affine, Liquify, mesh Puppet Warp rendering and Gaussian convolution; broader coverage remains open | [Current contract](gpu-engine.md#transforms-and-gaussian-convolution), [phase evidence](wiki/history/gpu-phases-4.93-.md) |
+| 5. Remaining blend modes | Delivered in 4.107/4.108 with explicit CPU exclusions; precision audit in 4.109 | [Blend contract](gpu-engine.md#all-other-blend-modes-phase-4108) |
 
-2026年10月6日のユーザー指示により、残りのBlend Mode対応を最終順位へ移動した。
-既存の全体計画にあるフィルタ・変形計算のGPU化を、その前に実施する。
-これは優先順位の指定であり、新たな計測結果による変更ではない。
+The 2026-10-06 ordering placed blend expansion last; later user requests
+authorized it before all possible filter work was complete. Do not retain the
+old ordering as a prohibition against already-delivered work.
 
-順位1と2は計測と分析が中心で、両者の結果が順位3の設計判断の材料になる。
-順位2の分解で、ダブ生成以外の要因(同期点やサブミット回数など)が支配的と
-判明した場合は、順位3より先にその対策を行う。その場合は本書を更新する。
+## Remaining candidates and acceptance
 
-### 1. ペン入力から表示までのレイテンシ計測の整備
+Offset Clone Layer GPU copies (4.110) and partial-tile projection clears
+(4.111) are delivered and user-checked on 2026-10-16.
+[Clone Layer](clone-layer.md) owns the copy conditions and remaining
+candidates; [projection clears](gpu-engine.md#partial-tile-projection-clears-phase-4111)
+owns deferred-clear and CPU-reader behavior. Detailed measurements stay in
+the linked benchmark page.
 
-目的: どの最適化が体感に効いているかを判断できるようにする。以降の作業の
-効果は、すべてこの計測で評価する。
+1. **Close outstanding failure/save UI verification.** The archived phase plan
+   records automated coverage but leaves interactive dialog acceptance pending.
+   Use the [manual checklist](gpu-engine.md#manual-regression-checklist) and
+   record the tested build and result. A documentation extraction does not
+   establish acceptance.
+2. **Continue priority 4 when requested.** Measure remaining filters before
+   choosing the next target (levels/curves were in the original scope, but their
+   4.93 baseline configuration was questioned and must be corrected first).
+   Maintain CPU fallbacks, operation-specific numerical parity, preview/final
+   consistency, Undo/Redo and persisted behavior. Puppet Warp follows
+   [its own contract](puppet-warp.md).
+3. **Refresh performance claims when behavior changes.** The 2026-10-10
+   re-baseline compared GPU brush input-to-display around 5 ms with CPU around
+   18-22 ms. The CPU update policy changed in 4.100 afterwards; current CPU
+   latency has not been re-measured in this record. Use the
+   [capture protocol](wiki/history/gpu-phases-4.58-4.81.md#controlled-capture-protocol),
+   three paths (CPU, GPU projection/CPU brush, GPU brush), fixed conditions,
+   sample/process counts and dropped-event checks. Qt frame swap is not physical
+   input-to-photon latency; queued-stroke benchmarks exclude input/display.
+   Update the [user benchmark guide](../gpu-engine.md#current-benchmarks) and
+   README together only when new representative evidence warrants it.
 
-範囲:
+For implementation work, completion requires relevant automated parity,
+fallback/failure, lifecycle and undo tests, plus documented manual acceptance.
+State pending verification explicitly. Timings are measurements, never test
+pass/fail thresholds or universal performance promises.
 
-- タブレット/マウスイベントの受信から、そのイベントによる画素が
-  キャンバスに表示されるまでの時間を計測する。既存のストローク
-  ベンチマークが除外している入力処理とキャンバス表示を含める。
-- 経路の区間ごと(イベント受信、ストローク処理のキュー投入、ダブ生成、
-  合成、投影、キャンバスへの転送、表示)に時刻を記録し、合計と内訳を
-  出せるようにする。
-- CPUのみ、GPU投影+CPUブラシ、GPU投影+ブラシの3経路を同じ条件で比較する。
-- 既存ベンチマークと同様に、計測範囲、サンプル数、プロセス間のばらつきを
-  明記する。実時間をテストの合否判定には使わない(既存の方針どおり)。
+## Deferred by the user
 
-完了条件:
+- **Large brush × mirrors × Alpha Lock catch-up:** deferred on 2026-10-03.
+  Keep the delivered improvements; do not resume without a new request.
+- **Painting the masking brush's GrayA8 mask on the GPU:** investigated and
+  deferred on 2026-10-11 because the measured benefit did not justify the
+  new integer tile/painting path. This is separate from the supported
+  F32/F16 masking composite.
+- The technically excluded blend modes remain CPU fallbacks, not an implicit
+  promise to port them. See the maintained exclusions and their reasons.
 
-- 手順が `docs/agent/gpu-engine.md` に記録され、別の担当者が同じ計測を
-  再現できる。
-- 64px/256pxのBuildup/Washについて、3経路のベースラインが記録されている。
-- 計測機構を無効にしたとき、通常の描画経路に影響しない。
+The original decisions and workload-specific measurements are retained in the
+[work-order snapshot](wiki/history/gpu-work-priorities-development.md).
 
-### 2. 短いストロークの固定オーバーヘッドの分解
+## Updating this page
 
-目的: 短いストロークでGPU経路がCPUより遅い原因を特定し、効果の大きい
-改善対象を決める。ブレンドモードの対応拡大よりも優先する。
-
-範囲:
-
-- `KisGpuCommandList` が持つタイムスタンプクエリを使ってGPU側の実行時間を
-  取得し、CPU側の待ち時間・記録時間と分けて計測する。
-- 少なくとも次の項目に分けて内訳を出す。
-  - 同期点(フェンスやタイムライン値の待ち、readback待ち)の回数と時間
-  - 1ストロークあたりのサブミット回数と、1回あたりのコスト
-  - 投影の再計算範囲(更新矩形と実際に再合成したタイル数)
-  - ダブのCPU→GPUアップロード量と時間
-  - ディスクリプタやテーブルの準備など、GPU実行以外のCPU側コスト
-- 対象は順位1と同じ64px/256pxのBuildup/Washとし、CPU経路との差を
-  項目ごとに説明できるようにする。
-
-完了条件:
-
-- 固定オーバーヘッドの内訳が `docs/agent/gpu-engine.md` に記録されている。
-- 次に手を付ける改善対象が内訳に基づいて決まっている。ダブ生成のGPU化が
-  最優先であるかどうかも、この結果で確認する。
-
-### 3. ダブ生成のGPU化に着手する
-
-目的: ダブ生成をGPUに移してCPU→GPUのアップロードをなくし、転送待ちの
-緩和を繰り返す段階から抜け出す。
-
-範囲:
-
-- 最初は単純な円形ダブ(テクスチャやマスクを伴わないもの)に限定する。
-- 既存のGPUブラシ合成と同じく、CPUダブ生成とのパリティテスト、
-  未対応条件でのCPUフォールバック、COW/Undo/Redo、サブミット失敗時の
-  ロールバックを確認する。
-- RGBA32Fを先に対応し、RGBA16Fは既存のF16経路と同じく丸め規則を
-  確認してから有効にする。
-- 効果は順位1のレイテンシ計測と順位2の内訳で評価する。
-
-完了条件:
-
-- 円形ダブのGPU生成がCPU生成とのパリティテストに合格している。
-- 対象ストロークでアップロード量が減り、短いストロークの完了時間または
-  入力から表示までのレイテンシの改善が、プロセス間のばらつきを超えて
-  確認できる。
-- ユーザーによる実アプリでの手動確認が完了している。
-
-### 4. フィルタ・変形計算のGPU化
-
-`docs/agent/gpu-engine.md` のフェーズ5に沿って、フィルタと変形計算そのものを
-GPU化する。対象はぼかし系、レベル／カーブ、Liquify、Transform Tool、
-Puppet Warp。既存のCPU読み戻しの最適化と、計算自体のGPU化は区別する。
-個別の着手順と範囲は計測結果に基づいて決める。
-
-CPUとのパリティテストを行い、プレビューと確定描画、Undo/Redoの整合性を
-維持する。Puppet Warpは `docs/agent/puppet-warp.md` の既存の不変条件を守る。
-
-### 5. 残りのブレンドモードの対応拡大(最終順位)
-
-HSL/HSV系、F16のSoft Light(Photoshop)など、GPU未対応のブレンドモードの
-追加は、フィルタ・変形計算のGPU化を含む順位1〜4が片付いてから行う。対応を広げても、短いストロークの
-固定オーバーヘッドは解消されないためである。着手する際は、
-`docs/agent/gpu-engine.md` の「Risks and open questions」にあるとおり、
-モードごとにCPUパリティテストを追加してからF16を有効にする。
-
-フェーズ4.107（2026年10月12日、ユーザー指示「6」）:
-- RGBA16FのブラシをGPU対応の全ブレンドモードに広げた（Soft Light (Photoshop)、Divide、Vivid Light、Hard Mix 3種、
-  Grain Merge/Extract、Negation、Allanon、Darker/Lighter Color）。
-- HSI/HSL/HSVの各系統（Color、Hue、Saturation、彩度の増減、明度系とその増減）とHSYのTint・彩度/輝度の増減の29モードを
-  レイヤーとブラシの両形式でGPU化した。
-- 追加したテストで、既にGPUだったRGBA32FブラシのVivid Light、Hard Mix Softer、Lighter ColorがCPUとずれることが
-  分かり、合わせて直した。NVIDIAのドライバーが `precise` 指定の積和をfmaに融合することも判明し、
-  `roundedProduct()` で回避した。
-- 残り（HDR版、Gamma・Modulo・論理演算などのその他の系統、Luminosity SAI、Lambert lighting など）はCPUのまま。
-  詳細は `gpu-engine.md` の「Remaining blend modes (phase 4.107)」。
-- 手動確認はユーザー報告で問題なし（2026年10月13日）。
-
-フェーズ4.108（2026年10月13日、ユーザー指示「4 のブレンドモード変更はすべてまとめて実施」）:
-- 残りのブレンドモードを、Dissolve（乱数）、Marker（Alpha Darkenの流量パラメータが必要）、Destination In/Atop
-  （タイルのない範囲にも作用する）、Divisive Modulo系3種（倍精度の剰余の丸めに依存し、1ulpの差がO(1)に拡大する）
-  を除いてすべてGPU化した。
-- 累乗・指数・三角関数を倍精度で計算するモードは許容差つき（F32 1e-3、F16 4ulp）。
-  詳細は `gpu-engine.md` の「All other blend modes (phase 4.108)」。
-- 手動確認はユーザー報告で問題なし（2026年10月13日）。
-
-フェーズ4.109（2026年10月13日、ユーザー指示「1を進めて」）: `precise` の積和がfmaに融合される問題の点検。
-- 単純なシェーダーではドライバーは `precise` を守る（`KisGpuEngineTest::testPreciseContraction`）。実際の
-  `composite_blend.glsl` の関数を呼ぶ場合だけ融合が再現した（`testBlendProbe`）。静的には検出できない。
-- ビット一致が必要で、直後に半精度・整数への丸めがある積和を `roundedProduct()` に置き換えた（F16のlerp、
-  F16 Alpha Darkenの色、Liquifyの座標と重み）。詳細は `gpu-engine.md` の「Precise contraction audit (phase 4.109)」。
-
-## 関連する付随作業
-
-- READMEの操作ベンチマーク表(投影・キャンバス・ミラー)はフェーズ4.42の
-  ベースラインのままである。順位1または2で計測手順を整備した時点で
-  再計測し、READMEと `docs/gpu-engine.md` を更新する。
-- 大径ブラシ×ミラー×Alpha Lockの追従遅延は、2026年10月3日にユーザーが
-  明示的に先送りした。本書の作業順序はこの判断を変更しない。新たな依頼が
-  ない限り、この調査は再開しない。
-
-## 本書の更新
-
-- 各作業の着手時と完了時に、状態と結果をここに追記する。技術的な詳細と
-  計測値は `docs/agent/wiki/history/` の最新のフェーズ記録ページに書き、本書からは
-  参照するだけにする。
-- 順位を入れ替える場合は、その根拠となった計測結果を併記する。
+- Update disposition/remaining work when a phase lands. Put full implementation
+  logs and measured results in the newest GPU history page; link them here.
+- Reconcile the maintained contract, user guide and work queue in the same
+  change when behavior changes. Do not reintroduce a chronological diary here.
+- Record user decisions or measurement evidence when priorities change.
+  Historical next steps do not authorize new implementation.
+- Allocate phase numbers using the
+  [numbering decision](wiki/decisions/gpu-phase-numbering.md), checking existing
+  records and concurrent reservations before choosing a number.
