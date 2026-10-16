@@ -29,27 +29,26 @@ Krita 6 codebase.**
 </table>
 
 Solstice is independently maintained and desktop-only. It is not an official
-Krita edition, and development no longer tracks upstream Krita. It is in
-testing; see [Versions](docs/versioning.md) for the version numbering.
+Krita edition, and development no longer tracks upstream Krita. See
+[Versions](docs/versioning.md) for its pre-1.0 version numbering.
 
 **Learning Solstice:** for the basics of using the application, see the
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[What's new](#whats-new-in-v020-beta8) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[What's new](#in-development--030) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 
-## What's new in v0.2.0-beta.8
+## In development — 0.3.0
 
-The eighth beta is a maintenance release for Solstice's native tools.
-Existing profiles, settings and workflows are preserved; no reset or conversion
-is needed.
+The next release removes the Beta label and includes:
 
-- [Asset Library](docs/asset-library.md)
-- [Quick Access, Grid Edit, gestures and Quick Brush Adjustments](docs/quick-access.md)
-- [Rest Note](docs/rest-note.md) and [Lazy Tools](docs/lazy-tools.md)
-- [Brush Stroke Layer](docs/brush-stroke-layer.md)
+- [GPU Clone Layer offsets and projection updates](docs/gpu-engine.md)
+- Move Tool X/Y input fix
+- Faster provisional Layers docker thumbnails after duplication
+- Repository documentation cleanup and automatic PR documentation checks
 
-Download [v0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8) for Windows x64.
+Build and publication are pending. The latest published download remains
+[v0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8).
 
 ## Highlights
 
