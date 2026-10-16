@@ -39,7 +39,8 @@ User instructions: `docs/test-builds.md`.
   runtime DLL, host interface DLL, four data packs and exact source/patches;
   `BUILD-INFO.txt` records the runtime version. See the
   [G'MIC implementation record](cpu-effects-and-gmic-plan.md#gmic-implementation-record-2026-10-15).
-  The new step was built locally; a cloud workflow run is still unverified.
+  The cloud build and package were verified in run 38833086246 on
+  2026-10-16 (see the beta.6 check below).
 
 Dependencies are downloaded sequentially and each verified tar is deleted
 after extraction, reducing peak disk usage. An exact cache key includes the
@@ -89,6 +90,28 @@ upload complete. Do not report a skipped GPU test as passed.
 No broad UI tests or `kis_kra_saver_test` run here. Interactive painting,
 Undo/Redo, save/reload and Vulkan/OpenGL sharing remain manual real-hardware
 checks. No local application restart is required for workflow-only changes.
+
+## Effects, Layer Comps and G'MIC package check (2026-10-16)
+
+- Run: <https://github.com/udtren/Solstice/actions/runs/38833086246>,
+  commit `b7ee343e81fe79b6fff257f6ae8b34af8ece7363`, version `0.2.0-beta.6`.
+- All required steps succeeded in 1 hour 16 minutes 34 seconds, including
+  the first cloud G'MIC runtime build, installation, packaging and upload.
+  `HAVE_KRITA_GPU_ENGINE=ON`; cloud GUI/runtime tests remain disabled.
+- Artifact `Solstice-windows-x64-20` contains the application and debug ZIPs,
+  checksums, build information and dependency lock. Both ZIP checksums and
+  CRC checks passed: 5,313 application entries and 220 debug entries.
+- Checked 24 required package files, including the new effects and Layer
+  Comps plugins, Lens Blur, G'MIC runtime/bridge, OpenMP/FFTW, all four G'MIC
+  data packs, exact source archive, patches/build script, and the thumbnail
+  registration script. Python plugins and PyQt6 remain included. The bundled
+  G'MIC source hash matches its runtime lock.
+- The packaged executable reports `0.2.0-beta.6 (git b7ee343)`; its
+  `--version` command exited successfully on the development machine with a
+  scratch `SOLSTICE_PROFILE_ROOT` and empty legacy profile paths. This checks
+  startup dependencies, not interactive painting or GPU runtime behavior.
+- Application ZIP SHA-256:
+  `2b309276bbb58d3decdd9a65a8371a465520bce49972971a37f257a8e8dd8be2`.
 
 ## Lock refresh (2026-10-13)
 

@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-15
+updated: 2026-10-16
 ---
 
 # Agent wiki
@@ -74,6 +74,9 @@ matches the task.
 
 ### Decisions
 
+- [Release and feature documentation](decisions/release-feature-documentation.md):
+  a single latest-release summary in README, stable guides, illustrated website
+  pages, and publication ordering.
 - [GPU engine phase numbering](decisions/gpu-phase-numbering.md): how phase
   numbers are assigned, and the next free number.
 - [`krita5.xmlgui` stays unchanged](decisions/xmlgui-unchanged.md): why menu

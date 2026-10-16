@@ -1,9 +1,10 @@
 # Effects filters
 
 Solstice's new effects use CPU processing. Film Grain, Chromatic Aberration,
-Film, Crystal, the Lens Blur extension, Pencil, Sharpness, Color Filter, Glow
+Film, Crystal, the Lens Blur extension, Pencil, Sharpness, Color Filter, Glow,
 Drop Shadow, Line Art Extraction and Color Reference are implemented.
 [G'MIC-Qt](gmic.md) is also available as a separate CPU filter dialog.
+These additions are included in **0.2.0-beta.6**.
 
 ## Color Reference
 
@@ -448,5 +449,6 @@ still use the existing GPU engine.
 Development status (2026-10-15): the user confirmed all six effects, including
 Pencil. Automated coverage includes pixels, parallel patches, configuration,
 selections, cancellation and Undo/Redo. The implementation plan retains the
-manual regression checklist. This
-page describes the development branch, not a newly published release.
+manual regression checklist. This page describes the effects included in
+0.2.0-beta.6; the sections above
+record any remaining interactive verification and feature-specific limits.

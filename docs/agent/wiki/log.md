@@ -1129,3 +1129,25 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   hold ownership, and the Brush Stroke Layer and Puppet Warp audit fixes.
   Package checked: checksums, 5,300 ZIP entries intact, Python plugins
   present. Website `site.ts` updated and published the same day.
+
+## 2026-10-16 release: 0.2.0-beta.6
+
+- GitHub Release `v0.2.0-beta.6` (prerelease, commit `b7ee343e81fe`, Actions
+  run 38833086246): Effects & Color, Color Reference with image drag and
+  drop, Layer Comps and the CPU G'MIC runtime. Relevant local effects,
+  composition, Lens Blur and G'MIC tests passed, including the real G'MIC
+  runtime integration checks.
+- The first cloud G'MIC build and package succeeded. Both ZIP checksums and
+  CRCs passed; the application has 5,313 entries, including Python plugins,
+  the new native plugins and the exact G'MIC source/patches/data. The packaged
+  version command passed with a scratch profile. Details and SHA-256 are in
+  [GitHub Actions](../github-actions.md#effects-layer-comps-and-gmic-package-check-2026-10-16).
+- Recorded the user's documentation policy in
+  [release-feature-documentation](decisions/release-feature-documentation.md):
+  keep README's latest-release summary short, use `In development` before
+  publication, and retain stable feature guides under `docs/`.
+- Website published the same day: `tidalboxstudio-web` develop `792e60c`,
+  production merge `a3c7383`. Cloudflare's production check succeeded.
+  Verified beta.6 on the live home/download pages, the GitHub Release link,
+  both new feature pages with their images, and their sitemap entries in a
+  normal browser. README and the guide index now identify the published beta.
