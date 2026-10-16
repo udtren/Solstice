@@ -26,9 +26,9 @@ stays reserved for that step, even when other work happens first.
 | 4.97 | GPU Liquify grid warp | done, manual check OK |
 | 4.98 | GPU Gaussian blur family | done, manual check OK |
 
-Later phases (4.99-4.110, through 2026-10-16) are listed in the history
-page; the last is 4.110 (Clone Layer offsets on the GPU). The next new
-phase is **4.111**.
+Later phases (4.99-4.111, through 2026-10-16) are listed in the history
+page; the last is 4.111 (partial-tile projection clears on the GPU). The
+next new phase is **4.112**.
 
 **Why.** The handoff and the priority documents already referred to 4.96
 as Puppet Warp's GPU rendering. Reusing the number for Liquify would have

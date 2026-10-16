@@ -68,6 +68,9 @@ private Q_SLOTS:
     void testChannelFlagBoundaries_data();
     void testChannelFlagBoundaries();
     void testPartialUpdateMatchesCpu();
+    void testUnalignedUpdateDownloadsNothing_data();
+    void testUnalignedUpdateDownloadsNothing();
+    void testAdjustmentLayerFirstMatchesCpu();
     void testF16Image();
     void testProjectionStaysOnGpu();
     void testConcurrentUpdatesSharingTilesMatchCpu();
@@ -937,6 +940,129 @@ void KisGpuProjectionTest::testPartialUpdateMatchesCpu()
     image->waitForDone();
     const std::vector<float> actual = readFloats(image->projection(), image->bounds());
     QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > before);
+
+    QPoint where;
+    const float difference = maxDifference(expected, actual, &where, image->width());
+    QVERIFY2(difference <= 2e-5f,
+             qPrintable(QStringLiteral("max difference %1 at (%2, %3): %4")
+                            .arg(difference)
+                            .arg(where.x())
+                            .arg(where.y())
+                            .arg(pixelReport(expected, actual, where, image->width()))));
+}
+
+void KisGpuProjectionTest::testUnalignedUpdateDownloadsNothing_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::newRow("f32") << false;
+    QTest::newRow("f16") << true;
+}
+
+void KisGpuProjectionTest::testUnalignedUpdateDownloadsNothing()
+{
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    // Phase 4.111: KisAsyncMerger::setupProjection() clears the dirty rect of
+    // the root and the group projection with the first GPU composite. A CPU
+    // clear of an unaligned rect downloaded its partly covered border tiles.
+    const QRect bounds(0, 0, 700, 500);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "unaligned");
+    const float background[4] = {0.2f, 0.3f, 0.4f, 1.0f};
+    KoColor backgroundColor(rgbaFloat());
+    std::memcpy(backgroundColor.data(), background, sizeof(background));
+    backgroundColor.convertTo(rgbaFloat(f16));
+    image->setDefaultProjectionColor(backgroundColor); // not transparent: the clear fills it
+    addPaintLayer(image, image->root(), COMPOSITE_OVER, 200, 50, QRect(0, 0, 640, 448));
+    KisGroupLayerSP group = new KisGroupLayer(image, "group", 230);
+    image->addNode(group, image->root());
+    KisPaintLayerSP painted = addPaintLayer(image, group, COMPOSITE_SCREEN, 255, 51, QRect(64, 32, 500, 400));
+    addPaintLayer(image, group, COMPOSITE_MULT, 180, 52, QRect(100, 60, 300, 300));
+    addPaintLayer(image, image->root(), COMPOSITE_OVER, 128, 53, QRect(200, 100, 256, 256));
+
+    // A dab: unaligned rect, partly erased so the clear matters.
+    const QRect dirty(123, 77, 150, 90);
+    image->refreshGraphAsync();
+    image->waitForDone();
+    fillRandom(painted->paintDevice(), dirty, 54);
+    painted->paintDevice()->clear(QRect(150, 100, 40, 30));
+
+    KisGpuMergeBatch::setEnabled(false);
+    painted->setDirty(dirty);
+    image->waitForDone();
+    const std::vector<float> expected = readFloats(image->projection(), image->bounds());
+
+    KisGpuMergeBatch::setEnabled(true);
+    image->refreshGraphAsync(); // the projections become GPU-resident
+    image->waitForDone();
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    backend->flush();
+    const quint64 downloadsBefore = backend->downloadedTileCount();
+    const quint64 compositesBefore = KisGpuMergeBatch::gpuCompositeCount();
+    painted->setDirty(dirty);
+    image->waitForDone();
+    backend->flush();
+    QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > compositesBefore);
+    QCOMPARE(backend->downloadedTileCount(), downloadsBefore);
+
+    // The partly covered border tiles stay GPU-valid and CPU-stale.
+    for (KisPaintDeviceSP projection : {image->projection(), group->original()}) {
+        KisTileSP tile = projection->dataManager()->getTile(dirty.left() / 64, dirty.top() / 64, false);
+        KisTileGpuState *state = tile->tileData()->gpuState();
+        QVERIFY(state);
+        QVERIFY(state->gpuValid());
+        QVERIFY(!state->cpuValid());
+    }
+
+    const std::vector<float> actual = readFloats(image->projection(), image->bounds());
+    QVERIFY(backend->downloadedTileCount() > downloadsBefore);
+    QPoint where;
+    if (f16) {
+        const float ulps = maxHalfUlpDifference(expected, actual, &where, image->width());
+        QVERIFY2(
+            ulps <= 4.0f,
+            qPrintable(
+                QStringLiteral("max difference %1 half ULPs at (%2, %3)").arg(ulps).arg(where.x()).arg(where.y())));
+    } else {
+        const float difference = maxDifference(expected, actual, &where, image->width());
+        QVERIFY2(difference <= 2e-5f,
+                 qPrintable(QStringLiteral("max difference %1 at (%2, %3): %4")
+                                .arg(difference)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(expected, actual, where, image->width()))));
+    }
+}
+
+void KisGpuProjectionTest::testAdjustmentLayerFirstMatchesCpu()
+{
+    REQUIRE_GPU();
+    // The bottom leaf of the group filters the cleared rect on the CPU: its
+    // clear must not wait for the first GPU composite (phase 4.111).
+    const QRect bounds(0, 0, 400, 300);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(), "adjustment first");
+    addPaintLayer(image, image->root(), COMPOSITE_OVER, 255, 55, bounds);
+    KisGroupLayerSP group = new KisGroupLayer(image, "group", 255);
+    image->addNode(group, image->root());
+    KisFilterSP blur = KisFilterRegistry::instance()->value("blur");
+    QVERIFY(blur);
+    KisAdjustmentLayerSP adjustment = new KisAdjustmentLayer(
+        image,
+        "blur",
+        blur->defaultConfiguration(KisGlobalResourcesInterface::instance())->cloneWithResourcesSnapshot(),
+        nullptr);
+    image->addNode(adjustment, group);
+    addPaintLayer(image, group, COMPOSITE_OVER, 255, 56, QRect(20, 10, 350, 260));
+
+    const QRect dirty(37, 41, 150, 100);
+    render(image, false);
+    adjustment->setDirty(dirty);
+    image->waitForDone();
+    const std::vector<float> expected = readFloats(image->projection(), image->bounds());
+
+    render(image, true);
+    adjustment->setDirty(dirty);
+    image->waitForDone();
+    const std::vector<float> actual = readFloats(image->projection(), image->bounds());
 
     QPoint where;
     const float difference = maxDifference(expected, actual, &where, image->width());

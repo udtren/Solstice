@@ -82,13 +82,18 @@ before and after phase 4.110. Summary:
 
 ## Remaining candidates (not done)
 
-1. **Partial-tile projection clears (all GPU merges, not clone-specific).**
-   `KisAsyncMerger::setupProjection()` calls `parentOriginal->clear(rect)`
-   on the CPU. For a dirty rect that is not tile-aligned, the partly covered
-   border tiles of every GPU-resident projection are downloaded (about 15 of
-   a 256 px dab's 25 tiles, per projection, per walker). A clone doubles it
-   through its second walker. Measured only in the benchmark, not in the
-   application; the canvas itself reads GPU tiles directly.
+1. ~~**Partial-tile projection clears (all GPU merges, not clone-specific).**~~
+   Done in GPU phase 4.111 (2026-10-16): `KisAsyncMerger::setupProjection()`
+   called `parentOriginal->clear(rect)` on the CPU, which downloaded the
+   partly covered border tiles of every GPU-resident projection for an
+   unaligned dirty rect (about 15 of a 256 px dab's 25 tiles, per
+   projection, per walker; a clone doubled it through its second walker).
+   The clear now runs with the first GPU composite of the batch
+   (`docs/agent/gpu-engine.md`, "Partial-tile projection clears (phase
+   4.111)"). Unaligned dabs of clones without masks download nothing and
+   take 0.25-0.40 ms instead of 1.6-2.8 ms per dab; masked clones keep the
+   downloads of their CPU masks
+   ([benchmark page](wiki/benchmarks/clone-layer-updates.md)).
 2. **One walker for source and clones.** Merging the clone's update into
    the source's walker would save the second recomposite of the root
    (about 0.4-0.8 ms per dab on the CPU). The walker code is intricate
