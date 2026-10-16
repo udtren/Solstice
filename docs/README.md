@@ -5,6 +5,10 @@ application, and everything else Solstice shares with Krita, see the
 [Krita User Manual](https://docs.krita.org/en/user_manual.html).
 Technical notes for developers are in [`agent`](agent/).
 
+[0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8)
+is a maintenance release for the native tools; existing workflows, profiles
+and settings remain compatible.
+
 ## Getting started
 
 - [Trial builds](test-builds.md): download, extract and start Solstice.
