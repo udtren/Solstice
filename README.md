@@ -36,7 +36,13 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[What's new](#whats-new-in-v020-beta6) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[In development](#in-development) | [What's new](#whats-new-in-v020-beta6) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+
+## In development
+
+- **[Simplified Chinese interface](docs/languages.md)**: the whole
+  interface, including the features Solstice adds, in 简体中文
+  (machine-translated; corrections welcome).
 
 ## What's new in v0.2.0-beta.6
 
@@ -293,6 +299,10 @@ a packaged release.
 - **Validation setup:** NVIDIA driver 596.86, Qt 6.8 and desktop OpenGL 4.6.
 - **Other platforms:** Linux and macOS are not currently validated for this
   custom build. Android is not supported.
+- **Interface languages:** English and Simplified Chinese cover everything,
+  including Solstice's own features (see [Interface languages](docs/languages.md));
+  other languages use Krita's translations, with Solstice's features in
+  English.
 
 The GPU engine has narrower requirements than Krita itself.
 See the [GPU Engine guide](docs/gpu-engine.md#requirements) for the supported document
