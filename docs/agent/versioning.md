@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.2.0-beta.8` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.3.0` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -62,8 +62,8 @@ Edit only the `SOLSTICE_VERSION_*` values in the top-level `CMakeLists.txt`:
 
 - `MINOR` for a milestone, `PATCH` for fixes only (pre-1.0 semantic
   versioning);
-- `LABEL`: `beta.8` now (`alpha` until 2026-10-13, `beta` for the first
-  beta), then `beta.N` or `rc.N`, empty for a release;
+- `LABEL`: empty for a release (including 0.3.0); use `alpha`, `beta.N`
+  or `rc.N` only for an explicitly designated prerelease;
 - `BUILD`: the fourth Windows file-version digit, for rebuilds of the same
   version; otherwise 0.
 
@@ -107,6 +107,7 @@ appears in the version strings.
 
 | Version | Date | Reason |
 | --- | --- | --- |
+| `0.3.0` | 2026-10-16 | User-requested release without the Beta label. Includes PR #5 (GPU Clone Layer offsets and Move Tool X/Y guard), #7 (partial-tile GPU projection clears), #8 (provisional layer thumbnails), and repository documentation maintenance/checks. Release preparation: build and publication pending. Krita compatibility version is unchanged. |
 | `0.2.0-beta.8` | 2026-10-16 | Eighth beta (user request): share Asset Library services and separate responsibilities in Quick Access, Grid Edit, Quick Brush Adjustments, gestures, Rest Note, Lazy Tools and Brush Stroke Layer. Existing behavior/settings retained and user-confirmed. Released as GitHub Release `v0.2.0-beta.8` (prerelease, merge commit `4e92a41ee78c`, PR #3, run 38872500400). Feature branches now merge into main through pull requests. |
 | `0.1.0-alpha` | 2026-10-07 | First Solstice version. |
 | `0.2.0-alpha` | 2026-10-10 | Milestone (user request): GPU brush by default, masking brush on the GPU, ABR import improvements, Solstice icons and splash, Explorer thumbnails. |

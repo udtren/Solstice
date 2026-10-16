@@ -4,15 +4,15 @@ Solstice has its own version number, starting at 0.1.0-alpha. See the
 [project overview](../README.md) for the latest-release summary and
 [GitHub Releases](https://github.com/udtren/Solstice/releases) for published builds.
 
-- **0.x** means Solstice is still in testing: features and behavior can
-  change between versions.
+- **0.x** is pre-1.0 development: features and behavior can change between
+  versions. It does not by itself mark a GitHub release as a prerelease.
 - The second number increases for a set of new features, the third for
   fixes only.
-- The label shows the stage: `alpha` until 2026-10-13, then `beta`
-  (`beta.8`, for example, is the eighth beta), later release candidates.
-  Version 1.0.0 will be the first release without a label.
+- A label such as `alpha`, `beta.8` or `rc.1` marks a prerelease.
+  The user selected **0.3.0** as the first release without a label; publication
+  status and available downloads are listed in GitHub Releases.
 - Development builds add the source revision, for example
-  `0.2.0-beta.8 (git abc1234)`.
+  `0.3.0 (git abc1234)`.
 
 The version appears on the splash screen, in **Help > About Solstice**, in
 **Help > Show system information for bug reports** and in the file

@@ -22,6 +22,7 @@ and limits live in `docs/`; the website provides illustrated summaries and
 links to those guides rather than becoming another specification.
 
 Release source, package and website changes in order: build the pushed source,
-verify the resulting ZIPs and checksums, publish the GitHub prerelease, then
+verify the resulting ZIPs and checksums, publish the GitHub Release (prerelease
+only when the version has a stage label), then
 update README's release wording and publish the website's matching download
 link. See the release procedure in `docs/agent/versioning.md`.
