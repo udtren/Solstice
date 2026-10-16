@@ -1137,6 +1137,7 @@ kept their pixels.
   0.9999.
 - Measurements: [Clone Layer updates](wiki/benchmarks/clone-layer-updates.md),
   "after phase 4.111".
+- Manual check (checklist item 17): reported OK by the user on 2026-10-16.
 
 ## Phase 0 technology decisions
 
