@@ -98,7 +98,7 @@ appears in the version strings.
    - in `solstice/`, run `npm run check` and `npm run build`, and confirm
      the new version in `dist/index.html` and `dist/download/index.html`;
    - commit and push `develop`, then, after the GitHub Release exists,
-     merge `develop` into `main` and push. Cloudflare Workers Builds
+     merge its pull request into `main`. Cloudflare Workers Builds
      publishes `main` to `https://solstice.tidalboxstudio.com`; check the
      live Download page shows the new version and its link opens the
      release.
@@ -107,7 +107,7 @@ appears in the version strings.
 
 | Version | Date | Reason |
 | --- | --- | --- |
-| `0.2.0-beta.8` | 2026-10-16 | Eighth beta preparation (user request): share Asset Library services and separate responsibilities in Quick Access, Grid Edit, Quick Brush Adjustments, gestures, Rest Note, Lazy Tools and Brush Stroke Layer. Existing behavior/settings retained and user-confirmed. Feature branches now merge into main through pull requests. |
+| `0.2.0-beta.8` | 2026-10-16 | Eighth beta (user request): share Asset Library services and separate responsibilities in Quick Access, Grid Edit, Quick Brush Adjustments, gestures, Rest Note, Lazy Tools and Brush Stroke Layer. Existing behavior/settings retained and user-confirmed. Released as GitHub Release `v0.2.0-beta.8` (prerelease, merge commit `4e92a41ee78c`, PR #3, run 38872500400). Feature branches now merge into main through pull requests. |
 | `0.1.0-alpha` | 2026-10-07 | First Solstice version. |
 | `0.2.0-alpha` | 2026-10-10 | Milestone (user request): GPU brush by default, masking brush on the GPU, ABR import improvements, Solstice icons and splash, Explorer thumbnails. |
 | `0.2.0-beta` | 2026-10-13 | Beta for publication (user request), after the pre-release review; only the label changes. Released 2026-10-14 as GitHub Release `v0.2.0-beta` (prerelease, commit `a442a5ce25`); its CI build lacked the Python plugins. |

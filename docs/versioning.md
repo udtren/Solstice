@@ -1,7 +1,7 @@
 # Versions
 
 Solstice has its own version number. It started at 0.1.0-alpha; the
-development version is **0.2.0-beta.8**. See
+current version is **0.2.0-beta.8**. See
 [GitHub Releases](https://github.com/udtren/Solstice/releases) for published builds.
 
 - **0.x** means Solstice is still in testing: features and behavior can

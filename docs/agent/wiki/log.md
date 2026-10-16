@@ -1244,6 +1244,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   push a feature branch and merge into main through a PR, including releases and
   documentation. Preparing 0.2.0-beta.8 through this workflow.
 
+## 2026-10-16 release: 0.2.0-beta.8
+
+- Published [v0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8)
+  from PR #3's merge commit `4e92a41ee78c`; CI run 38872500400 passed.
+  Package and local regression evidence is recorded in
+  [GitHub Actions](../github-actions.md#native-tools-maintenance-package-check-2026-10-16).
+- README and the guide index now link to the published maintenance release.
+  Post-release documentation also uses a feature-branch PR, preserving the
+  [branch policy](decisions/feature-branch-workflow.md).
+- The release tag stays at the tested build commit; subsequent documentation
+  commits do not replace or move it. Website publication follows the release
+  using `develop` and a pull request into the website's `main`.
+
 ## 2026-10-16 Clone Layer measurements and GPU copy (phase 4.110)
 
 - Added [Clone Layer updates](benchmarks/clone-layer-updates.md): a source
