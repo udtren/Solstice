@@ -98,7 +98,7 @@ Document ownership and lifecycle are defined in
   a single latest-release summary in README, stable guides, illustrated website
   pages, and publication ordering.
 - [GPU engine phase numbering](decisions/gpu-phase-numbering.md): how phase
-  numbers are assigned, and the next free number.
+  numbers are reserved and checked before reuse.
 - [`krita5.xmlgui` stays unchanged](decisions/xmlgui-unchanged.md): why menu
   changes avoid the main XMLGUI file.
 - [Solstice version vs. Krita compatibility version](decisions/versioning.md):
@@ -169,6 +169,13 @@ Document ownership and lifecycle are defined in
 - [Brush Stroke Layer development](history/brush-stroke-layer-development.md):
   complete original plan, investigations, measurements and dated verification;
   current recording/replay/persistence rules live in the feature reference.
+
+- [GPU engine development snapshot](history/gpu-engine-development.md):
+  complete mixed reference, initial architecture, phase plan and measurements;
+  current rules remain in the maintained GPU reference.
+- [GPU work-order development snapshot](history/gpu-work-priorities-development.md):
+  original priority decisions, progress and benchmark diary; the maintained
+  work-order page owns unfinished work and user deferrals.
 
 - [Expired GPU handoff](history/gpu-engine-handoff.md): former session context,
   measurements and instructions; current work uses GPU architecture/priorities.

@@ -44,6 +44,8 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 
 | Record | Role / maintained successor |
 | --- | --- |
+| [GPU engine development](wiki/history/gpu-engine-development.md) | Full mixed architecture/plan snapshot; [GPU maintenance](gpu-engine.md) owns the current contract |
+| [GPU work-order development](wiki/history/gpu-work-priorities-development.md) | Original priority rationale and dated progress; [GPU priorities](gpu-work-priorities.md) owns remaining work and deferrals |
 | [Illustration filters development](wiki/history/illustration-filters-development.md) | Complete investigation, stage results and measurements; [Illustration filters](illustration-filters.md) owns current behavior and pending checks; [old plan path](illustration-filters-plan.md) remains a pointer |
 | [CPU effects and G'MIC development](wiki/history/cpu-effects-and-gmic-development.md) | Complete plan, phase results and measurements; [CPU effects](cpu-effects.md) and [G'MIC](gmic.md) own maintenance; [old plan path](cpu-effects-and-gmic-plan.md) remains a pointer |
 | [Brush Stroke Layer development](wiki/history/brush-stroke-layer-development.md) | Complete original plan and dated results; [Brush Stroke Layer](brush-stroke-layer.md) owns the current contract; [old plan path](brush-stroke-layer-plan.md) remains a pointer |
