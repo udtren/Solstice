@@ -16,7 +16,7 @@ matches the task.
 
 Document ownership and lifecycle are defined in
 [Documentation maintenance](../documentation.md); the
-[agent guide](../README.md) identifies maintained, mixed and historical references.
+[agent guide](../README.md) identifies maintained references, plans and archived records.
 
 ## Conventions (schema)
 
@@ -98,7 +98,7 @@ Document ownership and lifecycle are defined in
 - [`krita5.xmlgui` stays unchanged](decisions/xmlgui-unchanged.md): why menu
   changes avoid the main XMLGUI file.
 - [Solstice version vs. Krita compatibility version](decisions/versioning.md):
-  why `0.1.0-alpha` is shown while `6.0.5-prealpha` stays internal.
+  why the public product version is separate from the internal compatibility version.
 - [Upstream: weekly review, selective cherry-picks](decisions/upstream-selective-intake.md):
   Hermes reports, the user decides, Claude cherry-picks; dry-run lessons.
 - [Translations: Solstice owns `krita.po`](decisions/translation-policy.md):
