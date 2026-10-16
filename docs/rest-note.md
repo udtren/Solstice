@@ -17,4 +17,14 @@ Custom > Enable the Rest Note docker**, restart Solstice, and show it from
 notice at once and hides the docker; it disappears from the Dockers menu
 after the next restart.
 
+Settings continue to use the existing `rest_note/config/main.json` in the
+resource folder, including settings from the original Python plugin. The native
+implementation separates settings, timer state and notifications internally;
+the controls, countdown behavior and notification appearance remain the same.
+
+Use **Pause / Resume** to hold or continue the countdown, **Reset** to start a
+fresh work period, or **Take a break now** to open the break overlay. **Skip**
+closes the overlay and starts a fresh work period. Eye breaks keep the work
+countdown running; a full break takes priority when it becomes due.
+
 Native implementation: [`../plugins/dockers/restnote`](../plugins/dockers/restnote/)

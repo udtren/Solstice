@@ -7,8 +7,13 @@ docker plugin: layer controls extend the existing Layers docker, while actions
 and dialogs are owned by each `KisViewManager`.
 
 - Action/dialog implementation: `libs/ui/KisSolsticeLazyTools.*`
+- Rename/export implementation (separated 2026-10-16): `libs/ui/lazytools/`
+  (`KisLazyToolsRenamePresets.*`, `KisLazyToolsRenameDialog.*`,
+  `KisLazyToolsFastExport.*`, `KisLazyToolsFastExportDialog.*`). The coordinator
+  shrank from 733 to 420 lines; the new implementation files are below 160 lines.
 - Top-menu lifecycle: `libs/ui/utils/KisMenuMnemonicFilter.*`
 - Focused regression: `libs/ui/tests/KisMenuMnemonicFilterTest.cpp`
+- Rename/export regression: `libs/ui/tests/KisLazyToolsTest.cpp`
 - View-manager lifecycle: `libs/ui/KisViewManager.cpp`
 - General > Custom UI: `libs/ui/forms/wdggeneralsettings.ui`
 - Settings persistence: `libs/ui/dialogs/kis_dlg_preferences.cc`
@@ -23,6 +28,15 @@ Changes span the shared `kritaui` library, Krita shell data, and the layer
 docker. Build Krita and the layer docker, then install both the shared library
 and docker before interactive testing. A running Krita process may lock the
 DLLs on Windows.
+
+For the rename/export separation, only `kritaui` changes; there are no action,
+form or layer-docker binary changes. Build and test:
+
+```bat
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritaui KisLazyToolsTest KisMenuMnemonicFilterTest -j 2"
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && set QT_QPA_PLATFORM=offscreen&& set QT_QPA_FONTDIR=C:\Windows\Fonts&& ctest --test-dir <krita-dev-root>\_build -R libs-ui-KisLazyToolsTest --output-on-failure --timeout 120 && ctest --test-dir <krita-dev-root>\_build -R libs-ui-KisMenuMnemonicFilterTest --output-on-failure --timeout 120"
+cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_install.cmake
+```
 
 ## Architecture and invariants
 
@@ -60,6 +74,35 @@ DLLs on Windows.
   `lazy_tools/config/name_color_list.txt` user-data path. Layer renaming uses
   `KisNodeManager::setNodeName()` so the name change is undoable; color labels
   apply only to the active node.
+- `KisLazyToolsRenamePresets` owns only the existing text codec and append
+  policy. Blank/empty-name lines are ignored; names split at the first comma,
+  color names are trimmed/case-insensitive (`gray` and `grey` both map to 8),
+  unknown colors map to 0. Appending preserves raw old lines and suppresses only
+  an exact new-line match, not normalized duplicates. The path resolver, text
+  encoding and silent I/O-failure behavior are unchanged.
+- The rename-dialog factory takes a parent and an apply callback. The coordinator
+  looks up the active node at application time and uses the same native node
+  manager/label operations. The dialog stays open if no node can be renamed.
+  Checked Save still appends before trying to rename. Width/height are saved on
+  destruction, including cancellation; minimum size and grid fallback remain
+  240x200 and at least one column. The modal caller owns the dialog.
+- `KisLazyToolsFastExport::Settings` preserves the four root-group keys
+  `Solstice/FastExportFolder`, `Solstice/FastExportPngCompression` (6),
+  `Solstice/FastExportPngAlpha` (true), and `Solstice/FastExportJpegQuality` (90).
+  Only these values are saved; format, scope and destination still start at
+  PNG, active document and source folder. The dialog keeps its existing numeric
+  ranges and trims the configured folder before saving.
+- The modeless export-dialog factory resolves documents only on Export through
+  the supplied scope callback. Parentage and `WA_DeleteOnClose` are unchanged;
+  callbacks capture the same view manager that the original dialog held.
+  Invalid destination/chooser cancellation returns before saving preferences.
+- Export execution keeps ordered `QPointer<KisDocument>` snapshots, skips null
+  and unnamed documents, waits for each named document's image through the
+  originating view manager, and calls `exportDocumentSync`. Source folder vs.
+  selected folder, `completeBaseName()` output naming, PNG compression/alpha,
+  JPEG quality and skipped-document reporting remain unchanged. Do not toggle
+  production document batch mode: format-specific options dialogs are existing
+  behavior. Tests set batch mode only on temporary test documents.
 - The Layers docker visibility selector intentionally changes canvas-layer
   visibility. Do not confuse it with Krita's existing filter button, which only
   filters rows shown in the docker.
@@ -106,3 +149,26 @@ confirming the application was closed. Logs under `%TEMP%`:
 `solstice-menu-shortcuts-build.log`, `solstice-menu-shortcuts-test.txt`,
 `solstice-menu-shortcuts-install.log`. No user preferences were modified.
 The user subsequently confirmed the real-app startup/TempBrush check passed.
+
+## Rename/export regression coverage
+
+`KisLazyToolsTest` uses a temporary Solstice profile, an explicit temporary
+KConfig path and temporary preset/output files. It covers legacy preset parsing,
+exact-line duplicate handling, raw-line and Unicode preservation, all color
+labels, export defaults/keys/round trips and multi-dot filenames. Widget checks
+cover rename application/cancel/no-active-node handling and geometry persistence,
+export scope resolution, saved options, invalid-folder warnings and chooser
+cancellation. Real PNG (alpha and opaque) and JPEG exports verify source and
+configured destinations, readable pixels/dimensions, and preservation of the
+document path, caption and modified flag. Null/unnamed documents, cancelled
+operation waits and failed output paths are checked too.
+
+2026-10-16 validation: `kritaui` and both test targets built successfully.
+The new suite passed all 13 QtTest cases (including init/cleanup), and CTest
+passed both `KisLazyToolsTest` and `KisMenuMnemonicFilterTest`. The shared UI
+library was installed; build/install DLL SHA-256 hashes matched. No user
+preferences or documents were used by the tests.
+
+The coordinator's OS hotkey filter, selection popup and translated strings were
+compared against the pre-refactor implementation and are unchanged. The user
+confirmed the rename/export refactor works correctly on 2026-10-16.

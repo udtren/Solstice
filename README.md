@@ -36,20 +36,20 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[What's new](#whats-new-in-v020-beta7) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[What's new](#in-development-v020-beta8) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 
-## What's new in v0.2.0-beta.7
+## In development: v0.2.0-beta.8
 
-The seventh beta speaks Simplified Chinese:
+The eighth beta is a maintenance release for Solstice's native tools.
+Existing profiles, settings and workflows are preserved; no reset or conversion
+is needed.
 
-- **[Simplified Chinese interface](docs/languages.md)**: the whole
-  interface, including the features Solstice adds, in 简体中文
-  (machine-translated; corrections welcome). Switch with **Settings >
-  Switch Application Language**.
-- **Website in Chinese**: the [Solstice site](https://solstice.tidalboxstudio.com/zh-cn/)
-  is also available in Simplified Chinese.
+- [Asset Library](docs/asset-library.md)
+- [Quick Access, Grid Edit, gestures and Quick Brush Adjustments](docs/quick-access.md)
+- [Rest Note](docs/rest-note.md) and [Lazy Tools](docs/lazy-tools.md)
+- [Brush Stroke Layer](docs/brush-stroke-layer.md)
 
-See the [full release notes and download](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.7).
+The latest published build is [v0.2.0-beta.7](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.7).
 
 ## Highlights
 

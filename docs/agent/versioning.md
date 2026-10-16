@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.2.0-beta.7` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.2.0-beta.8` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -62,7 +62,7 @@ Edit only the `SOLSTICE_VERSION_*` values in the top-level `CMakeLists.txt`:
 
 - `MINOR` for a milestone, `PATCH` for fixes only (pre-1.0 semantic
   versioning);
-- `LABEL`: `beta.7` now (`alpha` until 2026-10-13, `beta` for the first
+- `LABEL`: `beta.8` now (`alpha` until 2026-10-13, `beta` for the first
   beta), then `beta.N` or `rc.N`, empty for a release;
 - `BUILD`: the fourth Windows file-version digit, for rebuilds of the same
   version; otherwise 0.
@@ -73,8 +73,9 @@ appears in the version strings.
 
 ## Releasing
 
-1. Bump the version (above), record it under History, commit and push
-   `main`.
+1. On a feature branch based on `main`, bump the version (above), record it
+   under History, commit and push that branch. Merge its pull request into
+   `main`. Do not push directly to `main` (user decision, 2026-10-16).
 2. Run the "Windows x64 trial build" workflow on `main`
    (`gh workflow run windows-build.yml --ref main`) and wait for it to
    succeed (`docs/agent/github-actions.md`).
@@ -87,7 +88,8 @@ appears in the version strings.
    Verify the downloaded ZIPs and checksums before publishing. Keep README's
    new-feature summary marked `In development` until the release exists;
    then replace it with the released version and link, update the user-guide
-   index, and push those documentation changes. Keep only the latest release
+   index, and publish those documentation changes through another feature-branch
+   pull request. Keep only the latest release
    summary in README; older release notes remain in GitHub Releases.
 4. Update the website the same day (user decision, 2026-10-14), in
    `https://github.com/udtren/tidalboxstudio-web`:
@@ -105,6 +107,7 @@ appears in the version strings.
 
 | Version | Date | Reason |
 | --- | --- | --- |
+| `0.2.0-beta.8` | 2026-10-16 | Eighth beta preparation (user request): share Asset Library services and separate responsibilities in Quick Access, Grid Edit, Quick Brush Adjustments, gestures, Rest Note, Lazy Tools and Brush Stroke Layer. Existing behavior/settings retained and user-confirmed. Feature branches now merge into main through pull requests. |
 | `0.1.0-alpha` | 2026-10-07 | First Solstice version. |
 | `0.2.0-alpha` | 2026-10-10 | Milestone (user request): GPU brush by default, masking brush on the GPU, ABR import improvements, Solstice icons and splash, Explorer thumbnails. |
 | `0.2.0-beta` | 2026-10-13 | Beta for publication (user request), after the pre-release review; only the label changes. Released 2026-10-14 as GitHub Release `v0.2.0-beta` (prerelease, commit `a442a5ce25`); its CI build lacked the Python plugins. |

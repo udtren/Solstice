@@ -1,3 +1,9 @@
+kis_add_tests(KisAssetLibraryTest.cpp
+    LINK_LIBRARIES kritaui kritatestsdk)
+
+kis_add_tests(KisLazyToolsTest.cpp
+    LINK_LIBRARIES kritaui kritatestsdk)
+
 kis_add_test(KisCanvasPaintTraceTest.cpp
     TEST_NAME KisCanvasPaintTraceTest LINK_LIBRARIES Qt${QT_MAJOR_VERSION}::Gui Qt${QT_MAJOR_VERSION}::Test)
 
