@@ -22,8 +22,8 @@
  *  - Importing: the configuration was imported, the resources not yet;
  *  - Ready: the profile is complete.
  *
- * The Krita files (KisSolsticePaths::legacyConfigDir() and
- * legacyResourceDir()) are only read, never changed.
+ * Import reads the Krita source files without changing them. A retained
+ * custom ResourceDirectory may still be shared during later application use.
  */
 namespace KisSolsticeProfile
 {
@@ -96,9 +96,10 @@ struct ResourceCopyPlan {
 KRITAGLOBAL_EXPORT ResourceCopyPlan planResourceCopy();
 
 /**
- * Copies @p plan. @p progress receives the bytes copied so far and returns
- * false to cancel. On success the profile is marked Ready; on failure or
- * cancel the target folder is removed and @p error says why.
+ * Clears the destination and copies @p plan. @p progress receives the bytes
+ * copied so far and returns false to cancel. On success the profile is marked
+ * Ready. Space/copy failures attempt to remove the target; a final marker-write
+ * failure does not. The startup caller abandons failed imports; @p error says why.
  */
 KRITAGLOBAL_EXPORT bool
 copyResources(const ResourceCopyPlan &plan, const std::function<bool(qint64)> &progress, QString *error = nullptr);
