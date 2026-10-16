@@ -126,7 +126,8 @@ Feature status, active work and verification evidence belong in the linked
 document, not in this index. See [Document roles](docs/agent/README.md) for
 plans, historical records and references that still contain both.
 
-- CPU-only effects and G'MIC: [development reference](docs/agent/cpu-effects-and-gmic-plan.md).
+- Native CPU effects: [maintenance reference](docs/agent/cpu-effects.md).
+- G'MIC CPU runtime and bridge: [maintenance reference](docs/agent/gmic.md).
 - Illustration filters: [development reference](docs/agent/illustration-filters-plan.md).
 - Layer Comps: [development notes](docs/agent/layer-comps.md).
 - Color Reference: [development notes](docs/agent/color-reference.md).

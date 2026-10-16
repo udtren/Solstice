@@ -24,6 +24,8 @@ granularity, archival and the review checklist.
   defaults, scale/font configuration and visual regression scope.
 - [Settings location and profile import](settings-location.md) owns path
   resolution, startup/copy behavior, defaults and reset boundaries.
+- [Native CPU effects](cpu-effects.md) owns the six filters' pixel, configuration
+  and regression contracts; [G'MIC](gmic.md) owns its runtime, bridge and packaging.
 - [Feature inventory](feature-inventory.md) maps custom source locations.
   It is not a progress tracker.
 - Feature references linked from AGENTS own current behavior, compatibility,
@@ -44,7 +46,6 @@ validation details when extracting a standalone current reference.
 
 | Reference | Maintained information to find | Historical context to distinguish |
 | --- | --- | --- |
-| [CPU effects and G'MIC](cpu-effects-and-gmic-plan.md) | Status/decisions and F1-F6/G'MIC implementation records, including CPU bridge refinements | Initial investigation, proposed IDs/architecture and original completion gates |
 | [Illustration filters](illustration-filters-plan.md) | Decisions and Stage S/C/G/D1/L implementation records, including per-filter limits and pending interactive checks | Initial gap analysis, proposed algorithms and work order |
 
 These references remain authoritative until their complete current contracts
@@ -56,6 +57,7 @@ dated validation evidence, rather than adding another conflicting proposal.
 
 | Record | Role / maintained successor |
 | --- | --- |
+| [CPU effects and G'MIC development](wiki/history/cpu-effects-and-gmic-development.md) | Complete plan, phase results and measurements; [CPU effects](cpu-effects.md) and [G'MIC](gmic.md) own maintenance; [old plan path](cpu-effects-and-gmic-plan.md) remains a pointer |
 | [Brush Stroke Layer development](wiki/history/brush-stroke-layer-development.md) | Complete original plan and dated results; [Brush Stroke Layer](brush-stroke-layer.md) owns the current contract; [old plan path](brush-stroke-layer-plan.md) remains a pointer |
 | [ABR import development](wiki/history/abr-import-development.md) | Original investigation, staged implementation and dated results; [ABR import](abr-import.md) owns the current contract; [old plan path](abr-import-plan.md) remains a pointer |
 | [UI modernization development](wiki/history/ui-modernization-development.md) | Complete proposal and dated results; [Solstice interface](ui-modernization.md) owns current behavior; [old plan path](ui-modernization-plan.md) remains a pointer |
