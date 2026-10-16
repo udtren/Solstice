@@ -30,7 +30,7 @@
 #include <strokes/freehand_stroke.h>
 
 /**
- * The brush stroke file of a layer (docs/agent/brush-stroke-layer-plan.md):
+ * The brush stroke file of a layer (docs/agent/brush-stroke-layer.md):
  * a QDataStream of a header, the brush presets as XML, the resources as
  * their files (the presets' brush tips and textures, the strokes' patterns
  * and gradients), and the strokes, which refer to the presets, patterns and
@@ -156,7 +156,7 @@ snapshotPreset(KisPaintOpPresetSP preset, const KisRecordedBrushStroke &stroke, 
 
     // the brush tips and textures saved in the file, which draw the stroke
     // as it was drawn even where they are not installed; the installed
-    // ones for those the file lacks (ABR brush tips cannot be saved)
+    // ones for those the file lacks or could not load
     KisResourcesInterfaceSP lookup = KisGlobalResourcesInterface::instance();
     if (!saved.isEmpty()) {
         QList<KoResourceSP> resources = saved;

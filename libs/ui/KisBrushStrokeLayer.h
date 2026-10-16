@@ -30,7 +30,7 @@ class QIODevice;
 /**
  * One brush stroke as the brush tool drew it on a KisBrushStrokeLayer: the
  * stroke's jobs and the state they were drawn with, enough to draw it again
- * at another resolution. See docs/agent/brush-stroke-layer-plan.md.
+ * at another resolution. See docs/agent/brush-stroke-layer.md.
  */
 struct KRITAUI_EXPORT KisRecordedBrushStroke {
     /// A FreehandStrokeStrategy::Data job of type POINT, LINE or CURVE
@@ -82,7 +82,7 @@ using KisRecordedBrushStrokeSP = QSharedPointer<const KisRecordedBrushStroke>;
 /**
  * A paint layer that keeps the brush strokes drawn on it, so that they can
  * be drawn again at a new resolution (Solstice). Only the brush tool paints
- * on it. See docs/agent/brush-stroke-layer-plan.md.
+ * on it. See docs/agent/brush-stroke-layer.md.
  */
 class KRITAUI_EXPORT KisBrushStrokeLayer : public KisPaintLayer, public KisRedrawableLayerInterface
 {
@@ -181,8 +181,9 @@ public:
 
     /**
      * Writes @p strokes to @p device in Solstice's brush stroke format (the
-     * layer's file in a .kra, KisBrushStrokeLayerIO.cpp). The brush tips
-     * are not embedded; patterns and gradients are.
+     * layer's file in a .kra, KisBrushStrokeLayerIO.cpp). Brush tips,
+     * textures, patterns and gradients are embedded when their data can be
+     * saved; ABR tip images are stored as PNGs.
      */
     static bool saveStrokes(const QVector<KisRecordedBrushStrokeSP> &strokes, QIODevice *device);
 
