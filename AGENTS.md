@@ -167,6 +167,8 @@ Read these before adding or updating any feature:
   remaining blend modes, priority 5 (phase 4.107) done and manually checked 2026-10-13;
   all other blend modes (phase 4.108) done and manually checked 2026-10-13;
   precise contraction audit (phase 4.109) done and manually checked 2026-10-13;
+  partial-tile projection clears on the GPU (phase 4.111) done and tested
+  2026-10-16, manual check pending;
   priority 4 in progress):
   `docs/agent/gpu-work-priorities.md`
 - Brush Stroke Preview:
