@@ -22,7 +22,7 @@ class KisCanvasResourceProvider;
 class KisDoubleSliderSpinBox;
 class KisSliderSpinBox;
 class QComboBox;
-class QLabel;
+class QuickAdjustToolOptionsPad;
 class QTimer;
 class QToolButton;
 
@@ -65,11 +65,6 @@ private:
     void updateStatusButtons();
     void triggerAction(const QString &name);
     void setControlsEnabled(bool enabled);
-    void ensureToolOptionsPad();
-    void setToolOptionsPadVisible(bool visible);
-    void resizeToolOptionsPad();
-    void positionToolOptionsPad();
-    void returnToolOptionsDocker();
 
 protected:
     void moveEvent(QMoveEvent *event) override;
@@ -101,11 +96,7 @@ private:
     QToolButton *m_alphaToggle{nullptr};
     QToolButton *m_selectionToggle{nullptr};
     QToolButton *m_gestureToggle{nullptr};
-    QPointer<QDockWidget> m_toolOptionsDocker;
-    QPointer<QWidget> m_toolOptionsPad;
-    QPointer<QWidget> m_borrowedToolOptions;
-    QPointer<QWidget> m_toolOptionsPlaceholder;
-    bool m_toolOptionsDockerWasVisible{false};
+    QuickAdjustToolOptionsPad *m_toolOptions{nullptr};
     bool m_compactPopup{false};
     bool m_syncing{false};
 };

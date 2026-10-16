@@ -26,7 +26,13 @@
 | `krita-sol` | Historical pre-GPU development branch; retained for reference. |
 | `krita/6.0` | Historical upstream snapshot; retained for reference, no longer synchronized. |
 
-Make custom changes on `main`. Upstream Krita synchronization has
+Make changes on a feature branch based on `main`, push that branch, and merge
+it into `main` through a pull request (user decision, 2026-10-16). Do not push
+directly to `main`, including release preparation and post-release documentation.
+Use `codex/<topic>` for Codex feature branches. `main` remains the integration
+and release branch; release builds use the merged commit.
+
+Upstream Krita synchronization has
 been discontinued for this repository. Do not restore the `upstream` remote
 or resume upstream merges unless the user explicitly requests it. Selective
 intake is allowed: Hermes Agent reviews upstream Krita weekly, and Claude

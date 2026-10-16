@@ -6,7 +6,10 @@ the placeholders defined in `AGENTS.md` (`<repository-root>`,
 
 ## Before editing
 
-1. Confirm the branch is `krita-sol`. Never commit custom work to `krita/6.0`.
+1. Create or use a feature branch based on `main` (`codex/<topic>` for Codex).
+   Push the feature branch and merge through a pull request. Never push directly
+   to `main`; this also applies to release and documentation changes (user
+   decision, 2026-10-16). Never commit custom work to historical branches.
 2. Read `AGENTS.md`, `docs/agent/codebase-map.md`, and the complete agent
    document of every feature you will touch.
 3. Check `git status`. The tree may be dirty; existing changes belong to the

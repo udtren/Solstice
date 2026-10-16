@@ -33,6 +33,11 @@ and in the popup the angle dial and value of Tool Options for brush rotation,
 with its flip options in one menu button so the row fits the panel. The size bar covers the full brush size range and moves
 in finer steps at small sizes, like the brush tip's Diameter.
 
+Quick Brush Adjustments keeps its existing color and brush histories and optional
+floating Tool Options panel. Its saved visibility, position, history counts and
+control preferences continue to work after the internal reorganization; no
+settings reset or profile conversion is needed.
+
 ## Temporary shortcuts
 
 Hold shortcuts for erasing, preserving alpha, freehand selection and temporary
@@ -50,6 +55,12 @@ Opening several windows does not apply the same shortcut more than once.
 - Items added from the **Resources** dialog fill the palette's last empty row
   from the left and continue on the next row when the row is full. Items
   added from the header menu start a new row each time.
+- In **Grid Edit**, use Ctrl-click or a selection rectangle to select several
+  items and drag them together. Drag a text item's edge or a separator's end to
+  resize it. The context menu removes items or copies/moves them to another
+  tab. Undo applies to the current tab; Save applies the edited layout and
+  Cancel leaves the palette unchanged. Existing profiles and settings require
+  no conversion after the internal editor reorganization.
 
 ## Brushes
 
@@ -73,5 +84,16 @@ display is changed.
 
 Profiles, aliases, custom labels, colors and icons saved by the Quick Access
 plugin still load.
+
+Settings and item editing retain their existing formats and controls after the
+internal separation of configuration, profile loading and property dialogs.
+Cancelling an item edit leaves its values unchanged. Changing a brush between
+Icon and Stroke Preview still resizes it within the grid and moves overlapping
+items aside. Existing shortcut, gesture and popup behavior is preserved.
+
+The palette and gesture implementation has also been reorganized internally.
+Ctrl-drag placement, popup pinning and dragging, gesture keys, movement threshold,
+direction assignments and preview appearance keep their existing behavior.
+Existing profiles and settings continue to load without conversion or a reset.
 
 Native implementation: [`../plugins/dockers/quickaccess`](../plugins/dockers/quickaccess/)

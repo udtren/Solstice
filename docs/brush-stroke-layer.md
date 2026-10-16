@@ -81,6 +81,9 @@ be enlarged sharply. Original Krita opens the layer as a normal paint layer
 with the same pixels; saving the file again from Krita drops the remembered
 strokes.
 
+Existing Solstice documents and brush presets remain compatible; no file
+conversion or settings reset is needed after the October 16 code reorganization.
+
 The file stores each stroke's brush settings and colors, and the brush tip
 images, textures, patterns and gradients the strokes use, including brush
 tips imported from Photoshop ABR files, so the file enlarges sharply on a

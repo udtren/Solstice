@@ -58,6 +58,9 @@ matches the task.
 
 ### Concepts
 
+- [Native refactor boundaries](concepts/native-refactor-boundaries.md): sharing
+  services without changing compatibility or QObject/deferred-work ownership.
+
 - [CPU/GPU bit-identical parity](concepts/cpu-gpu-bit-parity.md): which
   parity rule applies (bit-identical transforms, tolerance for the FFT-based
   Gaussian blur); how the GPU transform paths reproduce CPU results bit for bit (planning with CPU
@@ -73,6 +76,9 @@ matches the task.
   `toAlignedRect()`, fuzzy comparisons in Qt 6.8.
 
 ### Decisions
+
+- [Feature branches before main](decisions/feature-branch-workflow.md): push
+  feature branches and merge PRs; no direct main pushes, including releases.
 
 - [Release and feature documentation](decisions/release-feature-documentation.md):
   a single latest-release summary in README, stable guides, illustrated website
