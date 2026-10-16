@@ -71,7 +71,7 @@ preview is disabled to retain fine detail. Automated checks cover conversion,
 partial updates, mask application and configuration XML, cancellation and
 Undo/Redo. The user confirmed Sharpness operation on 2026-10-15.
 
-Technical record: [Illustration filters plan](agent/illustration-filters-plan.md).
+Technical record: [Illustration filters](agent/illustration-filters.md#sharpness).
 
 ## Color Filter
 
@@ -112,7 +112,7 @@ only with Sharpness 0. Automated tests cover these formats, patch updates,
 selection/Undo/Redo, cancellation and mask configuration restoration.
 The user confirmed Color Filter operation on 2026-10-15.
 
-Technical record: [Illustration filters plan](agent/illustration-filters-plan.md).
+Technical record: [Illustration filters](agent/illustration-filters.md#color-filter).
 
 ## Glow
 
@@ -144,7 +144,7 @@ keep small highlights and final output consistent. The user confirmed Glow
 operation on 2026-10-15. Automated tests cover formats, patches, transparency,
 selections, Undo/Redo, cancellation and filter-mask settings.
 
-Technical record: [Illustration filters plan](agent/illustration-filters-plan.md).
+Technical record: [Illustration filters](agent/illustration-filters.md#glow).
 
 ## Drop Shadow
 
@@ -163,7 +163,7 @@ shadow, so applying it to a flattened image usually has no visible effect.
   Distance together. Arrow keys move by 1 document pixel; Shift moves by 10.
   The displayed radius adjusts to the distance and stays fixed during a drag.
 
-The position pad is in the dialog; this stage has no on-canvas handle.
+The position pad is in the dialog; there is no on-canvas handle.
 The existing Drop Shadow layer style remains available. Its light-angle
 convention is different from this filter's shadow-direction angle.
 
@@ -182,7 +182,7 @@ Automated tests cover partial updates, settings restoration, feathered
 selections, Undo/Redo, cancellation and the position pad. The user confirmed
 Drop Shadow operation on 2026-10-16.
 
-Technical record: [Illustration filters plan](agent/illustration-filters-plan.md).
+Technical record: [Illustration filters](agent/illustration-filters.md#drop-shadow).
 
 ## Line Art Extraction
 
@@ -220,7 +220,7 @@ to keep thin lines and the final result consistent. Automated checks cover
 formats, paper correction, density, patches, transparency, channel selection,
 Undo/Redo, cancellation and mask settings. Interactive verification is pending.
 
-Technical record: [Illustration filters plan](agent/illustration-filters-plan.md).
+Technical record: [Illustration filters](agent/illustration-filters.md#line-art-extraction).
 
 ## Film Grain
 
