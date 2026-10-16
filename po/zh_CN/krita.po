@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-10-16 12:40+0900\n"
+"POT-Creation-Date: 2026-10-16 12:53+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -22450,7 +22450,7 @@ msgstr "本地资源"
 #, kde-format
 msgctxt "@title:window"
 msgid "Solstice"
-msgstr ""
+msgstr "Solstice"
 
 #: libs/resources/KisResourceCacheDb.cpp:359
 #, kde-format
@@ -23757,7 +23757,7 @@ msgstr "正在等待保存完成..."
 #, kde-format
 msgctxt "@title:window"
 msgid "GPU Engine Stopped"
-msgstr ""
+msgstr "GPU 引擎已停止"
 
 #: libs/ui/KisGpuEngineUi.cpp:121
 #, kde-format
@@ -23769,20 +23769,22 @@ msgid ""
 "Check your open documents before saving them, and save to a new file if in "
 "doubt."
 msgstr ""
+"GPU 引擎无法从显卡读回 %1 个图块的图像数据，已经停止。Solstice 将在不使用 "
+"GPU 引擎的情况下继续运行。\n"
+"\n"
+"这些区域中最近的更改已经丢失：它们显示的是较早的内容。保存前请检查已打开的图"
+"像，如有疑问请保存为新文件。"
 
 #: libs/ui/KisGpuEngineUi.cpp:167
-#, fuzzy, kde-format
-#| msgid "This document..."
+#, kde-format
 msgid "This document"
-msgstr "此图像..."
+msgstr "此图像"
 
 #: libs/ui/KisGpuEngineUi.cpp:170
-#, fuzzy, kde-format
-#| msgctxt "%1 is the name of a brush engine"
-#| msgid "%1 Engine"
+#, kde-format
 msgctxt "@title:window"
 msgid "GPU Engine"
-msgstr "笔刷引擎：%1"
+msgstr "GPU 引擎"
 
 #: libs/ui/KisGpuEngineUi.cpp:171
 #, kde-format
@@ -23795,114 +23797,107 @@ msgid ""
 "\n"
 "Documents that are not converted work as before, without GPU acceleration."
 msgstr ""
+"%1 使用的色彩空间是 %2。\n"
+"\n"
+"GPU 引擎只加速 RGBA 浮点图像。要将此图像转换为 RGBA 16 位或 32 位浮点吗？转换"
+"可以撤销；保存时会保留新的色彩空间。\n"
+"\n"
+"未转换的图像照常工作，只是没有 GPU 加速。"
 
 #: libs/ui/KisGpuEngineUi.cpp:180 libs/ui/KisGpuEngineUi.cpp:268
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format)"
-#| msgid "Convert to a file layer"
+#, kde-format
 msgid "Convert to RGBA 16-bit float"
-msgstr "转换为文件图层"
+msgstr "转换为 RGBA 16 位浮点"
 
 #: libs/ui/KisGpuEngineUi.cpp:182 libs/ui/KisGpuEngineUi.cpp:270
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format)"
-#| msgid "Convert to a file layer"
+#, kde-format
 msgid "Convert to RGBA 32-bit float"
-msgstr "转换为文件图层"
+msgstr "转换为 RGBA 32 位浮点"
 
 #: libs/ui/KisGpuEngineUi.cpp:183
-#, fuzzy, kde-format
-#| msgctxt "@label:inlistbox"
-#| msgid "Keep-all"
+#, kde-format
 msgid "Keep"
-msgstr "禁止单词内部换行"
+msgstr "保持"
 
 #: libs/ui/KisGpuEngineUi.cpp:186
-#, fuzzy, kde-format
-#| msgid "Don't ask this again"
+#, kde-format
 msgid "Do not ask again"
 msgstr "不再询问"
 
 #: libs/ui/KisGpuEngineUi.cpp:211
 #, kde-format
 msgid "Saving now stores the document as it is displayed."
-msgstr ""
+msgstr "现在保存会按显示的样子保存图像。"
 
 #: libs/ui/KisGpuEngineUi.cpp:214
-#, fuzzy, kde-format
-#| msgctxt "Save as new layer style..."
-#| msgid "&Save as..."
+#, kde-format
 msgid "Save as New File..."
-msgstr "另存为(&S)..."
+msgstr "另存为新文件..."
 
 #: libs/ui/KisGpuEngineUi.cpp:215
-#, fuzzy, kde-format
-#| msgid "Save As"
+#, kde-format
 msgid "Save Anyway"
-msgstr "另存为"
+msgstr "仍然保存"
 
 #: libs/ui/KisGpuEngineUi.cpp:259
 #, kde-format
 msgid "GPU Engine (Vulkan)"
-msgstr ""
+msgstr "GPU 引擎 (Vulkan)"
 
 #: libs/ui/KisGpuEngineUi.cpp:260
 #, kde-format
 msgid "Use the GPU engine for RGBA float documents"
-msgstr ""
+msgstr "为 RGBA 浮点图像使用 GPU 引擎"
 
 #: libs/ui/KisGpuEngineUi.cpp:261
 #, kde-format
 msgid "Paint brush strokes on the GPU"
-msgstr ""
+msgstr "在 GPU 上绘制笔画"
 
 #: libs/ui/KisGpuEngineUi.cpp:265
 #, kde-format
 msgid "Ask"
-msgstr ""
+msgstr "询问"
 
 #: libs/ui/KisGpuEngineUi.cpp:271
-#, fuzzy, kde-format
-#| msgid "Set color space"
+#, kde-format
 msgid "Keep the color space"
-msgstr "设置色彩空间"
+msgstr "保持色彩空间"
 
 #: libs/ui/KisGpuEngineUi.cpp:279
-#, fuzzy, kde-format
-#| msgid "Opening document"
+#, kde-format
 msgid "Opening other documents:"
-msgstr "正在打开图像"
+msgstr "打开其他图像时："
 
 #: libs/ui/KisGpuEngineUi.cpp:286
 #, kde-format
 msgid "Stopped after an error in this session."
-msgstr ""
+msgstr "本次会话中因出错而停止。"
 
 #: libs/ui/KisGpuEngineUi.cpp:288
-#, fuzzy, kde-format
-#| msgid "Active tool: %1"
+#, kde-format
 msgid "Active on %1."
-msgstr "活动工具：%1"
+msgstr "正在 %1 上运行。"
 
 #: libs/ui/KisGpuEngineUi.cpp:290
 #, kde-format
 msgid "Enabled; starts with the first RGBA float document."
-msgstr ""
+msgstr "已启用；在打开第一个 RGBA 浮点图像时启动。"
 
 #: libs/ui/KisGpuEngineUi.cpp:292
 #, kde-format
 msgid "Not used in this session."
-msgstr ""
+msgstr "本次会话中未使用。"
 
 #: libs/ui/KisGpuEngineUi.cpp:294
 #, kde-format
 msgid "Changes take effect after restarting Solstice."
-msgstr ""
+msgstr "更改将在重启 Solstice 后生效。"
 
 #: libs/ui/KisGpuEngineUi.cpp:296
 #, kde-format
 msgid "Not available: this build of Solstice has no Vulkan support."
-msgstr ""
+msgstr "不可用：此 Solstice 版本不支持 Vulkan。"
 
 #: libs/ui/KisImageThumbnailStrokeStrategy.cpp:32
 msgctxt "(qtundo-format)"
@@ -25178,97 +25173,79 @@ msgstr "匿名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:166
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:700
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Reset Settings"
+#, kde-format
 msgid "Asset Library Settings"
-msgstr "重置设置"
+msgstr "Asset Library 设置"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:186
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:717
-#, fuzzy, kde-format
-#| msgid "Anti-alias"
+#, kde-format
 msgid "Alias"
-msgstr "抗锯齿"
+msgstr "别名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:186
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:717
-#, fuzzy, kde-format
-#| msgid "Extension"
+#, kde-format
 msgid "Extensions"
-msgstr "延长线"
+msgstr "扩展名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:186
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:717
-#, fuzzy, kde-format
-#| msgid "Include Audio"
+#, kde-format
 msgid "Include Subfolders"
-msgstr "包含音频"
+msgstr "包含子文件夹"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:186
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:717
-#, fuzzy, kde-format
-#| msgid "Path:"
+#, kde-format
 msgid "Path"
-msgstr "路径："
+msgstr "路径"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:197
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:736
-#, fuzzy, kde-format
-#| msgid "Select a Folder"
+#, kde-format
 msgid "Select Asset Folder"
-msgstr "选择文件夹"
+msgstr "选择素材文件夹"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:202
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:741
-#, fuzzy, kde-format
-#| msgid "Folder"
+#, kde-format
 msgid "Folder Alias"
-msgstr "文件夹"
+msgstr "文件夹别名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:203
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:741
-#, fuzzy, kde-format
-#| msgid "Alpha Options"
+#, kde-format
 msgid "Alias (optional)"
-msgstr "透明度通道选项"
+msgstr "别名 (可选)"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:220
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:772
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_4_Default_Resources.bundle:brushes/grass_patch."
-#| "gih"
-#| msgid "Grass Patch"
+#, kde-format
 msgid "Asset Paths"
-msgstr "草丛 模糊"
+msgstr "素材路径"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:225
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:777
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Cut Columns"
+#, kde-format
 msgid "Auto columns"
-msgstr "剪切一列帧"
+msgstr "自动列数"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:234
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:794
-#, fuzzy, kde-format
-#| msgid "Thumbnails"
+#, kde-format
 msgid "Thumbnail columns"
-msgstr "缩略图"
+msgstr "缩略图列数"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:235
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:795
-#, fuzzy, kde-format
-#| msgid "Hide layer thumbnail popup"
+#, kde-format
 msgid "Fixed thumbnail columns"
-msgstr "图层面板：光标悬停图层时不弹出显示缩略图"
+msgstr "固定缩略图列数"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:236
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:796
-#, fuzzy, kde-format
-#| msgid "Thumbnail Size"
+#, kde-format
 msgid "Thumbnail size"
 msgstr "缩略图大小"
 
@@ -25276,58 +25253,50 @@ msgstr "缩略图大小"
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:797
 #, kde-format
 msgid "Folder button font size"
-msgstr ""
+msgstr "文件夹按钮字体大小"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:238
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:798
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Decrease Font Size"
+#, kde-format
 msgid "Header font size"
-msgstr "缩小字体"
+msgstr "标题字体大小"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:239
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:799
 #, kde-format
 msgid "Asset filename font size"
-msgstr ""
+msgstr "素材文件名字体大小"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:491
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:378
 #, kde-format
 msgid "Add asset paths from Settings."
-msgstr ""
+msgstr "请在设置中添加素材路径。"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:532
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:388
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:446
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "Text that indicates no stop is selected in the stop gradient editor"
-#| msgid "No stop selected"
+#, kde-format
 msgid "No asset path is selected."
-msgstr "没有选择色标"
+msgstr "未选择素材路径。"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:537
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:450
-#, fuzzy, kde-format
-#| msgctxt "@title:window"
-#| msgid "File not found"
+#, kde-format
 msgid "Folder not found: %1"
-msgstr "找不到文件"
+msgstr "找不到文件夹：%1"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:639
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:542
 #, kde-format
 msgid "1 asset"
 msgid_plural "%1 assets"
-msgstr[0] ""
+msgstr[0] "%1 个素材"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:686
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:603
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:616
-#, fuzzy, kde-format
-#| msgid "There is no active document."
+#, kde-format
 msgid "No active document."
 msgstr "无活动图像。"
 
@@ -25351,25 +25320,21 @@ msgstr "插入为 - 新文件图层"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:725
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:642
-#, fuzzy, kde-format
-#| msgid "New palette name:"
+#, kde-format
 msgid "New file name"
-msgstr "新色板名称："
+msgstr "新文件名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:730
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:647
-#, fuzzy, kde-format
-#| msgid "The file does not contain an image."
+#, kde-format
 msgid "File name cannot contain a path."
-msgstr "文件不含图像。"
+msgstr "文件名不能包含路径。"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:739
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:656
-#, fuzzy, kde-format
-#| msgctxt "In a dialog asking whether to overwrite a bundle (resource pack)"
-#| msgid "A bundle with this name already exists."
+#, kde-format
 msgid "A file with that name already exists."
-msgstr "同名的资源包已存在。"
+msgstr "已存在同名文件。"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:748
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:125
@@ -25382,68 +25347,59 @@ msgstr "打开"
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:767
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:664
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:668
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "Action to duplicate the selected segment in the segment gradient editor"
-#| msgid "Duplicate segment"
+#, kde-format
 msgid "Duplicate Asset"
-msgstr "复制片段"
+msgstr "复制素材"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:767
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:668
-#, fuzzy, kde-format
-#| msgid "Could not open %1."
+#, kde-format
 msgid "Could not copy the file."
-msgstr "无法打开 %1。"
+msgstr "无法复制文件。"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:770
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:772
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:674
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:678
-#, fuzzy, kde-format
-#| msgid "Rename tag"
+#, kde-format
 msgid "Rename Asset"
-msgstr "重命名标签"
+msgstr "重命名素材"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:772
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:678
-#, fuzzy, kde-format
-#| msgid "Could not create the file for saving"
+#, kde-format
 msgid "Could not rename the file."
-msgstr "无法创建文件进行保存"
+msgstr "无法重命名文件。"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:776
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:782
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:685
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:693
-#, fuzzy, kde-format
-#| msgctxt "Action to delete the selected stop in the segment gradient editor"
-#| msgid "Delete stop"
+#, kde-format
 msgid "Delete Asset"
-msgstr "删除色标"
+msgstr "删除素材"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:777
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:686
-#, fuzzy, kde-format
-#| msgid "Delete this tag"
+#, kde-format
 msgid ""
 "Delete this file?\n"
 "%1"
-msgstr "删除此标签"
+msgstr ""
+"要删除此文件吗？\n"
+"%1"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:782
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:693
-#, fuzzy, kde-format
-#| msgid "Could not create the file for saving"
+#, kde-format
 msgid "Could not delete the file."
-msgstr "无法创建文件进行保存"
+msgstr "无法删除文件。"
 
 #: libs/ui/KisWelcomePageWidget.cpp:169
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:258
-#, fuzzy, kde-format
-#| msgid "Preset Icon Library"
+#, kde-format
 msgid "Asset Library"
-msgstr "预设图标库"
+msgstr "Asset Library"
 
 #: libs/ui/KisWelcomePageWidget.cpp:181
 #, kde-format
@@ -42285,32 +42241,27 @@ msgstr "重置为默认值"
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:852
 #, kde-format
 msgid "Hide"
-msgstr ""
+msgstr "隐藏"
 
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:845
-#, fuzzy, kde-format
-#| msgid "Show Move"
+#, kde-format
 msgid "Show"
-msgstr "显示移动"
+msgstr "显示"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:57
-#, fuzzy, kde-format
-#| msgid "Layer compression"
+#, kde-format
 msgid "Layer Comps"
-msgstr "图层压缩方式"
+msgstr "Layer Comps"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:80
-#, fuzzy, kde-format
-#| msgctxt "@action:inmenu"
-#| msgid "Merge Selected Layers"
+#, kde-format
 msgid "Overwrite Selected Layer Comps"
-msgstr "合并选中的图层"
+msgstr "覆盖选中的 Layer Comp"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:95
-#, fuzzy, kde-format
-#| msgid "Show active image in all windows"
+#, kde-format
 msgid "Show added layers in all comps"
-msgstr "在所有窗口中显示活动图像"
+msgstr "在所有 Layer Comp 中显示新添加的图层"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:109
 #, kde-format
@@ -42328,16 +42279,14 @@ msgid "Export Composition"
 msgstr "导出图层显示方案为图像/动画"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:112
-#, fuzzy, kde-format
-#| msgid "Activate Previous Layer"
+#, kde-format
 msgid "Apply Previous Layer Comp"
-msgstr "激活上一个图层"
+msgstr "应用上一个 Layer Comp"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:113
-#, fuzzy, kde-format
-#| msgid "Activate Next Layer"
+#, kde-format
 msgid "Apply Next Layer Comp"
-msgstr "激活下一个图层"
+msgstr "应用下一个 Layer Comp"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:129
 #, kde-format
@@ -42355,17 +42304,15 @@ msgid "Insert Name"
 msgstr "输入新图层显示方案名称"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:220
-#, fuzzy, kde-format
-#| msgid "Delete the layer or mask"
+#, kde-format
 msgid "Delete Layer Comps"
-msgstr "删除图层/蒙版"
+msgstr "删除 Layer Comp"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:221
-#, fuzzy, kde-format
-#| msgid "Delete the layer or mask"
+#, kde-format
 msgid "Delete the selected layer comp?"
 msgid_plural "Delete the %1 selected layer comps?"
-msgstr[0] "删除图层/蒙版"
+msgstr[0] "要删除选中的 %1 个 Layer Comp 吗？"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:303
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:420
@@ -42384,19 +42331,16 @@ msgid "Exporting composition: %1..."
 msgstr "导出图层显示方案为图像/动画：%1..."
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:527
-#, fuzzy, kde-format
-#| msgid "Overwrite Preset"
+#, kde-format
 msgid "Overwrite Layer Comps"
-msgstr "覆盖预设"
+msgstr "覆盖 Layer Comp"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:528
-#, fuzzy, kde-format
-#| msgctxt "Dialog title"
-#| msgid "Overwrite the file?"
+#, kde-format
 msgid "Overwrite the selected layer comp?"
 msgid_plural ""
 "Overwrite the %1 selected layer comps with the current visibility?"
-msgstr[0] "覆盖文件？"
+msgstr[0] "要用当前的可见性覆盖选中的 %1 个 Layer Comp 吗？"
 
 #: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:551
 #, kde-format
@@ -42409,33 +42353,31 @@ msgid "New Name:"
 msgstr "新方案名称："
 
 #: plugins/dockers/compositiondocker/compositionmodel.cpp:30
-#, fuzzy, kde-format
-#| msgid "Master Display:"
+#, kde-format
 msgid "Last Layer Display State"
-msgstr "主显示器："
+msgstr "上次的图层显示状态"
 
 #: plugins/dockers/compositiondocker/compositionmodel.cpp:42
 #, kde-format
 msgid "Apply this layer comp"
-msgstr ""
+msgstr "应用此 Layer Comp"
 
 #: plugins/dockers/compositiondocker/compositionmodel.cpp:44
-#, fuzzy, kde-format
-#| msgid "Include Audio"
+#, kde-format
 msgid "Include in export"
-msgstr "包含音频"
+msgstr "包含在导出中"
 
 #: plugins/dockers/compositiondocker/compositionmodel.cpp:46
 #, kde-format
 msgid ""
 "Restore the last custom visibility state. Newly added layers are left "
 "unchanged."
-msgstr ""
+msgstr "恢复上次自定义的可见性状态。新添加的图层保持不变。"
 
 #: plugins/dockers/compositiondocker/compositionmodel.cpp:47
 #, kde-format
 msgid "Double-click to apply. Ctrl/Shift-click to select several layer comps."
-msgstr ""
+msgstr "双击以应用。按住 Ctrl/Shift 点击可选择多个 Layer Comp。"
 
 #: plugins/dockers/compositiondocker/compositionmodel.cpp:69
 #: plugins/tools/tool_transform2/kis_tool_transform.cc:141
@@ -42444,10 +42386,9 @@ msgid "Apply"
 msgstr "应用"
 
 #: plugins/dockers/compositiondocker/compositionmodel.cpp:69
-#, fuzzy, kde-format
-#| msgid "Layer name:"
+#, kde-format
 msgid "Layer Comp"
-msgstr "图层名称："
+msgstr "Layer Comp"
 
 #. i18n: context: string @ property (toolTip), widget (QTreeView, compositionView)
 #: plugins/dockers/compositiondocker/wdgcompositiondocker.ui:24
@@ -45590,12 +45531,12 @@ msgstr ""
 #: plugins/dockers/restnote/RestNoteDock.cpp:53
 #, kde-format
 msgid "Resume work"
-msgstr ""
+msgstr "继续工作"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:128
 #, kde-format
 msgid "Time for a break"
-msgstr ""
+msgstr "该休息了"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:135
 #, kde-format
@@ -45603,216 +45544,190 @@ msgid ""
 "%1-minute break.\n"
 "Look into the distance and let your eyes relax."
 msgstr ""
+"休息 %1 分钟。\n"
+"眺望远处，让眼睛放松一下。"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:143
-#, fuzzy, kde-format
-#| msgid "Skip Back"
+#, kde-format
 msgid "Skip"
-msgstr "上一关键帧"
+msgstr "跳过"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:212
-#, fuzzy, kde-format
-#| msgctxt "@label:listbox"
-#| msgid "Line Break"
+#, kde-format
 msgid "Eye break"
-msgstr "换行规则"
+msgstr "护眼休息"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:216
 #, kde-format
 msgid "Look about 6 m (20 ft) away for 20 seconds."
-msgstr ""
+msgstr "眺望约 6 米 (20 英尺) 外的地方 20 秒。"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:381
-#, fuzzy, kde-format
-#| msgctxt "Expansion distance button in propagate colors filter"
-#| msgid "Restricted"
+#, kde-format
 msgid "Rest Note"
-msgstr "限制"
+msgstr "Rest Note"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:439
 #: plugins/dockers/restnote/RestNoteDock.cpp:594
 #, kde-format
 msgid "WORKING"
-msgstr ""
+msgstr "工作中"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:465
 #, kde-format
 msgid "Pause / Resume"
-msgstr ""
+msgstr "暂停 / 继续"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:467
 #, kde-format
 msgid "Take a break now"
-msgstr ""
+msgstr "现在休息"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:468
-#, fuzzy, kde-format
-#| msgid "Settings"
+#, kde-format
 msgid "Settings…"
-msgstr "设置"
+msgstr "设置…"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:597
 #, kde-format
 msgid "PAUSED"
-msgstr ""
+msgstr "已暂停"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:600
 #, kde-format
 msgid "ON BREAK"
-msgstr ""
+msgstr "休息中"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:603
 #, kde-format
 msgid "EYE BREAK"
-msgstr ""
+msgstr "护眼休息中"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:606
 #, kde-format
 msgid "IDLE"
-msgstr ""
+msgstr "空闲"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:610
 #, kde-format
 msgid "Away — timer paused"
-msgstr ""
+msgstr "离开 — 计时器已暂停"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:612
-#, fuzzy, kde-format
-#| msgid "Mask is disabled"
+#, kde-format
 msgid "Eye breaks: disabled"
-msgstr "蒙版已禁用"
+msgstr "护眼休息：已禁用"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:616
 #, kde-format
 msgid "Look about 6 m (20 ft) away"
-msgstr ""
+msgstr "眺望约 6 米 (20 英尺) 外的地方"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:619
 #, kde-format
 msgid "Next eye break in %1:%2"
-msgstr ""
+msgstr "距下次护眼休息 %1:%2"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:711
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Reset Settings"
+#, kde-format
 msgid "Rest Note Settings"
-msgstr "重置设置"
+msgstr "Rest Note 设置"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:714
-#, fuzzy, kde-format
-#| msgctxt "@label:listbox"
-#| msgid "Word Break"
+#, kde-format
 msgid "Work / Break cycle"
-msgstr "单词换行规则"
+msgstr "工作 / 休息循环"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:716
 #: plugins/dockers/restnote/RestNoteDock.cpp:717
 #: plugins/dockers/restnote/RestNoteDock.cpp:728
-#, fuzzy, kde-format
-#| msgctxt "Suffix: “Every x min”"
-#| msgid " min"
+#, kde-format
 msgid " min"
 msgstr " 分钟"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:718
-#, fuzzy, kde-format
-#| msgid "Video duration:"
+#, kde-format
 msgid "Work duration:"
-msgstr "视频长度："
+msgstr "工作时长："
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:719
-#, fuzzy, kde-format
-#| msgid "Video duration:"
+#, kde-format
 msgid "Break duration:"
-msgstr "视频长度："
+msgstr "休息时长："
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:722
 #, kde-format
 msgid "Eye break reminder (20-20-20)"
-msgstr ""
+msgstr "护眼休息提醒 (20-20-20)"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:724
 #, kde-format
 msgid "Enable eye break reminders"
-msgstr ""
+msgstr "启用护眼休息提醒"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:729
 #: plugins/dockers/restnote/RestNoteDock.cpp:730
 #: plugins/dockers/restnote/RestNoteDock.cpp:747
-#, fuzzy, kde-format
-#| msgctxt "suffix for \"seconds\""
-#| msgid " sec"
+#, kde-format
 msgid " sec"
 msgstr " 秒"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:731
-#, fuzzy, kde-format
-#| msgid "Interval X:"
+#, kde-format
 msgid "Interval:"
-msgstr "间隔 X："
+msgstr "间隔："
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:733
 #, kde-format
 msgid "Skip if a long break is due within:"
-msgstr ""
+msgstr "若长时间休息将在此时间内到来则跳过："
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:741
-#, fuzzy, kde-format
-#| msgid "Edge detection: "
+#, kde-format
 msgid "Idle detection"
-msgstr "实心色块边缘检测："
+msgstr "空闲检测"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:743
-#, fuzzy, kde-format
-#| msgid "Edge detection: "
+#, kde-format
 msgid "Enable idle detection"
-msgstr "实心色块边缘检测："
+msgstr "启用空闲检测"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:748
-#, fuzzy, kde-format
-#| msgid "Threshold:"
+#, kde-format
 msgid "Idle threshold:"
-msgstr "阈值："
+msgstr "空闲阈值："
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:754
-#, fuzzy, kde-format
-#| msgid "Selector Appearance"
+#, kde-format
 msgid "Overlay appearance"
-msgstr "拾色器外观"
+msgstr "遮罩外观"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:759
 #: plugins/dockers/restnote/RestNoteDock.cpp:774
-#, fuzzy, kde-format
-#| msgid "File size:"
+#, kde-format
 msgid "Title font size:"
-msgstr "文件大小："
+msgstr "标题字体大小："
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:760
 #: plugins/dockers/restnote/RestNoteDock.cpp:775
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Decrease Font Size"
+#, kde-format
 msgid "Message font size:"
-msgstr "缩小字体"
+msgstr "消息字体大小："
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:761
-#, fuzzy, kde-format
-#| msgid "Export size:"
+#, kde-format
 msgid "Skip font size:"
-msgstr "导出大小："
+msgstr "跳过按钮字体大小："
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:764
-#, fuzzy, kde-format
-#| msgid "Selector Appearance"
+#, kde-format
 msgid "Toast appearance"
-msgstr "拾色器外观"
+msgstr "提示通知外观"
 
 #: plugins/dockers/restnote/RestNoteDock.cpp:771
-#, fuzzy, kde-format
-#| msgid "Margins"
+#, kde-format
 msgid "Margin:"
-msgstr "页边距"
+msgstr "边距："
 
 #: plugins/dockers/smallcolorselector/smallcolorselector_dock.cc:37
 #, kde-format
@@ -53721,180 +53636,147 @@ msgid "Small Tiles"
 msgstr "拼贴"
 
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:38
-#, fuzzy, kde-format
-#| msgid "translations"
+#, kde-format
 msgid "Translation"
-msgstr "翻译"
+msgstr "平移"
 
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:55
-#, fuzzy, kde-format
-#| msgid "Center"
+#, kde-format
 msgid "Center X:"
-msgstr "居中"
+msgstr "中心 X："
 
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:56
-#, fuzzy, kde-format
-#| msgid "Center"
+#, kde-format
 msgid "Center Y:"
-msgstr "居中"
+msgstr "中心 Y："
 
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:57
-#, fuzzy, kde-format
-#| msgid "Reference images"
+#, kde-format
 msgid "Reference radius:"
-msgstr "参考图像"
+msgstr "参考半径："
 
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:59
 #, kde-format
 msgid ""
 "Radial displacement increases from zero at the center to Strength at this "
 "radius, then stays constant."
-msgstr ""
+msgstr "径向位移从中心处的零逐渐增大，到此半径时达到强度值，之后保持不变。"
 
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:61
 #, kde-format
 msgid ""
 "This color model is processed through floating-point RGB and converted back. "
 "The original opacity is preserved."
-msgstr ""
+msgstr "此色彩模型会转换为浮点 RGB 处理后再转换回来。原始不透明度会被保留。"
 
 #: plugins/filters/solsticeeffects/KisChromaticAberrationFilter.cpp:43
-#, fuzzy, kde-format
-#| msgctxt "@option:check"
-#| msgid "Enable Chromatic Aberration correction"
+#, kde-format
 msgid "Chromatic Aberration"
-msgstr "启用色差校正"
+msgstr "Chromatic Aberration"
 
 #: plugins/filters/solsticeeffects/KisChromaticAberrationFilter.cpp:45
-#, fuzzy, kde-format
-#| msgctxt "@option:check"
-#| msgid "Enable Chromatic Aberration correction"
+#, kde-format
 msgid "Chromatic &Aberration..."
-msgstr "启用色差校正"
+msgstr "Chromatic Aberration(&A)..."
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:103
-#, fuzzy, kde-format
-#| msgid "&Color Balance..."
+#, kde-format
 msgid "&Color Filter..."
-msgstr "色彩平衡(&C)..."
+msgstr "Color Filter(&C)..."
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:103
-#, fuzzy, kde-format
-#| msgctxt "Color rate of active Foreground color"
-#| msgid "Color Rate"
+#, kde-format
 msgid "Color Filter"
-msgstr "前景色比例"
+msgstr "Color Filter"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:113
-#, fuzzy, kde-format
-#| msgctxt "Blending mode - Divide"
-#| msgid "Divide"
+#, kde-format
 msgid "Vivid"
-msgstr "划分 = 除去"
+msgstr "鲜艳"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:114
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:57
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:58
 #, kde-format
 msgid "Warm"
-msgstr ""
+msgstr "暖色"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:115
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:58
 #, kde-format
 msgid "Cool"
-msgstr ""
+msgstr "冷色"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:116
 #, kde-format
 msgid "Lemonade"
-msgstr ""
+msgstr "柠檬汽水"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:117
-#, fuzzy, kde-format
-#| msgctxt "Blending mode - Copy Blue"
-#| msgid "Copy Blue"
+#, kde-format
 msgid "Cobalt Blue"
-msgstr "复制蓝通道"
+msgstr "钴蓝"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:118
-#, fuzzy, kde-format
-#| msgctxt "@title"
-#| msgid "Samaritan"
+#, kde-format
 msgid "Aquamarine"
-msgstr "撒马利亚字母"
+msgstr "海蓝"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:119
 #, kde-format
 msgid "Aurora"
-msgstr ""
+msgstr "极光"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:120
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:58
 #, kde-format
 msgid "Sepia"
-msgstr ""
+msgstr "怀旧棕"
 
 #: plugins/filters/solsticeeffects/KisColorFilter.cpp:121
-#, fuzzy, kde-format
-#| msgid "Midtones"
+#, kde-format
 msgid "Monotone"
-msgstr "中间调"
+msgstr "单色调"
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:60
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:102
-#, fuzzy, kde-format
-#| msgid "Look:"
+#, kde-format
 msgid "Look"
-msgstr "观察："
+msgstr "风格"
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:61
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Adjust"
+#, kde-format
 msgid "Adjust"
-msgstr "图像调整"
+msgstr "调整"
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:98
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:131
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "How much the midtone point used in auto levels is close to the center of "
-#| "the histogram (0%) or to the point selected in the method (100%)"
-#| msgid "Amount:"
+#, kde-format
 msgid "Amount:"
 msgstr "强度："
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:101
-#, fuzzy, kde-format
-#| msgid "90 &degrees"
+#, kde-format
 msgid "Hue (degrees):"
-msgstr "90 度(&D)"
+msgstr "色相 (度)："
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:103
-#, fuzzy, kde-format
-#| msgid "Color Sampler:"
+#, kde-format
 msgid "Color temperature:"
-msgstr "拾色器："
+msgstr "色温："
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:104
-#, fuzzy, kde-format
-#| msgctxt "Blending mode - Tint HSY"
-#| msgid "Tint"
+#, kde-format
 msgid "Tint:"
-msgstr "着色"
+msgstr "色调："
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:105
-#, fuzzy, kde-format
-#| msgctxt "EXIF: postprocessing"
-#| msgid "Sharpness:"
+#, kde-format
 msgid "Sharpness:"
 msgstr "锐利度："
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:111
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Reset Settings"
+#, kde-format
 msgid "Reset Settings"
 msgstr "重置设置"
 
@@ -53903,7 +53785,7 @@ msgstr "重置设置"
 msgid ""
 "Gray images use Brightness, Contrast and Sharpness only. Convert to RGB to "
 "use colored looks."
-msgstr ""
+msgstr "灰度图像只使用亮度、对比度和锐利度。请转换为 RGB 以使用彩色风格。"
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:122
 #: plugins/filters/solsticeeffects/KisGlowConfigWidget.cpp:47
@@ -53913,99 +53795,89 @@ msgstr ""
 msgid ""
 "This color model is processed through floating-point RGB and converted back; "
 "appearance may change."
-msgstr ""
+msgstr "此色彩模型会转换为浮点 RGB 处理后再转换回来，外观可能会改变。"
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:167
 #, kde-format
 msgid "Look previews: layer snapshot, Amount 100, neutral Adjust."
-msgstr ""
+msgstr "风格预览：图层快照，强度 100，调整为中性。"
 
 #: plugins/filters/solsticeeffects/KisColorFilterConfigWidget.cpp:168
 #, kde-format
 msgid "Look previews: sample image, Amount 100, neutral Adjust."
-msgstr ""
+msgstr "风格预览：示例图像，强度 100，调整为中性。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:71
-#, fuzzy, kde-format
-#| msgid "Brightness:"
+#, kde-format
 msgid "Keep brightness"
-msgstr "亮度："
+msgstr "保持亮度"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:79
-#, fuzzy, kde-format
-#| msgctxt "The 'reference' section label in selection tools options"
-#| msgid "Reference"
+#, kde-format
 msgid "Reference:"
-msgstr "采样图层"
+msgstr "参考："
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:97
 #, kde-format
 msgid "Drop image files here to add references. Multiple files are supported."
-msgstr ""
+msgstr "将图像文件拖放到此处以添加参考。支持多个文件。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:100
-#, fuzzy, kde-format
-#| msgctxt "Load Image as Thumbnail button"
-#| msgid "Load Image"
+#, kde-format
 msgid "Load Image..."
-msgstr "加载图像为缩略图"
+msgstr "加载图像..."
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:119
-#, fuzzy, kde-format
-#| msgid "&Gradient..."
+#, kde-format
 msgid "Edit Gradient..."
-msgstr "渐变(&G)..."
+msgstr "编辑渐变..."
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:135
 #, kde-format
 msgid ""
 "Maps dark to light tones to the reference colors. Lower Amount to retain "
 "more of the original colors."
-msgstr ""
+msgstr "将从暗到亮的色调映射到参考颜色。降低强度可保留更多原始颜色。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:141
 #, kde-format
 msgid ""
 "Colors are processed through floating-point RGB. Grayscale documents remain "
 "grayscale."
-msgstr ""
+msgstr "颜色以浮点 RGB 处理。灰度文档仍保持灰度。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:216
 #, kde-format
 msgid "The reference image is unavailable. The saved colors are still in use."
-msgstr ""
+msgstr "参考图像不可用。仍在使用已保存的颜色。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:236
 #, kde-format
 msgid "Cannot read this reference. The previous colors are still in use."
-msgstr ""
+msgstr "无法读取此参考。仍在使用之前的颜色。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:290
-#, fuzzy, kde-format
-#| msgid "Export Reference Images Set"
+#, kde-format
 msgid "Edit Reference Gradient"
-msgstr "导出参考图像集合"
+msgstr "编辑参考渐变"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:316
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:405
 #: plugins/filters/solsticeeffects/KisColorReferenceFilter.cpp:22
-#, fuzzy, kde-format
-#| msgid "Column Preference"
+#, kde-format
 msgid "Color Reference"
-msgstr "列优先"
+msgstr "Color Reference"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:316
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:276
-#, fuzzy, kde-format
-#| msgid "The file does not contain an image."
+#, kde-format
 msgid "The library already contains 50 images."
-msgstr "文件不含图像。"
+msgstr "参考库中已有 50 张图像。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:321
-#, fuzzy, kde-format
-#| msgid "Load Reference Images"
+#, kde-format
 msgid "Load Reference Image"
-msgstr "打开参考图像集合"
+msgstr "加载参考图像"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:323
 #, kde-format
@@ -54013,156 +53885,135 @@ msgid ""
 "Images (*.png *.jpg *.jpeg *.tif *.tiff *.bmp *.tga *.psd *.psb *.webp *.kra "
 "*.krz)"
 msgstr ""
+"图像 (*.png *.jpg *.jpeg *.tif *.tiff *.bmp *.tga *.psd *.psb *.webp *.kra *."
+"krz)"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:363
 #, kde-format
 msgid "The library contains 50 images. Remaining files were not added."
-msgstr ""
+msgstr "参考库中已有 50 张图像。其余文件未被添加。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:370
-#, fuzzy, kde-format
-#| msgid "Could not load %1."
+#, kde-format
 msgid "Cannot load %1. %2"
-msgstr "无法加载 %1。"
+msgstr "无法加载 %1。%2"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:399
-#, fuzzy, kde-format
-#| msgid "Delete all Reference Images"
+#, kde-format
 msgid "Delete Reference Image"
-msgstr "删除所有参考图像"
+msgstr "删除参考图像"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:400
 #, kde-format
 msgid ""
 "Delete %1 from the reference library? Existing filter layers will keep their "
 "saved colors."
-msgstr ""
+msgstr "要从参考库中删除 %1 吗？现有的滤镜图层会保留已保存的颜色。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:405
-#, fuzzy, kde-format
-#| msgid "Failed to save reference images."
+#, kde-format
 msgid "Cannot delete the reference image."
-msgstr "保存参考图像失败。"
+msgstr "无法删除参考图像。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceFilter.cpp:24
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Color &Transfer..."
+#, kde-format
 msgid "Color &Reference..."
-msgstr "颜色转移(&T)..."
+msgstr "Color Reference(&R)..."
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:210
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Block_tilt.kpp"
-#| msgid "Block tilt"
+#, kde-format
 msgid "Black to White"
-msgstr "色块 倾斜"
+msgstr "黑到白"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:216
-#, fuzzy, kde-format
-#| msgid "Number"
+#, kde-format
 msgid "Amber"
-msgstr "数字"
+msgstr "琥珀"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:217
 #, kde-format
 msgid "Ocean"
-msgstr ""
+msgstr "海洋"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:218
 #, kde-format
 msgid "Rose"
-msgstr ""
+msgstr "玫瑰"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:219
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:brushes/A_forest.gih"
-#| msgid "A-4 Forest"
+#, kde-format
 msgid "Forest"
-msgstr "A-4 树林"
+msgstr "森林"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:220
 #, kde-format
 msgid "Sunset"
-msgstr ""
+msgstr "日落"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:221
 #, kde-format
 msgid "Lavender"
-msgstr ""
+msgstr "薰衣草"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:222
 #, kde-format
 msgid "Copper"
-msgstr ""
+msgstr "紫铜"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:223
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Move right"
+#, kde-format
 msgid "Moonlight"
-msgstr "右移"
+msgstr "月光"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:280
-#, fuzzy, kde-format
-#| msgid "The file has no layers."
+#, kde-format
 msgid "The image has no visible pixels."
-msgstr "文件不含图层。"
+msgstr "图像没有可见像素。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:284
-#, fuzzy, kde-format
-#| msgctxt "error dialog from the reference tool"
-#| msgid "Could not create a reference image from the active layer."
+#, kde-format
 msgid "Cannot create the reference image folder."
-msgstr "无法从活动图层创建参考图像。"
+msgstr "无法创建参考图像文件夹。"
 
 #: plugins/filters/solsticeeffects/KisColorReferenceResources.cpp:301
-#, fuzzy, kde-format
-#| msgid "Failed to save reference image %1."
+#, kde-format
 msgid "Cannot save the reference image: %1"
-msgstr "保存参考图像 %1 失败。"
+msgstr "无法保存参考图像：%1"
 
 #: plugins/filters/solsticeeffects/KisCrystalConfigWidget.cpp:26
 #, kde-format
 msgid "Seamless tiling"
-msgstr ""
+msgstr "无缝拼贴"
 
 #: plugins/filters/solsticeeffects/KisCrystalConfigWidget.cpp:28
 #, kde-format
 msgid "Tile bounds (document pixels)"
-msgstr ""
+msgstr "拼贴边界 (文档像素)"
 
 #: plugins/filters/solsticeeffects/KisCrystalConfigWidget.cpp:51
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:80
 #: plugins/filters/solsticeeffects/KisFilmGrainConfigWidget.cpp:31
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:58
-#, fuzzy, kde-format
-#| msgid "New Scheme"
+#, kde-format
 msgid "New Seed"
-msgstr "新方案"
+msgstr "新种子"
 
 #: plugins/filters/solsticeeffects/KisCrystalConfigWidget.cpp:56
-#, fuzzy, kde-format
-#| msgid "Cell Size:"
+#, kde-format
 msgid "Cell size:"
 msgstr "单元格大小："
 
 #: plugins/filters/solsticeeffects/KisCrystalConfigWidget.cpp:57
-#, fuzzy, kde-format
-#| msgid "Regular"
+#, kde-format
 msgid "Irregularity:"
-msgstr "静态"
+msgstr "不规则度："
 
 #: plugins/filters/solsticeeffects/KisCrystalConfigWidget.cpp:58
 #: plugins/filters/solsticeeffects/KisFilmGrainConfigWidget.cpp:38
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:72
-#, fuzzy, kde-format
-#| msgid "Seed"
+#, kde-format
 msgid "Seed:"
-msgstr "种子"
+msgstr "种子："
 
 #: plugins/filters/solsticeeffects/KisCrystalConfigWidget.cpp:71
 #, kde-format
@@ -54170,22 +54021,23 @@ msgid ""
 "Cell spacing fits this tile. Colors wrap within each source tile; repeating "
 "source tiles produce repeating output. Opacity is preserved."
 msgstr ""
+"单元格间距会适配此拼贴。颜色在每个源拼贴内循环；重复的源拼贴会产生重复的输"
+"出。不透明度会被保留。"
 
 #: plugins/filters/solsticeeffects/KisCrystalFilter.cpp:24
 #, kde-format
 msgid "&Crystal..."
-msgstr ""
+msgstr "Crystal(&C)..."
 
 #: plugins/filters/solsticeeffects/KisCrystalFilter.cpp:24
 #, kde-format
 msgid "Crystal"
-msgstr ""
+msgstr "Crystal"
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:30
-#, fuzzy, kde-format
-#| msgid "Composition"
+#, kde-format
 msgid "Shadow position"
-msgstr "图层显示方案"
+msgstr "阴影位置"
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:32
 #, kde-format
@@ -54193,43 +54045,38 @@ msgid ""
 "Drag to set the shadow direction and distance. Arrow keys move 1 pixel; "
 "Shift moves 10 pixels. Right is 0 degrees; down is 90 degrees."
 msgstr ""
+"拖动以设置阴影的方向和距离。方向键移动 1 像素；按住 Shift 移动 10 像素。向右"
+"为 0 度；向下为 90 度。"
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:61
-#, fuzzy, kde-format
-#| msgid "Radius: "
+#, kde-format
 msgid "Radius: %1 px"
-msgstr "采样半径："
+msgstr "半径：%1 像素"
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:166
-#, fuzzy, kde-format
-#| msgid "Blur"
+#, kde-format
 msgid "Blur:"
-msgstr "模糊"
+msgstr "模糊："
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:167
-#, fuzzy, kde-format
-#| msgid "Angle weight:"
+#, kde-format
 msgid "Angle (degrees):"
-msgstr "角度权重："
+msgstr "角度 (度)："
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:168
-#, fuzzy, kde-format
-#| msgid "Distance:"
+#, kde-format
 msgid "Distance (pixels):"
-msgstr "距离："
+msgstr "距离 (像素)："
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:169
-#, fuzzy, kde-format
-#| msgid "Opacity:"
+#, kde-format
 msgid "Opacity (%):"
-msgstr "不透明度："
+msgstr "不透明度 (%)："
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:170
-#, fuzzy, kde-format
-#| msgctxt "Output color used for the shadows in auto levels"
-#| msgid "Shadows color:"
+#, kde-format
 msgid "Shadow color:"
-msgstr "阴影色："
+msgstr "阴影颜色："
 
 #: plugins/filters/solsticeeffects/KisDropShadowConfigWidget.cpp:172
 #, kde-format
@@ -54237,92 +54084,78 @@ msgid ""
 "Use a layer with transparency, or a filter mask on it. The shadow is hidden "
 "behind opaque paint. Angle 0 points right; 90 points down."
 msgstr ""
+"请使用带有透明区域的图层，或在其上使用滤镜蒙版。阴影会被不透明的绘画内容遮"
+"挡。角度 0 指向右侧；90 指向下方。"
 
 #: plugins/filters/solsticeeffects/KisDropShadowFilter.cpp:65
-#, fuzzy, kde-format
-#| msgid "Drop Shadow"
+#, kde-format
 msgid "&Drop Shadow..."
-msgstr "投影"
+msgstr "Drop Shadow(&D)..."
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:40
 #, kde-format
 msgid "Monochrome grain"
-msgstr ""
+msgstr "单色颗粒"
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:57
-#, fuzzy, kde-format
-#| msgid "Mode"
+#, kde-format
 msgid "Modern"
-msgstr "模式"
+msgstr "现代"
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:57
 #, kde-format
 msgid "Vintage"
-msgstr ""
+msgstr "复古"
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:88
-#, fuzzy, kde-format
-#| msgid "Color adjustment:"
+#, kde-format
 msgid "Color treatment:"
-msgstr "颜色调整："
+msgstr "色彩处理："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:89
-#, fuzzy, kde-format
-#| msgid "Color adjustment:"
+#, kde-format
 msgid "Color strength:"
-msgstr "颜色调整："
+msgstr "色彩强度："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:90
-#, fuzzy, kde-format
-#| msgctxt "@option:check"
-#| msgid "Enable Chromatic Aberration correction"
+#, kde-format
 msgid "Chromatic aberration:"
-msgstr "启用色差校正"
+msgstr "色差："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:91
-#, fuzzy, kde-format
-#| msgid "Strength:"
+#, kde-format
 msgid "Grain strength:"
-msgstr "效果强度："
+msgstr "颗粒强度："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:92
-#, fuzzy, kde-format
-#| msgid "Lightness Strength"
+#, kde-format
 msgid "Light leak strength:"
-msgstr "亮度效果强度"
+msgstr "漏光强度："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:95
-#, fuzzy, kde-format
-#| msgctxt "Context: dynamic sensors"
-#| msgid "Drawing angle"
+#, kde-format
 msgid "Aberration angle:"
-msgstr "笔画方向"
+msgstr "色差角度："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:97
-#, fuzzy, kde-format
-#| msgctxt "Blending mode - Grain Merge"
-#| msgid "Grain Merge"
+#, kde-format
 msgid "Grain seed:"
-msgstr "颗粒合并 (相加变深)"
+msgstr "颗粒种子："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:98
-#, fuzzy, kde-format
-#| msgid "Right Angle:"
+#, kde-format
 msgid "Light leak X:"
-msgstr "右侧角度："
+msgstr "漏光 X："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:99
-#, fuzzy, kde-format
-#| msgid "Right Angle:"
+#, kde-format
 msgid "Light leak Y:"
-msgstr "右侧角度："
+msgstr "漏光 Y："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:100
-#, fuzzy, kde-format
-#| msgctxt "Filter radius in Highpass filter settings"
-#| msgid "Filter radius:"
+#, kde-format
 msgid "Light leak radius:"
-msgstr "过滤半径："
+msgstr "漏光半径："
 
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:107
 #, kde-format
@@ -54330,104 +54163,93 @@ msgid ""
 "Color treatment and chromatic aberration use floating-point RGB conversion "
 "for this color model. Original opacity is preserved."
 msgstr ""
+"对于此色彩模型，色彩处理和色差会转换为浮点 RGB 处理。原始不透明度会被保留。"
 
 #: plugins/filters/solsticeeffects/KisFilmFilter.cpp:157
-#, fuzzy, kde-format
-#| msgid "&File"
+#, kde-format
 msgid "&Film..."
-msgstr "文件(&F)"
+msgstr "Film(&F)..."
 
 #: plugins/filters/solsticeeffects/KisFilmFilter.cpp:157
 #, kde-format
 msgid "Film"
-msgstr ""
+msgstr "Film"
 
 #: plugins/filters/solsticeeffects/KisFilmGrainConfigWidget.cpp:25
 #, kde-format
 msgid "Monochrome"
-msgstr ""
+msgstr "单色"
 
 #: plugins/filters/solsticeeffects/KisFilmGrainFilter.cpp:26
-#, fuzzy, kde-format
-#| msgid "&Gradient..."
+#, kde-format
 msgid "Film &Grain..."
-msgstr "渐变(&G)..."
+msgstr "Film Grain(&G)..."
 
 #: plugins/filters/solsticeeffects/KisFilmGrainFilter.cpp:26
-#, fuzzy, kde-format
-#| msgid "Fill Gradients"
+#, kde-format
 msgid "Film Grain"
-msgstr "填充渐变"
+msgstr "Film Grain"
 
 #: plugins/filters/solsticeeffects/KisGlowConfigWidget.cpp:35
-#, fuzzy, kde-format
-#| msgctxt "Layer name for translation of template"
-#| msgid "Effect"
+#, kde-format
 msgid "Effect area:"
-msgstr "特效"
+msgstr "效果范围："
 
 #: plugins/filters/solsticeeffects/KisGlowConfigWidget.cpp:36
-#, fuzzy, kde-format
-#| msgid "Arrange"
+#, kde-format
 msgid "Blur range:"
-msgstr "矢量图形排列控制"
+msgstr "模糊范围："
 
 #: plugins/filters/solsticeeffects/KisGlowConfigWidget.cpp:37
 #, kde-format
 msgid "Higher values include darker parts of the image in the glow."
-msgstr ""
+msgstr "值越高，发光中包含的图像暗部越多。"
 
 #: plugins/filters/solsticeeffects/KisGlowConfigWidget.cpp:39
 #, kde-format
 msgid ""
 "Higher values spread the light farther. Zero brightens highlights without "
 "spreading them."
-msgstr ""
+msgstr "值越高，光线扩散得越远。为零时只提亮高光而不扩散。"
 
 #: plugins/filters/solsticeeffects/KisGlowConfigWidget.cpp:41
 #, kde-format
 msgid ""
 "The original opacity is preserved. Glow does not extend outside painted "
 "areas."
-msgstr ""
+msgstr "原始不透明度会被保留。发光不会延伸到已绘制区域之外。"
 
 #: plugins/filters/solsticeeffects/KisGlowFilter.cpp:39
-#, fuzzy, kde-format
-#| msgctxt "New document"
-#| msgid "&New..."
+#, kde-format
 msgid "&Glow..."
-msgstr "新建(&N)..."
+msgstr "Glow(&G)..."
 
 #: plugins/filters/solsticeeffects/KisGlowFilter.cpp:39
-#, fuzzy, kde-format
-#| msgctxt "Blending mode - Glow"
-#| msgid "Glow"
+#, kde-format
 msgid "Glow"
-msgstr "发光"
+msgstr "Glow"
 
 #: plugins/filters/solsticeeffects/KisLineArtConfigWidget.cpp:31
-#, fuzzy, kde-format
-#| msgid "Keep original layer"
+#, kde-format
 msgid "Keep original"
-msgstr "保留原始图层"
+msgstr "保留原色"
 
 #: plugins/filters/solsticeeffects/KisLineArtConfigWidget.cpp:33
-#, fuzzy, kde-format
-#| msgid "Line color"
+#, kde-format
 msgid "Line color:"
-msgstr "线条颜色"
+msgstr "线条颜色："
 
 #: plugins/filters/solsticeeffects/KisLineArtConfigWidget.cpp:34
 #, kde-format
 msgid "Paper correction radius (pixels):"
-msgstr ""
+msgstr "纸张校正半径 (像素)："
 
 #: plugins/filters/solsticeeffects/KisLineArtConfigWidget.cpp:36
 #, kde-format
 msgid ""
 "Higher values retain more faint lines. Zero removes all ink; it does not "
 "bypass the filter."
-msgstr ""
+msgstr "值越高，保留的淡线越多。为零时会移除所有墨迹；这并不等于跳过此滤镜。"
 
 #: plugins/filters/solsticeeffects/KisLineArtConfigWidget.cpp:38
 #, kde-format
@@ -54435,6 +54257,7 @@ msgid ""
 "Choose a radius larger than the line width. Increase it for thick ink; "
 "reduce it for rapidly changing paper lighting."
 msgstr ""
+"请选择大于线条宽度的半径。墨线较粗时增大该值；纸张光照变化较快时减小该值。"
 
 #: plugins/filters/solsticeeffects/KisLineArtConfigWidget.cpp:40
 #, kde-format
@@ -54442,31 +54265,30 @@ msgid ""
 "Extracts dark marks on light paper into a transparent background. Very dark "
 "paper, sharp shadows and broad shaded areas may need manual correction."
 msgstr ""
+"将浅色纸张上的深色笔迹提取到透明背景上。纸张很暗、阴影锐利或大面积阴影区域可"
+"能需要手动修正。"
 
 #: plugins/filters/solsticeeffects/KisLineArtConfigWidget.cpp:47
 #, kde-format
 msgid ""
 "Paper brightness is measured through floating-point RGB. Keep original "
 "preserves the document's color channels."
-msgstr ""
+msgstr "纸张亮度以浮点 RGB 测量。“保留原色”会保留文档的颜色通道。"
 
 #: plugins/filters/solsticeeffects/KisLineArtFilter.cpp:42
-#, fuzzy, kde-format
-#| msgid "Invert Saturation"
+#, kde-format
 msgid "Line Art Extraction"
-msgstr "反转饱和度"
+msgstr "Line Art Extraction"
 
 #: plugins/filters/solsticeeffects/KisLineArtFilter.cpp:44
-#, fuzzy, kde-format
-#| msgid "Linear interpolation."
+#, kde-format
 msgid "&Line Art Extraction..."
-msgstr "线性插值"
+msgstr "Line Art Extraction(&L)..."
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:25
-#, fuzzy, kde-format
-#| msgid "Outline:"
+#, kde-format
 msgid "Outlines"
-msgstr "描边："
+msgstr "轮廓"
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:26
 #: plugins/paintops/hatching/hatching_paintop_plugin.cpp:29
@@ -54475,59 +54297,52 @@ msgid "Hatching"
 msgstr "排线"
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:27
-#, fuzzy, kde-format
-#| msgid "Grayscale"
+#, kde-format
 msgid "Grayscale output"
-msgstr "灰阶"
+msgstr "输出灰度"
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:54
 #, kde-format
 msgid ""
 "Stroke direction clockwise from horizontal, anchored to document pixels."
-msgstr ""
+msgstr "笔画方向，从水平方向顺时针计算，以文档像素为基准。"
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:56
 #, kde-format
 msgid ""
 "Varies stroke position, length and intensity. Zero produces regular parallel "
 "lines."
-msgstr ""
+msgstr "改变笔画的位置、长度和强度。为零时产生规则的平行线。"
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:65
-#, fuzzy, kde-format
-#| msgid "Outline:"
+#, kde-format
 msgid "Outline strength:"
-msgstr "描边："
+msgstr "轮廓强度："
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:68
-#, fuzzy, kde-format
-#| msgid "Hatching Angle"
+#, kde-format
 msgid "Hatching strength:"
-msgstr "排线角度"
+msgstr "排线强度："
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:69
-#, fuzzy, kde-format
-#| msgid "Hatching"
+#, kde-format
 msgid "Hatching size:"
-msgstr "排线"
+msgstr "排线大小："
 
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:70
-#, fuzzy, kde-format
-#| msgid "Lightness:"
+#, kde-format
 msgid "Roughness:"
-msgstr "亮度："
+msgstr "粗糙度："
 
 #: plugins/filters/solsticeeffects/KisPencilFilter.cpp:54
-#, fuzzy, kde-format
-#| msgid "Pencil"
+#, kde-format
 msgid "&Pencil..."
-msgstr "手绘路径"
+msgstr "Pencil(&P)..."
 
 #: plugins/filters/solsticeeffects/KisSharpnessFilter.cpp:33
-#, fuzzy, kde-format
-#| msgid "Sharpness"
+#, kde-format
 msgid "&Sharpness..."
-msgstr "锐利度"
+msgstr "Sharpness(&S)..."
 
 #: plugins/filters/solsticeeffects/KisSharpnessFilter.cpp:33
 #: plugins/paintops/libpaintop/KisSharpnessOptionData.cpp:32
@@ -70130,26 +69945,22 @@ msgid "Undo: erase actions of other tools"
 msgstr "撤销：清除上面各种变形工具的操作"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:365
-#, fuzzy, kde-format
-#| msgid "Thick gap:"
+#, kde-format
 msgctxt "@label:listbox Puppet Warp"
 msgid "Click pin:"
-msgstr "宽间隙："
+msgstr "点击图钉："
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:367
-#, fuzzy, kde-format
-#| msgid "Selection"
+#, kde-format
 msgctxt "@item:inlistbox Puppet Warp click action"
 msgid "Select pin"
-msgstr "选区"
+msgstr "选择图钉"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:368
-#, fuzzy, kde-format
-#| msgctxt "Action to delete the selected stop in the segment gradient editor"
-#| msgid "Delete stop"
+#, kde-format
 msgctxt "@item:inlistbox Puppet Warp click action"
 msgid "Delete pin"
-msgstr "删除色标"
+msgstr "删除图钉"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:370
 #, kde-format
@@ -70158,34 +69969,34 @@ msgid ""
 "Shift- or Ctrl-click adds a pin to the selection; drag on the canvas to "
 "select pins in a rectangle."
 msgstr ""
+"点击图钉时执行的操作。按住 Ctrl+Alt 点击总是删除图钉。\n"
+"按住 Shift 或 Ctrl 点击可将图钉加入选择；在画布上拖动可框选图钉。"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:374
-#, fuzzy, kde-format
-#| msgid "Order"
+#, kde-format
 msgctxt "@label Puppet Warp pin stacking order"
 msgid "Order:"
-msgstr "排序"
+msgstr "顺序："
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:381
-#, fuzzy, kde-format
-#| msgid "Blur the selection by the set amount"
+#, kde-format
 msgid "Bring the selected pins' parts to the front"
-msgstr "按照设置值模糊选区"
+msgstr "将选中图钉的部分置于最前"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:383
 #, kde-format
 msgid "Bring the selected pins' parts forward"
-msgstr ""
+msgstr "将选中图钉的部分前移一层"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:384
 #, kde-format
 msgid "Send the selected pins' parts backward"
-msgstr ""
+msgstr "将选中图钉的部分后移一层"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:385
 #, kde-format
 msgid "Send the selected pins' parts to the back"
-msgstr ""
+msgstr "将选中图钉的部分置于最后"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:705
 #, kde-format
@@ -70193,6 +70004,8 @@ msgid ""
 "Click the canvas to add pins. Ctrl+Alt-click a pin to delete it. Shift-click "
 "or drag a rectangle to select several pins and move them together."
 msgstr ""
+"点击画布以添加图钉。按住 Ctrl+Alt 点击图钉可将其删除。按住 Shift 点击或拖出矩"
+"形可选择多个图钉并一起移动。"
 
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:719
 #, kde-format
@@ -70267,7 +70080,7 @@ msgstr "操控变形 - 外框"
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:245
 #, kde-format
 msgid "Puppet"
-msgstr ""
+msgstr "Puppet Warp"
 
 #. i18n: context: string @ property (toolTip), widget (QToolButton, liquifyButton)
 #. i18n: context: string @ property (text), widget (QToolButton, liquifyButton)
@@ -70520,17 +70333,15 @@ msgstr "变形模式"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, puppetShowMeshCheckBox)
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:1684
-#, fuzzy, kde-format
-#| msgid "Show guides"
+#, kde-format
 msgid "Show mesh"
-msgstr "显示参考线"
+msgstr "显示网格"
 
 #. i18n: context: string @ property (text), widget (QLabel, puppetExpansionLabel)
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:1694
-#, fuzzy, kde-format
-#| msgid "Extension"
+#, kde-format
 msgid "Expansion:"
-msgstr "延长线"
+msgstr "扩展："
 
 #. i18n: context: string @ property (text), widget (QLabel, cageTransformDirections)
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:1755
@@ -70860,86 +70671,77 @@ msgstr "漫画格子框编辑工具"
 #, kde-format
 msgctxt "@title:window"
 msgid "Solstice - Vision ML"
-msgstr ""
+msgstr "Solstice - Vision ML"
 
 #: plugins/visionml/src/VisionML.cpp:171
 #, kde-format
 msgid "Failed to initialize Vision ML.\n"
-msgstr ""
+msgstr "Vision ML 初始化失败。\n"
 
 #: plugins/visionml/src/VisionML.cpp:308
-#, fuzzy, kde-format
-#| msgctxt "a tooltip shown when a file layer cannot find its linked file"
-#| msgid "Linked file not found: %1"
+#, kde-format
 msgid "Model file not found: %1"
-msgstr "无法找到链接的文件：%1"
+msgstr "找不到模型文件：%1"
 
 #: plugins/visionml/src/VisionML.cpp:327
 #, kde-format
 msgid "Error while trying to switch inference backend.\n"
-msgstr ""
+msgstr "切换推理后端时出错。\n"
 
 #: plugins/visionml/src/VisionML.cpp:410
 #, kde-format
 msgid "Unsupported image format for conversion to QImage"
-msgstr ""
+msgstr "不支持转换为 QImage 的图像格式"
 
 #: plugins/visionml/src/VisionML.cpp:431
-#, fuzzy, kde-format
-#| msgid "Back"
+#, kde-format
 msgid "Backend"
-msgstr "上一帧"
+msgstr "后端"
 
 #: plugins/visionml/src/VisionML.cpp:439
 #, kde-format
 msgid "CPU"
-msgstr ""
+msgstr "CPU"
 
 #: plugins/visionml/src/VisionML.cpp:440
 #, kde-format
 msgid "GPU"
-msgstr ""
+msgstr "GPU"
 
 #: plugins/visionml/src/VisionML.cpp:443
 #, kde-format
 msgid "CPU backend not available, hardware is not supported"
-msgstr ""
+msgstr "CPU 后端不可用，硬件不受支持"
 
 #: plugins/visionml/src/VisionML.cpp:447
 #, kde-format
 msgid "GPU backend not available, no supported devices found"
-msgstr ""
+msgstr "GPU 后端不可用，未找到受支持的设备"
 
 #: plugins/visionml/src/VisionML.cpp:495
-#, fuzzy, kde-format
-#| msgctxt "Color model"
-#| msgid "Model"
+#, kde-format
 msgid "Model"
-msgstr "色彩模型"
+msgstr "模型"
 
 #: plugins/visionml/src/VisionML.cpp:514
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Open Resources Folder"
+#, kde-format
 msgid "Open models folder"
-msgstr "打开资源文件夹"
+msgstr "打开模型文件夹"
 
 #: plugins/visionml/src/VisionML.cpp:597
-#, fuzzy, kde-format
-#| msgid "Failed to open %1."
+#, kde-format
 msgid "Failed to open folder: "
-msgstr "打开 %1 失败。"
+msgstr "无法打开文件夹："
 
 #: plugins/visionml/src/VisionML.cpp:614
-#, fuzzy, kde-format
-#| msgid "Error during import:"
+#, kde-format
 msgid "Error during image processing: "
-msgstr "导入时发生错误："
+msgstr "图像处理时出错："
 
 #: plugins/visionml/src/filters/BackgroundRemovalFilter.cpp:31
 #, kde-format
 msgid "Uses a neural network to separate foreground objects from background."
-msgstr ""
+msgstr "使用神经网络将前景对象与背景分离。"
 
 #: plugins/visionml/src/filters/BackgroundRemovalFilter.cpp:38
 #, kde-format
@@ -70947,109 +70749,89 @@ msgid ""
 "BiRefNet Dynamic gives higher-quality large-image masks; Lite is faster and "
 "uses less memory."
 msgstr ""
+"BiRefNet Dynamic 能为大图像生成更高质量的蒙版；Lite 速度更快，占用内存更少。"
 
 #: plugins/visionml/src/filters/BackgroundRemovalFilter.cpp:46
 #, kde-format
 msgid "Estimate pixel foreground contribution"
-msgstr ""
+msgstr "估算像素的前景贡献"
 
 #: plugins/visionml/src/filters/BackgroundRemovalFilter.cpp:106
-#, fuzzy, kde-format
-#| msgid "Background Color"
+#, kde-format
 msgid "Background Removal..."
-msgstr "背景色"
+msgstr "Background Removal..."
 
 #: plugins/visionml/src/filters/BackgroundRemovalFilter.cpp:136
 #: plugins/visionml/src/filters/BackgroundRemovalFilter.h:19
-#, fuzzy, kde-format
-#| msgid "Background Color"
+#, kde-format
 msgid "Background Removal"
-msgstr "背景色"
+msgstr "Background Removal"
 
 #: plugins/visionml/src/inpaint/InpaintTool.cpp:107
-#, fuzzy, kde-format
-#| msgid "Uncalibrated color space"
+#, kde-format
 msgid "Unsupported mask color space: %1"
-msgstr "未经校准的色彩空间"
+msgstr "不支持的蒙版色彩空间：%1"
 
 #: plugins/visionml/src/inpaint/InpaintTool.cpp:270
-#, fuzzy
-#| msgid "Smart"
 msgctxt "(qtundo-format)"
 msgid "Smart Fill"
-msgstr "智能"
+msgstr "智能填充"
 
 #: plugins/visionml/src/inpaint/InpaintTool.h:75
-#, fuzzy, kde-format
-#| msgid "Fill Tool"
+#, kde-format
 msgid "Smart Fill Tool"
-msgstr "填充工具/油漆桶"
+msgstr "智能填充工具"
 
 #: plugins/visionml/src/segmentation/SegmentationToolHelper.cpp:116
 #: plugins/visionml/src/segmentation/SegmentationToolHelper.cpp:135
-#, fuzzy
-#| msgctxt ""
-#| "Action to delete the selected segment in the segment gradient editor"
-#| msgid "Delete segment"
 msgctxt "(qtundo-format)"
 msgid "Select Segment"
-msgstr "删除片段"
+msgstr "选择分割区域"
 
 #: plugins/visionml/src/segmentation/SegmentationToolHelper.cpp:147
-#, fuzzy
-#| msgctxt "(qtundo-format)"
-#| msgid "Smooth Selection"
 msgctxt "(qtundo-format)"
 msgid "Segment Selection"
-msgstr "平滑化选区"
+msgstr "分割选区"
 
 #: plugins/visionml/src/segmentation/SelectSegmentFromPointTool.cpp:20
 #: plugins/visionml/src/segmentation/SelectSegmentFromPointTool.h:59
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Undo Polygon Selection Points"
+#, kde-format
 msgid "Segment Selection from Point"
-msgstr "撤销多边形选择点"
+msgstr "从点创建分割选区"
 
 #: plugins/visionml/src/segmentation/SelectSegmentFromRectTool.cpp:18
 #: plugins/visionml/src/segmentation/SelectSegmentFromRectTool.h:64
-#, fuzzy, kde-format
-#| msgid "Freehand Selection Tool"
+#, kde-format
 msgid "Segment Selection from Box"
-msgstr "手绘轮廓选区工具/套索"
+msgstr "从框创建分割选区"
 
 #. i18n: context: text @ Actions (Filters), ActionCollection (Krita)
 #: plugins/visionml/src/vision_filters.action:4
-#, fuzzy, kde-format
-#| msgctxt "Filter as an effect"
-#| msgid "Filters"
+#, kde-format
 msgctxt "action"
 msgid "Filters"
 msgstr "滤镜"
 
 #. i18n: context: text @ Action (krita_filter_background_removal), Actions (Filters), ActionCollection (Krita)
 #: plugins/visionml/src/vision_filters.action:7
-#, fuzzy, kde-format
-#| msgid "Background Color"
+#, kde-format
 msgctxt "action"
 msgid "Background Removal..."
-msgstr "背景色"
+msgstr "Background Removal..."
 
 #. i18n: context: toolTip @ Action (krita_filter_background_removal), Actions (Filters), ActionCollection (Krita)
 #: plugins/visionml/src/vision_filters.action:9
-#, fuzzy, kde-format
-#| msgid "Background Color"
+#, kde-format
 msgctxt "action"
 msgid "Background Removal (VisionML)"
-msgstr "背景色"
+msgstr "Background Removal (VisionML)"
 
 #. i18n: context: iconText @ Action (krita_filter_background_removal), Actions (Filters), ActionCollection (Krita)
 #: plugins/visionml/src/vision_filters.action:10
-#, fuzzy, kde-format
-#| msgid "Background Color"
+#, kde-format
 msgctxt "action"
 msgid "Background Removal"
-msgstr "背景色"
+msgstr "Background Removal"
 
 #. i18n: context: text @ Action (SelectSegmentFromPointTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (SelectSegmentFromPointTool), Actions (tool-shortcuts), ActionCollection (Tools)
@@ -71057,12 +70839,10 @@ msgstr "背景色"
 #: plugins/visionml/src/vision_tools.action:7
 #: plugins/visionml/src/vision_tools.action:9
 #: plugins/visionml/src/vision_tools.action:10
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Undo Polygon Selection Points"
+#, kde-format
 msgctxt "action"
 msgid "Segment Selection from Point"
-msgstr "撤销多边形选择点"
+msgstr "从点创建分割选区"
 
 #. i18n: context: text @ Action (SelectSegmentFromRectTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (SelectSegmentFromRectTool), Actions (tool-shortcuts), ActionCollection (Tools)
@@ -71070,28 +70850,26 @@ msgstr "撤销多边形选择点"
 #: plugins/visionml/src/vision_tools.action:17
 #: plugins/visionml/src/vision_tools.action:19
 #: plugins/visionml/src/vision_tools.action:20
-#, fuzzy, kde-format
-#| msgid "Freehand Selection Tool"
+#, kde-format
 msgctxt "action"
 msgid "Segment Selection from Box"
-msgstr "手绘轮廓选区工具/套索"
+msgstr "从框创建分割选区"
 
 #. i18n: context: text @ Action (VisionMLInpaintTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (VisionMLInpaintTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #: plugins/visionml/src/vision_tools.action:27
 #: plugins/visionml/src/vision_tools.action:30
-#, fuzzy, kde-format
-#| msgid "Fill Tool"
+#, kde-format
 msgctxt "action"
 msgid "Smart Fill Tool"
-msgstr "填充工具/油漆桶"
+msgstr "智能填充工具"
 
 #. i18n: context: toolTip @ Action (VisionMLInpaintTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #: plugins/visionml/src/vision_tools.action:29
 #, kde-format
 msgctxt "action"
 msgid "Smart Fill Tool (Vision ML)"
-msgstr ""
+msgstr "智能填充工具 (Vision ML)"
 
 #: qmlmodules/components/qml/ResourceView.qml:149
 #, kde-format

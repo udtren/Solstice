@@ -130,8 +130,9 @@ Read these before adding or updating any feature:
   reference image or gradient; CR0-CR4 implemented, built, tested and installed;
   interactive verification pending):
   `docs/agent/color-reference.md` (original plan: `docs/agent/color-reference-plan.md`)
-- Translations (Simplified Chinese first; policy decided and catalog
-  tooling done 2026-10-16; translation not started): `docs/agent/translations.md`
+- Translations (Simplified Chinese first; policy, catalog tooling and
+  the complete `zh_CN` translation done 2026-10-16; interface check
+  pending): `docs/agent/translations.md`
 - Document tool state: `docs/agent/document-tool-state.md`
 - Quick Access: `docs/agent/quick-access.md`
 - Rest Note: `docs/agent/rest-note.md`
