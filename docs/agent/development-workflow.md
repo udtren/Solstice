@@ -107,6 +107,11 @@ Examples: `libs\ui`, `libs\widgets`, `krita`, `plugins\dockers\restnote`.
    `AGENTS.md` index updated for new features.
 6. Listed the feature's manual regression checks for the user to run, and
    stated which ones could not be verified by an agent.
+7. If user-visible strings were added or changed: ran
+   `dev-tools/translations/update_translations.py`, translated the new and
+   fuzzy `po/zh_CN/krita.po` entries (rules in `docs/agent/translations.md`),
+   checked that `msgfmt --check` reports no fuzzy or untranslated entries,
+   and committed the catalog with the change.
 
 ## Upstream synchronization
 

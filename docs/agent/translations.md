@@ -198,6 +198,10 @@ Access layout issues and legacy-import warnings (never displayed),
    Transform Tool 14): catalog complete, 10,432 translated, `krita.mo`
    installed. Still to do: check the interface in Simplified Chinese
    (truncated labels, dialog widths, terminology in context).
-4. Add "update the template and translate" to the hand-off checklist in
-   `development-workflow.md`; list the language in `README.md` and the
-   release notes.
+4. Done 2026-10-16: hand-off checklist step 7 in
+   `development-workflow.md`; user guide `docs/languages.md` (in the guide
+   index); README "In development" entry and "Supported environment"
+   language line. At the next release, move the README entry into the
+   release summary and mention the machine-translated Simplified Chinese
+   interface in the GitHub Release notes (`docs/agent/versioning.md`,
+   "Releasing").

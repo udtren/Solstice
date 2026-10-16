@@ -1203,3 +1203,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   Transform Tool / Puppet Warp (14). The `zh_CN` catalog is complete:
   10,432 translated, 0 fuzzy, 0 untranslated; `msgfmt --check` and
   `ninja pofiles` passed; `krita.mo` installed.
+
+## 2026-10-16 docs: interface languages (A5)
+
+- Added hand-off checklist step 7 (update and translate the catalog) to
+  `development-workflow.md`, the user guide `docs/languages.md` (guide
+  index), a README "In development" entry and a "Supported environment"
+  language line, and the translation touch points in `feature-inventory.md`.
+- At the next release: move the README entry into the release summary and
+  mention the machine-translated Simplified Chinese interface in the GitHub
+  Release notes.

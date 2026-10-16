@@ -12,6 +12,8 @@ Technical notes for developers are in [`agent`](agent/).
   and resources, and importing a Krita profile.
 - [Versions](versioning.md): Solstice's version number, and the News area
   of the welcome page.
+- [Interface languages](languages.md): switching the language, and the
+  Simplified Chinese translation. In development.
 - [Explorer thumbnails](windows-shell-thumbnails.md): previews of `.kra`
   and `.krz` files in Windows Explorer.
 
