@@ -18,7 +18,7 @@ verification rules are in `docs/agent/development-workflow.md`.
 | `cmake/modules/` | CMake helpers (`KritaAddBrokenUnitTest.cmake` defines `kis_add_test(s)`). | Rarely. |
 | `3rdparty*`, `plugins/visionml/thirdparty/` | Vendored or dependency sources. | Only for deliberate dependency updates. Never reformat. |
 | `packaging/` | Platform packaging (desktop only; Android packaging removed). | Packaging/branding work only. |
-| `po/` | Translations (generated upstream). | Never edit by hand. |
+| `po/` | Translations, maintained by Solstice since 2026-10-16 (no upstream updates). | Translation work only; follow `docs/agent/translations.md`. |
 | `pch/` | Precompiled headers selected by `kis_add_library`. | Never for feature work. |
 | `winquirks/` | MSVC compatibility headers. | Never for feature work. |
 

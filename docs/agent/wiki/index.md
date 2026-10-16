@@ -85,6 +85,9 @@ matches the task.
   why `0.1.0-alpha` is shown while `6.0.5-prealpha` stays internal.
 - [Upstream: weekly review, selective cherry-picks](decisions/upstream-selective-intake.md):
   Hermes reports, the user decides, Claude cherry-picks; dry-run lessons.
+- [Translations: Solstice owns `krita.po`](decisions/translation-policy.md):
+  direct catalog edits, AI translation stated in release notes, English
+  feature names, no upstream translation updates.
 
 ### Pitfalls
 
@@ -105,6 +108,10 @@ matches the task.
   changes need `acceptsClicks()` to be committed; the strategies' "Alt" flag
   is the SampleFgNode action (Ctrl+Alt by default); cache keys must hold every
   input.
+
+- [Translation extraction on Windows](pitfalls/translation-extraction.md):
+  `.ui` `comment=` contexts, CRLF resource names, missing `Archive::Zip`,
+  reference fix-up order, `QT_TRANSLATE_NOOP` not extracted.
 
 ### Benchmarks
 

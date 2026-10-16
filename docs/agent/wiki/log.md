@@ -1151,3 +1151,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   Verified beta.6 on the live home/download pages, the GitHub Release link,
   both new feature pages with their images, and their sitemap entries in a
   normal browser. README and the guide index now identify the published beta.
+
+## 2026-10-16 tooling: translation catalogs (Simplified Chinese)
+
+- Recorded the user's translation policy in
+  [translation-policy](decisions/translation-policy.md) and
+  `docs/agent/translations.md`.
+- Added `dev-tools/translations/update_translations.py` (Windows replacement
+  for `Messages.sh`) and merged `po/zh_CN/krita.po`: 9,664 translated (all
+  previous translations unchanged), 577 fuzzy, 179 untranslated, 158
+  obsolete. `msgfmt --check` and `ninja pofiles` passed; not installed.
+- Pitfalls in [translation-extraction](pitfalls/translation-extraction.md).
