@@ -177,6 +177,9 @@ Access layout issues and legacy-import warnings (never displayed),
   素材 for an asset, 护眼休息 for an eye break, 图钉 for a Puppet Warp pin,
   GPU 引擎 for the GPU engine, 图块 for a tile; Layer Comp(s) and Puppet Warp
   stay in English.
+  The Layer Comps docker's inherited "composition" strings (context menu,
+  export, the `krita.action` entries and the export warning) also say
+  Layer Comp instead of Krita's 图层显示方案 (2026-10-16).
 - A fuzzy entry whose previous text differs only by "Krita" -> "Solstice"
   (same context) can take the old translation with the same rename; every
   other fuzzy entry needs a new translation (89 renames on 2026-10-16).

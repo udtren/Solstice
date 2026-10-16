@@ -1213,3 +1213,10 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - At the next release: move the README entry into the release summary and
   mention the machine-translated Simplified Chinese interface in the GitHub
   Release notes.
+
+## 2026-10-16 translation: Layer Comps terminology in zh_CN
+
+- Changed the 14 inherited "composition" entries of the Layer Comps docker
+  (context menu, export, `krita.action`, the export warning) from 图层显示方案
+  to Layer Comp, matching the docker's newer strings. Catalog still 10,432
+  translated; `krita.mo` rebuilt and installed.
