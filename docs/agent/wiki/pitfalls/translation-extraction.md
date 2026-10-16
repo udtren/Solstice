@@ -7,6 +7,8 @@ sources:
   - action_i18n.pl
   - extracti18n.pl
   - Messages.sh
+  - libs/global/KisSolsticeProfile.cpp
+  - docs/agent/translations.md
 related:
   - decisions/translation-policy.md
 ---
@@ -32,7 +34,18 @@ real new and removed strings differ (755 new, 276 gone on 2026-10-16).
 - **KDE fixes up references after xgettext**: `// i18n: file: x.ui:12` becomes
   `#: x.ui:12` and `rc.cpp` references are dropped. Sorting the template
   before that fix-up reordered the whole catalog.
-- **`QT_TRANSLATE_NOOP` is not extracted** (`kstandardaction_p.h`), so those
-  texts are not in `krita.po`.
+- **`QT_TRANSLATE_NOOP` is not extracted** (`kstandardaction_p.h`), but the
+  standard action labels are still translated: `kstandardaction.cpp` looks
+  them up with `i18nc("action", ...)` and the same texts are extracted from
+  `krita/kritamenu.action`. Change both when renaming one.
+- **Texts shown before `QApplication` cannot use `i18n()`** (the Krita-profile
+  import in `krita/main.cc`, and the `KisSolsticeProfile` errors it shows).
+  They are built in per language with `KisSolsticeProfile::builtInText()`;
+  adding a language means adding it there (audit 2026-10-16,
+  [translations.md](../../translations.md)).
+- **Error details are easy to miss:** a translated dialog that shows `%1`
+  from a model or an exception (`std::runtime_error`) stays partly English.
+  Wrap the detail with `i18n()` where it is made; `e.what()` carries UTF-8
+  (`QString(const char *)` decodes it).
 - **`msgfmt -o nul` fails on Windows** ("Invalid argument"); write the check
   output to a temporary `.mo`.

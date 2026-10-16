@@ -42,6 +42,26 @@ KRITAGLOBAL_EXPORT bool legacyProfileExists();
 /// The language of the Krita profile's language override (e.g. "ja"), or empty.
 KRITAGLOBAL_EXPORT QString legacyLanguage();
 
+/**
+ * The language of the texts around the import. They can appear before Qt
+ * and the translation catalogs start, so they are built in
+ * (builtInText()); the errors of this namespace use them too.
+ */
+enum class TextLanguage {
+    English,
+    Japanese,
+    ChineseSimplified,
+};
+
+/// The Krita language override (@p legacyLanguage, e.g. "ja" or "zh_CN")
+/// if it names a built-in language, otherwise the Windows display language
+/// (@p windowsLanguageId, a LANGID; 0 elsewhere).
+KRITAGLOBAL_EXPORT TextLanguage textLanguageFor(const QString &legacyLanguage, quint16 windowsLanguageId);
+/// textLanguageFor() of this system.
+KRITAGLOBAL_EXPORT TextLanguage textLanguage();
+/// The text of textLanguage().
+KRITAGLOBAL_EXPORT QString builtInText(const QString &english, const QString &japanese, const QString &chinese);
+
 /// Creates the profile folders for a fresh start (with the language set to
 /// English) and marks the profile Ready.
 KRITAGLOBAL_EXPORT bool createFreshProfile(QString *error = nullptr);
