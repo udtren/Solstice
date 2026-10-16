@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-10-16 12:02+0900\n"
+"POT-Creation-Date: 2026-10-16 12:18+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -15312,7 +15312,7 @@ msgctxt "action"
 msgid "Workspaces"
 msgstr "工作区"
 
-#: krita/main.cc:847
+#: krita/main.cc:843
 #, fuzzy, kde-format
 #| msgctxt "action"
 #| msgid "Quit application"
@@ -15320,7 +15320,7 @@ msgctxt "@info:short description"
 msgid "Digital painting application"
 msgstr "退出应用程序"
 
-#: krita/main.cc:850
+#: krita/main.cc:846
 #, kde-format
 msgctxt "@info:credit"
 msgid ""
@@ -15328,7 +15328,7 @@ msgid ""
 "Contributors"
 msgstr ""
 
-#: krita/main.cc:936 libs/ui/KisApplication.cpp:562
+#: krita/main.cc:932 libs/ui/KisApplication.cpp:562
 #: libs/ui/KisApplication.cpp:868
 #, fuzzy, kde-format
 #| msgctxt "@title:window"
@@ -15337,7 +15337,7 @@ msgctxt "@title:window"
 msgid "Solstice: Warning"
 msgstr "Krita：警告"
 
-#: krita/main.cc:937
+#: krita/main.cc:933
 #, kde-format
 msgid ""
 "You are running an unsupported version of Windows: %1.\n"
@@ -44589,6 +44589,69 @@ msgstr "您输入的名称无效。"
 msgid "Blending mode '%1' could not be found."
 msgstr "%1 无法打开"
 
+#: plugins/dockers/quickaccess/QuickAccessLegacyImporter.cpp:77
+#, fuzzy, kde-format
+#| msgid "Could not open '%1'."
+msgid "Could not read '%1': %2"
+msgstr "无法打开“%1”。"
+
+#: plugins/dockers/quickaccess/QuickAccessLegacyImporter.cpp:84
+#, fuzzy, kde-format
+#| msgid "Could not open '%1'."
+msgid "Could not parse '%1': %2"
+msgstr "无法打开“%1”。"
+
+#: plugins/dockers/quickaccess/QuickAccessModel.cpp:111
+#, fuzzy, kde-format
+#| msgid "File Layer Properties"
+msgid "A Quick Access item has no id."
+msgstr "文件图层属性"
+
+#: plugins/dockers/quickaccess/QuickAccessModel.cpp:119
+#, fuzzy, kde-format
+#| msgid "Layer %1 has an unsupported type."
+msgid "Item '%1' has an unsupported type."
+msgstr "图层 %1 包含不支持的类型。"
+
+#: plugins/dockers/quickaccess/QuickAccessModel.cpp:165
+#, fuzzy, kde-format
+#| msgctxt ""
+#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
+#| "Quick_circle_big.kpp"
+#| msgid "Quick circle big"
+msgid "A Quick Access grid has no id."
+msgstr "快速 圆形 大"
+
+#: plugins/dockers/quickaccess/QuickAccessModel.cpp:200
+#, fuzzy, kde-format
+#| msgctxt ""
+#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
+#| "Quick_circle_big.kpp"
+#| msgid "Quick circle big"
+msgid "A Quick Access tab has no id."
+msgstr "快速 圆形 大"
+
+#: plugins/dockers/quickaccess/QuickAccessModel.cpp:259
+#, kde-format
+msgid "Unsupported Quick Access format version %1."
+msgstr ""
+
+#: plugins/dockers/quickaccess/QuickAccessModel.cpp:278
+#, fuzzy, kde-format
+#| msgid ""
+#| "The following reference images could not be loaded:\n"
+#| "%1"
+msgid "A Quick Access profile must contain at least one tab."
+msgstr ""
+"无法加载下列参考图像：\n"
+"%1"
+
+#: plugins/dockers/quickaccess/QuickAccessProfileRepository.cpp:55
+#, fuzzy, kde-format
+#| msgid "Could not create the file for saving"
+msgid "Could not create the profile folder '%1'."
+msgstr "无法创建文件进行保存"
+
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:73
 #, kde-format
 msgctxt "@item:inlistbox"
@@ -71639,9 +71702,21 @@ msgstr ""
 msgid "Failed to initialize Vision ML.\n"
 msgstr ""
 
+#: plugins/visionml/src/VisionML.cpp:308
+#, fuzzy, kde-format
+#| msgctxt "a tooltip shown when a file layer cannot find its linked file"
+#| msgid "Linked file not found: %1"
+msgid "Model file not found: %1"
+msgstr "无法找到链接的文件：%1"
+
 #: plugins/visionml/src/VisionML.cpp:327
 #, kde-format
 msgid "Error while trying to switch inference backend.\n"
+msgstr ""
+
+#: plugins/visionml/src/VisionML.cpp:410
+#, kde-format
+msgid "Unsupported image format for conversion to QImage"
 msgstr ""
 
 #: plugins/visionml/src/VisionML.cpp:431
@@ -71725,6 +71800,12 @@ msgstr "背景色"
 #| msgid "Background Color"
 msgid "Background Removal"
 msgstr "背景色"
+
+#: plugins/visionml/src/inpaint/InpaintTool.cpp:107
+#, fuzzy, kde-format
+#| msgid "Uncalibrated color space"
+msgid "Unsupported mask color space: %1"
+msgstr "未经校准的色彩空间"
 
 #: plugins/visionml/src/inpaint/InpaintTool.cpp:270
 #, fuzzy

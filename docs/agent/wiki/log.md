@@ -1162,3 +1162,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   previous translations unchanged), 577 fuzzy, 179 untranslated, 158
   obsolete. `msgfmt --check` and `ninja pofiles` passed; not installed.
 - Pitfalls in [translation-extraction](pitfalls/translation-extraction.md).
+
+## 2026-10-16 fix: strings outside the translation catalog (F1-F5)
+
+- Audited Solstice C++ code for text that bypasses `i18n()`; results and the
+  F1-F5 list in `docs/agent/translations.md` ("Strings outside the catalog").
+  No Qt `tr()`; the standard action texts are covered by `.action` files.
+- The Krita-profile import texts in `krita/main.cc` and the
+  `KisSolsticeProfile` errors are built in for English, Japanese and
+  Simplified Chinese (`builtInText()`, `textLanguageFor()`, tested in
+  `KisSolsticeProfileTest`); Quick Access and Vision ML error details use
+  `i18n()`. Catalog re-merged: 12 new strings, no translation changed.
+- Built, `KisSolsticeProfileTest` and `QuickAccessCoreTest` passed;
+  kritaglobal, krita, Quick Access and Vision ML installed. The dialogs were
+  not checked interactively.
+- Updated [translation-extraction](pitfalls/translation-extraction.md).

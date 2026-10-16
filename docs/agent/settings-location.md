@@ -342,8 +342,13 @@ created the resource folder without `brushes\`.
 1. `registerMainConfigDefaults()`, then `prepareSolsticeProfile()` before
    `KConfig::setMainConfigName()` and the temporary `QCoreApplication`:
    - with no marker and a Krita profile, a `MessageBoxW` (Yes = import,
-     No = fresh, Cancel = quit) whose text is built in, in Japanese or
-     English, from the Krita language override or the Windows UI language;
+     No = fresh, Cancel = quit) whose text is built in, in English, Japanese
+     or Simplified Chinese (`KisSolsticeProfile::builtInText()`), from the
+     Krita language override (`ja`, `zh_CN`, `zh_SG`) or the Windows UI
+     language (Japanese; Chinese with the Simplified or Singapore
+     sublanguage), English otherwise (`textLanguageFor()`); the profile
+     errors shown in it (`KisSolsticeProfile.cpp`) and the progress and
+     stopped messages of step 2 use the same built-in texts;
    - with no Krita profile, a fresh profile;
    - batch runs (`--export*`) do not ask and create nothing.
 2. `finishSolsticeImport()` after the single-instance check, before the splash
@@ -557,8 +562,9 @@ The import decision has to come before any configuration is read.
      `%APPDATA%\krita` containing `resourcecache.sqlite`), show a **native
      Windows task dialog** (no Qt needed): "Use your Krita settings and
      resources in Solstice?", with **Import** and **Start fresh**;
-   - the dialog text is built in, in English and Japanese, chosen from the
-     Krita language override or the Windows UI language;
+   - the dialog text is built in, in English and Japanese (Simplified
+     Chinese added 2026-10-16), chosen from the Krita language override or
+     the Windows UI language;
    - with no Krita profile, start fresh without asking.
 2. **Import, small files (immediately, still before Qt):**
    - copy the rc files into `config\`, rewriting the `kritarc` paths listed

@@ -1,7 +1,8 @@
 # Translations (Simplified Chinese first)
 
 Status: policy decided 2026-10-16; extraction and merge tooling done
-2026-10-16 (`zh_CN` catalog merged); audit and translation not started.
+2026-10-16 (`zh_CN` catalog merged); audit and fixes F1-F5 done
+2026-10-16; translation not started.
 
 ## Decisions (user, 2026-10-16)
 
@@ -91,6 +92,69 @@ example "Digital painting application" got the translation of "Quit
 application"), so translate every fuzzy entry; do not just remove the flag.
 `ninja pofiles` builds the catalog.
 
+## Strings outside the catalog (audit 2026-10-16)
+
+Scope: C++ files added or changed relative to the upstream snapshot
+(`git diff krita/6.0 main`, 265 added and 479 modified files, vendored
+`plugins/visionml/thirdparty/` excluded; only the changed lines of modified
+files). A statement-level scan removed `i18n*()` calls and listed the
+sentence-like literals that were left (356), then each was classified by
+where it ends up. Heuristic: literals built in unusual ways can be missed.
+
+**Qt `tr()` / `QT_TRANSLATE_NOOP`:** no `tr()` or
+`QCoreApplication::translate` in Solstice code. The three Solstice
+`QT_TRANSLATE_NOOP` texts in `libs/widgetutils/config/kstandardaction_p.h`
+("&Configure Solstice...", "Upstream Krita &Handbook", "&About Solstice")
+are fine: `kstandardaction.cpp` translates labels with `i18nc("action", ...)`
+and the strings are extracted from `krita/kritamenu.action`.
+
+**User-visible, fixed 2026-10-16** (how: last column):
+
+| # | Where | What | Fix |
+| --- | --- | --- | --- |
+| F1 | `krita/main.cc` `askImportKritaProfile()`, `prepareSolsticeProfile()` (before `QApplication`) | Krita-profile import prompt and two error boxes (`MessageBoxW`), built in as English/Japanese; `solsticeUseJapanese()` picks the language | Built in: `KisSolsticeProfile::builtInText()` picks English, Japanese or Simplified Chinese (`textLanguageFor()`: Krita override `ja`/`zh_CN`/`zh_SG`, else the Windows UI language); `solsticeUseJapanese()` removed |
+| F2 | `krita/main.cc` `finishSolsticeImport()` (after `setApplicationDomain`) | progress dialog text, "import stopped" message (English/Japanese built in) | Same built-in texts as F1 (one language for the whole import, and the F3 details it shows are built in) |
+| F3 | `libs/global/KisSolsticeProfile.cpp` `setError()` | 5 distinct English details (11 calls: "Could not create/copy/clear %1", "Could not write the profile marker", "Not enough free space...") shown inside F1/F2 messages | `builtInText()` (they can appear before `QApplication`); "Cancelled" too |
+| F4 | `plugins/dockers/quickaccess/QuickAccessModel.cpp` (6), `QuickAccessProfileRepository.cpp:54` (1), `QuickAccessLegacyImporter.cpp:76,83` (2) | English details passed as `%1` into translated warnings | `i18n()`; `kritaquickaccesscore` links `KF6::I18n` |
+| F5 | `plugins/visionml/src/VisionML.cpp:308,410`, `inpaint/InpaintTool.cpp:107` | `std::runtime_error` texts appended to the translated "Error during image processing:" box (`VisionMLErrorReporter::showError`); ONNX Runtime errors stay English | `i18n()` at the throw (`e.what()` is UTF-8; `QString(const char *)` decodes it) |
+
+**User-visible, English upstream too (low priority):** the root launcher's
+start failure (`krita/windows_root_launcher.cpp:99`, before any Qt), the
+animation render timeout (`libs/ui/animation/KisAnimationRender.cpp:196`;
+upstream had the same literal, Solstice only renamed Krita), the assert box
+(`libs/global/kis_assert.cpp:43`), the usage-log warning
+(`plugins/extensions/buginfo/DlgKritaLog.cpp:30`).
+
+**Not user-visible (no action):** usage-log and system-information lines
+(`KisBrushStrokeLayer.cpp`, `KisUsageLogger.cpp`, `main.cc` sysinfo), style
+sheets, SQL, debug output, GPU engine internal errors (logged; the GPU
+settings and failure dialogs in `libs/ui/KisGpuEngineUi.cpp` use `i18n()`),
+ABR parser warnings (`warnKrita` in `kis_abr_brush_collection.cpp`), Quick
+Access layout issues and legacy-import warnings (never displayed),
+`std::length_error` in `KisCpuPlaneBlur.cpp` and `kis_qmic_interface.h`
+(caught and logged), internal object names.
+
+**Outside `krita.po`:**
+
+- G'MIC-Qt translates its own interface: `krita_gmic_qt.dll` embeds
+  `zh.qm` (and `ja.qm`, `zh_tw.qm`) from G'MIC-Qt's `translations.qrc`. Filter
+  name translations (`translations/filters/zh.qm`) are in G'MIC-Qt's
+  `wip_translations.qrc`; check in the running application whether they are
+  built in and enabled.
+- Qt's own texts (standard buttons, file dialogs) come from
+  `_install/translations/qtbase_zh_CN.qm`, installed by `installQtTranslations()`
+  in `krita/main.cc`.
+- The NSIS installer is English only (`MUI_LANGUAGE "English"` in
+  `packaging/windows/installer/installer_solstice.nsi`); the MSIX manifest
+  texts are English. The three Python plugin `Manual.html` files are
+  English only, as upstream.
+- 26 tracked `*_ui.py` files (pyuic output from `.ui` forms, for example
+  `libs/ui/forms/wdggeneralsettings_ui.py`) use Qt's `_translate()`, which
+  the extraction does not read. They are generated companions of the forms
+  and are not loaded by the application (`docs/agent/puppet-warp.md` keeps
+  `wdg_tool_transform_ui.py` synchronized on purpose); the strings come from
+  the `.ui` files.
+
 ## Rules for translating
 
 - Follow the terms already used in `po/zh_CN/krita.po` (for example 图层,
@@ -103,14 +167,7 @@ application"), so translate every fuzzy entry; do not just remove the flag.
 ## Remaining work
 
 1. Tooling: done (see "Updating the catalogs").
-2. Audit: `libs/widgetutils/config/kstandardaction_p.h` marks the standard
-   action texts (including "Configure/About Solstice") with
-   `QT_TRANSLATE_NOOP`, which the KDE extraction does not read, so they are
-   not in `krita.po`; check where they are translated. Solstice strings that bypass `i18n()` (literals, Qt `tr()`); the
-   built-in English/Japanese startup dialog in `krita/main.cc`
-   (`solsticeUseJapanese()`) needs a Simplified Chinese branch; decide on
-   G'MIC filter names, Python plugin `Manual.html`, the NSIS installer and
-   MSIX texts.
+2. Audit and fixes F1-F5: done (see "Strings outside the catalog").
 3. Translate in batches (shared menus and messages, Quick Access, filters,
    Rest Note/Asset Library/Vision ML, GPU/Layer Comps/Transform), building,
    installing and checking each batch in the interface.

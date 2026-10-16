@@ -6,7 +6,7 @@ set(KRITA_QUICKACCESS_CORE_SOURCES
 )
 
 kis_add_library(kritaquickaccesscore STATIC ${KRITA_QUICKACCESS_CORE_SOURCES})
-target_link_libraries(kritaquickaccesscore PUBLIC Qt${QT_MAJOR_VERSION}::Core)
+target_link_libraries(kritaquickaccesscore PUBLIC Qt${QT_MAJOR_VERSION}::Core KF${KF_MAJOR}::I18n)
 target_include_directories(kritaquickaccesscore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(KRITA_QUICKACCESS_DOCKER_SOURCES

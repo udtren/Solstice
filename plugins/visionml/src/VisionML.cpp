@@ -305,7 +305,7 @@ QByteArray VisionModels::modelPath(VisionMLTask task) const
 {
     const QString path = resolveModelPath(modelName(task));
     if (path.isEmpty()) {
-        throw std::runtime_error("Model file not found: " + modelName(task).toStdString());
+        throw std::runtime_error(i18n("Model file not found: %1", modelName(task)).toStdString());
     }
     return path.toUtf8();
 }
@@ -407,7 +407,7 @@ VisionMLImage VisionMLImage::prepare(KisPaintDevice const &device, QRect bounds)
 QImage VisionMLImage::convertToQImage(visp::image_view const &img, QRect b)
 {
     if (img.format != visp::image_format::rgba_u8) {
-        throw std::runtime_error("Unsupported image format for conversion to QImage");
+        throw std::runtime_error(i18n("Unsupported image format for conversion to QImage").toStdString());
     }
     if (b.isEmpty()) {
         b = QRect(0, 0, img.extent[0], img.extent[1]);
