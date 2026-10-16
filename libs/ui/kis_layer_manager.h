@@ -96,7 +96,7 @@ private Q_SLOTS:
 
     KisNodeSP addFileLayer(KisNodeSP activeNode);
     /// Solstice: a paint layer that records its brush strokes
-    /// (docs/agent/brush-stroke-layer-plan.md)
+    /// (docs/agent/brush-stroke-layer.md)
     KisNodeSP addBrushStrokeLayer(KisNodeSP activeNode);
 
     void layerStyle();

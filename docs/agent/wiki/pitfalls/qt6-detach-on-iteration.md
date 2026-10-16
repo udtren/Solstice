@@ -6,7 +6,7 @@ sources:
   - libs/image/kis_processing_applicator.cpp (UpdateCommand::partA/partB)
   - libs/libkis/Node.cpp (Node::save)
   - libs/image/tests/KisImageProjectionUpdatesFilterTest.cpp
-  - Qt 6 qarraydatapointer.h (needsDetach(): `!d || d->needsDetach()`), qlist.h (non-const begin()/end() call detach())
+  - 'Qt 6 qarraydatapointer.h (needsDetach(): `!d || d->needsDetach()`), qlist.h (non-const begin()/end() call detach())'
 related:
   - weak-pointer-map-keys.md
   - sip-return-types.md

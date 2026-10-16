@@ -39,7 +39,7 @@
 
 /**
  * The brush stroke layer with the Transform Tool
- * (docs/agent/brush-stroke-layer-plan.md): a free transform that only
+ * (docs/agent/brush-stroke-layer.md): a free transform that only
  * scales and moves draws the strokes again when it is applied; a rotation
  * keeps the transformed pixels.
  */

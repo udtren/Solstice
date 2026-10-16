@@ -124,10 +124,11 @@ Read these before adding or updating any feature:
 
 Feature status, active work and verification evidence belong in the linked
 document, not in this index. See [Document roles](docs/agent/README.md) for
-plans, historical records and references that still contain both.
+maintained references, plans and historical records.
 
-- CPU-only effects and G'MIC: [development reference](docs/agent/cpu-effects-and-gmic-plan.md).
-- Illustration filters: [development reference](docs/agent/illustration-filters-plan.md).
+- Native CPU effects: [maintenance reference](docs/agent/cpu-effects.md).
+- G'MIC CPU runtime and bridge: [maintenance reference](docs/agent/gmic.md).
+- Illustration filters: [maintenance reference](docs/agent/illustration-filters.md).
 - Layer Comps: [development notes](docs/agent/layer-comps.md).
 - Color Reference: [development notes](docs/agent/color-reference.md).
 - Translations: [policy and tooling](docs/agent/translations.md).
@@ -142,7 +143,7 @@ plans, historical records and references that still contain both.
 - Overview live update: [development notes](docs/agent/overview-live-update.md).
 - Versioning and releases: [development notes](docs/agent/versioning.md).
 - Executable naming: [development notes](docs/agent/executable-name.md).
-- Settings location and profile import: [development notes](docs/agent/settings-location.md).
+- Settings location and profile import: [maintenance reference](docs/agent/settings-location.md).
 - GPU Engine: [architecture and invariants](docs/agent/gpu-engine.md).
 - GPU work order: [priorities](docs/agent/gpu-work-priorities.md).
 - Clone Layer performance: [development notes](docs/agent/clone-layer.md).
@@ -150,13 +151,13 @@ plans, historical records and references that still contain both.
 - Brush preset grouping: [development notes](docs/agent/brush-preset-grouping.md).
 - Brush Presets scroll to selection: [development notes](docs/agent/brush-preset-scroll.md).
 - Visual branding: [checklist](docs/agent/solstice-visual-branding-todo.md).
-- Brush option shared model: [development reference](docs/agent/brush-option-shared-model-plan.md).
+- Brush option shared model: [maintenance reference](docs/agent/brush-option-shared-model.md).
 - Brush options in Tool Options: [development notes](docs/agent/tool-options-brush.md).
-- UI modernization: [development reference](docs/agent/ui-modernization-plan.md).
+- UI modernization: [maintenance reference](docs/agent/ui-modernization.md).
 - GitHub Actions Windows builds: [development notes](docs/agent/github-actions.md).
 - Explorer thumbnails: [development notes](docs/agent/windows-shell-thumbnails.md).
-- Brush Stroke Layer: [development reference](docs/agent/brush-stroke-layer-plan.md).
-- Photoshop brush import: [development reference](docs/agent/abr-import-plan.md).
+- Brush Stroke Layer: [maintenance reference](docs/agent/brush-stroke-layer.md).
+- Photoshop brush import: [maintenance reference](docs/agent/abr-import.md).
 - Welcome page News: [development notes](docs/agent/welcome-news.md).
 - Popup Palette and On-Canvas Brush Editor removal: [rationale](docs/agent/popup-palette-removal.md).
 
