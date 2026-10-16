@@ -1,5 +1,28 @@
 # GitHub Actions Windows trial build
 
+## Native-tools maintenance package check (2026-10-16)
+
+- Release: [v0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8),
+  commit `4e92a41ee78c361730467717bce588744cbe4e89` (PR #3).
+- [Run 38872500400](https://github.com/udtren/Solstice/actions/runs/38872500400)
+  passed configuration, compilation, installation and packaging with Qt 6.11.0,
+  Python plugins, the Vulkan engine and the CPU G'MIC runtime. CI keeps
+  `BUILD_TESTING=OFF`; local regression results are separate evidence.
+- All 18 selected local CTest suites passed in 110.32 seconds: Quick Access,
+  Rest Note, Asset Library, Lazy Tools, menu mnemonics, Brush Stroke Layer,
+  stroke replay/preview, selection movement and processing visitors.
+- Both downloaded ZIPs matched `SHA256SUMS.txt` and passed CRC checks:
+  5,313 application entries and 220 debug entries. Required executables,
+  changed plugins, Python support, GPU library, translations and shell thumbnail
+  registration script were present. All five uploaded release asset hashes
+  and sizes matched the verified local files before publication.
+- Application ZIP SHA-256:
+  `d65d1a1a1089dcb13bf520bf125eb49e60bc033d23b6d289818a31003783a1ce`.
+- The packaged executable's Windows version metadata identifies beta.8 and
+  `4e92a41`; an isolated-profile `--version` invocation exited with code 0.
+  This is not an interactive painting or GPU runtime test of the CI package.
+  The user confirmed the locally built refactors before release.
+
 ## Scope
 
 `.github/workflows/windows-build.yml` is manual-only (`workflow_dispatch`),

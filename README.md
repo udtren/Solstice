@@ -36,9 +36,9 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[What's new](#in-development-v020-beta8) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[What's new](#whats-new-in-v020-beta8) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 
-## In development: v0.2.0-beta.8
+## What's new in v0.2.0-beta.8
 
 The eighth beta is a maintenance release for Solstice's native tools.
 Existing profiles, settings and workflows are preserved; no reset or conversion
@@ -49,7 +49,7 @@ is needed.
 - [Rest Note](docs/rest-note.md) and [Lazy Tools](docs/lazy-tools.md)
 - [Brush Stroke Layer](docs/brush-stroke-layer.md)
 
-The latest published build is [v0.2.0-beta.7](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.7).
+Download [v0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8) for Windows x64.
 
 ## Highlights
 
