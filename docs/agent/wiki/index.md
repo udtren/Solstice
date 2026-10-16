@@ -137,6 +137,11 @@ Document ownership and lifecycle are defined in
 
 ### History
 
+- [Brush option shared model development](history/brush-option-shared-model-development.md)
+  and [phase 0 investigation](history/brush-option-shared-model-phase0.md):
+  complete proposals and dated migration results; the feature reference owns
+  current synchronization, compatibility and regression checks.
+
 - [ABR import development](history/abr-import-development.md): original
   investigation, interim conversion rules and dated results; the feature
   reference owns current support, compatibility and remaining verification.

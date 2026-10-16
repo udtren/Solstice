@@ -18,6 +18,8 @@ granularity, archival and the review checklist.
   lifecycle and regression checks; its original plan is archived below.
 - [Photoshop brush import](abr-import.md) owns parsing, conversion, resource
   compatibility and verification scope; its development history is archived below.
+- [Brush option shared model](brush-option-shared-model.md) owns state,
+  serialization compatibility and dependencies across all brush engines.
 - [Feature inventory](feature-inventory.md) maps custom source locations.
   It is not a progress tracker.
 - Feature references linked from AGENTS own current behavior, compatibility,
@@ -40,7 +42,6 @@ validation details when extracting a standalone current reference.
 | --- | --- | --- |
 | [CPU effects and G'MIC](cpu-effects-and-gmic-plan.md) | Status/decisions and F1-F6/G'MIC implementation records, including CPU bridge refinements | Initial investigation, proposed IDs/architecture and original completion gates |
 | [Illustration filters](illustration-filters-plan.md) | Decisions and Stage S/C/G/D1/L implementation records, including per-filter limits and pending interactive checks | Initial gap analysis, proposed algorithms and work order |
-| [Brush option shared model](brush-option-shared-model-plan.md) | Implementation results through phase 5, ownership/compatibility rules and manual checks | Original data flow, provisional class names, early-phase "next" steps |
 | [UI modernization](ui-modernization-plan.md) | Implemented phase results and remaining scope | Early UI proposals and historical branch instructions; current branch policy is in AGENTS |
 | [Settings location](settings-location.md) | Final profile paths, path helpers, import/default behavior and later fixes | Pre-migration file inventory and interim migration stages |
 
@@ -57,7 +58,8 @@ dated validation evidence, rather than adding another conflicting proposal.
 | [ABR import development](wiki/history/abr-import-development.md) | Original investigation, staged implementation and dated results; [ABR import](abr-import.md) owns the current contract; [old plan path](abr-import-plan.md) remains a pointer |
 | [Color Reference plan](color-reference-plan.md) | Archived proposal; [Color Reference](color-reference.md) supersedes it |
 | [Layer Comps plan](layer-comps-plan.md) | Original plan summary and optional LC5 scope; [Layer Comps](layer-comps.md) owns implementation |
-| [Brush model phase 0](brush-option-shared-model-phase0.md) | Dated source investigation; the shared-model reference owns subsequent implementation |
+| [Brush model development](wiki/history/brush-option-shared-model-development.md) | Complete plan and implementation record; [shared model](brush-option-shared-model.md) owns current behavior; [old plan path](brush-option-shared-model-plan.md) remains a pointer |
+| [Brush model phase 0](wiki/history/brush-option-shared-model-phase0.md) | Original source investigation; [old investigation path](brush-option-shared-model-phase0.md) remains a pointer |
 | [Paint trace baseline runs](paint-trace-baseline-runs.md) | Recorded workloads and run IDs; not the current work queue |
 | [GPU handoff archive](wiki/history/gpu-engine-handoff.md) | Expired session instructions, PIDs and measurements; use GPU architecture/priorities for new work |
 | [Feature touch-point record](wiki/history/feature-touchpoints-20261016.md) | Historical per-phase hook detail; use the maintained inventory to update current source ownership |
