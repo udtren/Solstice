@@ -125,6 +125,10 @@ Document ownership and lifecycle are defined in
   is the SampleFgNode action (Ctrl+Alt by default); cache keys must hold every
   input.
 
+- [Idle tasks wait for every open stroke](pitfalls/idle-tasks-wait-for-open-strokes.md):
+  thumbnails, Overview and Histogram idle tasks wait until no stroke is open;
+  Duplicate Layer's node juggler kept the new layer's thumbnail empty for
+  about 4.5 s (now a provisional worker-thread thumbnail).
 - [Translation extraction on Windows](pitfalls/translation-extraction.md):
   `.ui` `comment=` contexts, CRLF resource names, missing `Archive::Zip`,
   reference fix-up order, `QT_TRANSLATE_NOOP` not extracted.
