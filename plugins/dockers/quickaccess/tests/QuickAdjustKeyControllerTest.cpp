@@ -19,6 +19,7 @@
 #include <KisViewManager.h>
 #include <kconfiggroup.h>
 #include <kis_canvas_resource_provider.h>
+#include <opengl/kis_opengl.h>
 #include <ksharedconfig.h>
 #include <testui.h>
 
@@ -136,6 +137,7 @@ int main(int argc, char **argv)
     kisTestSetupFontconfig();
     // KisInputManager requires KisApplication's modifier mapper, so the
     // QApplication created by KISTEST_MAIN cannot host real main windows.
+    KisOpenGL::testingInitializeDefaultSurfaceFormat();
     KisApplication app(QStringLiteral("QuickAdjustKeyControllerTest"), argc, argv);
     registerResources();
     QuickAdjustKeyControllerTest test;

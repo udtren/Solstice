@@ -1231,3 +1231,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   added in 0.2.0-beta.7.
 - Website: `site.ts` points to beta.7 and the Simplified Chinese pages are
   published with it (see the website repository's `docs/solstice-site.md`).
+
+## 2026-10-16 maintenance and feature-branch policy
+
+- Consolidated the user-verified native-tool refactors: Asset Library shared
+  services; Quick Access settings/profiles/item editing, Grid Edit, Quick Adjust,
+  palette and gesture responsibilities; Rest Note, Lazy Tools and Brush Stroke
+  Layer. Feature documents record build, install, regression and manual results.
+- Captured [native refactor boundaries](concepts/native-refactor-boundaries.md):
+  preserve compatibility adapters and QObject/deferred-callback ownership.
+- Recorded the user's [feature-branch policy](decisions/feature-branch-workflow.md):
+  push a feature branch and merge into main through a PR, including releases and
+  documentation. Preparing 0.2.0-beta.8 through this workflow.

@@ -144,6 +144,9 @@ set(kritaui_LIB_SRCS
     KisToolOptionsBrushItems.cpp
     KisBrushStrokeLayer.cpp
     KisBrushStrokeLayerIO.cpp
+    brushstrokelayer/KisBrushStrokeLayerMonitor.cpp
+    brushstrokelayer/KisBrushStrokeLayerReplay.cpp
+    brushstrokelayer/KisBrushStrokeLayerTransform.cpp
     KisToolOptionsParameters.cpp
     kis_paintop_settings_widget.cpp
     kis_png_converter.cpp
@@ -163,6 +166,9 @@ set(kritaui_LIB_SRCS
     kis_canvas_controls_manager.cpp
     kis_multinode_property.cpp
     KisWelcomePageWidget.cpp
+    assetlibrary/KisAssetLibrarySettings.cpp
+    assetlibrary/KisAssetLibraryBrowser.cpp
+    assetlibrary/KisAssetLibraryOperations.cpp
     KisWelcomeAssetLibraryWidget.cpp
     KisUiFont.cpp
     KisIdleTasksManager.cpp
@@ -171,6 +177,10 @@ set(kritaui_LIB_SRCS
     KisTextPropertiesManager.cpp
     KisLongPressEventFilter.cpp
     KisSolsticeLazyTools.cpp
+    lazytools/KisLazyToolsRenamePresets.cpp
+    lazytools/KisLazyToolsRenameDialog.cpp
+    lazytools/KisLazyToolsFastExport.cpp
+    lazytools/KisLazyToolsFastExportDialog.cpp
     utils/KisMenuMnemonicFilter.cpp
     KisGpuEngineUi.cpp
 
