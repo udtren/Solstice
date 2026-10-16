@@ -51,8 +51,9 @@ Todo(2026年10月8日登録)から、2026年10月10日にユーザーの依頼�
 ## 段階
 
 1. **ブラシストロークレイヤーでのABRの先端の保存(2026年10月10日、
-   実装済み、手動確認で問題なし):** `docs/agent/brush-stroke-layer-plan.md` の
-   「ABRの先端の保存」。
+   実装済み、手動確認で問題なし):** 現行仕様は
+   [Brush Stroke Layer: Embedded resources](brush-stroke-layer.md#embedded-resources)。
+   当時の「ABRの先端の保存」の記録は[開発履歴](wiki/history/brush-stroke-layer-development.md)に保存。
 2. **読み込みの堅牢化と名前:** 16ビットの先端、版7〜10、先端のIDの
    読み方、大きさと全体量の上限、範囲の確認。`desc` と `sampledData` で
    先端をプリセット名で呼ぶ。壊れたファイルのテスト。

@@ -154,7 +154,7 @@ plans, historical records and references that still contain both.
 - UI modernization: [development reference](docs/agent/ui-modernization-plan.md).
 - GitHub Actions Windows builds: [development notes](docs/agent/github-actions.md).
 - Explorer thumbnails: [development notes](docs/agent/windows-shell-thumbnails.md).
-- Brush Stroke Layer: [development reference](docs/agent/brush-stroke-layer-plan.md).
+- Brush Stroke Layer: [maintenance reference](docs/agent/brush-stroke-layer.md).
 - Photoshop brush import: [development reference](docs/agent/abr-import-plan.md).
 - Welcome page News: [development notes](docs/agent/welcome-news.md).
 - Popup Palette and On-Canvas Brush Editor removal: [rationale](docs/agent/popup-palette-removal.md).

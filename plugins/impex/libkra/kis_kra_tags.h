@@ -141,7 +141,7 @@ const QString MIRROR_AXIS = "MirrorAxis";
 const QString ANNOTATIONS = "Annotations";
 const QString ANNOTATION = "Annotation";
 // Solstice: a brush stroke layer, saved as a paint layer with its recorded
-// strokes in a file beside its pixels (docs/agent/brush-stroke-layer-plan.md)
+// strokes in a file beside its pixels (docs/agent/brush-stroke-layer.md)
 const QString BRUSH_STROKE_LAYER = "solstice-brushstrokelayer";
 const QString DOT_BRUSH_STROKES = ".brushstrokes";
 }

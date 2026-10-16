@@ -6,7 +6,7 @@ sources:
   - docs/agent/quick-access.md
   - docs/agent/rest-note.md
   - docs/agent/lazy-tools.md
-  - docs/agent/brush-stroke-layer-plan.md
+  - docs/agent/brush-stroke-layer.md
 related:
   - ../pitfalls/build-format-test.md
 ---
@@ -36,4 +36,6 @@ are the authoritative source for ownership and tests.
 
 All affected features were built, tested, installed and confirmed by the user
 before the maintenance release was requested. Logs and individual test scope
-are recorded in their feature documents.
+are linked from their feature documents; the Brush Stroke Layer refactor's
+original logs and results are preserved in its
+[development history](../history/brush-stroke-layer-development.md).
