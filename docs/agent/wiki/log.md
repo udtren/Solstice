@@ -1526,3 +1526,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   on a worker thread (about 30 ms after a duplicate); the idle task still
   regenerates it. Test `testDuplicateGetsThumbnailWhileJugglerStrokeIsOpen`;
   opt-in `benchmarkDuplicateThumbnail` (`KRITA_THUMBNAIL_BENCHMARK=1`).
+
+## 2026-10-16 release: 0.3.0 preparation
+
+- Integrated PRs #5, #7 and #8 in dependency order, preserving current
+  documentation ownership and both sides of appended history. Each updated
+  PR passed the documentation workflow; native changes retained their existing
+  regression evidence. PR #8's real-app acceptance is still unrecorded.
+- Set the Solstice version to 0.3.0 with an empty prerelease label and build
+  digit 0, at the user's request. The Krita compatibility version is unchanged.
+- Updated the [version policy](../versioning.md) and user explanation: a
+  regular release may have a 0.x version. README keeps 0.3.0 marked in development
+  until the verified package is actually published.
+- Build/package validation and release publication are pending; this entry
+  does not claim new interactive verification.
