@@ -124,11 +124,11 @@ Read these before adding or updating any feature:
 
 Feature status, active work and verification evidence belong in the linked
 document, not in this index. See [Document roles](docs/agent/README.md) for
-plans, historical records and references that still contain both.
+maintained references, plans and historical records.
 
 - Native CPU effects: [maintenance reference](docs/agent/cpu-effects.md).
 - G'MIC CPU runtime and bridge: [maintenance reference](docs/agent/gmic.md).
-- Illustration filters: [development reference](docs/agent/illustration-filters-plan.md).
+- Illustration filters: [maintenance reference](docs/agent/illustration-filters.md).
 - Layer Comps: [development notes](docs/agent/layer-comps.md).
 - Color Reference: [development notes](docs/agent/color-reference.md).
 - Translations: [policy and tooling](docs/agent/translations.md).
