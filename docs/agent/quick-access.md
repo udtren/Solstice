@@ -11,6 +11,32 @@ refinement. Preserve the native architecture and established behavior.
 - Original assets: `<original-plugin-root>/quick_access_manager/remaster/resources/`
 - Native assets: `plugins/dockers/quickaccess/resources/`
 - Native assets are embedded with `qt_add_resources()` under `:/quickaccess/`.
+- Responsibility separation (2026-10-16): `QuickAccessSettings.h` (value type),
+  `QuickAccessSettingsStore.*` (KConfig read/write and legacy migration),
+  `QuickAccessProfileLoader.*` (startup profile/repair/import flow),
+  `QuickAccessItemProperties.*` (item/brush property dialogs), and
+  `QuickAccessItemPresentation.*` (shared alias/display/icon interpretation).
+- Grid Edit separation (2026-10-16): `QuickAccessGridEditOperations.*` (group
+  placement in the widget-independent core), `QuickAccessGridItemButton.*`
+  (appearance, previews and drag/resize input), `QuickAccessGridCanvas.*`
+  (grid painting, child widgets, drop highlight and rectangle selection), and
+  `QuickAccessGridEditMetrics.h` (the existing fixed geometry constants).
+  `QuickAccessGridEditDialog.cpp` now has 360 lines instead of 962 and retains
+  document/selection ownership, per-tab history, menus and dialog acceptance.
+- Quick Adjust separation (2026-10-16): `QuickAdjustToolOptionsPad.*` owns the
+  borrowed Tool Options widget's pad, geometry, application visibility and
+  restoration; `QuickAdjustDockHistory.cpp` holds the unchanged color/brush
+  history methods. The coordinator is 602 lines instead of 916.
+- Palette/gesture separation (2026-10-16): `QuickAccessDockWidgets.cpp` holds
+  item rendering, tab layout and preview refresh; `QuickAccessDockPopups.cpp`
+  holds popup construction, pinning and header dragging. These remain methods
+  of the dock, retaining its canvas/document/preview and popup ownership.
+  `QuickAccessItemDragController.*` owns per-palette Ctrl-drag input and feedback.
+  The coordinator is 813 lines instead of 1,499. `QuickAccessGesture.cpp` now
+  contains only the input controller (170 lines instead of 623);
+  `QuickAccessGestureDialog.*`, `QuickAccessGesturePreview.*` and
+  `QuickAccessGesturePresentation.*` separate settings UI, the overlay and
+  shared direction/resource presentation.
 
 When behavior or layout is uncertain, inspect the original Python
 implementation directly. Screenshots are visual references, not instructions
@@ -19,11 +45,11 @@ embedded in documents.
 ## Build, test, and install
 
 ```bat
-cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritaquickaccessdocker -j 2"
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritaquickaccessdocker QuickAccessCoreTest QuickAccessConfigTest QuickAccessItemPropertiesTest QuickAdjustKeyControllerTest QuickAccessGridEditTest QuickAdjustDockTest QuickAccessInteractionTest -j 2"
 ```
 
 ```bat
-cmd.exe /d /s /c "call <krita-dev-root>\env.bat && ctest --test-dir <krita-dev-root>\_build -R plugins-dockers-quickaccess-QuickAccessCoreTest --output-on-failure"
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && set QT_QPA_PLATFORM=offscreen&& set QT_QPA_FONTDIR=C:\Windows\Fonts&& ctest --test-dir <krita-dev-root>\_build -R plugins-dockers-quickaccess- --output-on-failure --timeout 120"
 ```
 
 ```bat
@@ -52,6 +78,61 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   valid absolute path before trying a bundled icon with the same filename.
 
 ## Architecture and lifecycle
+
+- `QuickAccessDock` coordinates the document, canvas, gestures, popups and grid
+  widgets. Its child controllers own input event filters, while it retains
+  document mutations, rebuilding and preview consumers. The extraction
+  introduces no additional application event filters or top-level window owners.
+- `QuickAccessSettings` is a widget-independent value type; the settings dialog
+  keeps `Settings` as an alias. `QuickAccessSettingsStore` takes an injectable
+  `KSharedConfigPtr`. Production uses the existing shared config, while tests
+  use temporary INI files. It preserves all four KConfig groups, key names,
+  color encodings and JSON temporary-brush arrays. Columns remain in `.kqap`,
+  not KConfig. Non-dialog keys such as selector shape, gesture threshold and
+  Tool Options startup visibility are not overwritten by a settings save.
+- The formerly duplicated initial-import and settings-upgrade mappings now use
+  `QuickAccessSettingsStore::importLegacy()`. Empty legacy blend-mode lists keep
+  the stored value; legacy absent dialog sizes still use 550x650. The raw value
+  type's older 340x480 defaults are retained, but palette settings always come
+  through the store and its established 550x650 fallback.
+- `QuickAccessProfileLoader` performs the original startup sequence: prefer the
+  native profile; repair overlapping stroke-preview items; upgrade legacy
+  settings only below migration version 2; otherwise import or create defaults.
+  Initial migration settings/version are written only after saving the imported
+  profile. A corrupt existing profile is not overwritten. Warnings are delivered
+  synchronously to the caller, which owns their dialog parent. The pre-existing
+  silent behavior for repair-save and optional settings-upgrade failures remains.
+- `QuickAccessItemProperties` receives the active grid/document, resolved label,
+  and parent widget. It does not save profiles or rebuild widgets; it returns
+  whether the dock should do so. Cancellation changes no item/alias values.
+  Brush display is set before layout normalization; unchanged brush display
+  returns false. Color dialogs remain parented to the property dialog window.
+- `QuickAccessItemPresentation` shares legacy/native alias lookup, brush display
+  constants and icon resolution. Its source remains in the same directory so
+  `__FILE__`-relative browsing of original icon assets is unchanged. Absolute
+  existing custom icons take priority over bundled icons with the same basename.
+- `kritaquickaccessconfig` is a private static support library linking the core,
+  Qt Gui and KConfig; it has no Qt Widgets or `kritaui` dependency. The loadable
+  docker and focused tests link it. No new installed DLL or persisted ID is added.
+- Grid Edit keeps a copy of the document and commits it only when its caller
+  receives Accepted. Each tab still has at most 20 item snapshots; undo clears
+  that tab's selection. Copy/move creates new IDs, preserves payloads and appends
+  below the target's occupied rows through the existing layout engine. Cross-tab
+  moves retain independent source/target undo histories.
+- Group movement clamps the whole selection at the top and horizontal bounds,
+  then places remaining items in visual order, with ID as the tie-breaker.
+  `QuickAccessGridEditOperations::moveGroup()` is the original algorithm; it
+  assumes normalized input items that fit their grid.
+- The canvas/button split introduces no event filters or new window owners.
+  Rebuilds remain zero-delay callbacks with the canvas as context, after mouse
+  release returns; destroying the dialog cancels pending rebuilds. The dialog
+  still owns one stroke-preview consumer. The canvas handles preview refresh and
+  rectangle hit testing against the actual child-button geometries.
+- Preserve Grid Edit's existing presentation rules separately from the palette:
+  its bundled-icon lookup precedes the absolute-file fallback, and its alias
+  lookup does not apply the palette's legacy-category fallback. This refactor
+  deliberately retains both behaviors rather than changing existing profiles'
+  appearance or which items have resize handles.
 
 - Register actions from `QuickAccessDock::setViewManager()`. Do not access a
   view manager from the plugin constructor.
@@ -86,7 +167,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   docker must not reflow the grid.
 - Ctrl + left-drag moves an item in the active grid, as the original
   `GridItemDragFilter` (`remaster/quick_access_palette/docker/drag_filter.py`):
-  `attachItemDrag()` installs the dock as event filter on every item widget
+  `QuickAccessItemDragController::attach()` installs the controller as event filter on every item widget
   (property `quickaccess_item_id`), in the docker and the popup. The Ctrl
   press is swallowed so the item does not fire; a `QRubberBand` on the grid
   widget shows the target; the target cell is the press-to-cursor delta
@@ -119,7 +200,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
 - `loadProfile()` repairs overlaps left by brushes saved as `stroke` while
   they were still one cell wide (`repairBrushSpans()`): it resizes one such
   brush through the layout engine, which re-places only overlapping items,
-  and saves the profile.
+  and saves the profile. The implementation now lives in `QuickAccessProfileLoader`.
 - Grid Edit draws `stroke` brushes with their stroke previews over their
   span and icon brushes with the preset icon, through the dialog's own
   `QuickAccessStrokePreviews`.
@@ -225,7 +306,9 @@ It creates two main windows and checks eraser and alpha-lock holds, release in
 another window, application deactivation, docker destruction and main-window
 destruction. Use Qt's offscreen platform for automated runs.
 The test uses `KisApplication`: `KisInputManager` assumes that application type
-when querying extended modifiers. It supplies clipboard MIME data for the
+when querying extended modifiers. Initialize the test OpenGL surface format
+before constructing it; otherwise main-window creation opens an internal-error
+dialog and an offscreen run waits indefinitely. It supplies clipboard MIME data for the
 offscreen platform and an independent preset per window (eraser mode is a
 derived preset resource). It disables installed controllers' event filters
 before adding the compiled test controllers, so each window has only one.
@@ -234,3 +317,178 @@ For interactive verification, open two windows and repeat holds for eraser,
 alpha lock, selection and temporary brushes. Check ordinary release, switching
 windows, Alt+Tab and closing a window while holding a key. Confirm restoration
 in the original window, and confirm editable fields do not activate holds.
+
+## Responsibility-separation regression checks
+
+`QuickAccessConfigTest` uses temporary INI/profile/legacy files to check defaults,
+four-group migration and round trips, unrelated-key preservation, corrupt JSON,
+initial versus existing-profile migration, migration idempotence, save failure,
+and historical stroke-preview overlap repair. `QuickAccessItemPropertiesTest`
+checks accept/cancel for all eight non-brush item kinds, legacy aliases and
+unchanged action/docker IDs, brush display/one-column layout/neighbour pushing,
+custom/bundled icon precedence, and the settings-dialog value round trip.
+Neither focused test loads the real user's profile. Existing core and hold-key
+tests remain part of the regression run.
+
+Validation on 2026-10-16: the docker and all four test targets built; all four
+CTest suites passed offscreen (11.74 seconds). The docker was installed into
+the development test installation, and its SHA-256 matched the build output.
+The user confirmed the refactored Quick Access works correctly on 2026-10-16.
+The checklist below remains the regression checklist for future changes.
+
+After installation and a complete restart, verify:
+
+1. Existing palette tabs, appearance, gesture settings, HueSVC and Quick Adjust
+   values load, and changes survive restart.
+2. Edit and cancel each item kind, including aliases, colors, a custom absolute
+   icon path and a script path. Color-picker windows retain normal colors.
+3. Change brush Icon/Stroke Preview in both the docker and palette popup; confirm
+   neighbour movement and Grid Edit agree, including a one-column grid.
+4. Ctrl-drag an item, cancel with another button, then use ordinary clicks.
+   Resources-dialog additions still fill sequentially; header additions start
+   a new row.
+5. Toggle popup shortcuts and pin/unpin behavior, then repeat the multi-window
+   hold-key checks above, including focus loss and editable text fields.
+
+## Grid Edit regression checks (2026-10-16)
+
+`QuickAccessGridEditTest` uses temporary configuration/resources, never the user's
+profile. It tests group clamping and collision placement, Ctrl multi-selection,
+rectangle selection, drag previews without document mutation, release followed by
+deferred rebuilding, horizontal and vertical resizing, icon-item movement without
+resizing, remove/copy/move menus, independent tab undo, the 20-entry history limit,
+Save/Cancel, payload/alias preservation and destruction with a rebuild pending.
+The original 24 widget method bodies were compared ignoring formatting and are
+unchanged; all literal tokens in the editor are preserved. The two child-widget
+traversals now live in the canvas; selection results and preview delivery retain
+the same semantics. No serialized fields, profile version, settings keys or
+action IDs changed.
+
+Validation: the plugin and all five test targets built. All five Quick Access
+CTest suites passed offscreen (19.99 seconds), including the new Grid Edit suite
+(11 QtTest cases including setup/cleanup). The plugin was installed and its
+build/install SHA-256 hashes matched. Logs under `%TEMP%`: `solstice-grid-edit-`
+`build.log`, `test-build.log`, `ctest.log`, and `install.log`.
+
+The user confirmed the Grid Edit split works correctly on 2026-10-16. For future
+changes, check an existing profile: Grid Edit drag/group selection, label/separator resize,
+tab copy/move and Undo, Save versus Cancel, and brush stroke/icon previews. Repeat
+in a second window and close the editor after dragging; palette popup and ordinary
+action activation should retain their existing behavior.
+
+## Quick Adjust ownership and history (2026-10-16)
+
+`QuickAdjustDock` explicitly deletes its `QuickAdjustToolOptionsPad` in its
+destructor body, before its members and child controls are destroyed. The pad
+is also a QObject child of the dock. Its application-state connection and queued
+geometry callbacks use the pad controller as context, and its borrowed/source/pad
+widgets remain guarded by QPointer. Restoration occurs at the same teardown point
+as before: reparent the borrowed content to `sharedtooldocker`, enable its toggle
+action, restore its previous visibility, and defer deletion of the placeholder
+and floating pad. Merely hiding the Quick Adjust dock hides the pad without
+returning its content or changing the saved startup preference.
+
+The dock supplies a synchronous context callback for the current canvas/window
+and Tool Options mode. The pad never retains a view manager. Losing or switching
+canvases does not release an already borrowed widget; maximum-size calculation
+uses the current window or the existing screen fallback. Keep the original
+compact-popup exclusion, hidden-toggle check, fixed 5-pixel gap, position strings,
+screen clamping and scroll-area size calculation. Startup visibility is still
+written even when no pad can be shown, including compact instances. Tests inject
+an independent KSharedConfig; production retains the existing shared config.
+
+The nine extracted history methods are unchanged. The session-wide color reset
+stays in `setCanvas()`, colors are still added only on actual use and ignored in
+eraser mode, and brush history is deduplicated by preset name and truncated to
+the configured button count. `unsetCanvas()` clears color history but retains
+brush history. Pressure toggle updates, provider connections, native hold-key
+controller ownership and the 200 ms synchronization timer remain with the dock.
+No settings keys, defaults, action IDs or profile fields changed.
+
+`QuickAdjustDockTest` compiles the current dock, history, pad and key-controller
+sources. It uses a temporary Solstice profile and temporary INI files. It checks
+borrowing/restoring initially visible and hidden dockers, application-state
+visibility, compact/hidden/no-canvas/toolbar/missing-docker guards, saved visibility
+and unrelated-key preservation, content growth/shrink and three pad positions,
+canvas loss, source/owner destruction, pending callbacks, brush-history order and
+limit, and normal versus compact controls and key-controller counts.
+
+Interactive checks after restarting Solstice: enable the Tool Options pad and
+try all three positions, switch tools and documents, hide/show Quick Adjust,
+switch to another application and back, then close the window. Check color and
+brush histories and the compact HueSVC layout, and repeat temporary hold keys in
+two windows. The user confirmed that Quick Brush Adjustments works correctly
+after this refactor on 2026-10-16; keep these checks for future changes.
+
+Validation on 2026-10-16: the plugin and all six test targets built; the new
+Quick Adjust suite passed all 12 QtTest cases (including setup/cleanup). All six
+Quick Access CTest suites passed offscreen (24.12 seconds). The plugin was
+installed, and its build/install DLL SHA-256 hashes matched. The nine moved
+history methods and all original string literals were checked against the prior
+implementation. Logs under `%TEMP%`: `solstice-quick-adjust-build.log`,
+`solstice-quick-adjust-test.txt`, `solstice-quick-adjust-ctest.log` and
+`solstice-quick-adjust-install.log`.
+
+## Palette and gesture separation (2026-10-16)
+
+`QuickAccessDockWidgets.cpp` and `QuickAccessDockPopups.cpp` implement existing
+dock methods; they add no owners, retained view managers or independent document
+copies. Item rendering retains the palette-specific aliases, fixed cell spacing,
+icon precedence, stroke-preview cache consumer, contextual menus and click
+connections. Popup flags, shortcuts, pinning, pointer-leave handling (including
+HueSVC combo-box popups) and header drag offset are unchanged.
+
+`QuickAccessItemDragController` installs filters only on the palette's item
+widgets. It obtains the active grid and cell size synchronously from the dock,
+retains only the item ID/press position/weak highlight pointer, and invokes the
+dock's move callback on a zero-delay timer. The dock still applies the layout
+engine, saves and rebuilds. This preserves the original active-grid lookup at
+delivery time and prevents deletion of the receiving widget inside mouse release.
+The dock explicitly deletes the controller before its document members are
+destroyed, cancelling queued moves. Plain clicks, Ctrl presses, double-clicks,
+other-button cancellation and row/column clamping retain their previous rules.
+
+`QuickAccessGestureController` remains the persistent dock's application event
+filter. Settings reload, text/modal focus exclusions, key matching, auto-repeat
+handling, threshold clamping, direction boundaries and execution payload mapping
+are unchanged. The controller owns and deletes `QuickAccessGesturePreview`;
+queued repositioning uses that preview as context. The dialog edits its own page
+copies and only its caller commits accepted settings. Presentation is shared by
+the dialog and overlay without adopting the palette's different legacy alias
+fallback rules. This is a responsibility split, not a change to gesture focus,
+multi-window routing or cancellation policy.
+
+`QuickAccessInteractionTest` compiles the plugin's production sources except
+factory registration, with the same resources and Python build option. It uses
+an isolated Solstice profile and temporary KConfig. It exercises actual palette
+and popup widgets, deferred Ctrl-drag save/rebuild, collision movement, unchanged
+payloads/aliases/gestures, plain clicks, other-button cancellation, span clamping,
+pending-callback destruction, popup pin flags/position/header dragging, all eight
+gesture directions and the center/threshold boundary, F-key and repeat handling,
+disabled/text/modal guards, controller teardown, preview geometry/reuse/teardown,
+and settings page edits and Save/Cancel isolation.
+
+For interactive verification after restarting Solstice, use an existing profile:
+Ctrl-drag items in the docker and popup, cancel with another button, use ordinary
+clicks and context menus, pin/unpin and drag the popup, and open both HueSVC blend
+mode lists. Test configured gesture keys and all directions with preview on/off;
+edit/cancel/save gesture pages and restart to check persistence. Repeat with two
+windows. Automated offscreen checks do not establish native focus or tablet
+behavior. The user confirmed this split works correctly on 2026-10-16; retain
+these interactive checks for future changes.
+
+Validation: the plugin and all seven test targets built. All seven Quick Access
+CTest suites passed offscreen (34.04 seconds); the new integration suite passed
+18 QtTest cases including setup/cleanup. The plugin was installed and build/install
+SHA-256 hashes matched (`141b8259f324aa081c4dea42f9cb6145de15ed03eb59ff742eb95c3551c001cb`).
+Comparison with the pre-split working copy confirmed 46 dock methods and all nine
+gesture-dialog methods unchanged, item construction unchanged except drag-filter
+attachment, and the drag algorithm unchanged except its callback boundaries.
+The original string-literal multiset is preserved across the extracted sources.
+Logs under `%TEMP%`: `solstice-palette-gesture-build.log`, `test-build.log`,
+`test.txt`, `ctest.log` and `install.log` (all with the same prefix).
+
+The regression assertions retain two existing Qt details: the original pin/unpin
+flag sequence leaves window type `Window` after unpinning because `Tool` and
+`Popup` share flag bits; preview placement uses the layout's size hint before
+showing, which can differ from the final frame size. Neither behavior was changed.

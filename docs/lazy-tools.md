@@ -41,6 +41,12 @@ Documents must already have a file name for Fast Image Export. PNG compression
 and alpha handling, JPEG quality, and the configured output folder are retained
 between uses.
 
+The native implementation separates rename presets and dialogs from the export
+workflow. Existing shortcuts, rename preset files and export preferences remain
+compatible. Fast Image Export keeps the source document's path and modified
+state; unnamed documents are skipped. The format's own export options can still
+appear as before.
+
 ## Custom settings
 
 Open **Settings > Configure Solstice > General > Custom** to configure the nine

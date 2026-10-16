@@ -4,6 +4,60 @@ Clip Studio Paintのベクターレイヤーのように、通常のブラシで
 記録し、拡大したときに新しい解像度で描き直せるレイヤーを、Solsticeに
 追加する計画。2026年10月9日にユーザーの依頼で作成した。
 
+## Current implementation layout (2026-10-16)
+
+The responsibility split below supersedes file locations in the historical
+implementation notes. It preserves behavior and the existing public API:
+
+| File under `libs/ui/` | Responsibility |
+| --- | --- |
+| `KisBrushStrokeLayer.h` | Public layer, recorded stroke and undo-command declarations; unchanged object layout |
+| `KisBrushStrokeLayer.cpp` | Layer construction, record ownership, change tracking and recording-scope undo commands (1,092 to 175 lines) |
+| `brushstrokelayer/KisBrushStrokeLayerMonitor.cpp` | Idle-time background checks, generation validation, scheduling, shutdown and canvas notifications |
+| `brushstrokelayer/KisBrushStrokeLayerReplay.cpp` | Replay through the native freehand stroke path, resource snapshots, texture/position/size mapping and transformed records |
+| `brushstrokelayer/KisBrushStrokeLayerTransform.cpp` | Pixel comparison, selection coverage, undoable selection moves and full/partial transform redraw |
+| `brushstrokelayer/KisBrushStrokeLayerPrivate.h` | Two internal cross-file helpers: length scale and queued canvas messages; no exported API |
+| `KisBrushStrokeLayerIO.cpp` | Existing serialization; unchanged |
+
+Keep the single monitor and its lifetime policy: one worker, delayed checks,
+generation rejection, payloads without owning node references, and waiting for
+the worker on application shutdown. Recorded scopes, LOD handling, transparent
+pixel tolerance, native floating-point/HDR comparison and partial-redraw blending
+are unchanged. Replay keeps its original random seed, sequential dabs, starting
+spacing state, mirror axes and texture offsets. The split adds no settings,
+actions, file-format version or migration; versions 1/2/3 retain their existing
+read behavior and version 3 remains the write format. No plugin-facing class
+members or virtual methods change.
+
+Build targets: `kritaui`, `KisBrushStrokeLayerTest`,
+`KisBrushStrokeLayerTransformTest`, `KisBrushStrokeReplayTest`,
+`MoveSelectionStrokeTest` and `kis_processings_test`. Run the matching CTest
+entries with `QT_QPA_PLATFORM=offscreen` and `QT_QPA_FONTDIR=C:\Windows\Fonts`.
+The brush suites use their existing isolated test profiles and bundled presets.
+They check real replay pixels, `.kra` round trips and embedded resources, undo,
+selection moves, mirrors, texture alignment, partial redraw/HDR preservation,
+invalid records, background notifications and continued-transform cancellation.
+
+Install the shared `kritaui` library through `_build/libs/ui/cmake_install.cmake`
+with `CMAKE_INSTALL_LOCAL_ONLY=1`; install any rebuilt shared dependencies too.
+Restart Solstice before checking the application. Interactive checks after this
+refactor: draw with a textured/mirrored brush, save/reopen and enlarge; move a
+whole stroke with a selection; undo/redo a scale or cancelled continued transform;
+apply a non-brush edit and confirm warning/recovery after undo. The detailed
+checks below remain applicable.
+
+2026-10-16 validation: all build targets above succeeded. All six CTest suites
+passed: `KisBrushStrokeLayerTest` (24.53 s),
+`KisBrushStrokeLayerTransformTest` (13.31 s), `KisBrushStrokeReplayTest`
+(13.77 s), `KisBrushStrokePreviewTest` (12.28 s), `MoveSelectionStrokeTest`
+(6.31 s), and `kis_processings_test` (0.74 s). The 41 original implementation
+bodies/classes were compared ignoring formatting and are unchanged; all literal
+tokens are preserved. The shared UI DLL exports the same 8,154 symbols as before.
+The UI library and rebuilt `kritalibpaintop` dependency were installed, and both
+build/install SHA-256 hashes matched. Logs: `%TEMP%/solstice-brush-layer-refactor-`
+`build.log`, `tests.log`, and `install.log`. The user confirmed the refactored
+brush stroke layer works correctly on 2026-10-16.
+
 ## 目的と決定事項(ユーザー、2026年10月9日)
 
 - **主な使い方:** 小さいサイズで描いた線画を拡大し、正式に使う。画像全体の
