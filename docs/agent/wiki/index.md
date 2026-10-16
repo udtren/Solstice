@@ -137,6 +137,10 @@ Document ownership and lifecycle are defined in
 
 ### History
 
+- [ABR import development](history/abr-import-development.md): original
+  investigation, interim conversion rules and dated results; the feature
+  reference owns current support, compatibility and remaining verification.
+
 - [Brush Stroke Layer development](history/brush-stroke-layer-development.md):
   complete original plan, investigations, measurements and dated verification;
   current recording/replay/persistence rules live in the feature reference.
