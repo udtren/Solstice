@@ -53,3 +53,10 @@ external-update paths. Dependency propagation is a current invariant; rejected
 transactional state and removed UI checks belong to the
 [historical record](../history/brush-option-shared-model-development.md).
 Preserve early investigations as evidence, not as a second current reference.
+
+The [interface extraction](../../ui-modernization.md) distinguishes an initial
+opt-in rollout from later application defaults. Check embedded defaults,
+read fallbacks, import behavior and explicit saved values together; reading
+only the original feature plan can give the wrong default. Keep a widget
+style's geometry guarantee separate from an independent option that changes
+layout, and retain the actual display-scale scope of visual verification.

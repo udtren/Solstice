@@ -137,6 +137,10 @@ Document ownership and lifecycle are defined in
 
 ### History
 
+- [UI modernization development](history/ui-modernization-development.md):
+  original proposal, visual baseline and dated implementation results;
+  the feature reference owns current defaults and maintenance checks.
+
 - [Brush option shared model development](history/brush-option-shared-model-development.md)
   and [phase 0 investigation](history/brush-option-shared-model-phase0.md):
   complete proposals and dated migration results; the feature reference owns
