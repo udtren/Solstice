@@ -50,7 +50,7 @@ public:
      * Solstice: the paint ops render their dabs one after another instead of
      * on several threads, so that the stroke's pixels do not depend on the
      * threads' timing and the same stroke can be drawn again exactly (the
-     * brush stroke layer, docs/agent/brush-stroke-layer-plan.md). Call it
+     * brush stroke layer, docs/agent/brush-stroke-layer.md). Call it
      * before the stroke starts.
      */
     void setSequentialDabRendering(bool value);

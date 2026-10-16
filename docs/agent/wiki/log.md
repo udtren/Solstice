@@ -72,10 +72,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 ## 2026-10-07 ingest: settings location complete
 
-- No new wiki page: the decisions and findings are in `docs/agent/settings-location.md`.
+- The original decisions and findings are preserved in
+  [settings/profile development history](history/settings-location-development.md).
   These include the relative KConfig names, the mounted kritarc defaults, the import rules,
   the Solstice defaults and the verification.
-- Pitfall recorded in `docs/agent/settings-location.md` (phase 5): starting `krita.exe`
+- Pitfall recorded in that history (phase 5): starting `krita.exe`
   directly does not work in the development environment; use `run-krita.bat`.
 
 ## 2026-10-07 ingest: GPU Gaussian blur family (phase 4.98)
@@ -737,7 +738,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Bug fix (user report): after a canvas resize, the first Brush Editor edit
   rewrote `MaskingBrush/MasterSizeCoeff` for the old size, so masked strokes
   became thin and stayed thin
-  ([brush-option-shared-model-plan.md](../brush-option-shared-model-plan.md),
+  ([shared-model development history](history/brush-option-shared-model-development.md),
   phase 5 fix).
 - Lesson: an option whose value derives from another (`addDependency()`)
   must be re-read when the other changes outside the editor, not only
@@ -902,7 +903,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   moves now move the strokes wholly inside the selection (last in the
   order, as the pasted pixels lie on top), and a background check after
   non-brush edits warns with a canvas message and a layer icon badge
-  ([plan](../brush-stroke-layer-plan.md), "選択範囲の移動と記録の照合").
+  ([plan](history/brush-stroke-layer-development.md), "選択範囲の移動と記録の照合").
 - Diagnosis method: render each recorded stroke alone and measure the share
   of its own opaque pixels that differ; whole strokes at 100% point to an
   edit that moved pixels, not to brush nondeterminism.
@@ -927,7 +928,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   pixels (grown 2 px, feathered, blended with `COMPOSITE_COPY` through the
   mask); most of the layer mismatching still falls back to pixels. The
   callers pass their own pixel transform so the fallback part looks as it
-  did ([plan](../brush-stroke-layer-plan.md), "一致しない部分だけ画素で拡大する").
+  did ([plan](history/brush-stroke-layer-development.md), "一致しない部分だけ画素で拡大する").
 - Lesson: when a fallback replaces a whole result, ask whether the check
   that triggers it can say where it failed; the mismatch mask was already
   computed and only needed to be kept.
@@ -1120,7 +1121,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   transforms, the record check skipping unrecorded edits (recorded-change
   scopes), LOD state leaking into the check, the Gradient tool, stalled
   checks of removed layers, and smaller items; details in
-  [brush-stroke-layer-plan.md](../brush-stroke-layer-plan.md) ("監査の修正").
+  [brush-stroke-layer-plan.md](history/brush-stroke-layer-development.md) ("監査の修正").
 
 ## 2026-10-15 release: 0.2.0-beta.5
 
@@ -1276,6 +1277,244 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   against the source revision (only relocation links adjusted). `git diff
   --check` passed. Documentation only: no new native build or interactive
   verification is claimed. No site generator or publication was introduced.
+
+## 2026-10-16 documentation: Brush Stroke Layer reference and history
+
+- Extracted the [maintenance reference](../brush-stroke-layer.md) after checking
+  recording, replay, transforms, serialization and monitor lifetime against the
+  current code. Preserved the complete 767-line original in
+  [development history](history/brush-stroke-layer-development.md); the old plan
+  path remains a pointer. Indexes and current source/document references now
+  use the maintained owner; historical log citations reach the archive.
+- Updated [the documentation decision](decisions/documentation-source-of-truth.md)
+  with the extraction lesson: later corrections and implementation take precedence
+  over early proposals, while pending/manual verification retains its original
+  scope. Corrected obsolete brush-tip/ABR embedding comments in the source.
+- Validation: archived body exactly matches the source revision; local links,
+  heading targets and wiki metadata/index coverage pass. Changed C++ files
+  differ only in comments, with changed-line clang-format checks passing;
+  `git diff --check` passes. No native behavior, format or user workflow changed,
+  and no new native build, installation or interactive verification is claimed.
+
+## 2026-10-16 documentation: ABR import reference and history
+
+- Extracted [ABR import](../abr-import.md) from the mixed plan after checking
+  parser, collection, converter and storage behavior. Preserved the full
+  286-line original in [development history](history/abr-import-development.md),
+  adjusting only two relocation links; the old plan path remains a pointer.
+- Current references now own final texture/color/scatter mapping, resource
+  identity and reload, folder tags, test scope and pending real-file checks.
+  Aligned the user guide with the implemented 16-bit precision, naming,
+  computed-only-file limitation and non-exhaustive diagnostics. No behavior
+  changed. Source comments now link to the current reference and accurately
+  scope the parser's limits.
+- Extended [the documentation decision](decisions/documentation-source-of-truth.md):
+  separate version support from content coverage, approximations from omissions,
+  and synthetic tests from real-file verification.
+- Validation: original archive body matches after the two link relocations;
+  local links/heading references and wiki metadata/index coverage pass. The
+  seven changed C++ files differ only in comments; changed-line clang-format
+  and `git diff --check` pass. No native build, installation or interactive
+  verification was run for this documentation-only extraction.
+
+## 2026-10-16 documentation: Brush option shared model reference and history
+
+- Extracted [the maintained reference](../brush-option-shared-model.md) after
+  comparing the complete plan and phase 0 investigation with current code.
+- Preserved both original bodies in history and retained their old paths as
+  pointers; updated indexes, source comments and stale Tool Options checks.
+- Lesson: derive current contracts from final implementation and later fixes,
+  including dependent reads after external changes, not only the original
+  write design. See [the documentation decision](decisions/documentation-source-of-truth.md).
+- Validation: both archived bodies match their source revision (935 and 370
+  lines); 112 Markdown files, 635 local references and 153 heading references
+  pass checks, as do wiki metadata/index coverage and `git diff --check`.
+  All 46 changed C++ files and 12 CMake files differ only in comments;
+  changed-line clang-format checks pass. Historical build/manual results remain
+  dated evidence; no new native or interactive verification is claimed.
+
+## 2026-10-16 documentation: Solstice interface reference and history
+
+- Extracted [the interface maintenance reference](../ui-modernization.md)
+  and preserved the complete original plan in
+  [development history](history/ui-modernization-development.md), adjusting
+  only relative links. The old path remains a pointer.
+- Resolved default-off proposals against embedded defaults and current read
+  fallbacks; distinguished explicit imported settings from absent keys,
+  style geometry from window layout, and current behavior from unverified
+  display scales. Corrected the user guide's radio-button description.
+- Extended [the documentation decision](decisions/documentation-source-of-truth.md)
+  with the lesson to trace defaults through both initialization and read paths.
+- Validation: archival body preservation, local links/headings, wiki metadata
+  and index coverage, comment-only C++ changes, changed-line clang-format
+  and `git diff --check`. No native build, installation or new interactive
+  verification is claimed.
+
+## 2026-10-16 documentation: settings/profile reference and history
+
+- Rewrote [Settings location](../settings-location.md) as the maintained
+  reference at its existing path and preserved the original investigation,
+  proposals and phase results in
+  [development history](history/settings-location-development.md).
+- Checked startup ordering, KConfig default mounting, import/cleanup callers,
+  shared custom resources, different-drive fallback and reset boundaries.
+  Updated the user guide and obsolete phase references accordingly.
+- Recorded the lesson in [the documentation decision](decisions/documentation-source-of-truth.md):
+  broad migration guarantees need the actual caller and fallback behavior.
+- Validated all 629 original lines, 715 local references (including 156
+  heading references) across 115 Markdown files, wiki metadata/index coverage,
+  comment-only C++/CMake edits, changed-line clang-format and `git diff --check`.
+  No runtime changes or fresh native/interactive verification are claimed.
+
+## 2026-10-16 documentation: CPU effects and G'MIC reference split
+
+- Extracted [native CPU effects](../cpu-effects.md) and [G'MIC integration](../gmic.md)
+  as separate maintenance owners. Preserved the complete 1,296-line plan,
+  phase results and timing tables in [development history](history/cpu-effects-and-gmic-development.md);
+  the original plan path remains a pointer.
+- Retained persisted IDs/settings, pixel/alpha/halo and transaction contracts,
+  native regression checks, runtime ABI/ownership, source pinning and packaging.
+  Updated feature indexes, build notes and user-guide links.
+- Reconciled the old cloud-unverified wording with the later beta.6 build and
+  package record; rechecked run 38833086246 as successful at its recorded commit.
+  Cloud GUI/runtime tests remain disabled. Clarified G'MIC's visible/all-layer
+  scope and profile paths, including independence from custom Resource Folder.
+- Recorded the lesson in [the documentation decision](decisions/documentation-source-of-truth.md):
+  component boundaries and later release evidence matter more than plan layout.
+- Validation: exact archival-body preservation, Markdown local links/headings,
+  wiki metadata/index coverage and `git diff --check`. Changes are documentation
+  only; no fresh native build, installation or interactive verification is claimed.
+
+## 2026-10-16 documentation: illustration filters reference and history
+
+- Extracted [Illustration filters](../illustration-filters.md) as the current
+  owner for the five native filters, shared scalar CPU helpers, configuration
+  compatibility, alpha/LOD contracts, UI lifetime and regression checks.
+- Preserved all 1,095 original lines in [development history](history/illustration-filters-development.md),
+  adjusting only relocated links. The old plan path remains a pointer.
+  Repaired user-guide, inventory and cross-feature references; removed the
+  now-empty list of mixed references from the agent guide.
+- Kept Line Art's interactive/real-artwork verification pending and Drop
+  Shadow's optional on-canvas handle deferred. Earlier Glow LOD and blur
+  proposals do not override full-resolution processing or the large-radius
+  three-box path.
+- Added the extraction lesson to [the documentation decision](decisions/documentation-source-of-truth.md):
+  numerical halos and per-feature alpha/UI boundaries must survive summaries.
+- Validation: archival-body comparison, local Markdown links and headings,
+  wiki metadata/index coverage and `git diff --check`. Documentation only;
+  no native build, installation or new interactive verification is claimed.
+
+## 2026-10-16 documentation: cross-document consistency audit
+
+- Audited current documentation navigation and searched the user/agent guides
+  for obsolete branch/profile paths, release/version claims, build limitations,
+  pending checks and expired handoff wording. Compared identified discrepancies
+  with maintained references, release records and the relevant source paths.
+- Corrected [trial-build instructions](../../test-builds.md): Python support
+  is included, artifact names carry a run number, and published downloads are
+  separate from expiring Actions artifacts. Checked the workflow and build
+  script against the existing package verification records.
+- Reconciled [Color Reference](../color-reference.md)'s synchronous processing
+  description with its widget-bound deferred import callback; replaced the
+  expired commit/ingest handoff with release provenance. Interactive acceptance
+  remains pending. The source still uses `QTimer::singleShot(0, this, ...)`.
+- Scoped [Qt observations](concepts/qt-numeric-and-geometry.md) to the recorded
+  local version; corrected wiki index descriptions and removed the duplicate
+  current-release number from [Versions](../../versioning.md).
+- Added the review lesson to [the documentation decision](decisions/documentation-source-of-truth.md)
+  and the [maintenance checklist](../documentation.md). Historical bodies and
+  dated test/benchmark results are unchanged. This pass is not an exhaustive
+  source-level audit of every feature or new native/interactive verification.
+- Validation: 121 Markdown files, 833 local references (including 167 heading
+  references), wiki metadata/index coverage and `git diff --check` passed.
+  All files under `wiki/history/` remain unchanged.
+
+## 2026-10-16 documentation: repository checker and PR workflow
+
+- Added the [repository checker](../../../dev-tools/docs/check_docs.py),
+  pinned parser dependencies and regression fixtures; local usage, scope and
+  limitations are in [Documentation maintenance](../documentation.md#automated-checks).
+- Added a lightweight [PR workflow](../../../.github/workflows/docs-check.yml)
+  for every PR targeting main, plus manual dispatch. It checks links, images,
+  heading anchors, wiki schema/index coverage and changed whitespace without
+  building or launching the application.
+- Fixed seven metadata errors exposed by YAML parsing and related-page
+  resolution: three source strings need quoting and four related paths need
+  page-relative resolution. Historical bodies and technical claims are unchanged.
+- The regression fixtures exercise malformed YAML, missing links/anchors/images,
+  case mismatches, missing index entries, duplicate/Unicode headings, escaped
+  paths, reference links, code examples and committed whitespace failures.
+- Local validation: 15 regression tests passed; 121 Markdown files and 870
+  local references (173 heading references) passed. Workflow YAML parsed and
+  `git diff --check` passed. The PR template now names main as its target.
+
+## 2026-10-16 documentation: GPU maintenance and work-order separation
+
+- Extracted the current [GPU maintenance contract](../gpu-engine.md) from the
+  mixed architecture/phase diary. Corrected obsolete opt-in, float-depth,
+  channel-mask, scratch-projection and shared-image canvas claims against the
+  committed implementation. Retained settings, tile ownership, synchronization,
+  failure/save boundaries, test targets and manual checks.
+- Replaced [GPU priorities](../gpu-work-priorities.md)'s accumulated diary with
+  delivered scope, unfinished candidates and explicit user deferrals. The
+  post-4.100 CPU latency remains unmeasured; failure/save UI acceptance remains
+  pending. No new implementation or manual acceptance is implied.
+- Preserved both complete originals in frozen snapshots:
+  [engine development](history/gpu-engine-development.md) and
+  [work-order development](history/gpu-work-priorities-development.md).
+  Only actual Markdown link destinations were relocated. Existing phase history
+  bodies remain unchanged.
+- Updated navigation, the documentation lesson and phase-number allocation:
+  check current records and concurrent reservations instead of copying a
+  supposedly next-free number into a second document.
+- Scope is main at `cc2445cc4a521d58ae0904079ee67354667b3eb6` (through 4.109);
+  unmerged work in other checkouts is not imported. Source checks covered gates,
+  projection, canvas transfer, dab layout, update scheduling and worker fallbacks.
+  This is documentation-only, with no native build or installation.
+- Validation: the repository checker passed for 123 Markdown files and 1024
+  local references (281 heading references); staged whitespace checks passed.
+  Compared both archive bodies with their base-commit originals after link
+  relocation and confirmed the pre-existing history files were unchanged.
+
+## 2026-10-16 documentation: GitHub Actions operations and history
+
+- Separated [current build operations](../github-actions.md) from the complete
+  [trial/package history](history/github-actions-development.md), preserving
+  the original body with relocated Markdown links.
+- Current guidance retains manual dispatch, pinned dependency/cache rules,
+  mirror refresh, Python/GPU/G'MIC requirements and package verification.
+  It distinguishes PR documentation checks, Windows compilation/packaging,
+  local regression coverage and interactive acceptance.
+- Updated release-evidence links and retained the three historical check
+  anchors used by older log entries. No workflow or build behavior changed.
+
+## 2026-10-16 Clone Layer measurements and GPU copy (phase 4.110)
+
+- Added [Clone Layer updates](benchmarks/clone-layer-updates.md): a source
+  stroke costs a clone a second walker; offset clones downloaded the GPU
+  brush's source tiles; masks and nesting measured.
+- Phase 4.110: offset clones without masks copy on the GPU
+  (`docs/agent/clone-layer.md`); the next phase number is 4.111.
+- Recorded the partial-tile projection clear in GPU merges as an open
+  candidate.
+- Manual check found a Move Tool "Internal Error" when editing the X/Y
+  boxes: an upstream bug (`commitChanges()` without a stroke), visible
+  because Solstice shows safe asserts that release Krita hides. Fixed in
+  `kis_tool_move.cc` (feature inventory, "Undocumented custom changes").
+
+## 2026-10-16 Partial-tile projection clears on the GPU (phase 4.111)
+
+- Phase 4.111: `KisAsyncMerger::setupProjection()` hands unaligned clears of
+  GPU-resident projections to `KisGpuMergeBatch::deferClear()`; the first
+  GPU composite fills the rect with the default pixel
+  (`docs/agent/gpu-engine.md`). The next phase number is 4.112.
+- [Clone Layer updates](benchmarks/clone-layer-updates.md): new "after
+  phase 4.111" tables; unaligned dabs without masks download nothing and
+  take about 0.2-0.4 ms per dab.
+- Recorded in the history page: an adjustment layer as the first leaf reads
+  the projection on the CPU right after `setupProjection()` (the merger's
+  flush for it comes before), so that case keeps the CPU clear.
+- `clone-layer.md` remaining candidate 1 marked done.
 
 ## 2026-10-16 duplicated layer thumbnails
 

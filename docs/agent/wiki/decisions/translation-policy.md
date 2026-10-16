@@ -5,8 +5,8 @@ sources:
   - docs/agent/translations.md
   - dev-tools/translations/update_translations.py
 related:
-  - pitfalls/translation-extraction.md
-  - decisions/upstream-selective-intake.md
+  - ../pitfalls/translation-extraction.md
+  - upstream-selective-intake.md
 ---
 
 # Translations: Solstice owns `krita.po`

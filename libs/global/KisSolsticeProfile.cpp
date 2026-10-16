@@ -241,7 +241,7 @@ bool KisSolsticeProfile::createFreshProfile(QString *error)
     if (!makeFolders(error)) {
         return false;
     }
-    // Solstice defaults (docs/agent/settings-location.md, phase 4): a new
+    // Solstice defaults (docs/agent/settings-location.md): a new
     // profile starts in English. The format is the one of
     // kswitchlanguagedialog_p.cpp: [Language] <application name>=<languages>.
     {

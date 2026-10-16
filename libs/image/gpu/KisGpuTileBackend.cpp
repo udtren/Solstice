@@ -460,6 +460,7 @@ QVector<KisTileData *> KisGpuTileBackend::downloadBatch(const QVector<KisTileDat
                 std::memcpy(stale[i]->data(), src + size_t(i) * tileBytes, tileBytes);
                 stale[i]->gpuState()->addValid(KisTileGpuState::CpuValid);
             }
+            m_downloadedTiles += quint64(stale.size());
         } else {
             warnKrita << "GPU engine: download of" << stale.size() << "tiles failed";
             failed = stale;
@@ -480,6 +481,11 @@ void KisGpuTileBackend::injectDownloadFailuresForTesting(int count)
 quint64 KisGpuTileBackend::contentLossCount() const
 {
     return m_lostTiles.load();
+}
+
+quint64 KisGpuTileBackend::downloadedTileCount() const
+{
+    return m_downloadedTiles.load();
 }
 
 bool KisGpuTileBackend::hasFailed() const

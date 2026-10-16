@@ -1,11 +1,11 @@
 # Brush options in Tool Options: technical notes
 
 User guide: the "Brush options in Tool Options" section of
-[`../brush-editor.md`](../brush-editor.md). Plan and phase history:
-[`brush-option-shared-model-plan.md`](brush-option-shared-model-plan.md),
-phase 3.
+[`../brush-editor.md`](../brush-editor.md). State and serialization contract:
+[Brush option shared model](brush-option-shared-model.md). Original phase 3
+results are in the [development history](wiki/history/brush-option-shared-model-development.md).
 
-Phase 3 of the brush option shared model. Like Clip Studio Paint's
+Like Clip Studio Paint's
 sub tool detail (eye marks) and tool property palette, an eye in the Brush
 Editor (F5) chooses which brush items appear in the Tool Options docker.
 
@@ -31,17 +31,17 @@ Editor (F5) chooses which brush items appear in the Tool Options docker.
 | Engine switch notification | `KisPaintopBox::sigCurrentSettingsWidgetChanged()`, `currentSettingsWidget()` |
 | Brush section | `KisToolOptionsBrushSection` (`libs/ui/tool/KisToolOptionsBrushSection.*`), added by `KisToolPaint::createOptionWidget()` when `showsBrushOptions()` |
 | Tools | `KisToolFreehand` (Freehand Brush, Dynamic Brush, Multibrush, Colorize Mask brush, ...) and `KisToolLine` return true |
-| Ids | Pixel Brush and Deform pass every option through `withToolOptionsId()` with its options-model id (`kis_brushop_settings_widget.cpp`, `kis_deform_paintop_settings_widget.cpp`) |
+| Ids | Engine settings widgets use `withToolOptionsId()` with their stable options-model IDs |
 | Test | `plugins/paintops/defaultpaintops/brush/tests/KisToolOptionsBrushTest.cpp` (shares `KisBrushTestMain.h` with the parity test) |
 
 ### Rules
 
 - An option has an eye only when it is checkable and has a Tool Options id.
-  Engines without ids (not migrated to the shared model) show no eye column
-  and their Brush section shows a hint.
+  All current engines register ids. An engine without ids would show no eye
+  column and a hint in the Brush section; this remains a safety fallback.
 - Engines with ids: Pixel Brush, Deform, Color Smudge, Sketch, Bristle,
   Tangent Normal, Hatching, Filter, Quick Brush, Curve, Grid, Particle,
-  Shape, Spray, MyPaint and Clone (phase 4 of the shared model plan): every
+  Shape, Spray, MyPaint and Clone: every
   engine. MyPaint's option ids are its setting names (`radius_logarithmic`,
   `opaque`, ...) plus `Basic` and `Airbrush`. Color Smudge has no masked brush; its other page
   parameters (Brush Tip, Blending Mode, Opacity, Texture Scale) come from the
@@ -184,7 +184,8 @@ checks that the ids are unique.
 1. Pixel Brush F5: eyes in front of Diameter, Ratio, Angle, Density and
    Spacing (Auto tip), Size, Angle and Spacing (Predefined tip),
    Precision and Auto, Blending Mode ("Selected:"), Painting Mode and
-   Texture Scale. Color Smudge and other engines show none.
+   Texture Scale. Check other engines against the registered parameters above;
+   hidden or unsupported controls must have no eye or mirror.
 2. With eyes on, the Brush section shows those controls; dragging a slider
    there changes the brush and F5 at once, and changing them in F5, the
    toolbar or with Shift + drag updates Tool Options.
@@ -212,7 +213,7 @@ checks that the ids are unique.
    category with a line between categories; toggling a checkbox there changes F5, the stroke and the
    preset's modified mark, and the reverse.
 3. Switching presets updates the checkboxes; switching to an engine
-   without support shows the hint; Deform shows its own items.
+   of another type shows that engine's own selected items.
 4. The choice survives a restart and applies to every Pixel Brush preset.
 5. The section and its categories have no headings, only lines.
 6. Lightness Strength is disabled in Tool Options unless the tip is in

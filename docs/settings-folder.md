@@ -1,6 +1,6 @@
 # Settings folder
 
-Solstice keeps all its own files in one folder, separate from Krita:
+On Windows, Solstice normally stores its settings and data in this folder:
 
 ```
 %APPDATA%\Solstice\
@@ -15,13 +15,15 @@ Solstice keeps all its own files in one folder, separate from Krita:
 `%APPDATA%` is usually `C:\Users\<you>\AppData\Roaming`. Paste
 `%APPDATA%\Solstice` into the Explorer address bar to open the folder.
 
-Solstice and Krita no longer share settings, resources or the "already
-running" check. Both can be installed and run at the same time.
+Solstice and Krita use separate settings and default resource folders, and
+separate "already running" checks. Both can be installed and run at the same
+time. A custom resource folder can remain shared, as described below.
 
 ## First start
 
 On the first start, Solstice looks for a Krita installation's settings
-(`%LOCALAPPDATA%\kritarc` or `%APPDATA%\krita`). If it finds them, it asks:
+(`%LOCALAPPDATA%\kritarc` or a resource database in `%APPDATA%\krita`).
+If it finds them, it asks:
 
 - **Yes**: Solstice copies Krita's settings and resources into its own
   folder, then starts.
@@ -32,12 +34,15 @@ On the first start, Solstice looks for a Krita installation's settings
 - **No**: Solstice starts with its own default settings and resources.
 - **Cancel**: Solstice does not start. It asks again next time.
 
-If the copy is cancelled or fails (for example for lack of disk space),
-Solstice removes what it had copied, quits, and asks again on the next start.
+If the import is cancelled or fails (for example for lack of disk space),
+Solstice attempts to remove the partial settings and default resource copy
+before quitting. After successful cleanup, it asks again on the next start.
+Log and cache folders can remain.
 
 If the Krita settings use a custom resource folder (the **Resource Folder**
 setting in Krita's preferences), Solstice copies the settings only and
-keeps using that folder.
+keeps using that folder. It remains shared if Krita still uses it, so resource
+changes made later in either application can affect both.
 
 Without Krita settings, Solstice starts with its defaults and does not ask.
 
@@ -65,17 +70,34 @@ defaults above apply.
 
 ## Starting over
 
-To run the first start again, close Solstice and delete (or rename)
-`%APPDATA%\Solstice`. **Reset All Settings** (Settings menu) resets the settings
-file only.
+To run the first start again with the normal layout, close Solstice and rename
+`%APPDATA%\Solstice` to keep it as a backup. Solstice creates a new profile on
+the next start. If configuration uses the separate Local folder described
+below, rename that configuration folder too. A custom resource folder is
+outside these folders and remains in place.
+
+**Reset All Settings** (Settings menu) backs up `kritarc` as
+`config\kritarc.backup`, replacing the previous backup, and reloads defaults
+and the default workspace. Restart afterwards. This does not repeat the import
+question or reset resource data, display settings, shortcuts or language files.
 
 ## Limitations
+
+- If Windows stores Roaming and Local AppData on different drives, settings
+  (including the first-start marker and menu/toolbar files) use
+  `%LOCALAPPDATA%\Solstice\config`. Logs, default resources and cache stay
+  under `%APPDATA%\Solstice`.
+- An explicitly configured `QML_DISK_CACHE_PATH` can place the interface cache
+  outside the profile.
+- The first-start question described above is implemented on Windows. The
+  current non-Windows startup imports a detected Krita profile without that
+  question; this guide does not imply identical import UI on other systems.
 
 - Some files are not Solstice's and stay where other programs keep them:
   - temporary files, including autosaves of unsaved documents, in `%TEMP%`;
   - the font cache of the font library (`%LOCALAPPDATA%\fontconfig`);
   - Python's own packages.
-- Krita's files in `%LOCALAPPDATA%` and `%APPDATA%\krita` stay as they are.
-  Delete them yourself if you no longer use Krita.
-- Earlier Solstice versions also used `%LOCALAPPDATA%\krita\cache`. Solstice
-  no longer uses it; you can delete it.
+- Import leaves Krita's source files in `%LOCALAPPDATA%` and
+  `%APPDATA%\krita` unchanged.
+- Earlier Solstice versions used `%LOCALAPPDATA%\krita\cache`. It is no longer
+  Solstice's default cache location, but Krita may still use it.

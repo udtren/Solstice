@@ -100,7 +100,7 @@ for brush tips). `KisPredefinedBrushChooser`
 (`plugins/paintops/libpaintop/kis_predefined_brush_chooser.cpp`) puts one for
 `ResourceType::Brushes` under its tip list. Storages of type Adobe Brush
 Library (`.abr`) count as bundles for both presets and tips
-(`docs/agent/abr-import-plan.md`). Test: `testBrushTipFilters` in
+([ABR import](abr-import.md)). Test: `testBrushTipFilters` in
 `libs/ui/tests/KisBrushStrokePreviewTest.cpp` (the test resources hold no
 tips, so the filtering itself is checked only when tips exist).
 
