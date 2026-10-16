@@ -187,6 +187,10 @@ fixtures. It does not start the Windows build or validate application behavior.
 
 ## Historical evidence
 
+[0.3.0 package verification](wiki/history/release-0.3.0.md) records the first
+release after the documentation split. Subsequent build evidence belongs in
+separate dated history records; the pre-separation snapshot stays frozen.
+
 <a id="native-tools-maintenance-package-check-2026-10-16"></a>
 <a id="simplified-chinese-package-check-2026-10-16"></a>
 <a id="effects-layer-comps-and-gmic-package-check-2026-10-16"></a>
