@@ -60,3 +60,11 @@ read fallbacks, import behavior and explicit saved values together; reading
 only the original feature plan can give the wrong default. Keep a widget
 style's geometry guarantee separate from an independent option that changes
 layout, and retain the actual display-scale scope of visual verification.
+
+The [profile extraction](../../settings-location.md) keeps a stable reference
+path while moving the entire mixed source into history. Migration guarantees
+must be traced through callers as well as low-level helpers: cleanup scope,
+custom shared resources, platform-specific prompts and different-drive path
+fallbacks qualify broad claims such as "one folder" or "everything copied is
+removed." Preserve these boundaries instead of turning implementation intent
+into an unconditional guarantee.

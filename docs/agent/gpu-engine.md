@@ -138,8 +138,8 @@ details are in the phase records, now in the wiki history pages (see
   engine has a user setting, document conversion, and failure warnings
   (3.3). The GPU engine is **on by default** since 2026-10-07: the embedded
   `krita/data/kritarc` sets `Solstice/GpuEngine=true`, and the code fallback
-  stays off, so tests are unaffected (`docs/agent/settings-location.md`,
-  phase 4). It is set in Preferences → Performance → GPU Engine;
+  stays off, so tests are unaffected ([Settings defaults](settings-location.md#defaults-and-resets)).
+  It is set in Preferences → Performance → GPU Engine;
   `KRITA_GPU_PROJECTION=1/0` overrides it. With it off, Krita's runtime
   behavior is unchanged.
 - Implementation:

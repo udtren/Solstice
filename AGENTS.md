@@ -142,7 +142,7 @@ plans, historical records and references that still contain both.
 - Overview live update: [development notes](docs/agent/overview-live-update.md).
 - Versioning and releases: [development notes](docs/agent/versioning.md).
 - Executable naming: [development notes](docs/agent/executable-name.md).
-- Settings location and profile import: [development notes](docs/agent/settings-location.md).
+- Settings location and profile import: [maintenance reference](docs/agent/settings-location.md).
 - GPU Engine: [architecture and invariants](docs/agent/gpu-engine.md).
 - GPU work order: [priorities](docs/agent/gpu-work-priorities.md).
 - Brush Stroke Preview: [development notes](docs/agent/brush-stroke-preview.md).
