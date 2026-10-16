@@ -11,6 +11,7 @@
 
 #include <KisGpuCommandList.h>
 #include <KisGpuContext.h>
+#include <KisGpuShiftedCopyPass.h>
 #include <KisGpuTilePool.h>
 
 #include <KoColor.h>
@@ -22,6 +23,7 @@
 #include <QMutexLocker>
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <half.h>
 #include <memory>
@@ -46,6 +48,8 @@ struct WorkContext {
     KisGpuCommandList commands;
     std::unique_ptr<KisGpuLayerCompositor> compositor32;
     std::unique_ptr<KisGpuLayerCompositor> compositor16;
+    std::unique_ptr<KisGpuShiftedCopyPass> shiftedCopy32;
+    std::unique_ptr<KisGpuShiftedCopyPass> shiftedCopy16;
     quint64 lastUse = 0;
 };
 
@@ -57,6 +61,7 @@ QMutex s_contextsMutex;
  */
 std::vector<std::unique_ptr<WorkContext>> *s_freeContexts = new std::vector<std::unique_ptr<WorkContext>>();
 size_t s_contextCount = 0;
+std::atomic<quint64> s_shiftedCopyCount{0};
 constexpr size_t MinimumContexts = 3;
 
 std::unique_ptr<WorkContext> acquireContext(KisGpuContext &context)
@@ -499,5 +504,130 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
     // download it (ordered after this submission). Prefer a completed context
     // on the next call; only wait when every available context is still busy.
     releaseContext(std::move(work));
+    return ok;
+}
+
+quint64 KisGpuProjectionCompositor::shiftedCopyCount()
+{
+    return s_shiftedCopyCount.load();
+}
+
+bool KisGpuProjectionCompositor::copyShifted(KisPaintDeviceSP dst,
+                                             const QRect &dstRect,
+                                             KisPaintDeviceSP src,
+                                             const QPoint &offset,
+                                             QString *errorMessage)
+{
+    auto fail = [errorMessage](const QString &message) {
+        if (errorMessage) {
+            *errorMessage = message;
+        }
+        return false;
+    };
+
+    if (dstRect.isEmpty()) {
+        return true;
+    }
+    if (!src || !dst || src == dst) {
+        return fail(QStringLiteral("the source must be another device"));
+    }
+    if (!KisGpuTileAccess::isSupported(dst, errorMessage) || !KisGpuTileAccess::isSupported(src, errorMessage)) {
+        return false;
+    }
+    if (!(*src->colorSpace() == *dst->colorSpace())) {
+        return fail(QStringLiteral("source color space differs from the destination"));
+    }
+    const qint32 pixelSize = dst->pixelSize();
+    if (std::memcmp(src->defaultPixel().data(), dst->defaultPixel().data(), size_t(pixelSize))) {
+        return fail(QStringLiteral("shifted copy requires equal default pixels"));
+    }
+    // The same exclusivity rule as composite(): merge jobs never share a
+    // tile of the image grid.
+    if (dst->x() % TileSize || dst->y() % TileSize) {
+        return fail(QStringLiteral("destination offset is not a multiple of 64"));
+    }
+
+    const QRect srcSample = src->extent() & dstRect.translated(-offset);
+    if (srcSample.isEmpty() && (dst->extent() & dstRect).isEmpty()) {
+        // copyAreaOptimized() does nothing here either: both are default.
+        return true;
+    }
+
+    KisGpuContext &context = KisGpuTileBackend::instance()->context();
+    std::unique_ptr<WorkContext> work = acquireContext(context);
+    if (!work->commands.isValid() || !work->commands.wait()) {
+        releaseContext(std::move(work));
+        return fail(QStringLiteral("GPU work context is unavailable"));
+    }
+    work->lastUse = 0;
+    std::unique_ptr<KisGpuShiftedCopyPass> &pass = pixelSize == 8 ? work->shiftedCopy16 : work->shiftedCopy32;
+    if (!pass) {
+        pass = KisGpuShiftedCopyPass::create(context,
+                                             pixelSize == 8 ? KisGpuTileFormat::RGBA16F : KisGpuTileFormat::RGBA32F,
+                                             errorMessage);
+    }
+    if (!pass) {
+        releaseContext(std::move(work));
+        return false;
+    }
+
+    KisGpuCommandList &commands = work->commands;
+    commands.begin();
+
+    KisGpuTileAccess target(dst, dstRect, KisGpuTileAccess::ReadWrite);
+    KisGpuTileAccess::UploadArena uploads(
+        qMin<VkDeviceSize>(16 * 1024 * 1024, VkDeviceSize(target.tileCount()) * pixelSize * TileSize * TileSize * 3));
+    std::unique_ptr<KisGpuTileAccess> source;
+    KisGpuShiftedCopyPass::Copy copy;
+
+    bool ok = target.prepare(commands, uploads, errorMessage);
+    if (ok) {
+        const QRect grid = target.tileGrid();
+        const QPoint dstOrigin = target.tileOrigin(grid.left(), grid.top());
+        copy.dstTiles = target.addresses();
+        copy.dstGridWidth = grid.width();
+        copy.clip = dstRect.translated(-dstOrigin);
+        defaultPixelAsFloat(src, copy.fill);
+
+        // Without source tiles the grid is empty and every pixel is filled.
+        QPoint srcOrigin = dstOrigin - offset;
+        if (!srcSample.isEmpty()) {
+            source.reset(new KisGpuTileAccess(src, srcSample, KisGpuTileAccess::ReadOnly));
+            if (source->tileCount()) {
+                ok = source->prepare(commands, uploads, errorMessage);
+                const QRect srcGrid = source->tileGrid();
+                srcOrigin = source->tileOrigin(srcGrid.left(), srcGrid.top());
+                copy.srcTiles = source->addresses();
+                copy.srcGridWidth = srcGrid.width();
+                copy.srcGridHeight = srcGrid.height();
+            }
+        }
+        // Source grid pixel of destination grid pixel q:
+        // (dstOrigin + q - offset) - srcOrigin.
+        copy.shift = dstOrigin - offset - srcOrigin;
+    }
+    if (ok) {
+        commands.computeBarrier();
+        ok = pass->record(commands, copy, errorMessage);
+    }
+
+    QVector<KisGpuTileAccess *> accessList;
+    accessList << &target;
+    if (source) {
+        accessList << source.get();
+    }
+    if (ok) {
+        work->lastUse = KisGpuTileAccess::submitAndFinish(commands, accessList);
+        ok = work->lastUse != 0;
+        if (!ok && errorMessage && errorMessage->isEmpty()) {
+            *errorMessage = QStringLiteral("GPU submission refused or failed");
+        }
+    } else {
+        KisGpuTileAccess::finishUnsubmitted(commands, accessList);
+    }
+    releaseContext(std::move(work));
+    if (ok) {
+        ++s_shiftedCopyCount;
+    }
     return ok;
 }

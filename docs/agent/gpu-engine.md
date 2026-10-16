@@ -7,11 +7,11 @@ for unfinished work and deferred investigations.
 
 ## Status and locations
 
-This extraction was checked against main at
-`cc2445cc4a521d58ae0904079ee67354667b3eb6` on 2026-10-16. The committed
-implementation and phase evidence here run through phase 4.109. Work in another
-checkout or feature branch is not included until merged; no new native build or
-interactive acceptance is claimed by this documentation change.
+The initial extraction was checked against main at
+`cc2445cc4a521d58ae0904079ee67354667b3eb6` on 2026-10-16. Phase 4.110
+is integrated from PR #5; its tests and recorded user acceptance are in
+[Clone Layer](clone-layer.md). Work in another checkout is not included until
+merged; documentation changes alone do not establish interactive acceptance.
 
 - The engine accelerates RGBA F32/F16 tiles, layer projection, supported pixel
   brushes, selected transforms and Gaussian convolution. Unsupported conditions
@@ -881,6 +881,24 @@ kept their pixels.
   a comparison only, and explicit `fma()` calls that reproduce the CPU's
   AVX2 kernels (`softFade()`).
 
+### Clone Layer offsets (phase 4.110)
+
+2026-10-16, user request (after measuring Clone Layer costs).
+
+- An offset Clone Layer without effect masks copies its source on the GPU:
+  `KisCloneLayer::copyOriginalToProjection()` →
+  `KisGpuProjectionCompositor::copyShifted()` → `KisGpuShiftedCopyPass`
+  (`shaders/copy_shifted.comp`), any pixel shift, the source's default
+  pixel where it has no tile, pixels unconverted. Before, the CPU copy
+  downloaded the GPU-written source tiles on every update.
+- Conditions, parity (alpha-0 colors), the reason masked clones stay on
+  the CPU, tests and the remaining candidates: `docs/agent/clone-layer.md`.
+  Measurements: [Clone Layer updates](wiki/benchmarks/clone-layer-updates.md).
+- Found while measuring, not changed: `KisAsyncMerger::setupProjection()`
+  clears the dirty rect on the CPU, which downloads the partly covered
+  border tiles of GPU-resident projections for rects that are not
+  tile-aligned (all GPU merges).
+
 ## Technology and device requirements
 
 | Topic | Decision | Reason |
@@ -1028,6 +1046,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `KisGpuGLSharedBuffer.*` (Windows) | Vulkan buffer shared with a GL pixel unpack buffer, with the Vulkan/GL semaphore cycle. |
 | `KisGpuGLInterop_p.h` (private) | GL_EXT_memory_object / GL_EXT_semaphore entry points and the device-UUID check shared by the interop classes. |
 | `KisGpuSeparableConvolutionPass.*` + `shaders/separable_convolution.comp` | Phase-4.98 separable convolution in bands: horizontal pass into a double intermediate, vertical pass with the FFT worker's write rules. |
+| `KisGpuShiftedCopyPass.*` + `shaders/copy_shifted.comp` | Phase-4.110 copy between tile grids with any pixel shift (Clone Layer offsets); the default pixel where the source has no tile. |
 | `KisGpuMaskingCompositePass.*` + `shaders/masking_composite.comp` | Phase-4.101 masking brush composite: stroke pixels into the target with the mask composited into alpha, ten modes, CPU-exact. |
 
 ## Source map (`libs/image`)
@@ -1043,6 +1062,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `gpu/KisGpuMergeBatch.*` | Batches composites inside `KisAsyncMerger`; eligibility checks; CPU fallback. Always compiled; inert without `HAVE_KRITA_GPU_ENGINE`. |
 | `gpu/KisGpuEngineSettings.*` | kritarc keys, the convert policy, GPU color spaces and the conversion target. Always compiled. |
 | `gpu/KisGpuProjectionCompositor.*` | Composites batches in place into GPU-authoritative projection tiles; layer accesses and reusable work contexts. |
+| `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks. |
 | `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points. |
 | `kis_updater_context.cpp` | Tile-aligned job exclusivity when `KisGpuMergeBatch::mayCompositeOnGpu`. |
 | `gpu/KisGpuConvolutionWorker.*` | Phase-4.98 Gaussian convolution: old-data snapshot, one GPU submission into a temporary device, CPU copy into the rect. Called by `KisGaussianKernel::applyGaussian()`. |
@@ -1218,7 +1238,6 @@ Record the build, format, workload and result separately from earlier acceptance
     Hard Overlay, Penumbra A, Easy Dodge, Modulo Shift, Lambert Lighting,
     Behind, Greater, Luminosity SAI and Copy Red; each looks like the CPU;
     Destination In still works (CPU); Undo/Redo.
-
 16. Outstanding failure UI acceptance: with a reproducible test fault, confirm
     that content loss produces one non-modal warning and stops GPU use. Check
     Save/Save As/export/save-on-close choices (Save as New File default,
@@ -1226,6 +1245,8 @@ Record the build, format, workload and result separately from earlier acceptance
     target, and the documented autosave/`supportsIO() == false` exclusions.
     Do not induce a real driver reset or use valuable documents to exercise
     this check. Record acceptance separately from `KisGpuSaveTest`.
+17. Clone Layer offsets (phase 4.110): the
+    [Clone Layer manual checks](clone-layer.md#manual-checks).
 
 ## Phase history
 
@@ -1337,6 +1358,7 @@ Section index:
 - [Remaining blend modes (phase 4.107)](wiki/history/gpu-phases-4.93-.md#remaining-blend-modes-phase-4107)
 - [All other blend modes (phase 4.108)](wiki/history/gpu-phases-4.93-.md#all-other-blend-modes-phase-4108)
 - [Precise contraction audit (phase 4.109)](wiki/history/gpu-phases-4.93-.md#precise-contraction-audit-phase-4109)
+- [Clone Layer offsets (phase 4.110)](wiki/history/gpu-phases-4.93-.md#clone-layer-offsets-phase-4110)
 
 ## Risks and open questions
 

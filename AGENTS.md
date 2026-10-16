@@ -146,6 +146,7 @@ maintained references, plans and historical records.
 - Settings location and profile import: [maintenance reference](docs/agent/settings-location.md).
 - GPU Engine: [architecture and invariants](docs/agent/gpu-engine.md).
 - GPU work order: [priorities](docs/agent/gpu-work-priorities.md).
+- Clone Layer performance: [development notes](docs/agent/clone-layer.md).
 - Brush Stroke Preview: [development notes](docs/agent/brush-stroke-preview.md).
 - Brush preset grouping: [development notes](docs/agent/brush-preset-grouping.md).
 - Brush Presets scroll to selection: [development notes](docs/agent/brush-preset-scroll.md).

@@ -1487,3 +1487,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   local regression coverage and interactive acceptance.
 - Updated release-evidence links and retained the three historical check
   anchors used by older log entries. No workflow or build behavior changed.
+
+## 2026-10-16 Clone Layer measurements and GPU copy (phase 4.110)
+
+- Added [Clone Layer updates](benchmarks/clone-layer-updates.md): a source
+  stroke costs a clone a second walker; offset clones downloaded the GPU
+  brush's source tiles; masks and nesting measured.
+- Phase 4.110: offset clones without masks copy on the GPU
+  (`docs/agent/clone-layer.md`); the next phase number is 4.111.
+- Recorded the partial-tile projection clear in GPU merges as an open
+  candidate.
+- Manual check found a Move Tool "Internal Error" when editing the X/Y
+  boxes: an upstream bug (`commitChanges()` without a stroke), visible
+  because Solstice shows safe asserts that release Krita hides. Fixed in
+  `kis_tool_move.cc` (feature inventory, "Undocumented custom changes").
