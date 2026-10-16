@@ -92,3 +92,11 @@ despite its later deferred file-drop import. Follow cross-document consumers
 and later implementation changes, not only the original plan. Scope
 [dependency observations](../concepts/qt-numeric-and-geometry.md) to the build
 and date they describe; local measurements do not identify CI dependencies.
+
+The [automated checks](../../documentation.md#automated-checks) make navigation
+and wiki schema validation reproducible in the repository and on PRs. Parsing
+Markdown/YAML found malformed source strings and inconsistent related-page
+paths that the earlier regular-expression checks missed. Run on every PR so
+deleting a referenced source or image is covered even without a Markdown edit.
+Fixtures must exercise both deliberate failures and valid code examples;
+machine validation still cannot establish feature behavior or manual acceptance.
