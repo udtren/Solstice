@@ -68,3 +68,11 @@ custom shared resources, platform-specific prompts and different-drive path
 fallbacks qualify broad claims such as "one folder" or "everything copied is
 removed." Preserve these boundaries instead of turning implementation intent
 into an unconditional guarantee.
+
+The [CPU effects](../../cpu-effects.md) and [G'MIC](../../gmic.md) extraction
+separates components by maintenance responsibility, even when they shared one
+implementation plan. Check release/build records as well as that plan: the
+later cloud-package check supersedes an earlier "unverified" statement without
+establishing GUI runtime coverage. Keep pixel/ABI compatibility in current
+references and dated timing tables in history; buffer accounting and converter
+microbenchmarks are not end-to-end speed or process-memory guarantees.
