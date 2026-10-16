@@ -590,6 +590,12 @@ HSL/HSV系、F16のSoft Light(Photoshop)など、GPU未対応のブレンドモ�
 - ビット一致が必要で、直後に半精度・整数への丸めがある積和を `roundedProduct()` に置き換えた（F16のlerp、
   F16 Alpha Darkenの色、Liquifyの座標と重み）。詳細は `gpu-engine.md` の「Precise contraction audit (phase 4.109)」。
 
+フェーズ4.110（2026年10月16日、ユーザー指示）: オフセット付きClone Layerのソース読み出しをGPUで行う。
+- マスクのないオフセット付きクローンは、ソースのGPUタイルをGPU上でずらしてコピーする（`copyShifted()`、
+  `KisGpuShiftedCopyPass`）。従来はCPUコピーのため更新のたびにソースのタイルをダウンロードしていた。
+- マスク付きはCPUのまま（マスクがCPUでコピー結果を読むため、GPUコピーでは遅くなった）。
+- 計測と残りの候補は `clone-layer.md`。手動確認はユーザー報告で問題なし（2026年10月16日）。
+
 ## 関連する付随作業
 
 - READMEの操作ベンチマーク表(投影・キャンバス・ミラー)はフェーズ4.42の

@@ -220,6 +220,10 @@ Read these before adding or updating any feature:
   `docs/agent/abr-import-plan.md`
 - Welcome page News: Krita news above, Solstice GitHub releases below:
   `docs/agent/welcome-news.md`
+- Clone Layer performance (GPU copy of offset clones, GPU engine phase
+  4.110, implemented, tested and manually checked 2026-10-16;
+  measurements and remaining candidates):
+  `docs/agent/clone-layer.md`
 - Removal of the right-click Popup Palette and the On-Canvas Brush Editor
   (what was kept and why): `docs/agent/popup-palette-removal.md`
 

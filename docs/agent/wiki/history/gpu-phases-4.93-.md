@@ -692,3 +692,18 @@ multiply-adds elsewhere. Details: [gpu-engine.md](../../gpu-engine.md),
   called from a probe reproduced it, with identical inputs and decorations.
   The risk is therefore treated as context-dependent: products feeding a sum
   before a rounding step now use `roundedProduct()`.
+
+## Clone Layer offsets (phase 4.110)
+
+2026-10-16, user request. Offset Clone Layers without effect masks copy
+their source on the GPU. Details: [clone-layer.md](../../clone-layer.md);
+numbers: [Clone Layer updates](../benchmarks/clone-layer-updates.md).
+
+- Measured first: a benchmark test with a GPU download counter showed the
+  CPU copy downloading the GPU brush's source tiles on every update.
+- A first version also copied on the GPU for masked clones; transparency
+  masks became slower because the CPU mask then downloaded the copy.
+  Masked clones were returned to the CPU copy.
+- Found, not changed: CPU clears of non-aligned dirty rects in
+  `KisAsyncMerger::setupProjection()` download partial projection tiles in
+  every GPU merge.

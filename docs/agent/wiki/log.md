@@ -1243,3 +1243,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Recorded the user's [feature-branch policy](decisions/feature-branch-workflow.md):
   push a feature branch and merge into main through a PR, including releases and
   documentation. Preparing 0.2.0-beta.8 through this workflow.
+
+## 2026-10-16 Clone Layer measurements and GPU copy (phase 4.110)
+
+- Added [Clone Layer updates](benchmarks/clone-layer-updates.md): a source
+  stroke costs a clone a second walker; offset clones downloaded the GPU
+  brush's source tiles; masks and nesting measured.
+- Phase 4.110: offset clones without masks copy on the GPU
+  (`docs/agent/clone-layer.md`); the next phase number is 4.111.
+- Recorded the partial-tile projection clear in GPU merges as an open
+  candidate.
+- Manual check found a Move Tool "Internal Error" when editing the X/Y
+  boxes: an upstream bug (`commitChanges()` without a stroke), visible
+  because Solstice shows safe asserts that release Krita hides. Fixed in
+  `kis_tool_move.cc` (feature inventory, "Undocumented custom changes").
