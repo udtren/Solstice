@@ -101,6 +101,8 @@ public:
      * (KisTileGpuState::ContentLost).
      */
     quint64 contentLossCount() const;
+    /// Tiles read back to the CPU by successful downloads since startup (measurements).
+    quint64 downloadedTileCount() const;
     /**
      * True after GPU content was lost: the engine accepts no more GPU work
      * (KisGpuTileAccess::isSupported() is false) and the CPU path takes over.
@@ -160,6 +162,7 @@ private:
     std::atomic<int> m_injectedDownloadFailures{0};
     std::atomic<quint64> m_injectedReadbackLimit{~quint64(0)};
     std::atomic<quint64> m_lostTiles{0};
+    std::atomic<quint64> m_downloadedTiles{0};
     std::atomic<bool> m_failed{false};
 };
 
