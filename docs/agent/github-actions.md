@@ -30,6 +30,16 @@ User instructions: `docs/test-builds.md`.
 - `build-windows.ps1`: configure, build/install, and package stages; all paths
   are under the runner's temporary `solstice` directory. It never uses the
   developer's `env.bat`, `_build`, `_install`, or active `kritarc`.
+- After installing the host, the build stage invokes
+  `build-tools/gmic/build-runtime.py` against that job's installed Qt6/QMic
+  ABI. `build-tools/gmic/runtime.lock.json` pins G'MIC 3.7.4.1 and its source
+  SHA-256 separately from the prebuilt dependency mirror. The archive already
+  includes CImg and the community standard library. The runtime builds on the
+  CPU with OpenMP/FFTW; logs go to `gmic-build.log`. Packaging requires the
+  runtime DLL, host interface DLL, four data packs and exact source/patches;
+  `BUILD-INFO.txt` records the runtime version. See the
+  [G'MIC implementation record](cpu-effects-and-gmic-plan.md#gmic-implementation-record-2026-10-15).
+  The new step was built locally; a cloud workflow run is still unverified.
 
 Dependencies are downloaded sequentially and each verified tar is deleted
 after extraction, reducing peak disk usage. An exact cache key includes the

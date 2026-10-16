@@ -721,8 +721,9 @@ void KisKraSaver::saveWarningColor(QDomDocument& doc, QDomElement& element, KisI
 
 void KisKraSaver::saveCompositions(QDomDocument& doc, QDomElement& element, KisImageSP image)
 {
-    if (!image->compositions().isEmpty()) {
+    {
         QDomElement e = doc.createElement("compositions");
+        e.setAttribute("newLayersVisible", image->newLayersVisibleInCompositions() ? "1" : "0");
         Q_FOREACH (KisLayerCompositionSP composition, image->compositions()) {
             composition->save(doc, e);
         }

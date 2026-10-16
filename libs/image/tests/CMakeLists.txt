@@ -132,6 +132,7 @@ kis_add_tests(
     KisGridInterpolationToolsTest.cpp
     KisPuppetTransformWorkerTest.cpp
     KisImageProjectionUpdatesFilterTest.cpp
+    KisLayerCompositionTest.cpp
     LINK_LIBRARIES kritaimage kritatestsdk
     )
 

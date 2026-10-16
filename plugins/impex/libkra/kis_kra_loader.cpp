@@ -319,6 +319,7 @@ KisImageSP KisKraLoader::loadXML(const QDomElement& imageElement)
         else {
             image = new KisImage(0, width, height, cs, m_d->imageName);
         }
+        image->setNewLayersVisibleInCompositions(false);
         image->setResolution(xres, yres);
         loadNodes(imageElement, image, const_cast<KisGroupLayer*>(image->rootLayer().data()));
 
@@ -1413,6 +1414,7 @@ KisNodeSP KisKraLoader::loadColorizeMask(KisImageSP image, const QDomElement& el
 
 void KisKraLoader::loadCompositions(const QDomElement& elem, KisImageSP image)
 {
+    image->setNewLayersVisibleInCompositions(elem.attribute("newLayersVisible", "0") == "1");
     QDomNode child;
 
     for (child = elem.firstChild(); !child.isNull(); child = child.nextSibling()) {
