@@ -1,31 +1,14 @@
-# GitHub Actions Windows trial build
+# GitHub Actions — Windows build operations
 
-Documentation has a separate lightweight PR workflow; see
-[Documentation checks](documentation.md#automated-checks). It does not start
-the Windows application build described here.
+This document owns workflow operation, dependency maintenance, build/package
+requirements and verification. User download instructions are in
+[Windows test builds](../test-builds.md); version bumps and publication are in
+[Releasing](versioning.md#releasing).
 
-## Native-tools maintenance package check (2026-10-16)
-
-- Release: [v0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8),
-  commit `4e92a41ee78c361730467717bce588744cbe4e89` (PR #3).
-- [Run 38872500400](https://github.com/udtren/Solstice/actions/runs/38872500400)
-  passed configuration, compilation, installation and packaging with Qt 6.11.0,
-  Python plugins, the Vulkan engine and the CPU G'MIC runtime. CI keeps
-  `BUILD_TESTING=OFF`; local regression results are separate evidence.
-- All 18 selected local CTest suites passed in 110.32 seconds: Quick Access,
-  Rest Note, Asset Library, Lazy Tools, menu mnemonics, Brush Stroke Layer,
-  stroke replay/preview, selection movement and processing visitors.
-- Both downloaded ZIPs matched `SHA256SUMS.txt` and passed CRC checks:
-  5,313 application entries and 220 debug entries. Required executables,
-  changed plugins, Python support, GPU library, translations and shell thumbnail
-  registration script were present. All five uploaded release asset hashes
-  and sizes matched the verified local files before publication.
-- Application ZIP SHA-256:
-  `d65d1a1a1089dcb13bf520bf125eb49e60bc033d23b6d289818a31003783a1ce`.
-- The packaged executable's Windows version metadata identifies beta.8 and
-  `4e92a41`; an isolated-profile `--version` invocation exited with code 0.
-  This is not an interactive painting or GPU runtime test of the CI package.
-  The user confirmed the locally built refactors before release.
+Dated trial failures, dependency upgrades and release package checks are preserved
+in the [build history](wiki/history/github-actions-development.md). A successful
+past run does not verify a new artifact. Record new build evidence in history,
+with the exact commit and run URL.
 
 ## Scope
 
@@ -35,17 +18,14 @@ Windows x64, Release, unsigned ZIP plus logs. It uses GitHub-hosted
 SHA-pinned official actions. There are no push/PR triggers, publishing jobs,
 signing keys, self-hosted runners, or inherited KDE CI credentials.
 
-The user authorized creation, push and a first trial run on 2026-10-03.
-User instructions: `docs/test-builds.md`.
-
-`.github/workflows/dependency-check.yml` (2026-10-13) runs weekly (Monday
+`.github/workflows/dependency-check.yml` runs weekly (Monday
 03:17 UTC) and on demand, with `contents: read` and `issues: write`; see
 "Dependency mirror" below.
 
 ## Dependency and build files
 
 - `build-tools/github-actions/windows-dependencies.lock.json`: 87 public
-  KDE Windows package versions (86 until the 2026-10-13 refresh below), download URLs, sizes, SHA-256 checksums,
+  KDE Windows package versions, download URLs, sizes, SHA-256 checksums,
   source recipe revisions and dependency relationships. The package set was
   seeded from the local Qt6 dependency inventory. Some older local versions
   were already absent from the registry, so available versions on the same
@@ -66,8 +46,6 @@ User instructions: `docs/test-builds.md`.
   runtime DLL, host interface DLL, four data packs and exact source/patches;
   `BUILD-INFO.txt` records the runtime version. See the
   [G'MIC build and distribution reference](gmic.md#build-install-and-distribution).
-  The cloud build and package were verified in run 38833086246 on
-  2026-10-16 (see the beta.6 check below).
 
 Dependencies are downloaded sequentially and each verified tar is deleted
 after extraction, reducing peak disk usage. An exact cache key includes the
@@ -107,95 +85,53 @@ are uploaded even if a later stage fails. Retention is seven days.
 
 ## Verification and operation
 
-Before pushing changes, parse the Python/PowerShell/YAML and inspect archive
-handling and checksum rejection. Dispatch the workflow on `main` (`krita-sol-gpu` until 2026-10-13),
-record the exact commit and run URL, and follow its result. Inspect configure
-output, GPU enablement, compiler failures, package output and artifacts. A
-run is only successful when build, installation, packaging and artifact
-upload complete. Do not report a skipped GPU test as passed.
+1. Merge the intended feature/release PRs into `main` and record the desired
+   commit. Check version values in CMake and the dependency lock. If modifying
+   build tooling, validate Python/PowerShell/YAML and review archive extraction
+   and checksum rejection before dispatch.
+2. Dispatch the Windows workflow and identify its run by ref and commit:
 
-No broad UI tests or `kis_kra_saver_test` run here. Interactive painting,
-Undo/Redo, save/reload and Vulkan/OpenGL sharing remain manual real-hardware
-checks. No local application restart is required for workflow-only changes.
+   ```console
+   gh workflow run windows-build.yml --repo udtren/Solstice --ref main
+   gh run list --repo udtren/Solstice --workflow windows-build.yml --limit 5
+   gh run view <run-id> --repo udtren/Solstice
+   ```
 
-## Simplified Chinese package check (2026-10-16)
+   Confirm the run's `headSha` is the intended merged revision; a moving branch
+   name alone does not prove which commit was built. Record the run URL.
+3. Follow configuration, compilation, installation, G'MIC runtime build,
+   packaging and artifact upload. Success requires all required stages.
+   Configure must confirm GPU and Python support. Download diagnostic logs
+   on failure and fix the owning input through a feature PR; do not publish a
+   partial build or bypass integrity checks.
+4. Download `Solstice-windows-x64-<run-number>` to an isolated directory.
+   Verify every ZIP against `SHA256SUMS.txt`, run ZIP CRC checks, and inspect
+   `BUILD-INFO.txt` for the built commit/version. Check required executable,
+   GPU, Python/PyQt, QML, translation, G'MIC runtime/data/source and shell
+   thumbnail files. Check executable version metadata and, where supported,
+   run `solstice.com --version` using a scratch `SOLSTICE_PROFILE_ROOT`.
+5. For a release, follow [Releasing](versioning.md#releasing): tag the built
+   commit and publish the verified application/debug ZIPs, checksums, build
+   information and dependency lock. Compare uploaded assets with the verified
+   files. Update release documentation and the website only after the release
+   exists.
 
-- Run: <https://github.com/udtren/Solstice/actions/runs/38851516022>,
-  commit `53685b8aaeabbfd3295aa1db97edfec574b19c44`, version `0.2.0-beta.7`.
-- All required steps succeeded in about 71 minutes. Artifact
-  `Solstice-windows-x64-21`: both ZIP checksums and CRC checks passed
-  (5,313 application and 220 debug entries).
-- `bin/locale/zh_CN/LC_MESSAGES/krita.mo` is byte-identical to the locally
-  built catalog and contains the new Solstice strings. Qt's own Chinese
-  texts ship as the merged `bin/translations/qt_zh_CN.qm` (210 KB; the
-  dependency install's `qt_zh_CN.qm` is only a 99-byte meta catalog).
-- The packaged `solstice.com --version` printed
-  `krita 0.2.0-beta.7 (git 53685b8)` and exited 0 with a scratch
-  `SOLSTICE_PROFILE_ROOT` and empty legacy profile paths;
-  `solstice.exe` reports `ProductName` Solstice, version
-  `0.2.0-beta.7 (git 53685b8)`.
-- Application ZIP SHA-256:
-  `147f7eddaec472b3b2d9025785db3c1653167ae9f195875252ded55bfb52b364`.
+The Windows workflow has no publishing step; the ZIP is unsigned. Artifact
+retention is seven days, so an expired artifact needs a new run. Logs use
+`Windows-build-logs-<run-number>-<attempt>`.
 
-## Effects, Layer Comps and G'MIC package check (2026-10-16)
+CI uses `BUILD_TESTING=OFF`. No broad UI tests or `kis_kra_saver_test` run
+here. A build/package pass, checksum match or `--version` smoke check does not
+establish interactive painting, Undo/Redo, save/reload or Vulkan/OpenGL runtime
+behavior. Preserve local regression and user acceptance evidence separately;
+never report skipped GPU tests as passed. Workflow-only changes need no local
+application restart.
 
-- Run: <https://github.com/udtren/Solstice/actions/runs/38833086246>,
-  commit `b7ee343e81fe79b6fff257f6ae8b34af8ece7363`, version `0.2.0-beta.6`.
-- All required steps succeeded in 1 hour 16 minutes 34 seconds, including
-  the first cloud G'MIC runtime build, installation, packaging and upload.
-  `HAVE_KRITA_GPU_ENGINE=ON`; cloud GUI/runtime tests remain disabled.
-- Artifact `Solstice-windows-x64-20` contains the application and debug ZIPs,
-  checksums, build information and dependency lock. Both ZIP checksums and
-  CRC checks passed: 5,313 application entries and 220 debug entries.
-- Checked 24 required package files, including the new effects and Layer
-  Comps plugins, Lens Blur, G'MIC runtime/bridge, OpenMP/FFTW, all four G'MIC
-  data packs, exact source archive, patches/build script, and the thumbnail
-  registration script. Python plugins and PyQt6 remain included. The bundled
-  G'MIC source hash matches its runtime lock.
-- The packaged executable reports `0.2.0-beta.6 (git b7ee343)`; its
-  `--version` command exited successfully on the development machine with a
-  scratch `SOLSTICE_PROFILE_ROOT` and empty legacy profile paths. This checks
-  startup dependencies, not interactive painting or GPU runtime behavior.
-- Application ZIP SHA-256:
-  `2b309276bbb58d3decdd9a65a8371a465520bce49972971a37f257a8e8dd8be2`.
+## Dependency mirror
 
-## Lock refresh (2026-10-13)
-
-The first build on `main` (run
-<https://github.com/udtren/Solstice/actions/runs/38406141485>) failed in
-"Prepare dependencies": all 86 locked packages (`transition.now-qt6-179033…`,
-source revision `31c578a`) returned HTTP 404; the registry keeps only recent
-builds. `krita-sol-gpu` still built because its branch-scoped Actions cache
-held the old set (caches are per branch; one saved on the default branch is
-shared, others are not, and an unused cache expires after seven days).
-
-`build-tools/github-actions/refresh-dependency-lock.py` regenerates the lock
-from the registry API: for every locked package, the newest
-`transition.now-qt6-<timestamp>` build whose `metadata.json` names the branch
-`transition.now/qt6`, with the registry's size and SHA-256 of `archive.tar`,
-the metadata's source revision and dependencies. It reports dependencies
-outside the set; toolchain and Vulkan entries are kept. All URLs were checked
-(HEAD, sizes match); the checksums are verified by the bootstrap on download.
-
-Result: 87 packages at source revision `4aff6eb` of
-`packaging/krita-deps-management` (builds of 2026-10-09). The branch merged
-master's dependency updates, so this is a version upgrade, not only a
-rebuild: Boost 1.81 → 1.90, Eigen 3.4.0 → 5.0.1, exiv2 0.27.5 → 0.28.8,
-FFmpeg 7.1.1 → 8.0.1, expat 2.4.8 → 2.7.5, brotli 1.1.0 → 1.2.0, dlfcn-win32
-1.3.1 → 1.4.2, DrMingw 0.9.7 → 0.9.13 and others; Imath is a separate package
-(`ext_imath`, needed by `ext_openexr`). Qt stays on KDE's 6.11.0 fork
-(`QT_GIT_TAG` `3a13b2d` → `97e5e18`: Wayland and Android fixes; the move to
-6.11.3 was reverted upstream). Both revisions were built on the
-`krita-windows-clang21` image, matching LLVM-MinGW 20251118. Solstice's
-source already handles exiv2 0.28 (`EXIV2_TEST_VERSION(0,28,0)`) and prefers
-Eigen 5 (`find_package(Eigen3 5)`, 3.3 fallback). The local
-development dependencies are not affected.
-
-## Dependency mirror (2026-10-13)
-
-The user chose a permanent fix after the registry removal above: a mirror
-(A) plus a weekly check (B). The Actions cache saved on the default branch
-`main` is now shared with other branches as a side effect.
+KDE's registry removes older builds. The pinned mirror keeps the locked set
+available independently of registry retention; the weekly check detects missing
+mirror assets. The lock is the authority for the active set and checksums.
 
 - **Mirror:** public repository `udtren/solstice-deps` (created 2026-10-13).
   One GitHub Release per locked set, tag `deps-<newest build date>-<source
@@ -218,18 +154,14 @@ The user chose a permanent fix after the registry removal above: a mirror
   summary, and the workflow opens or comments on the issue "Windows build
   dependencies: mirror files missing" when the mirror is incomplete.
 
-Refresh procedure: run `refresh-dependency-lock.py`, review the recipe diff
-(as above), commit and push, then run the mirror workflow with that ref at
-once (KDE keeps builds only for a few weeks), then a build on `main`.
+Refresh procedure: run `refresh-dependency-lock.py` on a feature branch, review
+package/recipe/version changes and commit/push. Run the mirror workflow with
+that exact ref promptly, before KDE prunes the downloads. Verify all mirrored
+assets, merge the Solstice PR, then run a Windows build on main. A refresh may
+upgrade libraries; review ABI/API consequences and do not describe it as only
+a URL repair. `--mirror-only` adds mirror fields without changing the set.
 
-## Python plugins (2026-10-14)
-
-The user found no Python Plugin Manager in the 0.2.0-beta ZIP. Every CI build
-until then had configured without Python plugins (pykrita): CMake ran with
-setup-python's interpreter, which has neither the dependency packages' SIP
-and PyQt6 nor the build-only modules SIP imports. Local builds get them from
-`env.bat`'s `PYTHONPATH` (`<install>\lib\site-packages`) and the system
-Python's `packaging` and `setuptools`.
+## Python plugin requirements
 
 - `build-windows.ps1` sets `PYTHONPATH` to `$Deps/lib/site-packages` (the
   dependency packages install SIP, PyQt6, pyqt6-sip and pyqt-builder there,
@@ -246,71 +178,27 @@ Python's `packaging` and `setuptools`.
 - The packager already copies the dependencies' `lib\site-packages` and
   Krita's `lib\krita-python-libs`.
 
-First check: run <https://github.com/udtren/Solstice/actions/runs/38488208727>
-(branch `ci/python-plugins`) configured with the Python plugins.
+## Documentation checks
 
-Release check: the 0.2.0-beta.2 package (run
-<https://github.com/udtren/Solstice/actions/runs/38488980328>, commit
-`9224a5d118`) contains `lib/kritaplugins/kritapykrita.dll`, PyKrita,
-PyQt6 and the bundled plugins in `share/krita/pykrita`, and the user
-confirmed on 2026-10-14 that Configure Solstice shows the Python Plugin
-Manager.
+[Documentation checks](documentation.md#automated-checks) is a separate,
+lightweight workflow on PRs targeting main and manual dispatch. It checks
+Markdown navigation, wiki schema and whitespace, and runs its own regression
+fixtures. It does not start the Windows build or validate application behavior.
 
-## First trial run (2026-10-03)
+## Historical evidence
 
-- Commit: `70bf96017d55f9e4c7b24ce3297416a199a2264f`.
-- Run: <https://github.com/udtren/Solstice/actions/runs/37120885525>.
-- Dependency bootstrap, cache save and Release configuration completed.
-  The GPU-engine enablement check passed.
-- Qt resolved to 6.11.0. Compilation and installation succeeded in 96 minutes
-  with two workers, including the Vulkan engine and Vision ML.
-- Packaging failed before ZIP creation because `KDE_INSTALL_USE_QT_SYS_PATHS`
-  defaulted to OFF. The CI configure arguments now explicitly enable it and
-  validate the cache value before starting the long compilation step.
-- No application ZIP was produced by this run; subsequent runs below verified
-  the corrected configuration and packaging.
-- (Fixed 2026-10-14, see "Python plugins" below.) SIP/PyQt6 were not found with setup-python's interpreter, so Python plugin
-  support is disabled. Resolve the dependency package's Python module layout
-  and interpreter compatibility before claiming parity with local builds.
-  Eigen3 and xsimd were found through their supported-version fallbacks; the
-  earlier failed version probes are not missing-dependency failures.
+<a id="native-tools-maintenance-package-check-2026-10-16"></a>
+<a id="simplified-chinese-package-check-2026-10-16"></a>
+<a id="effects-layer-comps-and-gmic-package-check-2026-10-16"></a>
 
-The corrected run is
-<https://github.com/udtren/Solstice/actions/runs/37126839545> at
-`8b18d8a13ba5fd60dee423f573f95c46ed35d54c`, using four build workers.
-Compilation and installation passed in about 66 minutes. Packaging reached
-`windeployqt` but failed because the scanner was passed the nonexistent `i/qml`
-directory; ECM had installed the modules in `deps/qml`. This was reproduced
-locally with the exact locked Qt 6.11, ICU and zlib archives: direct scanning
-without that missing path returned JSON, while the extra path returned exit 1
-and no stdout. The correction sets a relative QML install directory, only
-passes existing import paths, and handles absent optional CLI tools.
-With an existing import directory, both the direct scanner and the Qt 6.11
-`windeployqt --dry-run` returned exit 0 in the isolated local reproduction.
-Locally, a `windeployqt --dry-run` with Qt Quick enabled found
-`org.krita.components` through the explicit application QML import path.
+Older links resolve here. The dated checks are now in history:
+[beta.8 native tools](wiki/history/github-actions-development.md#native-tools-maintenance-package-check-2026-10-16),
+[beta.7 Chinese interface](wiki/history/github-actions-development.md#simplified-chinese-package-check-2026-10-16),
+and [beta.6 effects/Layer Comps/G'MIC](wiki/history/github-actions-development.md#effects-layer-comps-and-gmic-package-check-2026-10-16).
 
-## Verified successful run (2026-10-04 JST)
-
-- Run: <https://github.com/udtren/Solstice/actions/runs/37131426139>.
-- Commit: `e7927d99f943accc2fa23e536269420cdf13c15b`.
-- All required steps succeeded: dependency cache restore, configuration,
-  compilation, installation, ZIP creation and artifact upload. Total job time
-  was 47 minutes 39 seconds; completion was 00:44 JST on October 4.
-- Artifact: `Solstice-windows-x64-3`, ID `11277529982`, 385,298,266 bytes.
-  Its downloaded SHA-256 matched GitHub's recorded digest:
-  `d39a119dc86548dc4a93c12b4084da73d56e2bfc60f9905b92375a88391bc705`.
-- Both inner ZIPs matched `SHA256SUMS.txt`. Application ZIP SHA-256:
-  `d912ab6ef82483079563f91c5145e5464b66cce7bcb1c122b439cfd990690900`.
-- Application ZIP CRC validation passed for all 5,039 entries. Twelve required
-  files were present, including the executables, GPU and Vision ML libraries,
-  Qt Core/Gui/Widgets, `platforms/qwindows.dll`, and the
-  `org.krita.components` module's `qmldir` and DLL.
-- The install log confirms application QML files are now under `i/qml`.
-- The artifact expires at 00:43 JST on October 11, 2026. A new manual run is
-  required to obtain another artifact after expiration.
-
-This verifies compilation and packaging, not application execution. GPU runtime,
-interactive behavior and Python plugin support remain outside this trial's
-verified scope. The local application, development installation and `kritarc`
-were not changed during verification.
+The [complete pre-separation snapshot](wiki/history/github-actions-development.md)
+contains the first trial and packaging fixes, dependency refresh rationale,
+Python plugin restoration and beta.6/beta.7/beta.8 package verification.
+Use the run/commit recorded in each entry when interpreting its results;
+temporary artifact availability and old package versions are not current
+operating instructions.

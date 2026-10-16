@@ -219,7 +219,7 @@ directory with 113 dependency-checked binaries, isolated PATH/settings/cache
 passed the 11 pre-optimization integration checks. This establishes that
 tested runtime dependency closure, not validation of every release ZIP.
 
-The later [beta.6 package record](github-actions.md#effects-layer-comps-and-gmic-package-check-2026-10-16)
+The later [beta.6 package record](wiki/history/github-actions-development.md#effects-layer-comps-and-gmic-package-check-2026-10-16)
 reports successful cloud build/install/package/upload in run 38833086246 on
 2026-10-16, ZIP checksum/CRC and required-file/source-hash checks, plus a local
 packaged `--version` startup check. The run's success and source commit

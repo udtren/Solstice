@@ -352,7 +352,7 @@ The 2026-10-15/16 stage records report each suite passing and ten module suites
 passing after Line Art. Those counts describe that stage, not the module's
 current total. General acceptance dates are at the top; they do not establish
 every manual scenario. Release inclusion and cloud package checks are recorded
-in [Versioning](versioning.md) and [the beta.6 package record](github-actions.md#effects-layer-comps-and-gmic-package-check-2026-10-16),
+in [Versioning](versioning.md) and [the beta.6 package record](wiki/history/github-actions-development.md#effects-layer-comps-and-gmic-package-check-2026-10-16),
 and do not complete pending Line Art interaction checks.
 
 ### Manual regression checklist
