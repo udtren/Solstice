@@ -5,7 +5,7 @@
 2026-10-16: implementation authorized after the user accepted the Layer Comps
 resize fix. CR0-CR4 implemented, built, tested and installed.
 Included in **0.2.0-beta.6**; see the [release ledger](versioning.md#history)
-and [package check](github-actions.md#effects-layer-comps-and-gmic-package-check-2026-10-16).
+and [package check](wiki/history/github-actions-development.md#effects-layer-comps-and-gmic-package-check-2026-10-16).
 Interactive confirmation remains pending; publication does not complete it.
 
 User guide: [Effects filters](../effects-filters.md#color-reference).
