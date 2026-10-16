@@ -902,7 +902,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   moves now move the strokes wholly inside the selection (last in the
   order, as the pasted pixels lie on top), and a background check after
   non-brush edits warns with a canvas message and a layer icon badge
-  ([plan](../brush-stroke-layer-plan.md), "選択範囲の移動と記録の照合").
+  ([plan](history/brush-stroke-layer-development.md), "選択範囲の移動と記録の照合").
 - Diagnosis method: render each recorded stroke alone and measure the share
   of its own opaque pixels that differ; whole strokes at 100% point to an
   edit that moved pixels, not to brush nondeterminism.
@@ -927,7 +927,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   pixels (grown 2 px, feathered, blended with `COMPOSITE_COPY` through the
   mask); most of the layer mismatching still falls back to pixels. The
   callers pass their own pixel transform so the fallback part looks as it
-  did ([plan](../brush-stroke-layer-plan.md), "一致しない部分だけ画素で拡大する").
+  did ([plan](history/brush-stroke-layer-development.md), "一致しない部分だけ画素で拡大する").
 - Lesson: when a fallback replaces a whole result, ask whether the check
   that triggers it can say where it failed; the mismatch mask was already
   computed and only needed to be kept.
@@ -1120,7 +1120,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   transforms, the record check skipping unrecorded edits (recorded-change
   scopes), LOD state leaking into the check, the Gradient tool, stalled
   checks of removed layers, and smaller items; details in
-  [brush-stroke-layer-plan.md](../brush-stroke-layer-plan.md) ("監査の修正").
+  [brush-stroke-layer-plan.md](history/brush-stroke-layer-development.md) ("監査の修正").
 
 ## 2026-10-15 release: 0.2.0-beta.5
 
@@ -1276,3 +1276,21 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   against the source revision (only relocation links adjusted). `git diff
   --check` passed. Documentation only: no new native build or interactive
   verification is claimed. No site generator or publication was introduced.
+
+## 2026-10-16 documentation: Brush Stroke Layer reference and history
+
+- Extracted the [maintenance reference](../brush-stroke-layer.md) after checking
+  recording, replay, transforms, serialization and monitor lifetime against the
+  current code. Preserved the complete 767-line original in
+  [development history](history/brush-stroke-layer-development.md); the old plan
+  path remains a pointer. Indexes and current source/document references now
+  use the maintained owner; historical log citations reach the archive.
+- Updated [the documentation decision](decisions/documentation-source-of-truth.md)
+  with the extraction lesson: later corrections and implementation take precedence
+  over early proposals, while pending/manual verification retains its original
+  scope. Corrected obsolete brush-tip/ABR embedding comments in the source.
+- Validation: archived body exactly matches the source revision; local links,
+  heading targets and wiki metadata/index coverage pass. Changed C++ files
+  differ only in comments, with changed-line clang-format checks passing;
+  `git diff --check` passes. No native behavior, format or user workflow changed,
+  and no new native build, installation or interactive verification is claimed.

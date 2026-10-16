@@ -137,6 +137,10 @@ Document ownership and lifecycle are defined in
 
 ### History
 
+- [Brush Stroke Layer development](history/brush-stroke-layer-development.md):
+  complete original plan, investigations, measurements and dated verification;
+  current recording/replay/persistence rules live in the feature reference.
+
 - [Expired GPU handoff](history/gpu-engine-handoff.md): former session context,
   measurements and instructions; current work uses GPU architecture/priorities.
 - [Feature touch-point record](history/feature-touchpoints-20261016.md):

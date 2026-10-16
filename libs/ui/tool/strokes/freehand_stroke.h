@@ -192,7 +192,7 @@ public:
 
 private:
     // Solstice: recording for a brush stroke layer
-    // (docs/agent/brush-stroke-layer-plan.md)
+    // (docs/agent/brush-stroke-layer.md)
     void initRecording(const QVector<KisFreehandStrokeInfo *> &strokeInfos);
     void recordJob(const Data &data);
     void endRecordedChange();
