@@ -1,9 +1,10 @@
 ---
 type: concept
-updated: 2026-10-07
+updated: 2026-10-16
 sources:
   - <krita-dev-root>/_install/include/QtCore/qnumeric.h (Qt 6.8.0)
   - https://github.com/qt/qtbase/blob/v6.8.0/src/gui/painting/qpolygon.cpp
+  - docs/agent/github-actions.md (Dependency and build files; package checks)
 related:
   - cpu-gpu-bit-parity.md
   - krita-copy-semantics.md
@@ -11,9 +12,14 @@ related:
 
 # Qt numeric and geometry semantics
 
-The dependencies ship Qt 6.8.0 (`QT_VERSION_STR` in the installed
-`qconfig.h`). Qt sources are not in the development tree. Read the headers
-under `_install/include`, or the qtbase sources at tag `v6.8.0`.
+These observations use the local development installation's Qt 6.8.0 headers
+and sources, as inspected on 2026-10-07 (`QT_VERSION_STR` in `qconfig.h`).
+They are not a version guarantee for every build: the
+[CI package checks](../../github-actions.md) record a different Qt version.
+For a new parity investigation, identify the target build's Qt version and
+inspect its headers/source revision before applying these observations. The
+original local headers are under `_install/include`; the source tag used here
+is `v6.8.0`.
 
 ## `qRound(double)`
 

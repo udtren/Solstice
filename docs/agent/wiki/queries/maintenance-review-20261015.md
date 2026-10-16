@@ -21,7 +21,7 @@ related:
 - Compare redraws across both devices' bounds: erased edge pixels are outside
   the edited device's bounds. RGBA float comparisons and masked replacement
   must preserve HDR/negative values. Validate stored painter indices before
-  background replay. See [Brush Stroke Layer](../../brush-stroke-layer-plan.md).
+  background replay. See [Brush Stroke Layer](../../brush-stroke-layer.md).
 - A temporary key action must restore the view manager that owned its key
   press, even after focus changes. Weak references and focus-loss cleanup
   prevent state sticking or being restored in another window. See

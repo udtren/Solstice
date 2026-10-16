@@ -43,7 +43,7 @@
 #include <strokes/freehand_stroke.h>
 
 /**
- * Stage 2a of the brush stroke layer plan (docs/agent/brush-stroke-layer-plan.md):
+ * Brush Stroke Layer recording and replay (docs/agent/brush-stroke-layer.md):
  * a stroke painted on a KisBrushStrokeLayer through the brush tool's stroke
  * path is recorded, its record draws the same pixels again, and undo and
  * redo keep the record and the pixels together.
