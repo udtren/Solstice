@@ -1165,7 +1165,7 @@ void InplaceTransformStrokeStrategy::redrawRecordedStrokes(QVector<KisStrokeJobD
     // Solstice: a brush stroke layer draws its strokes again for the final
     // transform, over the transformed pixels of the preview; when it cannot
     // (rotation, other edits on the layer), they stay
-    // (docs/agent/brush-stroke-layer-plan.md)
+    // (docs/agent/brush-stroke-layer.md)
     if (m_d->selection || m_d->initialTransformArgs.externalSource()) {
         return;
     }

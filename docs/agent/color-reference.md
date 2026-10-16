@@ -4,7 +4,9 @@
 
 2026-10-16: implementation authorized after the user accepted the Layer Comps
 resize fix. CR0-CR4 implemented, built, tested and installed.
-Interactive confirmation remains pending.
+Included in **0.2.0-beta.6**; see the [release ledger](versioning.md#history)
+and [package check](wiki/history/github-actions-development.md#effects-layer-comps-and-gmic-package-check-2026-10-16).
+Interactive confirmation remains pending; publication does not complete it.
 
 User guide: [Effects filters](../effects-filters.md#color-reference).
 The [original plan](color-reference-plan.md) is historical; this document
@@ -15,7 +17,7 @@ Photo-library/camera import were excluded by the user; .clip is unsupported.
 ## Decisions under implementation authorization
 
 - CPU-only native filter, ID `solstice_color_reference`, configuration version
-  1, **Filter > Adjust > Color Reference**, implemented on `main`.
+  1, **Filter > Adjust > Color Reference**.
 - Image mode is a tone-to-color mapping using the reference's distribution.
   The original absolute-bin proposal was rejected because it largely preserves
   brightness even with Keep brightness off. Weighted quantile positions allow
@@ -37,9 +39,11 @@ Photo-library/camera import were excluded by the user; .clip is unsupported.
   the generic gradient editor on a private copy; only OK commits the change.
   Hide resource add/update buttons. The image grid displays references.
 - Bounded table construction and thumbnail loading run synchronously. Opening
-  50 stored thumbnails plus eight presets measured 20 ms. No asynchronous
-  callbacks or worker lifetime are required. Full import uses a wait cursor
-  and remains synchronous; large-file responsiveness needs manual review.
+  50 stored thumbnails plus eight presets measured 20 ms. No background worker
+  is used. File drops defer import through a widget-bound GUI callback (see
+  [Library and widget lifecycle](#library-and-widget-lifecycle)); the import
+  itself uses a wait cursor and remains synchronous. Large-file responsiveness
+  needs manual review.
 
 These are implementation choices within the user's authorization, not
 separate confirmations of every design option.
@@ -219,8 +223,9 @@ Do not terminate Solstice for DLL installation; ask the user to close it if lock
   `6BB9667BB17CFF844B8ECAE54D6AABDA356B5E0AB6887177E74491BA964F2838`.
 - Offscreen warnings concern unavailable window-system features, test
   translations and Gradient Map's unused dither resource; no failed checks.
-- Interactive acceptance remains pending. No commit was made; wiki ingest
-  is due after a committed task.
+- Interactive acceptance remained pending at this initial handoff, before
+  the release commit. Later publication is recorded under Status and scope;
+  it does not add interactive acceptance evidence.
 
 ### File-drop follow-up (2026-10-16)
 

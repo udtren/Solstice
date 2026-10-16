@@ -16,7 +16,7 @@ matches the task.
 
 Document ownership and lifecycle are defined in
 [Documentation maintenance](../documentation.md); the
-[agent guide](../README.md) identifies maintained, mixed and historical references.
+[agent guide](../README.md) identifies maintained references, plans and archived records.
 
 ## Conventions (schema)
 
@@ -38,7 +38,9 @@ Document ownership and lifecycle are defined in
   - `queries/`: saved answers to questions that are likely to come up again.
 - **Frontmatter** on every page: `type`, `updated` (YYYY-MM-DD), `sources`
   (commits, `path:line` or symbols, documents, external URLs) and `related`
-  (other wiki pages). History pages carry `status` instead of `updated`,
+  (paths to other wiki pages, relative to the containing page). Quote source
+  strings containing `: ` so YAML does not interpret them as mappings.
+  History pages carry `status` instead of `updated`,
   and no `related`. All history pages are listed here; the GPU phase section
   index also lives in `docs/agent/gpu-engine.md`.
 - **Names:** lowercase-hyphenated file names; one topic per page; update a
@@ -58,7 +60,9 @@ Document ownership and lifecycle are defined in
 - **Lint** (periodically, or when asked): check that referenced files and
   symbols still exist, benchmarks are not stale, pages do not contradict
   `AGENTS.md` or the feature documents, and every page is listed here. Log
-  the pass.
+  the pass. Run the [automated navigation/schema checks](../documentation.md#automated-checks)
+  locally; the same checks run on PRs. Source accuracy and dated evidence
+  still need review.
 
 ## Pages
 
@@ -94,11 +98,11 @@ Document ownership and lifecycle are defined in
   a single latest-release summary in README, stable guides, illustrated website
   pages, and publication ordering.
 - [GPU engine phase numbering](decisions/gpu-phase-numbering.md): how phase
-  numbers are assigned, and the next free number.
+  numbers are reserved and checked before reuse.
 - [`krita5.xmlgui` stays unchanged](decisions/xmlgui-unchanged.md): why menu
   changes avoid the main XMLGUI file.
 - [Solstice version vs. Krita compatibility version](decisions/versioning.md):
-  why `0.1.0-alpha` is shown while `6.0.5-prealpha` stays internal.
+  why the public product version is separate from the internal compatibility version.
 - [Upstream: weekly review, selective cherry-picks](decisions/upstream-selective-intake.md):
   Hermes reports, the user decides, Claude cherry-picks; dry-run lessons.
 - [Translations: Solstice owns `krita.po`](decisions/translation-policy.md):
@@ -140,6 +144,42 @@ Document ownership and lifecycle are defined in
 
 ### History
 
+- [Illustration filters development](history/illustration-filters-development.md):
+  original designs, stage S/C/G/D1/L results and timings; the maintained
+  reference retains the current contracts and pending Line Art verification.
+
+- [CPU effects and G'MIC development](history/cpu-effects-and-gmic-development.md):
+  original plan, phase results and measurements; native effects and the
+  separately built G'MIC runtime have their own maintained references.
+
+- [Settings location and profile migration](history/settings-location-development.md):
+  pre-migration inventory, provisional design and dated implementation checks;
+  the stable settings reference owns current paths and startup behavior.
+
+- [UI modernization development](history/ui-modernization-development.md):
+  original proposal, visual baseline and dated implementation results;
+  the feature reference owns current defaults and maintenance checks.
+
+- [Brush option shared model development](history/brush-option-shared-model-development.md)
+  and [phase 0 investigation](history/brush-option-shared-model-phase0.md):
+  complete proposals and dated migration results; the feature reference owns
+  current synchronization, compatibility and regression checks.
+
+- [ABR import development](history/abr-import-development.md): original
+  investigation, interim conversion rules and dated results; the feature
+  reference owns current support, compatibility and remaining verification.
+
+- [Brush Stroke Layer development](history/brush-stroke-layer-development.md):
+  complete original plan, investigations, measurements and dated verification;
+  current recording/replay/persistence rules live in the feature reference.
+
+- [GPU engine development snapshot](history/gpu-engine-development.md):
+  complete mixed reference, initial architecture, phase plan and measurements;
+  current rules remain in the maintained GPU reference.
+- [GPU work-order development snapshot](history/gpu-work-priorities-development.md):
+  original priority decisions, progress and benchmark diary; the maintained
+  work-order page owns unfinished work and user deferrals.
+
 - [Expired GPU handoff](history/gpu-engine-handoff.md): former session context,
   measurements and instructions; current work uses GPU architecture/priorities.
 - [Feature touch-point record](history/feature-touchpoints-20261016.md):
@@ -147,6 +187,10 @@ Document ownership and lifecycle are defined in
 - [Brush Stroke Preview design](history/brush-stroke-preview-design.md):
   original design, assessment and dated verification, superseded by the
   maintained feature contract.
+
+- [GitHub Actions development](history/github-actions-development.md): original
+  trial failures, dependency refreshes and package verification records; use
+  the maintained Actions guide for current operation.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):
