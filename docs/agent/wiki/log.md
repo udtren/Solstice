@@ -1515,3 +1515,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the projection on the CPU right after `setupProjection()` (the merger's
   flush for it comes before), so that case keeps the CPU clear.
 - `clone-layer.md` remaining candidate 1 marked done.
+
+## 2026-10-16 duplicated layer thumbnails
+
+- Measured why a duplicated layer's Layers docker thumbnail appeared late:
+  the node juggler keeps its stroke open for about 4.5 s and idle tasks wait
+  for it; generating the thumbnail takes about 2 ms. Recorded as
+  [idle tasks wait for every open stroke](pitfalls/idle-tasks-wait-for-open-strokes.md).
+- `KisLayerThumbnailCache` now draws a provisional thumbnail for added nodes
+  on a worker thread (about 30 ms after a duplicate); the idle task still
+  regenerates it. Test `testDuplicateGetsThumbnailWhileJugglerStrokeIsOpen`;
+  opt-in `benchmarkDuplicateThumbnail` (`KRITA_THUMBNAIL_BENCHMARK=1`).
