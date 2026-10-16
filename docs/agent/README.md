@@ -26,6 +26,8 @@ granularity, archival and the review checklist.
   resolution, startup/copy behavior, defaults and reset boundaries.
 - [Native CPU effects](cpu-effects.md) owns the six filters' pixel, configuration
   and regression contracts; [G'MIC](gmic.md) owns its runtime, bridge and packaging.
+- [Illustration filters](illustration-filters.md) owns the five filters' persisted
+  controls, shared CPU primitives, UI lifetime and outstanding verification.
 - [Feature inventory](feature-inventory.md) maps custom source locations.
   It is not a progress tracker.
 - Feature references linked from AGENTS own current behavior, compatibility,
@@ -36,27 +38,11 @@ granularity, archival and the review checklist.
 - [Upstream intake](upstream-intake.md) owns selective patch decisions;
   [Todo](todo.md) holds user-registered work not yet started.
 
-## References that still contain design history
-
-The following files evolved from plans into maintenance references. Their
-names alone do not make them unimplemented plans or disposable archives.
-Do not infer current behavior from an initial proposal. Read the implementation
-records and subsequent corrections, and preserve their compatibility and
-validation details when extracting a standalone current reference.
-
-| Reference | Maintained information to find | Historical context to distinguish |
-| --- | --- | --- |
-| [Illustration filters](illustration-filters-plan.md) | Decisions and Stage S/C/G/D1/L implementation records, including per-filter limits and pending interactive checks | Initial gap analysis, proposed algorithms and work order |
-
-These references remain authoritative until their complete current contracts
-have been extracted. Avoid appending unrelated work diaries to them. New
-maintenance updates should revise the relevant current behavior and link
-dated validation evidence, rather than adding another conflicting proposal.
-
 ## Superseded plans and historical evidence
 
 | Record | Role / maintained successor |
 | --- | --- |
+| [Illustration filters development](wiki/history/illustration-filters-development.md) | Complete investigation, stage results and measurements; [Illustration filters](illustration-filters.md) owns current behavior and pending checks; [old plan path](illustration-filters-plan.md) remains a pointer |
 | [CPU effects and G'MIC development](wiki/history/cpu-effects-and-gmic-development.md) | Complete plan, phase results and measurements; [CPU effects](cpu-effects.md) and [G'MIC](gmic.md) own maintenance; [old plan path](cpu-effects-and-gmic-plan.md) remains a pointer |
 | [Brush Stroke Layer development](wiki/history/brush-stroke-layer-development.md) | Complete original plan and dated results; [Brush Stroke Layer](brush-stroke-layer.md) owns the current contract; [old plan path](brush-stroke-layer-plan.md) remains a pointer |
 | [ABR import development](wiki/history/abr-import-development.md) | Original investigation, staged implementation and dated results; [ABR import](abr-import.md) owns the current contract; [old plan path](abr-import-plan.md) remains a pointer |

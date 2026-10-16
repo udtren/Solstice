@@ -24,7 +24,7 @@ not a promise of pixel-identical output from the reference application.
 | CPU convolution | [kis_convolution_painter.cc](../../libs/image/kis_convolution_painter.cc): spatial/FFTW workers |
 | Automated checks | [effect tests](../../plugins/filters/solsticeeffects/tests/), [Lens Blur tests](../../plugins/filters/blur/tests/KisLensBlurFilterTest.cpp) |
 
-The effects module also hosts [Illustration filters](illustration-filters-plan.md)
+The effects module also hosts [Illustration filters](illustration-filters.md)
 and [Color Reference](color-reference.md). Their contracts remain in those
 documents. Shared sampler/kernel changes require their affected regressions.
 Do not move helpers into shared application libraries merely for convenience.

@@ -1384,3 +1384,22 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Validation: exact archival-body preservation, Markdown local links/headings,
   wiki metadata/index coverage and `git diff --check`. Changes are documentation
   only; no fresh native build, installation or interactive verification is claimed.
+
+## 2026-10-16 documentation: illustration filters reference and history
+
+- Extracted [Illustration filters](../illustration-filters.md) as the current
+  owner for the five native filters, shared scalar CPU helpers, configuration
+  compatibility, alpha/LOD contracts, UI lifetime and regression checks.
+- Preserved all 1,095 original lines in [development history](history/illustration-filters-development.md),
+  adjusting only relocated links. The old plan path remains a pointer.
+  Repaired user-guide, inventory and cross-feature references; removed the
+  now-empty list of mixed references from the agent guide.
+- Kept Line Art's interactive/real-artwork verification pending and Drop
+  Shadow's optional on-canvas handle deferred. Earlier Glow LOD and blur
+  proposals do not override full-resolution processing or the large-radius
+  three-box path.
+- Added the extraction lesson to [the documentation decision](decisions/documentation-source-of-truth.md):
+  numerical halos and per-feature alpha/UI boundaries must survive summaries.
+- Validation: archival-body comparison, local Markdown links and headings,
+  wiki metadata/index coverage and `git diff --check`. Documentation only;
+  no native build, installation or new interactive verification is claimed.

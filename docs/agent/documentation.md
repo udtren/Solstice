@@ -32,8 +32,8 @@ as history. A recent edit date alone does not settle a conflict.
 ## Reading and document lifecycle
 
 Start at [the technical index](../../AGENTS.md#agent-technical-document-index)
-and [the wiki index](wiki/index.md). The [agent guide](README.md) distinguishes
-maintained references, mixed legacy references, plans and archived records.
+and [the wiki index](wiki/index.md). The [agent guide](README.md) identifies
+maintained references, plans and archived records.
 
 - A new plan states its scope and approval/implementation status. Separate user
   decisions from implementation choices; a proposal does not authorize work.
@@ -44,8 +44,8 @@ maintained references, mixed legacy references, plans and archived records.
 - When a plan is superseded, name and link its maintained successor at the top.
   Preserve useful design rationale and measurements. Retain an old-path pointer
   when moving a document, and repair incoming links and heading references.
-- Existing long mixed references are identified in the agent guide. Their
-  dated investigation/proposal sections are historical; explicit implementation
+- When a feature reference still mixes current rules with development history,
+  its dated investigation/proposal sections are historical; explicit implementation
   results and later corrections establish what was delivered. Before changing
   such a feature, read the complete reference, not just its opening proposal.
 - When extracting a maintained reference from a mixed document, carry over
