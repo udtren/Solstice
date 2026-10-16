@@ -75,6 +75,68 @@ routine document maintenance. The product website owns introductions and
 downloads and links to the guides; its release procedure is in
 [Versioning](versioning.md#releasing).
 
+## Automated checks
+
+The repository checker is [check_docs.py](../../dev-tools/docs/check_docs.py).
+Use Python 3.10 or newer and Git. Install its pinned parser dependencies in a
+virtual environment, then run from the repository root:
+
+```console
+python -m pip install -r dev-tools/docs/requirements.txt
+python -B -m unittest discover -s dev-tools/docs -p "test_*.py" -v
+python -B dev-tools/docs/check_docs.py
+```
+
+The script also resolves the repository from its own location when invoked
+from another working directory. `--root <path>` selects an explicit checkout.
+Failures print `path:line: reason` and return exit status 1. Success returns 0.
+
+Scope is `AGENTS.md`, root `README.md`, `build-tools/gmic/README.md`, and every
+Markdown file below `docs/`, including history. It checks:
+
+- Markdown inline/reference links, images and HTML `href`/`src` targets, with
+  exact filename case on Windows and Linux. URL-encoded names are decoded;
+  relative paths resolve from the referring document, and `/` paths from the
+  repository root. Local links must remain inside the repository.
+- Markdown heading fragments, including duplicate headings, inline formatting,
+  Unicode text and setext headings, plus explicit HTML `id`/anchor `name`.
+  Heading IDs use GitHub-style lowercase text, punctuation removal, hyphens
+  for spaces and numeric suffixes for collisions.
+- Wiki YAML syntax, unique keys, folder/type agreement, valid `updated` dates,
+  nonempty `sources` lists, history `status`, and page-relative `related`
+  links. Every ordinary/history wiki page needs an actual Markdown or HTML
+  link from `wiki/index.md`; a filename mentioned in prose/code is insufficient.
+  `index.md` requires `type: index` and `updated`; `log.md` requires `type: log`.
+- `git diff --check` for the documentation scope, checker directory and its
+  workflow. The default base is `HEAD` (staged/unstaged tracked changes);
+  stage new files before this check. For committed branch changes, pass
+  `--base <base-commit>` using the branch's merge base with `main`.
+
+Code fences, inline code and HTML comments are examples, not links. External
+URLs are not requested. Free-form `sources` entries may name historical commits,
+symbols or external evidence; only their schema is checked. Broken Markdown
+that renders as plain text, extension-specific anchors, factual accuracy,
+release inclusion, benchmark freshness and interactive behavior require review.
+This is a navigation/schema check, not a full GitHub renderer or source audit.
+Archive immutability is reviewed in the diff; the checker does not freeze the
+latest GPU history page, which legitimately receives new results.
+
+[Documentation checks](../../.github/workflows/docs-check.yml) runs on every
+PR targeting `main`, including source-only changes that might delete a linked
+file, and supports manual dispatch. It uses Ubuntu and Python 3.13, pinned
+actions, read-only repository permission, no persisted checkout credentials
+and a five-minute timeout. It runs the checker tests before checking all
+documents. On a PR it checks the merge commit against its first parent (the
+base branch tip), so committed whitespace errors are included. Manual runs
+check navigation/schema on the selected revision; their whitespace base is
+`HEAD`. There is no native build or application launch. Making this status a
+required branch-protection check is a separate repository setting.
+
+When changing the checker, extend its [regression fixtures](../../dev-tools/docs/test_check_docs.py)
+for both genuine errors and false positives. Update `FIXED_DOCS`/the discovery
+scope and `DIFF_PATHS` together if another maintained documentation tree is
+added. Keep local and CI dependencies in the same requirements file.
+
 ## Change and review checklist
 
 1. Determine the owner of each changed fact. Update it and repair conflicting

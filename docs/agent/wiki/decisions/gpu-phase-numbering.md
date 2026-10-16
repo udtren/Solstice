@@ -2,7 +2,7 @@
 type: decision
 updated: 2026-10-13
 sources:
-  - docs/agent/gpu-engine-handoff.md (phase 4.95 entry: "次のフェーズ4.96（メッシュ変形のGPU描画）")
+  - 'docs/agent/gpu-engine-handoff.md (phase 4.95 entry: "次のフェーズ4.96（メッシュ変形のGPU描画）")'
   - docs/agent/gpu-work-priorities.md (phase 4.95 and 4.97 entries)
   - docs/agent/puppet-warp.md ("Mesh (phase 4.95)")
 related:
