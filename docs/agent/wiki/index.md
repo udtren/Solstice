@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 
 # Agent wiki
@@ -195,6 +195,8 @@ Document ownership and lifecycle are defined in
 - [GitHub Actions development](history/github-actions-development.md): original
   trial failures, dependency refreshes and package verification records; use
   the maintained Actions guide for current operation.
+- [0.3.0 release verification](history/release-0.3.0.md): exact build identity,
+  package checks, publication and the boundary of existing feature-test evidence.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

@@ -36,19 +36,17 @@ Krita edition, and development no longer tracks upstream Krita. See
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[What's new](#in-development--030) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[What's new](#whats-new-in-030) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 
-## In development — 0.3.0
+## What's new in 0.3.0
 
-The next release removes the Beta label and includes:
+[Solstice 0.3.0](https://github.com/udtren/Solstice/releases/tag/v0.3.0)
+removes the Beta label and includes:
 
 - [GPU Clone Layer offsets and projection updates](docs/gpu-engine.md)
 - Move Tool X/Y input fix
 - Faster provisional Layers docker thumbnails after duplication
 - Repository documentation cleanup and automatic PR documentation checks
-
-Build and publication are pending. The latest published download remains
-[v0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8).
 
 ## Highlights
 
@@ -133,7 +131,7 @@ move and rotate the parts around them. See the
 > supported hardware and platforms are limited.
 
 Download the unsigned Windows x64 ZIP from
-[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8),
+[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.3.0),
 extract it and start `solstice.exe`.
 
 Source code and newer Windows x64 trial ZIPs are also available from successful
