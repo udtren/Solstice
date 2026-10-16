@@ -1,6 +1,8 @@
 ---
 type: history
 status: archived 2026-10-13
+sources:
+  - docs/gpu-engine.md (development sections archived 2026-10-13)
 ---
 
 # GPU Engine user guide, development notes (archive)

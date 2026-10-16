@@ -3,7 +3,8 @@
 Guides to the features Solstice adds to Krita. For the basics of using the
 application, and everything else Solstice shares with Krita, see the
 [Krita User Manual](https://docs.krita.org/en/user_manual.html).
-Technical notes for developers are in [`agent`](agent/).
+Technical notes and document roles are in the [agent guide](agent/README.md).
+The Markdown sources in this repository are the maintained originals.
 
 [0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8)
 is a maintenance release for the native tools; existing workflows, profiles
