@@ -6,6 +6,7 @@
 #ifndef KISGPUPROJECTIONCOMPOSITOR_H
 #define KISGPUPROJECTIONCOMPOSITOR_H
 
+#include <QPoint>
 #include <QRect>
 #include <QString>
 #include <QVector>
@@ -78,6 +79,28 @@ public:
                           const QVector<Layer> &layers,
                           QString *errorMessage = nullptr,
                           const KisGpuLayerCompositor::Mask *mask = nullptr);
+
+    /**
+     * Solstice: Clone Layer offsets (docs/agent/clone-layer.md). Inside
+     * @p dstRect, @p dst becomes @p src shifted by @p offset:
+     * dst(p) = src(p - offset), the source's default pixel where it has no
+     * data, like KisPainter::copyAreaOptimized(dstRect.topLeft(), src, dst,
+     * dstRect.translated(-offset)). Pixels are copied unconverted (the CPU
+     * Copy op may clear the color of some transparent RGBA F32 pixels).
+     *
+     * Both devices must have the same RGBA F32/F16 color space and default
+     * pixel, and @p dst an offset that is a multiple of 64 (the same
+     * exclusivity rule as composite()). Does not wait.
+     *
+     * @return false when unsupported or on failure; @p dst is then unchanged
+     */
+    static bool copyShifted(KisPaintDeviceSP dst,
+                            const QRect &dstRect,
+                            KisPaintDeviceSP src,
+                            const QPoint &offset,
+                            QString *errorMessage = nullptr);
+    /// Successful copyShifted() calls since startup (tests and measurements).
+    static quint64 shiftedCopyCount();
 };
 
 #endif // KISGPUPROJECTIONCOMPOSITOR_H

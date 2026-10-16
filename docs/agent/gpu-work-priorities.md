@@ -9,9 +9,10 @@ diary are preserved in the
 
 ## Scope and evidence
 
-Reviewed on 2026-10-16 against main
-`cc2445cc4a521d58ae0904079ee67354667b3eb6`, whose committed GPU record ends at
-4.109. Follow [the branch policy](../../AGENTS.md#branch-policy) for new work.
+Initially extracted on 2026-10-16 at
+`cc2445cc4a521d58ae0904079ee67354667b3eb6` (through 4.109), then updated
+for the integration of PR #5 (4.110). Follow
+[the branch policy](../../AGENTS.md#branch-policy) for new work.
 Later work in other checkouts/branches must be reconciled when it merges;
 this page neither imports it nor marks its manual checks complete.
 
@@ -31,6 +32,11 @@ authorized it before all possible filter work was complete. Do not retain the
 old ordering as a prohibition against already-delivered work.
 
 ## Remaining candidates and acceptance
+
+Offset Clone Layer GPU copies (4.110) are delivered and user-checked on
+2026-10-16. [Clone Layer](clone-layer.md) owns the conditions and remaining
+candidates, including partial-tile projection clears; detailed measurements
+stay in its linked benchmark page.
 
 1. **Close outstanding failure/save UI verification.** The archived phase plan
    records automated coverage but leaves interactive dialog acceptance pending.

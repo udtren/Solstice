@@ -30,6 +30,9 @@ On RGBA 32-bit and 16-bit float layers:
 - **Transform Tool**: applying scale, rotate and shear (Free Transform
   without perspective), Liquify and Puppet Warp. The results are identical
   to the CPU results; Puppet Warp's parts are combined on the CPU.
+- **Clone Layers moved away from their source** (without masks) copy the
+  source on the GPU, so they follow GPU brush strokes without reading the
+  source back.
 - **Gaussian Blur**, also inside Unsharp Mask and Gaussian High Pass, for
   filter applications, filter layers and filter masks that update large
   areas. The result matches the CPU within one rounding step.
@@ -52,6 +55,8 @@ long without AVX2).
   Large or densely spaced strokes using them can take time to catch up.
 - Alpha Darken with some channels turned off, and the blend modes listed
   above.
+- Copying the source of a Clone Layer that has transparency or filter
+  masks (the masks themselves run on the CPU).
 - Soft proofing, channel selection in the Channels docker, and some display
   color profiles (LUT-based profiles, absolute colorimetric intent) use the
   CPU for the canvas display.
