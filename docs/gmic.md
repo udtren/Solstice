@@ -66,7 +66,7 @@ actual filter application, Undo/Redo, offline dialog loading, repeated
 launch/cancel, conversions and layer synchronization. The Windows cloud build
 and package checks passed for 0.2.0-beta.6 on 2026-10-16; cloud GUI/runtime tests
 were disabled. Linux/macOS runtime packaging remains unverified. See the
-[dated package check](agent/github-actions.md#effects-layer-comps-and-gmic-package-check-2026-10-16).
+[dated package check](agent/wiki/history/github-actions-development.md#effects-layer-comps-and-gmic-package-check-2026-10-16).
 
 Implementation and regression instructions:
 [G'MIC maintenance reference](agent/gmic.md).

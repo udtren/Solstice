@@ -185,6 +185,10 @@ Document ownership and lifecycle are defined in
   original design, assessment and dated verification, superseded by the
   maintained feature contract.
 
+- [GitHub Actions development](history/github-actions-development.md): original
+  trial failures, dependency refreshes and package verification records; use
+  the maintained Actions guide for current operation.
+
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):
 

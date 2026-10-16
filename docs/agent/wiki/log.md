@@ -1475,3 +1475,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   local references (281 heading references); staged whitespace checks passed.
   Compared both archive bodies with their base-commit originals after link
   relocation and confirmed the pre-existing history files were unchanged.
+
+## 2026-10-16 documentation: GitHub Actions operations and history
+
+- Separated [current build operations](../github-actions.md) from the complete
+  [trial/package history](history/github-actions-development.md), preserving
+  the original body with relocated Markdown links.
+- Current guidance retains manual dispatch, pinned dependency/cache rules,
+  mirror refresh, Python/GPU/G'MIC requirements and package verification.
+  It distinguishes PR documentation checks, Windows compilation/packaging,
+  local regression coverage and interactive acceptance.
+- Updated release-evidence links and retained the three historical check
+  anchors used by older log entries. No workflow or build behavior changed.

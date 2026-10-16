@@ -44,6 +44,7 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 
 | Record | Role / maintained successor |
 | --- | --- |
+| [GitHub Actions development](wiki/history/github-actions-development.md) | Dated build failures, dependency changes and package checks; [GitHub Actions operations](github-actions.md) owns current procedures |
 | [GPU engine development](wiki/history/gpu-engine-development.md) | Full mixed architecture/plan snapshot; [GPU maintenance](gpu-engine.md) owns the current contract |
 | [GPU work-order development](wiki/history/gpu-work-priorities-development.md) | Original priority rationale and dated progress; [GPU priorities](gpu-work-priorities.md) owns remaining work and deferrals |
 | [Illustration filters development](wiki/history/illustration-filters-development.md) | Complete investigation, stage results and measurements; [Illustration filters](illustration-filters.md) owns current behavior and pending checks; [old plan path](illustration-filters-plan.md) remains a pointer |
