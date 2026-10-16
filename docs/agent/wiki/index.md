@@ -14,6 +14,10 @@ records.
 Read this index before starting work; open the pages whose one-line summary
 matches the task.
 
+Document ownership and lifecycle are defined in
+[Documentation maintenance](../documentation.md); the
+[agent guide](../README.md) identifies maintained, mixed and historical references.
+
 ## Conventions (schema)
 
 - **Single source of truth.** Feature behavior, invariants, build/test
@@ -27,14 +31,16 @@ matches the task.
   - `decisions/`: one decision per page, with the reason and date;
   - `pitfalls/`: things that went wrong and how to avoid them;
   - `benchmarks/`: measured numbers with date, hardware, workload and source;
-  - `history/`: archived records (phase logs), moved verbatim; not edited
-    except to append to the newest page;
+  - `history/`: archived phase logs, superseded designs and expired handoffs,
+    with bodies preserved. Add provenance/archival notices and repair relative
+    links when relocating them; append new phase results only to the newest
+    phase page, not to frozen snapshots;
   - `queries/`: saved answers to questions that are likely to come up again.
 - **Frontmatter** on every page: `type`, `updated` (YYYY-MM-DD), `sources`
   (commits, `path:line` or symbols, documents, external URLs) and `related`
   (other wiki pages). History pages carry `status` instead of `updated`,
-  and no `related` (they are archives; the section index in
-  `docs/agent/gpu-engine.md` links them).
+  and no `related`. All history pages are listed here; the GPU phase section
+  index also lives in `docs/agent/gpu-engine.md`.
 - **Names:** lowercase-hyphenated file names; one topic per page; update a
   page instead of adding a near-duplicate.
 - **Evidence:** name the symbol or file a claim depends on, so a lint pass can
@@ -76,6 +82,10 @@ matches the task.
   `toAlignedRect()`, fuzzy comparisons in Qt 6.8.
 
 ### Decisions
+
+- [Repository-owned documentation](decisions/documentation-source-of-truth.md):
+  canonical Markdown stays with the code; document roles, stable indexes and
+  explicit archival prevent conflicting copies.
 
 - [Feature branches before main](decisions/feature-branch-workflow.md): push
   feature branches and merge PRs; no direct main pushes, including releases.
@@ -126,6 +136,14 @@ matches the task.
   Gaussian blur and other filters on a 2480x3508 RGBA32F layer.
 
 ### History
+
+- [Expired GPU handoff](history/gpu-engine-handoff.md): former session context,
+  measurements and instructions; current work uses GPU architecture/priorities.
+- [Feature touch-point record](history/feature-touchpoints-20261016.md):
+  accumulated per-phase source changes removed from the maintained inventory.
+- [Brush Stroke Preview design](history/brush-stroke-preview-design.md):
+  original design, assessment and dated verification, superseded by the
+  maintained feature contract.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):
