@@ -46,3 +46,10 @@ establish real-file compatibility. State where a parser limit applies instead
 of promoting it to a total memory or safety guarantee. The
 [original results](../history/abr-import-development.md) retain their dates and
 sample scope.
+
+The [shared brush model extraction](../../brush-option-shared-model.md) shows
+why an early architecture proposal must be checked against both write and
+external-update paths. Dependency propagation is a current invariant; rejected
+transactional state and removed UI checks belong to the
+[historical record](../history/brush-option-shared-model-development.md).
+Preserve early investigations as evidence, not as a second current reference.

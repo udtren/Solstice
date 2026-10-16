@@ -149,7 +149,7 @@ plans, historical records and references that still contain both.
 - Brush preset grouping: [development notes](docs/agent/brush-preset-grouping.md).
 - Brush Presets scroll to selection: [development notes](docs/agent/brush-preset-scroll.md).
 - Visual branding: [checklist](docs/agent/solstice-visual-branding-todo.md).
-- Brush option shared model: [development reference](docs/agent/brush-option-shared-model-plan.md).
+- Brush option shared model: [maintenance reference](docs/agent/brush-option-shared-model.md).
 - Brush options in Tool Options: [development notes](docs/agent/tool-options-brush.md).
 - UI modernization: [development reference](docs/agent/ui-modernization-plan.md).
 - GitHub Actions Windows builds: [development notes](docs/agent/github-actions.md).
