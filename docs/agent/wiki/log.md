@@ -1428,3 +1428,22 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Validation: 121 Markdown files, 833 local references (including 167 heading
   references), wiki metadata/index coverage and `git diff --check` passed.
   All files under `wiki/history/` remain unchanged.
+
+## 2026-10-16 documentation: repository checker and PR workflow
+
+- Added the [repository checker](../../../dev-tools/docs/check_docs.py),
+  pinned parser dependencies and regression fixtures; local usage, scope and
+  limitations are in [Documentation maintenance](../documentation.md#automated-checks).
+- Added a lightweight [PR workflow](../../../.github/workflows/docs-check.yml)
+  for every PR targeting main, plus manual dispatch. It checks links, images,
+  heading anchors, wiki schema/index coverage and changed whitespace without
+  building or launching the application.
+- Fixed seven metadata errors exposed by YAML parsing and related-page
+  resolution: three source strings need quoting and four related paths need
+  page-relative resolution. Historical bodies and technical claims are unchanged.
+- The regression fixtures exercise malformed YAML, missing links/anchors/images,
+  case mismatches, missing index entries, duplicate/Unicode headings, escaped
+  paths, reference links, code examples and committed whitespace failures.
+- Local validation: 15 regression tests passed; 121 Markdown files and 870
+  local references (173 heading references) passed. Workflow YAML parsed and
+  `git diff --check` passed. The PR template now names main as its target.

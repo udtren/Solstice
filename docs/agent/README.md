@@ -8,6 +8,8 @@ then the relevant complete feature reference. User workflows are in
 Documentation source stays in this repository. See
 [Documentation maintenance](documentation.md) for ownership, precedence,
 granularity, archival and the review checklist.
+Its [automated checks](documentation.md#automated-checks) document the local
+command and the PR workflow for links, wiki metadata and changed whitespace.
 
 ## Maintained references
 

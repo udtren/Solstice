@@ -116,7 +116,8 @@ Examples: `libs\ui`, `libs\widgets`, `krita`, `plugins\dockers\restnote`.
    checked that `msgfmt --check` reports no fuzzy or untranslated entries,
    and committed the catalog with the change.
 8. Followed [Documentation maintenance](documentation.md): updated the owning
-   reference, checked links and indexes, and recorded a concise wiki entry.
+   reference, ran its [automated checks](documentation.md#automated-checks)
+   for links/indexes/schema, and recorded a concise wiki entry.
    For documentation-only work, native format/build/test/install steps do not
    apply unless source behavior is also changed; do not claim new runtime
    verification from a prose edit.

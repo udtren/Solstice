@@ -1,5 +1,9 @@
 # GitHub Actions Windows trial build
 
+Documentation has a separate lightweight PR workflow; see
+[Documentation checks](documentation.md#automated-checks). It does not start
+the Windows application build described here.
+
 ## Native-tools maintenance package check (2026-10-16)
 
 - Release: [v0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8),
