@@ -61,7 +61,7 @@ User instructions: `docs/test-builds.md`.
   CPU with OpenMP/FFTW; logs go to `gmic-build.log`. Packaging requires the
   runtime DLL, host interface DLL, four data packs and exact source/patches;
   `BUILD-INFO.txt` records the runtime version. See the
-  [G'MIC implementation record](cpu-effects-and-gmic-plan.md#gmic-implementation-record-2026-10-15).
+  [G'MIC build and distribution reference](gmic.md#build-install-and-distribution).
   The cloud build and package were verified in run 38833086246 on
   2026-10-16 (see the beta.6 check below).
 

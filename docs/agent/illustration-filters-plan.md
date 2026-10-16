@@ -371,8 +371,9 @@ Difficulty: medium-high. The main risk is quality on photographed paper.
 | Final | Cross-filter regressions and documentation | All automated and manual checks recorded, including unverified items |
 
 Ask the user for an interactive check after each stage, and record the result
-in an implementation record section at the end of this document, as
-`cpu-effects-and-gmic-plan.md` does.
+in an implementation record section at the end of this document. The
+[CPU effects development history](wiki/history/cpu-effects-and-gmic-development.md)
+preserves an example of those staged records.
 
 ## Verification
 
@@ -428,7 +429,7 @@ then restart fully.
 - User-supplied screenshots of the CLIP STUDIO PAINT documentation for Drop
   Shadow, Glow, Color Filter, Line Art Extraction and Sharpness (2026-10-15;
   not stored).
-- `cpu-effects-and-gmic-plan.md`: the CPU-only policy, module layout and test
+- [Native CPU effects](cpu-effects.md): the CPU-only policy, module layout and test
   pattern this plan follows.
 - Local guides: `codebase-map.md`, `extension-points.md`, `coding-rules.md`,
   `development-workflow.md`, `wiki/decisions/xmlgui-unchanged.md`.

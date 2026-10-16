@@ -27,9 +27,9 @@ controlled by G'MIC's own settings.
 
 ## Supported scope
 
-- Input modes: active paint layer, all paint layers, active and the immediately
-  adjacent paint layer below, or active and the immediately adjacent paint
-  layer above. The adjacent modes require visible paint layers. Group and
+- Input modes: active visible paint layer, all paint layers (including hidden
+  ones), active and the immediately adjacent visible paint layer below, or
+  active and the immediately adjacent visible paint layer above. Group and
   vector layers are not flattened into paint layers automatically.
 - Output replaces the input layers in place. A filter may change their number,
   dimensions, names, opacity, blend modes and offsets, as part of one undoable
@@ -46,14 +46,16 @@ controlled by G'MIC's own settings.
 
 The CPU bridge avoids two temporary full-image copies when returning a
 filter result and converts RGB pixels directly to and from G'MIC's buffers.
-This reduces transfer overhead and temporary memory use, especially for
+This can reduce transfer overhead and temporary memory use, especially for
 large images. It does not speed up the filter algorithm itself; the benefit
 depends on image size, color depth and the selected filter.
 
-G'MIC settings are stored in `%APPDATA%/Solstice/config/gmic-qt.ini`; downloaded
-definitions and data use `%APPDATA%/Solstice/resources/gmic`. An explicit
-Solstice profile override also applies to these paths. The pinned source,
-licenses and Solstice build patches ship under `share/gmic/source`.
+G'MIC settings normally use `%APPDATA%/Solstice/config/gmic-qt.ini`; downloaded
+definitions and data use `%APPDATA%/Solstice/resources/gmic`. The configuration
+folder can fall back to Local AppData as described in [Settings folder](settings-folder.md).
+A Solstice profile override applies, but choosing a custom Resource Folder
+for brushes does not move G'MIC data. The pinned source, licenses and Solstice
+build patches ship under `share/gmic/source`.
 
 ## Development status
 
@@ -61,9 +63,10 @@ The CPU runtime and CPU bridge optimizations (output-copy reduction and direct
 RGB conversion) were confirmed working by the user on 2026-10-15 in the local
 Windows development build. Automated checks cover an
 actual filter application, Undo/Redo, offline dialog loading, repeated
-launch/cancel, conversions and layer synchronization. Linux/macOS runtime
-packaging and a GitHub Actions execution of the new build step have not been
-verified.
+launch/cancel, conversions and layer synchronization. The Windows cloud build
+and package checks passed for 0.2.0-beta.6 on 2026-10-16; cloud GUI/runtime tests
+were disabled. Linux/macOS runtime packaging remains unverified. See the
+[dated package check](agent/github-actions.md#effects-layer-comps-and-gmic-package-check-2026-10-16).
 
 Implementation and regression instructions:
-[CPU effects and G'MIC plan](agent/cpu-effects-and-gmic-plan.md).
+[G'MIC maintenance reference](agent/gmic.md).

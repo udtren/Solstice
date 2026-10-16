@@ -1365,3 +1365,22 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   heading references) across 115 Markdown files, wiki metadata/index coverage,
   comment-only C++/CMake edits, changed-line clang-format and `git diff --check`.
   No runtime changes or fresh native/interactive verification are claimed.
+
+## 2026-10-16 documentation: CPU effects and G'MIC reference split
+
+- Extracted [native CPU effects](../cpu-effects.md) and [G'MIC integration](../gmic.md)
+  as separate maintenance owners. Preserved the complete 1,296-line plan,
+  phase results and timing tables in [development history](history/cpu-effects-and-gmic-development.md);
+  the original plan path remains a pointer.
+- Retained persisted IDs/settings, pixel/alpha/halo and transaction contracts,
+  native regression checks, runtime ABI/ownership, source pinning and packaging.
+  Updated feature indexes, build notes and user-guide links.
+- Reconciled the old cloud-unverified wording with the later beta.6 build and
+  package record; rechecked run 38833086246 as successful at its recorded commit.
+  Cloud GUI/runtime tests remain disabled. Clarified G'MIC's visible/all-layer
+  scope and profile paths, including independence from custom Resource Folder.
+- Recorded the lesson in [the documentation decision](decisions/documentation-source-of-truth.md):
+  component boundaries and later release evidence matter more than plan layout.
+- Validation: exact archival-body preservation, Markdown local links/headings,
+  wiki metadata/index coverage and `git diff --check`. Changes are documentation
+  only; no fresh native build, installation or interactive verification is claimed.

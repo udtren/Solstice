@@ -448,7 +448,7 @@ still use the existing GPU engine.
 
 Development status (2026-10-15): the user confirmed all six effects, including
 Pencil. Automated coverage includes pixels, parallel patches, configuration,
-selections, cancellation and Undo/Redo. The implementation plan retains the
-manual regression checklist. This page describes the effects included in
+selections, cancellation and Undo/Redo. The [CPU effects maintenance reference](agent/cpu-effects.md)
+retains the manual regression checklist. This page describes the effects included in
 0.2.0-beta.6; the sections above
 record any remaining interactive verification and feature-specific limits.
