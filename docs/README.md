@@ -34,8 +34,18 @@ Technical notes for developers are in [`agent`](agent/).
 - [Vision ML](vision-ml.md): AI-assisted selection, Smart Fill and
   background removal, run on your computer.
 
+## Effects and color
+
+- [Effects & Color](effects-filters.md): illustration filters for color,
+  lighting, texture and line-art extraction, including Color Reference and
+  extended Lens Blur. **In development.**
+- [G'MIC-Qt](gmic.md): a separate CPU filter dialog, input/output modes
+  and supported scope.
+
 ## Workflow and interface
 
+- [Layer Comps](layer-comps.md): save, switch and export layer visibility
+  variations. **In development.**
 - [Tools when switching documents](document-tool-state.md): tool restoration
   when moving between canvases with a mouse, pen, or eraser.
 - [Quick Access Manager](quick-access.md): configurable action, docker and

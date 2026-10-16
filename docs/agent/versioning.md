@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.2.0-beta.5` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.2.0-beta.6` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -62,7 +62,7 @@ Edit only the `SOLSTICE_VERSION_*` values in the top-level `CMakeLists.txt`:
 
 - `MINOR` for a milestone, `PATCH` for fixes only (pre-1.0 semantic
   versioning);
-- `LABEL`: `beta.5` now (`alpha` until 2026-10-13, `beta` for the first
+- `LABEL`: `beta.6` now (`alpha` until 2026-10-13, `beta` for the first
   beta), then `beta.N` or `rc.N`, empty for a release;
 - `BUILD`: the fourth Windows file-version digit, for rebuilds of the same
   version; otherwise 0.
@@ -109,6 +109,10 @@ appears in the version strings.
 | `0.2.0-beta.5` | 2026-10-15 | Fifth beta (user request): RGBA16F document conversion choices, document tool-state restoration, Quick Access hold ownership, and the Brush Stroke Layer and Puppet Warp audit fixes. Released 2026-10-15 as GitHub Release `v0.2.0-beta.5` (prerelease, commit `dd9e48c152`, run 38669973004); website updated the same day. |
 
 ## Checks
+
+Release preparation (2026-10-16): `0.2.0-beta.6` includes Effects & Color,
+Color Reference, Layer Comps and the bundled CPU G'MIC runtime. Release and
+website publication are pending the Windows workflow and package checks.
 
 - After reconfiguring, check the CMake output for
   `-- Solstice version: <version>`, and check that

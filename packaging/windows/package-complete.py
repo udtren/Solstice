@@ -523,6 +523,21 @@ MergeFolders.merge_folders(f"{KRITA_INSTALL_DIR}\\share\\icons", f"{pkg_root}\\s
 MergeFolders.merge_folders(f"{KRITA_INSTALL_DIR}\\share\\krita", f"{pkg_root}\\share\\krita")
 MergeFolders.merge_folders(f"{KRITA_INSTALL_DIR}\\share\\kritaplugins", f"{pkg_root}\\share\\kritaplugins")
 
+# A bridge-only package would display a nonfunctional G'MIC menu entry.
+gmic_required = ["lib/kritaplugins/krita_gmic_qt.dll", "bin/libkritaqmicinterface.dll",
+                 "share/gmic/gmic_cluts.gmz", "share/gmic/gmic_denoise_cnn.gmz",
+                 "share/gmic/gmic_lightleaks.gmz", "share/gmic/gmic_scale2x_cnn.gmz",
+                 "share/gmic/source/runtime.lock.json", "share/gmic/source/runtime-patches.json",
+                 "share/gmic/source/build-runtime.py", "share/gmic/source/README.md",
+                 "share/gmic/source/gmic-3.7.4.1.tar.gz"]
+for required in gmic_required:
+    if not os.path.isfile(os.path.join(KRITA_INSTALL_DIR, required)):
+        raise RuntimeError(f"Missing required G'MIC runtime file: {required}")
+MergeFolders.merge_folders(f"{KRITA_INSTALL_DIR}\\share\\gmic", f"{pkg_root}\\share\\gmic")
+for required in gmic_required:
+    if not os.path.isfile(os.path.join(pkg_root, required)):
+        raise RuntimeError(f"G'MIC file missing from package: {required}")
+
 if useQt6Build:
     MergeFolders.merge_folders(f"{DEPS_INSTALL_DIR}\\share\\kf6", f"{pkg_root}\\share\\kf6")
 else:

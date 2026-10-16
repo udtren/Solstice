@@ -113,6 +113,23 @@ Read these before adding or updating any feature:
 
 ### Feature documents
 
+- CPU-only effects and G'MIC integration (Film Grain, Chromatic Aberration,
+  Film, Crystal, extended Lens Blur and Pencil user-verified;
+  G'MIC CPU runtime and CPU bridge optimizations user-verified 2026-10-15; work branch
+  `codex/cpu-effects-and-gmic`): `docs/agent/cpu-effects-and-gmic-plan.md`
+- Illustration filters (Sharpness, Color Filter, Glow, Drop Shadow, Line Art
+  Extraction, in that order; Sharpness, Color Filter and Glow manually confirmed 2026-10-15;
+  Drop Shadow D1 manually confirmed 2026-10-16;
+  Line Art Extraction implemented, interactive verification pending;
+  branch `codex/illustration-filters`):
+  `docs/agent/illustration-filters-plan.md`
+- Layer Comps (extension of the existing Compositions docker; LC1-LC4
+  user-verified including resize layout refinement 2026-10-16):
+  `docs/agent/layer-comps.md`
+- Color Reference (new `solstice_color_reference` filter: recolor from a
+  reference image or gradient; CR0-CR4 implemented, built, tested and installed;
+  interactive verification pending):
+  `docs/agent/color-reference.md` (original plan: `docs/agent/color-reference-plan.md`)
 - Document tool state: `docs/agent/document-tool-state.md`
 - Quick Access: `docs/agent/quick-access.md`
 - Rest Note: `docs/agent/rest-note.md`

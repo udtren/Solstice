@@ -45,19 +45,61 @@
 #include <kis_time_span.h>
 #include <KisMimeDatabase.h>
 
-
-
 #include "compositionmodel.h"
+#include "CompositionDocumentState.h"
+#include <QCheckBox>
+#include <QMessageBox>
+#include <QSignalBlocker>
+#include <QScopeGuard>
+#include <QHBoxLayout>
 
-
-CompositionDockerDock::CompositionDockerDock( )
-    : QDockWidget(i18n("Compositions"))
+CompositionDockerDock::CompositionDockerDock()
+    : QDockWidget(i18n("Layer Comps"))
     , m_canvas(0)
 {
     QWidget* widget = new QWidget(this);
     setupUi(widget);
     m_model = new CompositionModel(this);
     compositionView->setModel(m_model);
+    compositionView->setRootIsDecorated(false);
+    compositionView->setItemsExpandable(false);
+    compositionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    compositionView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    compositionView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    compositionView->setDragDropMode(QAbstractItemView::InternalMove);
+    compositionView->setDefaultDropAction(Qt::MoveAction);
+    compositionView->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    compositionView->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    compositionView->header()->setSectionResizeMode(2, QHeaderView::Stretch);
+    connect(compositionView, &QTreeView::clicked, this, [this](const QModelIndex &index) {
+        if (index.column() == 0 && !(QApplication::keyboardModifiers() & (Qt::ControlModifier | Qt::ShiftModifier)))
+            activated(index);
+    });
+    auto *overwrite = new QToolButton(widget);
+    overwrite->setIcon(KisIconUtils::loadIcon("document-save"));
+    overwrite->setToolTip(i18n("Overwrite Selected Layer Comps"));
+    overwrite->setAutoRaise(true);
+    // Keep controls together; only the list consumes extra vertical space.
+    auto *buttonLayout = new QHBoxLayout;
+    buttonLayout->setContentsMargins(0, 0, 0, 0);
+    buttonLayout->setSpacing(2);
+    for (QToolButton *button :
+         {saveButton, overwrite, moveUpButton, moveDownButton, deleteButton, exportCompositions}) {
+        gridLayout->removeWidget(button);
+        buttonLayout->addWidget(button);
+    }
+    buttonLayout->addStretch(1);
+    gridLayout->addLayout(buttonLayout, 2, 0, 1, 6);
+    gridLayout->setRowStretch(0, 1);
+    connect(overwrite, &QToolButton::clicked, this, &CompositionDockerDock::updateComposition);
+    m_newLayersVisible = new QCheckBox(i18n("Show added layers in all comps"), widget);
+    gridLayout->addWidget(m_newLayersVisible, 3, 0, 1, 6);
+    connect(m_newLayersVisible, &QCheckBox::toggled, this, [this](bool visible) {
+        if (!m_canvas)
+            return;
+        m_canvas->image()->setNewLayersVisibleInCompositions(visible);
+        m_canvas->image()->setModifiedWithoutUndo();
+    });
     compositionView->installEventFilter(this);
     deleteButton->setIcon(KisIconUtils::loadIcon("edit-delete"));
     saveButton->setIcon(KisIconUtils::loadIcon("list-add"));
@@ -67,8 +109,8 @@ CompositionDockerDock::CompositionDockerDock( )
     deleteButton->setToolTip(i18n("Delete Composition"));
     saveButton->setToolTip(i18n("New Composition"));
     exportCompositions->setToolTip(i18n("Export Composition"));
-    moveUpButton->setToolTip(i18n("Move Composition Up"));
-    moveDownButton->setToolTip(i18n("Move Composition Down"));
+    moveUpButton->setToolTip(i18n("Apply Previous Layer Comp"));
+    moveDownButton->setToolTip(i18n("Apply Next Layer Comp"));
 
     setWidget(widget);
 
@@ -118,12 +160,6 @@ CompositionDockerDock::~CompositionDockerDock()
 
 void CompositionDockerDock::setCanvas(KoCanvasBase * canvas)
 {
-    if (m_canvas && m_canvas->viewManager()) {
-        Q_FOREACH (KisAction *action, m_actions) {
-            m_canvas->viewManager()->actionManager()->takeAction(action);
-        }
-    }
-
     unsetCanvas();
     setEnabled(canvas != 0);
 
@@ -143,44 +179,59 @@ void CompositionDockerDock::setCanvas(KoCanvasBase * canvas)
                 m_canvas->viewManager()->actionManager()->addAction(action->objectName(), action);
             }
         }
+        m_state = CompositionDocumentState::get(m_canvas->viewManager()->document(), m_canvas->image());
+        connect(m_state, &CompositionDocumentState::changed, this, &CompositionDockerDock::updateModel);
         updateModel();
     }
 }
 
 void CompositionDockerDock::unsetCanvas()
 {
+    if (m_canvas && m_canvas->viewManager()) {
+        for (KisAction *action : m_actions) {
+            m_canvas->viewManager()->actionManager()->takeAction(action);
+        }
+    }
+    if (m_state)
+        disconnect(m_state, nullptr, this, nullptr);
+    m_state.clear();
     setEnabled(false);
     m_canvas = 0;
-    m_model->setCompositions(QList<KisLayerCompositionSP>());
+    m_model->setState({}, {}, {});
 }
 
 void CompositionDockerDock::activated(const QModelIndex& index)
 {
     KisLayerCompositionSP composition = m_model->compositionFromIndex(index);
-    composition->apply();
+    if (m_state && composition && index.column() != 1) {
+        m_state->apply(composition);
+        compositionView->setCurrentIndex(m_model->indexForComposition(composition));
+    }
 }
 
 void CompositionDockerDock::deleteClicked()
 {
-    QModelIndex index = compositionView->currentIndex();
-    if (m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->image() && index.isValid()) {
-        KisLayerCompositionSP composition = m_model->compositionFromIndex(index);
-        m_canvas->viewManager()->image()->removeComposition(composition);
-        updateModel();
-
-        const int compositionCount = compositionView->model()->rowCount();
-        if (compositionCount > 0) {
-            if (index.row() == compositionCount) {
-                compositionView->setCurrentIndex(index.siblingAtRow(compositionCount-1));
-            } else {
-                compositionView->setCurrentIndex(index);
-            }
-        }
-    }
+    const auto selected = selectedCompositions();
+    if (!m_canvas || selected.isEmpty())
+        return;
+    if (selected.size() > 1
+        && QMessageBox::question(
+               this,
+               i18n("Delete Layer Comps"),
+               i18np("Delete the selected layer comp?", "Delete the %1 selected layer comps?", selected.size()))
+            != QMessageBox::Yes)
+        return;
+    KisImageSP image = m_canvas->image();
+    for (const auto &comp : selected)
+        image->removeComposition(comp);
+    image->setModifiedWithoutUndo();
+    updateModel();
 }
 
 void CompositionDockerDock::saveClicked()
 {
+    if (!m_canvas)
+        return;
     KisImageWSP image = m_canvas->viewManager()->image();
     if (!image) return;
 
@@ -202,41 +253,45 @@ void CompositionDockerDock::saveClicked()
         } while(found && i < 1000);
     }
     KisLayerCompositionSP composition(new KisLayerComposition(image, name));
+    image->barrierLock(true);
     composition->store();
     image->addComposition(composition);
+    image->unlock();
     saveNameEdit->clear();
     updateModel();
-    compositionView->setCurrentIndex(m_model->index(image->compositions().count()-1, 0));
+    compositionView->setCurrentIndex(m_model->indexForComposition(composition));
     image->setModifiedWithoutUndo();
 }
 
 void CompositionDockerDock::moveCompositionUp()
 {
-    QModelIndex index = compositionView->currentIndex();
-    if (m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->image() && index.isValid()) {
-        KisLayerCompositionSP composition = m_model->compositionFromIndex(index);
-        m_canvas->viewManager()->image()->moveCompositionUp(composition);
-        updateModel();
-        compositionView->setCurrentIndex(m_model->index(m_canvas->viewManager()->image()->compositions().indexOf(composition),0));
-    }
+    applyAdjacent(-1);
 }
 
 void CompositionDockerDock::moveCompositionDown()
 {
-    QModelIndex index = compositionView->currentIndex();
-    if (m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->image() && index.isValid()) {
-        KisLayerCompositionSP composition = m_model->compositionFromIndex(index);
-        m_canvas->viewManager()->image()->moveCompositionDown(composition);
-        updateModel();
-        compositionView->setCurrentIndex(m_model->index(m_canvas->viewManager()->image()->compositions().indexOf(composition),0));
-    }
+    applyAdjacent(1);
 }
 
 void CompositionDockerDock::updateModel()
 {
-    if (m_model && m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->image()) {
-        m_model->setCompositions(m_canvas->viewManager()->image()->compositions());
+    if (!m_canvas || !m_state)
+        return;
+    CompositionDocumentState::get(m_canvas->viewManager()->document(), m_canvas->image());
+    const auto selected = selectedCompositions();
+    auto current = m_model->compositionFromIndex(compositionView->currentIndex());
+    m_model->setState(m_canvas->image(), m_state->snapshot(), m_state->active());
+    // Restore selection by identity when inserting the transient row or reordering.
+    for (const auto &comp : selected) {
+        const auto index = m_model->indexForComposition(comp);
+        if (index.isValid())
+            compositionView->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
+    const auto currentIndex = m_model->indexForComposition(current);
+    if (currentIndex.isValid())
+        compositionView->selectionModel()->setCurrentIndex(currentIndex, QItemSelectionModel::NoUpdate);
+    const QSignalBlocker blocker(m_newLayersVisible);
+    m_newLayersVisible->setChecked(m_canvas->image()->newLayersVisibleInCompositions());
 }
 
 void CompositionDockerDock::exportImageClicked()
@@ -263,7 +318,16 @@ void CompositionDockerDock::exportImageClicked()
         }
 
         KisLayerCompositionSP currentComposition = toQShared(new KisLayerComposition(image, "temp"));
+        const QPointer<CompositionDocumentState> exportState = m_state;
+        if (exportState)
+            exportState->setExporting(true);
+        const auto exportGuard = qScopeGuard([exportState]() {
+            if (exportState)
+                exportState->setExporting(false);
+        });
+        image->barrierLock(true);
         currentComposition->store();
+        image->unlock();
 
         const QString exportWindowTitle = i18n("Exporting Compositions...");
         QSharedPointer<QProgressDialog> m_progressBar(new QProgressDialog(exportWindowTitle, i18n("Cancel"), 0, 0, this));
@@ -297,7 +361,9 @@ void CompositionDockerDock::exportImageClicked()
             // We should simply a) Deep Copy Image, b) Apply Composition, c) RefreshImageGraph,
             // d) Export Image.
             // This task can then be threaded to work in parallel.
+            image->barrierLock();
             composition->apply();
+            image->unlock();
             image->refreshGraphAsync();
             image->waitForDone();
 
@@ -324,7 +390,9 @@ void CompositionDockerDock::exportImageClicked()
             d->deleteLater();
         }
 
+        image->barrierLock();
         currentComposition->apply();
+        image->unlock();
 
         image->refreshGraphAsync();
         image->waitForDone();
@@ -367,7 +435,16 @@ void CompositionDockerDock::exportAnimationClicked()
         }
 
         KisLayerCompositionSP currentComposition = toQShared(new KisLayerComposition(image, "temp"));
+        const QPointer<CompositionDocumentState> exportState = m_state;
+        if (exportState)
+            exportState->setExporting(true);
+        const auto exportGuard = qScopeGuard([exportState]() {
+            if (exportState)
+                exportState->setExporting(false);
+        });
+        image->barrierLock(true);
         currentComposition->store();
+        image->unlock();
 
         const QString videoExtension = KisMimeDatabase::suffixesForMimeType(exportOptions.videoMimeType).first();
 
@@ -375,7 +452,9 @@ void CompositionDockerDock::exportAnimationClicked()
             if(!composition->isExportEnabled())
                 continue;
 
+            image->barrierLock();
             composition->apply();
+            image->unlock();
             image->refreshGraphAsync();
             image->waitForDone();
 
@@ -395,7 +474,9 @@ void CompositionDockerDock::exportAnimationClicked()
             if (!success) break;
         }
 
+        image->barrierLock();
         currentComposition->apply();
+        image->unlock();
         image->refreshGraphAsync();
         image->waitForDone();
     }
@@ -405,7 +486,8 @@ bool CompositionDockerDock::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::KeyPress ) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down) {
+        if (obj == compositionView && keyEvent->modifiers() == Qt::NoModifier
+            && (keyEvent->key() == Qt::Key_Up || keyEvent->key() == Qt::Key_Down)) {
             // new index will be set after the method is called
             QTimer::singleShot(0, this, SLOT(activateCurrentIndex()));
         }
@@ -419,7 +501,7 @@ void CompositionDockerDock::activateCurrentIndex()
 {
     QModelIndex index = compositionView->currentIndex();
     if (index.isValid()) {
-        activated(index);
+        activated(index.siblingAtColumn(2));
     }
 }
 
@@ -437,19 +519,33 @@ void CompositionDockerDock::customContextMenuRequested(QPoint pos)
 
 void CompositionDockerDock::updateComposition()
 {
-    QModelIndex index = compositionView->currentIndex();
-    if (m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->image() && index.isValid()) {
-        KisLayerCompositionSP composition = m_model->compositionFromIndex(index);
-        composition->store();
-        m_canvas->image()->setModifiedWithoutUndo();
-    }
+    const auto selected = selectedCompositions();
+    if (!m_canvas || selected.isEmpty())
+        return;
+    if (selected.size() > 1
+        && QMessageBox::question(this,
+                                 i18n("Overwrite Layer Comps"),
+                                 i18np("Overwrite the selected layer comp?",
+                                       "Overwrite the %1 selected layer comps with the current visibility?",
+                                       selected.size()))
+            != QMessageBox::Yes)
+        return;
+    KisImageSP image = m_canvas->image();
+    image->barrierLock(true);
+    for (const auto &comp : selected)
+        comp->store();
+    image->unlock();
+    image->setModifiedWithoutUndo();
+    Q_EMIT image->sigCompositionsChanged();
+    updateModel();
 }
 
 void CompositionDockerDock::renameComposition()
 {
     dbgKrita << "rename";
     QModelIndex index = compositionView->currentIndex();
-    if (m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->image() && index.isValid()) {
+    if (m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->image() && index.isValid()
+        && !m_model->isSnapshot(index)) {
         KisLayerCompositionSP composition = m_model->compositionFromIndex(index);
         bool ok;
         QString name = QInputDialog::getText(this, i18n("Rename Composition"),
@@ -458,8 +554,35 @@ void CompositionDockerDock::renameComposition()
         if (ok && !name.isEmpty()) {
             composition->setName(name);
             m_canvas->image()->setModifiedWithoutUndo();
+            Q_EMIT m_canvas->image()->sigCompositionsChanged();
+            updateModel();
         }
     }
 }
 
+QList<KisLayerCompositionSP> CompositionDockerDock::selectedCompositions() const
+{
+    QList<KisLayerCompositionSP> result;
+    for (const auto &index : compositionView->selectionModel()->selectedRows(2)) {
+        if (!m_model->isSnapshot(index)) {
+            auto comp = m_model->compositionFromIndex(index);
+            if (comp)
+                result << comp;
+        }
+    }
+    return result;
+}
 
+void CompositionDockerDock::applyAdjacent(int direction)
+{
+    if (!m_canvas)
+        return;
+    const auto comps = m_canvas->image()->compositions();
+    if (comps.isEmpty())
+        return;
+    const auto current = m_model->compositionFromIndex(compositionView->currentIndex());
+    const int currentRow = comps.indexOf(current);
+    const int row = currentRow < 0 ? (direction > 0 ? 0 : comps.size() - 1) : currentRow + direction;
+    if (row >= 0 && row < comps.size())
+        activated(m_model->indexForComposition(comps.at(row)));
+}

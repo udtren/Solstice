@@ -13,6 +13,7 @@
 #include <QUuid>
 #include <QDomDocument>
 #include <QDomElement>
+#include <QMutex>
 
 #include "kis_image.h"
 
@@ -49,9 +50,15 @@ public:
     */
     void apply();
 
-   /**
-    * Set the export enabled flag, if false the compositions will not be exported
-    */
+    /** Caller must hold the image barrier lock while accessing the node tree. */
+    KUndo2Command *createApplyCommand(bool preserveMissing = false);
+    bool matchesCurrentVisibility(bool preserveMissing = false) const;
+    void recordAddedNode(KisNodeSP node, bool visible);
+    QMap<QUuid, bool> visibilityMap() const;
+
+    /**
+     * Set the export enabled flag, if false the compositions will not be exported
+     */
     void setExportEnabled(bool enabled);
 
    /**
@@ -67,6 +74,7 @@ public:
     void save(QDomDocument& doc, QDomElement& element);
 
 private:
+    mutable QMutex m_mutex;
     KisImageWSP m_image;
     QString m_name;
     QMap<QUuid, bool> m_visibilityMap;

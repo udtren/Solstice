@@ -36,7 +36,22 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[In development](#in-development) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+
+## In development
+
+The following additions are in development and have not yet been published
+in a release:
+
+- **[Effects & Color](docs/effects-filters.md)**: illustration filters for
+  color, lighting, texture and line-art extraction, plus extended Lens Blur.
+- **[Color Reference](docs/effects-filters.md#color-reference)**: recolor
+  from an image or gradient, with drag-and-drop image import.
+- **[Layer Comps](docs/layer-comps.md)**: save, switch and export layer
+  visibility variations.
+
+See [GitHub Releases](https://github.com/udtren/Solstice/releases) for
+published versions and their release notes.
 
 ## Highlights
 
@@ -50,6 +65,9 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - **Native productivity tools**: [Quick Access Manager](docs/quick-access.md),
   [Asset Library](docs/asset-library.md), [Rest Note](docs/rest-note.md) and
   [Lazy Tools](docs/lazy-tools.md).
+- **[Effects & Color](docs/effects-filters.md)**.
+- **[G'MIC-Qt CPU filters](docs/gmic.md)**.
+- **[Layer Comps](docs/layer-comps.md)**.
 - **[Vision ML](docs/vision-ml.md)**: native tools for AI-assisted selection,
   background removal and Smart Fill.
 - **[Puppet Warp](docs/puppet-warp.md)**: pose and reshape artwork with movable
