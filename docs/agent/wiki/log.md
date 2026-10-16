@@ -1447,3 +1447,31 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Local validation: 15 regression tests passed; 121 Markdown files and 870
   local references (173 heading references) passed. Workflow YAML parsed and
   `git diff --check` passed. The PR template now names main as its target.
+
+## 2026-10-16 documentation: GPU maintenance and work-order separation
+
+- Extracted the current [GPU maintenance contract](../gpu-engine.md) from the
+  mixed architecture/phase diary. Corrected obsolete opt-in, float-depth,
+  channel-mask, scratch-projection and shared-image canvas claims against the
+  committed implementation. Retained settings, tile ownership, synchronization,
+  failure/save boundaries, test targets and manual checks.
+- Replaced [GPU priorities](../gpu-work-priorities.md)'s accumulated diary with
+  delivered scope, unfinished candidates and explicit user deferrals. The
+  post-4.100 CPU latency remains unmeasured; failure/save UI acceptance remains
+  pending. No new implementation or manual acceptance is implied.
+- Preserved both complete originals in frozen snapshots:
+  [engine development](history/gpu-engine-development.md) and
+  [work-order development](history/gpu-work-priorities-development.md).
+  Only actual Markdown link destinations were relocated. Existing phase history
+  bodies remain unchanged.
+- Updated navigation, the documentation lesson and phase-number allocation:
+  check current records and concurrent reservations instead of copying a
+  supposedly next-free number into a second document.
+- Scope is main at `cc2445cc4a521d58ae0904079ee67354667b3eb6` (through 4.109);
+  unmerged work in other checkouts is not imported. Source checks covered gates,
+  projection, canvas transfer, dab layout, update scheduling and worker fallbacks.
+  This is documentation-only, with no native build or installation.
+- Validation: the repository checker passed for 123 Markdown files and 1024
+  local references (281 heading references); staged whitespace checks passed.
+  Compared both archive bodies with their base-commit originals after link
+  relocation and confirmed the pre-existing history files were unchanged.
