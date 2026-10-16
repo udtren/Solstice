@@ -151,7 +151,7 @@ plans, historical records and references that still contain both.
 - Visual branding: [checklist](docs/agent/solstice-visual-branding-todo.md).
 - Brush option shared model: [maintenance reference](docs/agent/brush-option-shared-model.md).
 - Brush options in Tool Options: [development notes](docs/agent/tool-options-brush.md).
-- UI modernization: [development reference](docs/agent/ui-modernization-plan.md).
+- UI modernization: [maintenance reference](docs/agent/ui-modernization.md).
 - GitHub Actions Windows builds: [development notes](docs/agent/github-actions.md).
 - Explorer thumbnails: [development notes](docs/agent/windows-shell-thumbnails.md).
 - Brush Stroke Layer: [maintenance reference](docs/agent/brush-stroke-layer.md).
