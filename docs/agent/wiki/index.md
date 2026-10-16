@@ -137,6 +137,10 @@ Document ownership and lifecycle are defined in
 
 ### History
 
+- [Illustration filters development](history/illustration-filters-development.md):
+  original designs, stage S/C/G/D1/L results and timings; the maintained
+  reference retains the current contracts and pending Line Art verification.
+
 - [CPU effects and G'MIC development](history/cpu-effects-and-gmic-development.md):
   original plan, phase results and measurements; native effects and the
   separately built G'MIC runtime have their own maintained references.

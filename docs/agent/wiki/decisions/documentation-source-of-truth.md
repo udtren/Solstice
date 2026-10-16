@@ -76,3 +76,11 @@ later cloud-package check supersedes an earlier "unverified" statement without
 establishing GUI runtime coverage. Keep pixel/ABI compatibility in current
 references and dated timing tables in history; buffer accounting and converter
 microbenchmarks are not end-to-end speed or process-memory guarantees.
+
+The [illustration-filter extraction](../../illustration-filters.md) retains
+shared-helper dependency rules as well as visible controls: numerical rebasing
+can require a larger halo than the visual kernel. Avoid simplifying that away
+when summarizing algorithms. Preserve different alpha/LOD rules per feature,
+and distinguish queued widget callbacks from worker-thread execution. Archiving
+a delivered implementation's plan does not complete its pending artwork/UI
+verification or authorize an optional control from the proposal.
