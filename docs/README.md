@@ -6,9 +6,9 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.2.0-beta.8](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8)
-is a maintenance release for the native tools; existing workflows, profiles
-and settings remain compatible.
+[0.3.0](https://github.com/udtren/Solstice/releases/tag/v0.3.0) removes the
+Beta label, improves GPU Clone Layer/projection updates and duplicated-layer
+thumbnails, and fixes Move Tool X/Y input.
 
 ## Getting started
 
