@@ -36,28 +36,20 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[In development](#in-development) | [What's new](#whats-new-in-v020-beta6) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[What's new](#whats-new-in-v020-beta7) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 
-## In development
+## What's new in v0.2.0-beta.7
+
+The seventh beta speaks Simplified Chinese:
 
 - **[Simplified Chinese interface](docs/languages.md)**: the whole
   interface, including the features Solstice adds, in 简体中文
-  (machine-translated; corrections welcome).
+  (machine-translated; corrections welcome). Switch with **Settings >
+  Switch Application Language**.
+- **Website in Chinese**: the [Solstice site](https://solstice.tidalboxstudio.com/zh-cn/)
+  is also available in Simplified Chinese.
 
-## What's new in v0.2.0-beta.6
-
-The sixth beta adds illustration filters and layer visibility workflows:
-
-- **[Effects & Color](docs/effects-filters.md)**: illustration filters for
-  color, lighting, texture and line-art extraction, plus extended Lens Blur.
-- **[Color Reference](docs/effects-filters.md#color-reference)**: recolor
-  from an image or gradient, with drag-and-drop image import.
-- **[Layer Comps](docs/layer-comps.md)**: save, switch and export layer
-  visibility variations.
-- **[G'MIC-Qt](docs/gmic.md)**: bundled CPU runtime, offline catalog and
-  standard data packs.
-
-See the [full release notes and download](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.6).
+See the [full release notes and download](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.7).
 
 ## Highlights
 
@@ -142,7 +134,7 @@ move and rotate the parts around them. See the
 > supported hardware and platforms are limited.
 
 Download the unsigned Windows x64 ZIP from
-[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.6),
+[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.7),
 extract it and start `solstice.exe`.
 
 Source code and newer Windows x64 trial ZIPs are also available from successful
