@@ -137,6 +137,10 @@ Document ownership and lifecycle are defined in
 
 ### History
 
+- [Settings location and profile migration](history/settings-location-development.md):
+  pre-migration inventory, provisional design and dated implementation checks;
+  the stable settings reference owns current paths and startup behavior.
+
 - [UI modernization development](history/ui-modernization-development.md):
   original proposal, visual baseline and dated implementation results;
   the feature reference owns current defaults and maintenance checks.

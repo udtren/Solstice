@@ -72,10 +72,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 ## 2026-10-07 ingest: settings location complete
 
-- No new wiki page: the decisions and findings are in `docs/agent/settings-location.md`.
+- The original decisions and findings are preserved in
+  [settings/profile development history](history/settings-location-development.md).
   These include the relative KConfig names, the mounted kritarc defaults, the import rules,
   the Solstice defaults and the verification.
-- Pitfall recorded in `docs/agent/settings-location.md` (phase 5): starting `krita.exe`
+- Pitfall recorded in that history (phase 5): starting `krita.exe`
   directly does not work in the development environment; use `run-krita.bat`.
 
 ## 2026-10-07 ingest: GPU Gaussian blur family (phase 4.98)
@@ -1348,3 +1349,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   and index coverage, comment-only C++ changes, changed-line clang-format
   and `git diff --check`. No native build, installation or new interactive
   verification is claimed.
+
+## 2026-10-16 documentation: settings/profile reference and history
+
+- Rewrote [Settings location](../settings-location.md) as the maintained
+  reference at its existing path and preserved the original investigation,
+  proposals and phase results in
+  [development history](history/settings-location-development.md).
+- Checked startup ordering, KConfig default mounting, import/cleanup callers,
+  shared custom resources, different-drive fallback and reset boundaries.
+  Updated the user guide and obsolete phase references accordingly.
+- Recorded the lesson in [the documentation decision](decisions/documentation-source-of-truth.md):
+  broad migration guarantees need the actual caller and fallback behavior.
+- Validated all 629 original lines, 715 local references (including 156
+  heading references) across 115 Markdown files, wiki metadata/index coverage,
+  comment-only C++/CMake edits, changed-line clang-format and `git diff --check`.
+  No runtime changes or fresh native/interactive verification are claimed.

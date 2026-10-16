@@ -22,6 +22,8 @@ granularity, archival and the review checklist.
   serialization compatibility and dependencies across all brush engines.
 - [Solstice interface](ui-modernization.md) owns theme/style boundaries,
   defaults, scale/font configuration and visual regression scope.
+- [Settings location and profile import](settings-location.md) owns path
+  resolution, startup/copy behavior, defaults and reset boundaries.
 - [Feature inventory](feature-inventory.md) maps custom source locations.
   It is not a progress tracker.
 - Feature references linked from AGENTS own current behavior, compatibility,
@@ -44,7 +46,6 @@ validation details when extracting a standalone current reference.
 | --- | --- | --- |
 | [CPU effects and G'MIC](cpu-effects-and-gmic-plan.md) | Status/decisions and F1-F6/G'MIC implementation records, including CPU bridge refinements | Initial investigation, proposed IDs/architecture and original completion gates |
 | [Illustration filters](illustration-filters-plan.md) | Decisions and Stage S/C/G/D1/L implementation records, including per-filter limits and pending interactive checks | Initial gap analysis, proposed algorithms and work order |
-| [Settings location](settings-location.md) | Final profile paths, path helpers, import/default behavior and later fixes | Pre-migration file inventory and interim migration stages |
 
 These references remain authoritative until their complete current contracts
 have been extracted. Avoid appending unrelated work diaries to them. New
@@ -58,6 +59,7 @@ dated validation evidence, rather than adding another conflicting proposal.
 | [Brush Stroke Layer development](wiki/history/brush-stroke-layer-development.md) | Complete original plan and dated results; [Brush Stroke Layer](brush-stroke-layer.md) owns the current contract; [old plan path](brush-stroke-layer-plan.md) remains a pointer |
 | [ABR import development](wiki/history/abr-import-development.md) | Original investigation, staged implementation and dated results; [ABR import](abr-import.md) owns the current contract; [old plan path](abr-import-plan.md) remains a pointer |
 | [UI modernization development](wiki/history/ui-modernization-development.md) | Complete proposal and dated results; [Solstice interface](ui-modernization.md) owns current behavior; [old plan path](ui-modernization-plan.md) remains a pointer |
+| [Settings/profile development](wiki/history/settings-location-development.md) | Complete pre-migration inventory and phase results; [Settings location](settings-location.md) remains the maintained reference at its stable path |
 | [Color Reference plan](color-reference-plan.md) | Archived proposal; [Color Reference](color-reference.md) supersedes it |
 | [Layer Comps plan](layer-comps-plan.md) | Original plan summary and optional LC5 scope; [Layer Comps](layer-comps.md) owns implementation |
 | [Brush model development](wiki/history/brush-option-shared-model-development.md) | Complete plan and implementation record; [shared model](brush-option-shared-model.md) owns current behavior; [old plan path](brush-option-shared-model-plan.md) remains a pointer |
