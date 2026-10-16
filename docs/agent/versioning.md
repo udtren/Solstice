@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.2.0-beta.6` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.2.0-beta.7` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -62,7 +62,7 @@ Edit only the `SOLSTICE_VERSION_*` values in the top-level `CMakeLists.txt`:
 
 - `MINOR` for a milestone, `PATCH` for fixes only (pre-1.0 semantic
   versioning);
-- `LABEL`: `beta.6` now (`alpha` until 2026-10-13, `beta` for the first
+- `LABEL`: `beta.7` now (`alpha` until 2026-10-13, `beta` for the first
   beta), then `beta.N` or `rc.N`, empty for a release;
 - `BUILD`: the fourth Windows file-version digit, for rebuilds of the same
   version; otherwise 0.
@@ -113,6 +113,7 @@ appears in the version strings.
 | `0.2.0-beta.4` | 2026-10-14 | Fourth beta (user request): fixes the crash in `KisImage::enableDirtyRequests()` during repeated Python `Node.save()` (thread-safe projection updates filter stack), and Python `Node.save()`, `Filter.apply()`, `Scratchpad.setScale()` return `bool`. Released 2026-10-15 as GitHub Release `v0.2.0-beta.4` (prerelease, commit `3575bbb59c`, run 38584970834); website updated the same day. |
 | `0.2.0-beta.5` | 2026-10-15 | Fifth beta (user request): RGBA16F document conversion choices, document tool-state restoration, Quick Access hold ownership, and the Brush Stroke Layer and Puppet Warp audit fixes. Released 2026-10-15 as GitHub Release `v0.2.0-beta.5` (prerelease, commit `dd9e48c152`, run 38669973004); website updated the same day. |
 | `0.2.0-beta.6` | 2026-10-16 | Sixth beta (user request): Effects & Color, Color Reference with image drag and drop, Layer Comps, and the bundled CPU G'MIC runtime. Released as GitHub Release `v0.2.0-beta.6` (prerelease, commit `b7ee343e81fe`, run 38833086246); website updated the same day with Effects & Color and Layer Comps pages. |
+| `0.2.0-beta.7` | 2026-10-16 | Seventh beta (user request): complete Simplified Chinese interface (machine-translated `zh_CN` catalog, built-in Chinese texts for the Krita-profile import, translated Quick Access and Vision ML error details) and the translation tooling; the website adds Simplified Chinese pages under `/zh-cn/`. |
 
 ## Checks
 
