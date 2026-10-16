@@ -737,7 +737,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Bug fix (user report): after a canvas resize, the first Brush Editor edit
   rewrote `MaskingBrush/MasterSizeCoeff` for the old size, so masked strokes
   became thin and stayed thin
-  ([brush-option-shared-model-plan.md](../brush-option-shared-model-plan.md),
+  ([shared-model development history](history/brush-option-shared-model-development.md),
   phase 5 fix).
 - Lesson: an option whose value derives from another (`addDependency()`)
   must be re-read when the other changes outside the editor, not only
@@ -1315,3 +1315,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   seven changed C++ files differ only in comments; changed-line clang-format
   and `git diff --check` pass. No native build, installation or interactive
   verification was run for this documentation-only extraction.
+
+## 2026-10-16 documentation: Brush option shared model reference and history
+
+- Extracted [the maintained reference](../brush-option-shared-model.md) after
+  comparing the complete plan and phase 0 investigation with current code.
+- Preserved both original bodies in history and retained their old paths as
+  pointers; updated indexes, source comments and stale Tool Options checks.
+- Lesson: derive current contracts from final implementation and later fixes,
+  including dependent reads after external changes, not only the original
+  write design. See [the documentation decision](decisions/documentation-source-of-truth.md).
+- Validation: both archived bodies match their source revision (935 and 370
+  lines); 112 Markdown files, 635 local references and 153 heading references
+  pass checks, as do wiki metadata/index coverage and `git diff --check`.
+  All 46 changed C++ files and 12 CMake files differ only in comments;
+  changed-line clang-format checks pass. Historical build/manual results remain
+  dated evidence; no new native or interactive verification is claimed.

@@ -1,9 +1,8 @@
 # Brush Editor
 
-Solstice keeps the Brush Editor's option values in one shared model per brush
-engine instead of inside the editor's pages. Every engine uses it. A change to
-one option updates only that option in the brush preset, and the same model
-shows options in the Tool Options docker.
+The Brush Editor and Tool Options edit the same preset settings for every
+brush engine. Changes stay synchronized, including settings that depend on
+other options.
 
 ## Engines
 
