@@ -100,3 +100,12 @@ paths that the earlier regular-expression checks missed. Run on every PR so
 deleting a referenced source or image is covered even without a Markdown edit.
 Fixtures must exercise both deliberate failures and valid code examples;
 machine validation still cannot establish feature behavior or manual acceptance.
+
+The [GPU extraction](../../gpu-engine.md) separates a maintained implementation
+contract from a [current work queue](../../gpu-work-priorities.md) and frozen
+snapshots. Reconcile later phase results with the source before retaining early
+"CPU only", opt-in or proposed-architecture claims. Keep dated performance
+comparisons distinct from changed defaults: a subsequent CPU scheduling change
+invalidates treating an older comparison as current latency. Preserve explicit
+deferrals and pending dialog acceptance. Phase-number reservations must be
+checked against current and concurrent work, not copied as a stale next number.
