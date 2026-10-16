@@ -38,7 +38,7 @@ When the agent's shell is Git Bash:
   directory (`$TMPDIR`), not bare `/tmp`.
 - Check for a running Krita before installing with
   `MSYS_NO_PATHCONV=1 tasklist /FI "IMAGENAME eq solstice.exe"` (and `krita.exe` for older launchers) (Git Bash) or
-  `Get-Process krita` (PowerShell).
+  `Get-Process -Name solstice,krita -ErrorAction SilentlyContinue` (PowerShell).
 
 ## Build
 
@@ -115,22 +115,19 @@ Examples: `libs\ui`, `libs\widgets`, `krita`, `plugins\dockers\restnote`.
    fuzzy `po/zh_CN/krita.po` entries (rules in `docs/agent/translations.md`),
    checked that `msgfmt --check` reports no fuzzy or untranslated entries,
    and committed the catalog with the change.
+8. Followed [Documentation maintenance](documentation.md): updated the owning
+   reference, checked links and indexes, and recorded a concise wiki entry.
+   For documentation-only work, native format/build/test/install steps do not
+   apply unless source behavior is also changed; do not claim new runtime
+   verification from a prose edit.
 
 ## Upstream synchronization
 
-Historical. Merging upstream was discontinued (see `AGENTS.md`, "Branch
-policy"); upstream changes now arrive as approved cherry-picks following
-`docs/agent/upstream-intake.md`. The points below still explain why upstream
-files should be edited sparingly.
+Upstream merges are discontinued. `krita/6.0`, `krita-sol` and
+`krita-sol-gpu` are historical references, not active integration branches.
+Approved selective changes follow [Upstream intake](upstream-intake.md);
+do not add a persistent upstream remote.
 
-- `krita/6.0` tracks upstream Krita 6 only. Merge it into `krita-sol`; do not
-  cherry-pick custom work onto it.
-- Minimize edits to upstream files so merges stay clean: prefer new files,
-  plugins, and small hook points (one member + one call) over rewriting
-  upstream functions.
-- The list of custom touch points in upstream files is maintained in
-  `docs/agent/feature-inventory.md`. Check it when resolving merge conflicts.
-- To see the complete custom diff:
-  ```bash
-  git diff --stat $(git merge-base krita-sol krita/6.0) krita-sol
-  ```
+Keep edits to inherited files small so reviews and selective patches remain
+tractable. Use [Feature inventory](feature-inventory.md) to find shared hooks
+and its comparison commands to inspect the current Solstice divergence.

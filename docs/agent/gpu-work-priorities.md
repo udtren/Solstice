@@ -601,7 +601,7 @@ HSL/HSV系、F16のSoft Light(Photoshop)など、GPU未対応のブレンドモ�
   投影1つ・ウォーカー1回あたり約15タイル）。クリアをバッチに預け、最初のGPU合成の先頭で既定ピクセルを書き込む
   （`KisGpuMergeBatch::deferClear()`）。
 - CPUのまま: GPU投影オフ、RGBA F32/F16以外、タイル単位の矩形、ラップアラウンド、最初のレイヤーが調整レイヤーの場合。
-- 詳細は `gpu-engine.md` の「Partial-tile projection clears (phase 4.111)」。手動確認は未実施。
+- 詳細は `gpu-engine.md` の「Partial-tile projection clears (phase 4.111)」。手動確認はユーザー報告で問題なし（2026年10月16日）。
 
 ## 関連する付随作業
 

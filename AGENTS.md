@@ -39,9 +39,8 @@ intake is allowed: Hermes Agent reviews upstream Krita weekly, and Claude
 cherry-picks only the items the user approved and records every decision in
 the ledger of `docs/agent/upstream-intake.md`. Apply upstream commits as
 patches following that document; do not add a persistent remote. `origin`
-is `https://github.com/udtren/Solstice.git`. This policy supersedes the older
-branch and synchronization instructions in `docs/agent/development-workflow.md`;
-that document's build, test and installation instructions still apply.
+is `https://github.com/udtren/Solstice.git`. The implementation workflow is
+documented in `docs/agent/development-workflow.md`.
 
 The former GitHub fork is retained at
 `https://github.com/udtren/Solstice-upstream-archive` as a read-only archive.
@@ -62,6 +61,10 @@ in `docs/agent/versioning.md` ("Releasing").
 
 ## Documentation organization
 
+- Documentation sources stay in this repository (user decision, 2026-10-16).
+  A future site renders these sources; it must not become a second editable
+  copy. Follow [Documentation maintenance](docs/agent/documentation.md) for
+  document roles, precedence, archival and review.
 - Keep `README.md` in English as the project overview: identity, the
   website (`https://solstice.tidalboxstudio.com`, live since 2026-10-14),
   differences from Krita, GPU status, representative benchmarks,
@@ -114,120 +117,48 @@ Read these before adding or updating any feature:
 | `docs/agent/codebase-map.md` | Repository layout, library layering, key classes, and deciding which folder a change belongs in |
 | `docs/agent/extension-points.md` | Recipes and required files for dockers, view plugins, tools, filters, file formats, settings, actions, and icons |
 | `docs/agent/coding-rules.md` | Conventions, persistence/compatibility, undo and threading, lifecycle, formatting, and files to leave alone |
-| `docs/agent/development-workflow.md` | Build, test, install, hand-off checklist, and upstream synchronization |
+| `docs/agent/development-workflow.md` | Build, test, install, hand-off checklist, and selective upstream intake |
 | `docs/agent/feature-inventory.md` | Every custom touch point in upstream files, undocumented changes, and the new-feature/document template |
 
 ### Feature documents
 
-- CPU-only effects and G'MIC integration (Film Grain, Chromatic Aberration,
-  Film, Crystal, extended Lens Blur and Pencil user-verified;
-  G'MIC CPU runtime and CPU bridge optimizations user-verified 2026-10-15; work branch
-  `codex/cpu-effects-and-gmic`): `docs/agent/cpu-effects-and-gmic-plan.md`
-- Illustration filters (Sharpness, Color Filter, Glow, Drop Shadow, Line Art
-  Extraction, in that order; Sharpness, Color Filter and Glow manually confirmed 2026-10-15;
-  Drop Shadow D1 manually confirmed 2026-10-16;
-  Line Art Extraction implemented, interactive verification pending;
-  branch `codex/illustration-filters`):
-  `docs/agent/illustration-filters-plan.md`
-- Layer Comps (extension of the existing Compositions docker; LC1-LC4
-  user-verified including resize layout refinement 2026-10-16):
-  `docs/agent/layer-comps.md`
-- Color Reference (new `solstice_color_reference` filter: recolor from a
-  reference image or gradient; CR0-CR4 implemented, built, tested and installed;
-  interactive verification pending):
-  `docs/agent/color-reference.md` (original plan: `docs/agent/color-reference-plan.md`)
-- Translations (Simplified Chinese first; policy, catalog tooling and
-  the complete `zh_CN` translation done 2026-10-16; interface check
-  pending): `docs/agent/translations.md`
-- Document tool state: `docs/agent/document-tool-state.md`
-- Quick Access: `docs/agent/quick-access.md`
-- Rest Note: `docs/agent/rest-note.md`
-- Asset Library: `docs/agent/asset-library.md`
-- Vision ML: `docs/agent/vision-ml.md`
-- Lazy Tools: `docs/agent/lazy-tools.md`
-- Puppet Warp: `docs/agent/puppet-warp.md`
-- Docker locks: `docs/agent/docker-locks.md`
-- Overview live update:
-  `docs/agent/overview-live-update.md`
-- Versioning (Solstice version vs. Krita compatibility version):
-  `docs/agent/versioning.md`
-- Executable name (`solstice.exe`/`solstice.com` on Windows; `krita.dll` and
-  the application name `krita` kept): `docs/agent/executable-name.md`
-- Settings location (`%APPDATA%\Solstice`, Krita profile import, Solstice defaults):
-  `docs/agent/settings-location.md`
-- GPU Engine (branch `krita-sol-gpu`): `docs/agent/gpu-engine.md`
-- GPU Engine work order (priorities 1-3 done; input-to-display re-baseline
-  2026-10-10: GPU brush about 5 ms against 18-22 ms on the CPU; masking brush
-  composite on the GPU (phase 4.101) done and manually checked 2026-10-10;
-  textured dabs on the GPU (phase 4.102) done and manually checked 2026-10-11;
-  image tip dabs on the GPU (phase 4.103) done and manually checked 2026-10-11;
-  colour, Lightness and Gradient image tips (phase 4.104) done and manually checked 2026-10-11;
-  RGBA16F image tips and textures (phase 4.105) done and manually checked 2026-10-11;
-  RGBA16F masking brush composite (phase 4.106) done and manually checked 2026-10-12;
-  remaining blend modes, priority 5 (phase 4.107) done and manually checked 2026-10-13;
-  all other blend modes (phase 4.108) done and manually checked 2026-10-13;
-  precise contraction audit (phase 4.109) done and manually checked 2026-10-13;
-  partial-tile projection clears on the GPU (phase 4.111) done and tested
-  2026-10-16, manual check pending;
-  priority 4 in progress):
-  `docs/agent/gpu-work-priorities.md`
-- Brush Stroke Preview:
-  `docs/agent/brush-stroke-preview.md`
-- Brush preset grouping:
-  `docs/agent/brush-preset-grouping.md`
-- Brush Presets scroll to the selected preset (setting):
-  `docs/agent/brush-preset-scroll.md`
-- Solstice visual branding checklist:
-  `docs/agent/solstice-visual-branding-todo.md`
-- Brush option shared model (phase 1 done for Deform; phase 2a brush tip and
-  masking brush and phase 2b Pixel Brush done and manually checked
-  2026-10-08; phase 4 Color Smudge done and manually checked 2026-10-08; Sketch and
-  Bristle done and manually checked 2026-10-08; Tangent Normal, Hatching,
-  Filter and Quick Brush done and manually checked 2026-10-08; Curve, Grid,
-  Particle and Shape done and manually checked 2026-10-09; Spray and MyPaint
-  done and manually checked 2026-10-09; Clone done and manually checked
-  2026-10-09; every engine uses the model; phase 5 done and manually checked 2026-10-09):
-  `docs/agent/brush-option-shared-model-plan.md`, findings in
-  `docs/agent/brush-option-shared-model-phase0.md`
-- Brush options in Tool Options (eyes in the Brush Editor; phases 3a and 3b
-  done and manually checked 2026-10-08): `docs/agent/tool-options-brush.md`
-- UI modernization (phases 0-3 done; phase 4 first part done):
-  `docs/agent/ui-modernization-plan.md`
-- GitHub Actions Windows trial builds: `docs/agent/github-actions.md`
-- Explorer thumbnails of .kra/.krz (Krita Shell Extension shipped in
-  `shellex`, per-user registration scripts):
-  `docs/agent/windows-shell-thumbnails.md`
-- Brush stroke layer (redraw recorded brush strokes at a new resolution;
-  stage 1 done; stage 2a recording done and manually checked 2026-10-09;
-  stage 2b redraw on image/layer scaling done and manually checked 2026-10-09;
-  stage 2c saving the strokes in .kra done and manually checked 2026-10-09;
-  redraw with the Transform Tool done and manually checked 2026-10-10;
-  brush tips saved in .kra, sequential dabs and recorded stroke starts for
-  exact redraws done and manually checked 2026-10-10; Move Tool selection
-  moves carry the strokes and a background record check warns when the
-  pixels stop matching, done and manually checked 2026-10-13; scaling
-  redraws all but the mismatching part, done and manually checked
-  2026-10-13; audit fixes (canvas mirror recorded, Multibrush records load,
-  Instant Preview selection moves, cancelled continued transforms, record
-  check) done and manually checked 2026-10-15):
-  `docs/agent/brush-stroke-layer-plan.md`
-- Photoshop brush (ABR) import improvements (phase 1, ABR tips saved with
-  brush stroke layers, done and manually checked 2026-10-10; phase 2, new
-  parser and tip names, done and manually checked 2026-10-10; phase 3,
-  patterns, done and manually checked 2026-10-10; phase 4, presets,
-  done and manually checked 2026-10-10; phase 5, folders as tags,
-  done and manually checked 2026-10-10; finishing work (color dynamics,
-  scatter count, curve and texture fixes, README) done and manually checked
-  2026-10-10):
-  `docs/agent/abr-import-plan.md`
-- Welcome page News: Krita news above, Solstice GitHub releases below:
-  `docs/agent/welcome-news.md`
-- Clone Layer performance (GPU copy of offset clones, GPU engine phase
-  4.110, implemented, tested and manually checked 2026-10-16;
-  measurements and remaining candidates):
-  `docs/agent/clone-layer.md`
-- Removal of the right-click Popup Palette and the On-Canvas Brush Editor
-  (what was kept and why): `docs/agent/popup-palette-removal.md`
+Feature status, active work and verification evidence belong in the linked
+document, not in this index. See [Document roles](docs/agent/README.md) for
+plans, historical records and references that still contain both.
+
+- CPU-only effects and G'MIC: [development reference](docs/agent/cpu-effects-and-gmic-plan.md).
+- Illustration filters: [development reference](docs/agent/illustration-filters-plan.md).
+- Layer Comps: [development notes](docs/agent/layer-comps.md).
+- Color Reference: [development notes](docs/agent/color-reference.md).
+- Translations: [policy and tooling](docs/agent/translations.md).
+- Document tool state: [development notes](docs/agent/document-tool-state.md).
+- Quick Access: [development notes](docs/agent/quick-access.md).
+- Rest Note: [development notes](docs/agent/rest-note.md).
+- Asset Library: [development notes](docs/agent/asset-library.md).
+- Vision ML: [development notes](docs/agent/vision-ml.md).
+- Lazy Tools: [development notes](docs/agent/lazy-tools.md).
+- Puppet Warp: [development notes](docs/agent/puppet-warp.md).
+- Docker locks: [development notes](docs/agent/docker-locks.md).
+- Overview live update: [development notes](docs/agent/overview-live-update.md).
+- Versioning and releases: [development notes](docs/agent/versioning.md).
+- Executable naming: [development notes](docs/agent/executable-name.md).
+- Settings location and profile import: [development notes](docs/agent/settings-location.md).
+- GPU Engine: [architecture and invariants](docs/agent/gpu-engine.md).
+- GPU work order: [priorities](docs/agent/gpu-work-priorities.md).
+- Clone Layer performance: [development notes](docs/agent/clone-layer.md).
+- Brush Stroke Preview: [development notes](docs/agent/brush-stroke-preview.md).
+- Brush preset grouping: [development notes](docs/agent/brush-preset-grouping.md).
+- Brush Presets scroll to selection: [development notes](docs/agent/brush-preset-scroll.md).
+- Visual branding: [checklist](docs/agent/solstice-visual-branding-todo.md).
+- Brush option shared model: [development reference](docs/agent/brush-option-shared-model-plan.md).
+- Brush options in Tool Options: [development notes](docs/agent/tool-options-brush.md).
+- UI modernization: [development reference](docs/agent/ui-modernization-plan.md).
+- GitHub Actions Windows builds: [development notes](docs/agent/github-actions.md).
+- Explorer thumbnails: [development notes](docs/agent/windows-shell-thumbnails.md).
+- Brush Stroke Layer: [development reference](docs/agent/brush-stroke-layer-plan.md).
+- Photoshop brush import: [development reference](docs/agent/abr-import-plan.md).
+- Welcome page News: [development notes](docs/agent/welcome-news.md).
+- Popup Palette and On-Canvas Brush Editor removal: [rationale](docs/agent/popup-palette-removal.md).
 
 Before changing a listed feature, read its complete agent document. When a new
 custom feature is added, create its `docs/agent/<feature>.md` technical document,
@@ -243,7 +174,9 @@ The source checkout and build tree are separate:
 - Test installation: `<krita-dev-root>\_install`
 - Environment script: `<krita-dev-root>\env.bat`
 - Clang-format: `<toolchain-root>\bin\clang-format.exe`
-- Active Krita configuration: `%LOCALAPPDATA%\kritarc`
+- Solstice configuration: normally `%APPDATA%\Solstice\config\kritarc`;
+  resolve it through `KisSolsticePaths` (fallbacks and legacy import are in
+  `docs/agent/settings-location.md`).
 
 Feature-specific targets, tests, installation scripts, configuration paths, and
 runtime dependencies are documented under `docs/agent/`.

@@ -91,8 +91,11 @@ Reference: `plugins/extensions/buginfo/`.
   `createAction("<action_name>")` and connect them; use `viewManager()` only
   inside slots.
 - Every action name must be defined in an `.action` file (see Actions below).
-- Menu placement: either add `<Action name="..."/>` to `krita/krita5.xmlgui`,
-  or ship a plugin `.xmlgui` installed to `${KDE_INSTALL_DATADIR}/kritaplugins`.
+- Menu placement: ship a plugin `.xmlgui` installed to
+  `${KDE_INSTALL_DATADIR}/kritaplugins`, or add the menu entry in code.
+  Keep `krita/krita5.xmlgui` unchanged to preserve the user's customized menu.
+  See [the recorded decision](wiki/decisions/xmlgui-unchanged.md); changes to
+  that file require the user's explicit approval.
 - Image changes must go through undoable commands or strokes (see
   `docs/agent/coding-rules.md`).
 

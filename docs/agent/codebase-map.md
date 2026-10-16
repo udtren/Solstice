@@ -101,7 +101,7 @@ Each category directory has a `CMakeLists.txt` that lists subdirectories with
 | New option in Settings > Configure | `libs/ui/forms/wdggeneralsettings.ui` + `libs/ui/dialogs/kis_dlg_preferences.cc` (or a plugin-local settings dialog) |
 | Add controls to an existing docker | That docker's directory (e.g. `plugins/dockers/layerdocker/`) |
 | Reusable widget for several plugins | `libs/widgets/` (no `kritaui` dependency) or `libs/ui/widgets/` (needs `kritaui`) |
-| New main-menu entry | Action definition in `krita/kritamenu.action` (or the plugin's own `.action` file) and placement in `krita/krita5.xmlgui` |
+| New main-menu entry | Action definition in `krita/kritamenu.action` (or the plugin's own `.action` file), placed by a plugin `.xmlgui` or code; see `extension-points.md` |
 | New icon | Plugin-local `resources/` embedded with `qt_add_resources()`, or `krita/pics/` with its `.qrc` for application-wide icons |
 | Scripting API | `libs/libkis/` — avoid unless requested |
 
