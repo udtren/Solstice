@@ -1177,3 +1177,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   kritaglobal, krita, Quick Access and Vision ML installed. The dialogs were
   not checked interactively.
 - Updated [translation-extraction](pitfalls/translation-extraction.md).
+
+## 2026-10-16 translation: zh_CN batches 1-2 (shared strings, Quick Access)
+
+- Translated 89 Krita -> Solstice renames (old translation with the same
+  rename), 173 shared strings and 220 Quick Access strings in
+  `po/zh_CN/krita.po`: 10,146 translated, 183 fuzzy, 103 untranslated; no
+  previous translation changed. `msgfmt --check` and `ninja pofiles`
+  passed; `krita.mo` installed. Not checked in the interface yet.
+- Terminology choices (配置方案, 文字标签, 标签页, English feature and docker
+  names) are in `docs/agent/translations.md` ("Rules for translating").
+- Left: Solstice filters, Rest Note, Asset Library, Vision ML, GPU, Layer
+  Comps, Transform Tool (286 strings).

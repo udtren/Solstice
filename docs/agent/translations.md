@@ -2,7 +2,8 @@
 
 Status: policy decided 2026-10-16; extraction and merge tooling done
 2026-10-16 (`zh_CN` catalog merged); audit and fixes F1-F5 done
-2026-10-16; translation not started.
+2026-10-16; translation batches 1-2 (shared strings, Quick Access) done
+2026-10-16, 286 feature strings left; not checked in the interface yet.
 
 ## Decisions (user, 2026-10-16)
 
@@ -158,7 +159,19 @@ Access layout issues and legacy-import warnings (never displayed),
 ## Rules for translating
 
 - Follow the terms already used in `po/zh_CN/krita.po` (for example 图层,
-  笔刷预设, 滤镜).
+  笔刷预设, 滤镜, 画布, 选区, 笔尖, 不透明度, 流量, 面板 for docker,
+  面板列表 for the Dockers menu, 总览图 for Overview, 资源包 for bundle,
+  笔刷引擎 for brush engine, 锁定透明度 for preserve alpha, 快速预渲染 for
+  Instant Preview).
+- Solstice choices (2026-10-16): 图像 for a document (as Krita's catalog),
+  配置方案 for a Quick Access profile (特性文件 is a color profile),
+  文字标签 for the Quick Access "Label" item (标签 is a tag), 标签页 for a
+  tab; feature and docker names stay in English (Brush Stroke Layer, Layer
+  Comp, Rest Note, Quick Access, Quick Access Palette, Quick Brush
+  Adjustments, Quick Adjust, HueSVC).
+- A fuzzy entry whose previous text differs only by "Krita" -> "Solstice"
+  (same context) can take the old translation with the same rename; every
+  other fuzzy entry needs a new translation (89 renames on 2026-10-16).
 - Keep `kde-format` placeholders (`%1`), accelerators (`&`), rich-text markup
   and `msgctxt` intact; `Plural-Forms` is `nplurals=1`.
 - Check the catalog with `msgfmt --check` (`_install/bin/msgmerge.exe` and
@@ -170,7 +183,11 @@ Access layout issues and legacy-import warnings (never displayed),
 2. Audit and fixes F1-F5: done (see "Strings outside the catalog").
 3. Translate in batches (shared menus and messages, Quick Access, filters,
    Rest Note/Asset Library/Vision ML, GPU/Layer Comps/Transform), building,
-   installing and checking each batch in the interface.
+   installing and checking each batch in the interface. Done 2026-10-16:
+   the 89 renames, batch 1 (173 shared strings) and batch 2 (220 Quick
+   Access strings); catalog 10,146 translated, 183 fuzzy, 103 untranslated,
+   `krita.mo` installed. Left: Solstice filters 127, Rest Note 38, Asset
+   Library 34, Vision ML 34, GPU 24, Layer Comps 15, Transform Tool 14.
 4. Add "update the template and translate" to the hand-off checklist in
    `development-workflow.md`; list the language in `README.md` and the
    release notes.
