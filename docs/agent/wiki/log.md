@@ -1331,3 +1331,20 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   All 46 changed C++ files and 12 CMake files differ only in comments;
   changed-line clang-format checks pass. Historical build/manual results remain
   dated evidence; no new native or interactive verification is claimed.
+
+## 2026-10-16 documentation: Solstice interface reference and history
+
+- Extracted [the interface maintenance reference](../ui-modernization.md)
+  and preserved the complete original plan in
+  [development history](history/ui-modernization-development.md), adjusting
+  only relative links. The old path remains a pointer.
+- Resolved default-off proposals against embedded defaults and current read
+  fallbacks; distinguished explicit imported settings from absent keys,
+  style geometry from window layout, and current behavior from unverified
+  display scales. Corrected the user guide's radio-button description.
+- Extended [the documentation decision](decisions/documentation-source-of-truth.md)
+  with the lesson to trace defaults through both initialization and read paths.
+- Validation: archival body preservation, local links/headings, wiki metadata
+  and index coverage, comment-only C++ changes, changed-line clang-format
+  and `git diff --check`. No native build, installation or new interactive
+  verification is claimed.

@@ -5,6 +5,9 @@ docker headers, document tabs and toolbars, without moving any controls or
 changing how they work. New profiles start with these changes on; each one can
 be turned off to return to Krita's look.
 
+Existing saved choices remain in use. An older or imported profile with no
+saved Solstice interface choice uses the enabled default.
+
 ## UI font
 
 Solstice uses **Cantarell**, bundled with the application, as its default
@@ -72,8 +75,8 @@ the theme's colors, on top of the Fusion style:
 
 - Buttons are rounded; toggled buttons and the active tool are filled with
   the selection color.
-- Check boxes and radio buttons are filled with the selection color when
-  checked.
+- Checked boxes use the selection color with a check mark; selected radio
+  buttons show a dot in that color.
 - Input fields and spin boxes (including the slider spin boxes) get a
   rounded frame that turns to the selection color when focused; the step
   buttons are flat inside the frame.
