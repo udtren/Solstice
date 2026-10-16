@@ -2,8 +2,8 @@
 
 Status: policy decided 2026-10-16; extraction and merge tooling done
 2026-10-16 (`zh_CN` catalog merged); audit and fixes F1-F5 done
-2026-10-16; translation batches 1-2 (shared strings, Quick Access) done
-2026-10-16, 286 feature strings left; not checked in the interface yet.
+2026-10-16; `zh_CN` catalog fully translated 2026-10-16 (10,432 entries, no fuzzy or
+untranslated); not checked in the interface yet.
 
 ## Decisions (user, 2026-10-16)
 
@@ -168,7 +168,15 @@ Access layout issues and legacy-import warnings (never displayed),
   文字标签 for the Quick Access "Label" item (标签 is a tag), 标签页 for a
   tab; feature and docker names stay in English (Brush Stroke Layer, Layer
   Comp, Rest Note, Quick Access, Quick Access Palette, Quick Brush
-  Adjustments, Quick Adjust, HueSVC).
+  Adjustments, Quick Adjust, HueSVC, Asset Library, Vision ML, the filters
+  Solstice added: Chromatic Aberration, Color Filter, Color Reference,
+  Crystal, Drop Shadow, Film, Film Grain, Glow, Line Art Extraction, Pencil,
+  Sharpness, Background Removal; menu entries keep the accelerator as
+  `Name(&X)...`). Look and gradient preset names, settings and messages are
+  translated, and so are the Vision ML tool names (智能填充工具, 从点/从框创建分割选区);
+  素材 for an asset, 护眼休息 for an eye break, 图钉 for a Puppet Warp pin,
+  GPU 引擎 for the GPU engine, 图块 for a tile; Layer Comp(s) and Puppet Warp
+  stay in English.
 - A fuzzy entry whose previous text differs only by "Krita" -> "Solstice"
   (same context) can take the old translation with the same rename; every
   other fuzzy entry needs a new translation (89 renames on 2026-10-16).
@@ -185,9 +193,11 @@ Access layout issues and legacy-import warnings (never displayed),
    Rest Note/Asset Library/Vision ML, GPU/Layer Comps/Transform), building,
    installing and checking each batch in the interface. Done 2026-10-16:
    the 89 renames, batch 1 (173 shared strings) and batch 2 (220 Quick
-   Access strings); catalog 10,146 translated, 183 fuzzy, 103 untranslated,
-   `krita.mo` installed. Left: Solstice filters 127, Rest Note 38, Asset
-   Library 34, Vision ML 34, GPU 24, Layer Comps 15, Transform Tool 14.
+   Access strings), then batches 3-6 (Solstice filters 127, Rest Note 38,
+   Asset Library 34, Vision ML 34) and batches 7-9 (GPU 24, Layer Comps 15,
+   Transform Tool 14): catalog complete, 10,432 translated, `krita.mo`
+   installed. Still to do: check the interface in Simplified Chinese
+   (truncated labels, dialog widths, terminology in context).
 4. Add "update the template and translate" to the hand-off checklist in
    `development-workflow.md`; list the language in `README.md` and the
    release notes.

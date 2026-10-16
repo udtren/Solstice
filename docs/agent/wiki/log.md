@@ -1189,3 +1189,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   names) are in `docs/agent/translations.md` ("Rules for translating").
 - Left: Solstice filters, Rest Note, Asset Library, Vision ML, GPU, Layer
   Comps, Transform Tool (286 strings).
+
+## 2026-10-16 translation: zh_CN batches 3-9 (filters, Rest Note, Asset Library, Vision ML, GPU, Layer Comps, Transform Tool)
+
+- Translated the Solstice filters (127), Rest Note (38), Asset Library (34)
+  and Vision ML (34) strings: catalog 10,379 translated, 30 fuzzy, 23
+  untranslated; no previous translation changed. `msgfmt --check` and
+  `ninja pofiles` passed; `krita.mo` installed. Not checked in the
+  interface yet.
+- Filter names Solstice added stay in English (including Background
+  Removal); the list is in `docs/agent/translations.md`.
+- Then batches 7-9: GPU settings and messages (24), Layer Comps (15),
+  Transform Tool / Puppet Warp (14). The `zh_CN` catalog is complete:
+  10,432 translated, 0 fuzzy, 0 untranslated; `msgfmt --check` and
+  `ninja pofiles` passed; `krita.mo` installed.
