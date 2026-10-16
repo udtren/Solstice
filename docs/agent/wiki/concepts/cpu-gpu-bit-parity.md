@@ -8,7 +8,7 @@ sources:
   - libs/image/gpu/KisGpuTransformWorker.*, libs/image/gpu/KisGpuGridWarpWorker.*
   - libs/image/tests/KisGpuPaintDeviceTest.cpp (testGpuTransformMatchesCpu, testGpuLiquifyMatchesCpu, testGpuGaussianMatchesCpu)
   - libs/gpu/shaders/separable_convolution.comp (phase 4.98, tolerance-based)
-  - libs/gpu/shaders/composite_blend.glsl (phase 4.107: roundedProduct, exactQuotient, mul3, HSX modes)
+  - 'libs/gpu/shaders/composite_blend.glsl (phase 4.107: roundedProduct, exactQuotient, mul3, HSX modes)'
   - libs/pigment/KoColorSpaceMaths.h (KoColorSpaceMathsTraits<T>::compositetype)
 related:
   - krita-copy-semantics.md

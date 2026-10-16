@@ -38,7 +38,9 @@ Document ownership and lifecycle are defined in
   - `queries/`: saved answers to questions that are likely to come up again.
 - **Frontmatter** on every page: `type`, `updated` (YYYY-MM-DD), `sources`
   (commits, `path:line` or symbols, documents, external URLs) and `related`
-  (other wiki pages). History pages carry `status` instead of `updated`,
+  (paths to other wiki pages, relative to the containing page). Quote source
+  strings containing `: ` so YAML does not interpret them as mappings.
+  History pages carry `status` instead of `updated`,
   and no `related`. All history pages are listed here; the GPU phase section
   index also lives in `docs/agent/gpu-engine.md`.
 - **Names:** lowercase-hyphenated file names; one topic per page; update a
@@ -58,7 +60,9 @@ Document ownership and lifecycle are defined in
 - **Lint** (periodically, or when asked): check that referenced files and
   symbols still exist, benchmarks are not stale, pages do not contradict
   `AGENTS.md` or the feature documents, and every page is listed here. Log
-  the pass.
+  the pass. Run the [automated navigation/schema checks](../documentation.md#automated-checks)
+  locally; the same checks run on PRs. Source accuracy and dated evidence
+  still need review.
 
 ## Pages
 
