@@ -84,3 +84,11 @@ when summarizing algorithms. Preserve different alpha/LOD rules per feature,
 and distinguish queued widget callbacks from worker-thread execution. Archiving
 a delivered implementation's plan does not complete its pending artwork/UI
 verification or authorize an optional control from the proposal.
+
+The subsequent consistency audit found stale claims outside the extracted
+plans: the [trial-build guide](../../../test-builds.md) still excluded Python
+plugins, and [Color Reference](../../color-reference.md) described no callbacks
+despite its later deferred file-drop import. Follow cross-document consumers
+and later implementation changes, not only the original plan. Scope
+[dependency observations](../concepts/qt-numeric-and-geometry.md) to the build
+and date they describe; local measurements do not identify CI dependencies.

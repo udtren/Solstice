@@ -1403,3 +1403,28 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Validation: archival-body comparison, local Markdown links and headings,
   wiki metadata/index coverage and `git diff --check`. Documentation only;
   no native build, installation or new interactive verification is claimed.
+
+## 2026-10-16 documentation: cross-document consistency audit
+
+- Audited current documentation navigation and searched the user/agent guides
+  for obsolete branch/profile paths, release/version claims, build limitations,
+  pending checks and expired handoff wording. Compared identified discrepancies
+  with maintained references, release records and the relevant source paths.
+- Corrected [trial-build instructions](../../test-builds.md): Python support
+  is included, artifact names carry a run number, and published downloads are
+  separate from expiring Actions artifacts. Checked the workflow and build
+  script against the existing package verification records.
+- Reconciled [Color Reference](../color-reference.md)'s synchronous processing
+  description with its widget-bound deferred import callback; replaced the
+  expired commit/ingest handoff with release provenance. Interactive acceptance
+  remains pending. The source still uses `QTimer::singleShot(0, this, ...)`.
+- Scoped [Qt observations](concepts/qt-numeric-and-geometry.md) to the recorded
+  local version; corrected wiki index descriptions and removed the duplicate
+  current-release number from [Versions](../../versioning.md).
+- Added the review lesson to [the documentation decision](decisions/documentation-source-of-truth.md)
+  and the [maintenance checklist](../documentation.md). Historical bodies and
+  dated test/benchmark results are unchanged. This pass is not an exhaustive
+  source-level audit of every feature or new native/interactive verification.
+- Validation: 121 Markdown files, 833 local references (including 167 heading
+  references), wiki metadata/index coverage and `git diff --check` passed.
+  All files under `wiki/history/` remain unchanged.

@@ -79,6 +79,10 @@ downloads and links to the guides; its release procedure is in
 
 1. Determine the owner of each changed fact. Update it and repair conflicting
    summaries; prefer replacing repeated facts with links.
+   For cross-document audits, check user guides as well as technical references:
+   search for obsolete build limitations and session handoffs, and scope
+   dependency observations to their build/date. Record the audit's scope;
+   navigation checks alone are not a feature-by-feature implementation audit.
 2. Keep behavior, user guidance and implementation notes in the same PR when
    behavior changes. A documentation-only correction does not imply a new
    build, installation or interactive verification.
