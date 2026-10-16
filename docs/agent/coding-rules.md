@@ -30,8 +30,8 @@ Global policy (branch, documentation, Android removal) is in `AGENTS.md`.
 - For **existing upstream files**, format only the lines you changed
   (`clang-format --lines=<start>:<end>` or `git clang-format`). Whole-file
   formatting of upstream files reorders includes and rewraps unrelated code,
-  producing large diffs that make upstream synchronization with `krita/6.0`
-  harder (this has already happened in `krita/main.cc` and
+  producing large diffs that obscure reviews and selective patch intake
+  (this has already happened in `krita/main.cc` and
   `libs/ui/KisApplication.cpp`).
 - Never format vendored code (`3rdparty*`, `plugins/visionml/thirdparty/`).
 - Run `git diff --check` on touched files.
@@ -47,8 +47,12 @@ Global policy (branch, documentation, Android removal) is in `AGENTS.md`.
 
 ## Configuration and persistence
 
-- `kritarc` location: `%LOCALAPPDATA%\kritarc`. Access through
-  `KisConfig(true)` (read) / `KisConfig(false)` (write), or `KConfigGroup`.
+- Access the active profile through `KisConfig(true)` (read),
+  `KisConfig(false)` (write), or `KConfigGroup`. Solstice normally stores
+  `kritarc` in `%APPDATA%\Solstice\config\`; use `KisSolsticePaths` when a
+  resolved path or named config is needed. The legacy Krita location is an
+  import source, not the active Solstice configuration. See
+  [Settings location](settings-location.md) for fallbacks and test profiles.
 - New custom global keys use the `Solstice/` prefix
   (e.g. `Solstice/ColorPickFromAnywhere`). Feature-specific groups documented in
   each feature's agent document take precedence.
@@ -58,8 +62,11 @@ Global policy (branch, documentation, Android removal) is in `AGENTS.md`.
   schemes (filter ids, transform args XML, dock ids, action names) is a
   compatibility contract. Changing it requires explicit user approval and
   backward-compatible reading.
-- Per-user data files belong under `%APPDATA%\krita\<feature>\`
-  (`KoResourcePaths` / `QStandardPaths`), not next to the executable.
+- Per-user data belongs in the Solstice profile. Use `KisSolsticePaths` and
+  the feature's documented resource/config helpers, not a hard-coded stock
+  Krita directory or unredirected `QStandardPaths` location. Preserve existing
+  resource-directory overrides and legacy import behavior; see
+  [Settings location](settings-location.md).
 
 ## Image model, undo, and threading
 
@@ -118,5 +125,7 @@ Global policy (branch, documentation, Android removal) is in `AGENTS.md`.
   inspection artifacts and are not built. Edit the `.ui` file, not the `.py`.
   Do not delete them unless the user asks. (Upstream `pykrita` `_ui.py` files are
   real Python sources.)
-- `po/`, `pch/`, `winquirks/`, vendored third-party code.
+- `pch/`, `winquirks/`, vendored third-party code.
+- Solstice maintains `po/`; catalog changes follow
+  [Translations](translations.md), including new/changed user-visible strings.
 - Unrelated user changes in the working tree.

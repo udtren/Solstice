@@ -1257,6 +1257,26 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   commits do not replace or move it. Website publication follows the release
   using `develop` and a pull request into the website's `main`.
 
+## 2026-10-16 documentation ownership and role cleanup
+
+- Recorded [repository-owned documentation](decisions/documentation-source-of-truth.md):
+  originals stay with the code. Added the [maintenance rules](../documentation.md)
+  and [agent guide](../README.md), distinguishing current references, mixed
+  plan/references, superseded proposals and history.
+- Replaced AGENTS' duplicated feature progress with stable links. Corrected
+  active configuration/resource guidance, translation-catalog ownership,
+  menu-editing guidance, the process check and inherited upstream-merge advice;
+  aligned both README download links with beta.8.
+- Preserved the expired GPU handoff and accumulated per-phase source inventory
+  as indexed archives. Extracted the Brush Stroke Preview maintenance contract
+  from its original design, corrected its cache path against
+  `KisBrushStrokePreviewCache.cpp`, and retained dated verification evidence.
+- Validation: local document/image targets and heading references checked;
+  wiki metadata and index coverage checked; all three archived bodies compared
+  against the source revision (only relocation links adjusted). `git diff
+  --check` passed. Documentation only: no new native build or interactive
+  verification is claimed. No site generator or publication was introduced.
+
 ## 2026-10-16 Clone Layer measurements and GPU copy (phase 4.110)
 
 - Added [Clone Layer updates](benchmarks/clone-layer-updates.md): a source
