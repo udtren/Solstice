@@ -1501,3 +1501,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   boxes: an upstream bug (`commitChanges()` without a stroke), visible
   because Solstice shows safe asserts that release Krita hides. Fixed in
   `kis_tool_move.cc` (feature inventory, "Undocumented custom changes").
+
+## 2026-10-16 Partial-tile projection clears on the GPU (phase 4.111)
+
+- Phase 4.111: `KisAsyncMerger::setupProjection()` hands unaligned clears of
+  GPU-resident projections to `KisGpuMergeBatch::deferClear()`; the first
+  GPU composite fills the rect with the default pixel
+  (`docs/agent/gpu-engine.md`). The next phase number is 4.112.
+- [Clone Layer updates](benchmarks/clone-layer-updates.md): new "after
+  phase 4.111" tables; unaligned dabs without masks download nothing and
+  take about 0.2-0.4 ms per dab.
+- Recorded in the history page: an adjustment layer as the first leaf reads
+  the projection on the CPU right after `setupProjection()` (the merger's
+  flush for it comes before), so that case keeps the CPU clear.
+- `clone-layer.md` remaining candidate 1 marked done.

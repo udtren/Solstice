@@ -11,7 +11,7 @@ diary are preserved in the
 
 Initially extracted on 2026-10-16 at
 `cc2445cc4a521d58ae0904079ee67354667b3eb6` (through 4.109), then updated
-for the integration of PR #5 (4.110). Follow
+for the integration of PRs #5/#7 (4.110/4.111). Follow
 [the branch policy](../../AGENTS.md#branch-policy) for new work.
 Later work in other checkouts/branches must be reconciled when it merges;
 this page neither imports it nor marks its manual checks complete.
@@ -33,10 +33,12 @@ old ordering as a prohibition against already-delivered work.
 
 ## Remaining candidates and acceptance
 
-Offset Clone Layer GPU copies (4.110) are delivered and user-checked on
-2026-10-16. [Clone Layer](clone-layer.md) owns the conditions and remaining
-candidates, including partial-tile projection clears; detailed measurements
-stay in its linked benchmark page.
+Offset Clone Layer GPU copies (4.110) and partial-tile projection clears
+(4.111) are delivered and user-checked on 2026-10-16.
+[Clone Layer](clone-layer.md) owns the copy conditions and remaining
+candidates; [projection clears](gpu-engine.md#partial-tile-projection-clears-phase-4111)
+owns deferred-clear and CPU-reader behavior. Detailed measurements stay in
+the linked benchmark page.
 
 1. **Close outstanding failure/save UI verification.** The archived phase plan
    records automated coverage but leaves interactive dialog acceptance pending.

@@ -140,7 +140,7 @@ Document ownership and lifecycle are defined in
   Gaussian blur and other filters on a 2480x3508 RGBA32F layer.
 - [Clone Layer updates](benchmarks/clone-layer-updates.md): update time and
   GPU downloads per dab for clone offsets, masks, RGBA8/F32 and nesting,
-  before and after phase 4.110.
+  before and after phases 4.110 and 4.111.
 
 ### History
 

@@ -13,11 +13,13 @@
 
 #include <kis_debug.h>
 
+#include <KoColor.h>
 #include <KoColorModelStandardIds.h>
 #include <KoColorSpace.h>
 
 #include "KisGpuEngineSettings.h"
 #include "kis_abstract_projection_plane.h"
+#include "kis_default_bounds_base.h"
 #include "kis_image.h"
 #include "kis_layer.h"
 #include "kis_layer_projection_plane.h"
@@ -100,7 +102,7 @@ KisGpuMergeBatch::KisGpuMergeBatch() = default;
 
 KisGpuMergeBatch::~KisGpuMergeBatch()
 {
-    KIS_SAFE_ASSERT_RECOVER_NOOP(m_entries.isEmpty() && "GPU merge batch destroyed without flush()");
+    KIS_SAFE_ASSERT_RECOVER_NOOP(m_entries.isEmpty() && !m_clearPending && "GPU merge batch destroyed without flush()");
 }
 
 bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP projection, const QRect &rect)
@@ -166,7 +168,7 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
         return false;
     }
 
-    if (!m_entries.isEmpty() && (m_projection != projection || m_rect != rect)) {
+    if ((!m_entries.isEmpty() || m_clearPending) && (m_projection != projection || m_rect != rect)) {
         flush();
     }
 
@@ -189,42 +191,94 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
 #endif
 }
 
-void KisGpuMergeBatch::flush()
+bool KisGpuMergeBatch::deferClear(KisNodeSP node, KisPaintDeviceSP projection, const QRect &rect)
 {
-    if (m_entries.isEmpty()) {
+#ifdef HAVE_KRITA_GPU_ENGINE
+    if (!projection || rect.isEmpty() || tileAligned(rect) == rect || !mayCompositeOnGpu(node)) {
+        return false;
+    }
+    // The wrapped strategy splits clears at the wrap rect; composite() does not.
+    if (projection->defaultBounds()->wrapAroundMode() || projection->x() % TileSize || projection->y() % TileSize
+        || !KisGpuTileAccess::isSupported(projection)) {
+        return false;
+    }
+
+    if (!m_entries.isEmpty() || m_clearPending) {
+        flush();
+    }
+    m_projection = projection;
+    m_rect = rect;
+    m_clearPending = true;
+    return true;
+#else
+    Q_UNUSED(node);
+    Q_UNUSED(projection);
+    Q_UNUSED(rect);
+    return false;
+#endif
+}
+
+void KisGpuMergeBatch::flush(bool cpuReadsNext)
+{
+    if (m_entries.isEmpty() && !m_clearPending) {
         return;
     }
 
     bool done = false;
 #ifdef HAVE_KRITA_GPU_ENGINE
-    QVector<KisGpuProjectionCompositor::Layer> layers;
-    for (const Entry &entry : m_entries) {
-        KisGpuProjectionCompositor::Layer layer;
-        layer.device = entry.device;
-        layer.op = KisGpuBlendOp(entry.op);
-        layer.opacity = entry.opacity;
-        layer.alphaLocked = entry.alphaLocked;
-        layer.channelMask = entry.channelMask;
-        layers << layer;
-    }
+    if (!m_entries.isEmpty() || !cpuReadsNext) {
+        QVector<KisGpuProjectionCompositor::Layer> layers;
+        if (m_clearPending) {
+            // A replace layer without tiles sets the rect to its default pixel.
+            KisGpuProjectionCompositor::Layer clear;
+            clear.device = clearSource();
+            clear.replace = true;
+            layers << clear;
+        }
+        for (const Entry &entry : m_entries) {
+            KisGpuProjectionCompositor::Layer layer;
+            layer.device = entry.device;
+            layer.op = KisGpuBlendOp(entry.op);
+            layer.opacity = entry.opacity;
+            layer.alphaLocked = entry.alphaLocked;
+            layer.channelMask = entry.channelMask;
+            layers << layer;
+        }
 
-    QString error;
-    done = KisGpuProjectionCompositor::composite(m_projection, m_rect, layers, &error);
-    if (done) {
-        s_gpuCompositeCount++;
-    } else {
-        warnImage << "GPU projection failed, compositing on the CPU:" << error;
+        QString error;
+        done = KisGpuProjectionCompositor::composite(m_projection, m_rect, layers, &error);
+        if (done) {
+            if (!m_entries.isEmpty())
+                s_gpuCompositeCount++;
+        } else {
+            warnImage << "GPU projection failed, compositing on the CPU:" << error;
+        }
     }
 #endif
 
-    if (!done) {
+    if (!done && m_clearPending) {
+        m_projection->clear(m_rect);
+    }
+    if (!done && !m_entries.isEmpty()) {
         KisPaintTrace::link("path.projection.cpu_fallback", this, KisPaintTrace::currentFlow());
         compositeOnCpu();
     }
 
     m_entries.clear();
+    m_clearPending = false;
     m_projection = nullptr;
     m_rect = QRect();
+}
+
+KisPaintDeviceSP KisGpuMergeBatch::clearSource()
+{
+    const KoColor defaultPixel = m_projection->defaultPixel();
+    if (!m_clearSource || !(*m_clearSource->colorSpace() == *m_projection->colorSpace())
+        || !(m_clearSource->defaultPixel() == defaultPixel)) {
+        m_clearSource = new KisPaintDevice(m_projection->colorSpace());
+        m_clearSource->setDefaultPixel(defaultPixel);
+    }
+    return m_clearSource;
 }
 
 void KisGpuMergeBatch::compositeOnCpu()
