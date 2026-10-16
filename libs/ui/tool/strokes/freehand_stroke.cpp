@@ -74,7 +74,7 @@ struct FreehandStrokeStrategy::Private
     std::mutex updateEntryMutex;
 
     // Solstice: the stroke recorded for a brush stroke layer
-    // (docs/agent/brush-stroke-layer-plan.md); not copied to level of
+    // (docs/agent/brush-stroke-layer.md); not copied to level of
     // detail clones
     KisBrushStrokeLayerSP recordingLayer;
     QSharedPointer<KisRecordedBrushStroke> recording;

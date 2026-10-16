@@ -1,239 +1,69 @@
-# GPU Engine — agent development notes
+# GPU Engine — maintenance reference
 
-Design document and technical reference for moving Solstice's image engine
-(compositing, filters, transforms, and painting) from the CPU to Vulkan
-compute on the GPU. User-facing status is in `docs/gpu-engine.md`.
+This document owns the current GPU architecture, compatibility, failure handling,
+source map and regression checks. See the [user guide](../gpu-engine.md) for
+workflows and visible limitations, and [work priorities](gpu-work-priorities.md)
+for unfinished work and deferred investigations.
 
 ## Status and locations
 
-Where this document says "below" or "details below" about a phase, the
-details are in the phase records, now in the wiki history pages (see
-"Phase history").
+The initial extraction was checked against main at
+`cc2445cc4a521d58ae0904079ee67354667b3eb6` on 2026-10-16. Phases 4.110
+and 4.111 are integrated from PRs #5/#7; tests and recorded user acceptance are in
+[Clone Layer](clone-layer.md). Work in another checkout is not included until
+merged; documentation changes alone do not establish interactive acceptance.
 
-- Branch: `krita-sol-gpu`, created from `krita-sol` at `890aadc2ba`; since
-  2026-10-13 development continues on `main`, created from it.
-  Upstream Krita synchronization is intentionally abandoned on this branch.
-- GPU brush on by default since 2026-10-10 (`Solstice/GpuBrush`, default
-  true, read once per process; `KRITA_GPU_BRUSH` 1/0 overrides), after the
-  input-to-display re-baseline (about 5 ms against 18–22 ms on the CPU;
-  `gpu-work-priorities.md`). The CPU brush's minimum update period went from
-  10 ms to 0 (adaptive period kept; `KRITA_CPU_BRUSH_MIN_UPDATE_MS`), and the
-  stroke's first update and the after-batch re-check (4.88, 4.89) apply to
-  every path. GPU dab descriptions are decided once per stroke
-  (`KisBrushOpResources::gpuDabs`) instead of reading the environment for
-  every dab (see `gpu-work-priorities.md`, 2026-10-10).
-- Masking brush on the GPU (phase 4.101, 2026-10-10; section "Masking
-  brush"): RGBA32F strokes with a masking brush in one of the ten modes
-  without strength use the GPU brush; the masking composite runs on the GPU
-  (`KisGpuMaskingWorker`), bit-identical to the CPU; RGBA16F strokes too
-  since phase 4.106 (2026-10-12). The ten modes are all the masking brush
-  offers (`KisMaskingBrushCompositeOpFactory::supportedCompositeOpIds()`;
-  the strength modes are for textures only). Other masked strokes
-  (no shaderFloat64, `KRITA_GPU_MASKING=0`, LOD) stay on
-  the CPU brush with a CPU Wash preview and merge
-  (`KisIndirectPaintingSupport::temporaryTargetPaintedOnCpu()`).
-- Textured dabs on the GPU (phase 4.102, 2026-10-11; section "Textured
-  dabs"): RGBA32F circle dabs with a pattern texture in one of the 14
-  alpha-only modes are generated and textured on the GPU; Lightness,
-  Gradient, sharpness and RGBA16F stay on the CPU (RGBA16F: phase 4.105).
-- RGBA16F image tips and textures on the GPU (phase 4.105, 2026-10-11;
-  section "RGBA16F image tips and textures").
-- Every other blend mode except Dissolve, Marker, Destination In/Atop and
-  Divisive Modulo (and its Continuous variants) on the GPU (phase 4.108, 2026-10-13; section "All
-  other blend modes").
-- Remaining blend modes on the GPU (phase 4.107, 2026-10-12; section
-  "Remaining blend modes"): RGBA16F brushes in every GPU blend mode, and the
-  HSI/HSL/HSV families plus HSY Tint and Increase/Decrease
-  Saturation/Luminosity for layers and brushes in both formats.
-- Image tip dabs on the GPU (phase 4.103, 2026-10-11; section "Image tip
-  dabs"): RGBA32F dabs of predefined (GBR, PNG, SVG, ABR) tips in alpha-mask
-  mode are generated on the GPU, also textured; the CPU now transforms
-  image tips with the same deterministic code instead of QPainter (at most
-  one 8-bit step from upstream Krita). Phase 4.104 (2026-10-11): the image
-  stamp (colour), Lightness map and Gradient map applications too.
-- Phase: **4 (brush prototype), opt-in; phases 4.1–4.5 manually checked,
-  phases 4.6 and 4.8 add brush-job and full stroke-strategy coverage.** Phase
-  4.7 is also manually confirmed, with combined four-pass painting recorded
-  for Normal/Alpha Darken, selection and alpha lock. Phase 4.8 batches Wash
-  readbacks; the user confirmed correctness but reported Wash mirror lag
-  (Buildup appeared unaffected). Phase 4.9 accelerates unrestricted Wash
-  preview; the user confirmed improved response near the mirror intersection,
-  but distant mirror lag remains in both Wash and Buildup. Phase 4.10 combines
-  distant passes using sparse destination tiles; the user confirmed large
-  improvements in ordinary Wash and Buildup. Alpha Lock still causes a long
-  delay after pen release in both modes. Phase 4.11 addresses speculative CPU
-  clone readbacks after stroke commits, but did not resolve the reported lag.
-  The user clarified that strokes keep catching up after release at 200-300px
-  and above. Phase 4.12 bounds brush batches by actual source bytes to avoid
-  GPU staging refusals. The user confirmed residual lag and explicitly deferred
-  further large-brush mirror optimization on 2026-10-03 as a rare use case.
-  Retain the tested improvements; do not resume this investigation without a
-  new request. This deferral applies only to this performance issue. Phase 4.13
-  adds GPU Erase dab compositing for unrestricted-channel RGBA32F pixel brushes;
-  the user confirmed the manual eraser check. Phase 4.14 extends unrestricted
-  RGBA32F Wash eraser preview compositing to the GPU; the user confirmed the
-  manual check without issues. Phase 4.15 adds GPU final Wash merging for
-  unrestricted Normal/Erase RGBA32F paint layers; the user confirmed the manual
-  test passed. Phase 4.16 adds selection coverage to Normal/Erase Wash previews
-  and final merges; the user confirmed the manual selection check passed.
-  Phases 4.17-4.19 are implemented together: Wash Alpha Lock, Wash RGB channel
-  restrictions with selections, and CPU-compatible Erase channel handling in
-  both direct and Wash painting. The user confirmed the combined manual check
-  passed. Phases 4.20-4.22 extend the existing separable layer blend modes to
-  direct brush dabs and Wash preview/final merging, including selections and
-  channel restrictions. The user confirmed their combined manual test passed.
-  Phases 4.23-4.25 pipeline brush submissions through three reusable contexts,
-  reuse upload allocations in size buckets and cap their total at 64 MiB.
-  Their combined manual check passed, as confirmed by the user. Phases 4.26-4.28
-  add Linear Burn, Linear Light and Pin Light to float layer compositing,
-  RGBA32F Buildup dabs and Wash preview/final merging; the user confirmed their
-  combined manual check passed. Phases 4.29-4.31 add the separable and HSY blend
-  families described below as one bundle; the user confirmed the combined
-  manual check passed.
-  Phases 4.32-4.33 batch ordinary bulk CPU reads and distinguish initial,
-  CPU-to-GPU transition and resident projection timings (details below).
-  The subsequent manual report identified drawing catch-up with textured
-  brushes at 150px and above; the screenshot also has Masked Brush enabled.
-  Phases 4.34-4.35 address masked-stroke readbacks and staging reallocation
-  pressure, with a new textured/masked full-stroke regression matrix.
-  The user confirmed almost no lag at 150px and acceptable gradual lag above
-  about 250px. Further tuning of that reported case is not currently needed.
-  Phases 4.36-4.37 add per-channel layer projection in F32/F16 and align the
-  established F16 generic blend math with CPU half arithmetic (details below).
-  The user confirmed the combined real-app check passed.
-  Phases 4.38-4.40 reduce CPU-to-GPU transition costs with shared upload
-  allocations, bounded retirement outside the shared lock, and host-cached
-  transfer-only staging. The user confirmed their real-app check passed.
-  Phase 4.41 batches voluntary tile eviction readbacks while retaining busy
-  tiles and GPU-only data after failed transfers. The user confirmed its
-  real-app check passed. Details and checks are below.
-  Phase 4.42 refreshes all README benchmark workloads and ordinary complete
-  strokes on the current build, with a strengthened canvas benchmark.
-  It changes measurement coverage only; no application DLL changes.
-  Phases 4.43-4.45 reduce ordinary-stroke tile costs: GPU COW snapshot copying,
-  whole-tile sharing without readback, and batched partial-clear edge reads.
-  Controlled short-stroke results and regression coverage are documented below;
-  the user confirmed this bundle's real-app test passed.
-  Phase 4.46 adds RGBA16F Normal/Erase Buildup with selections and channel
-  locks; the user confirmed its real-app test passed. Phases 4.47-4.48 add
-  F16 Alpha Darken and Normal/Erase Wash preview/final merge; the user confirmed
-  this bundle passed. Phases 4.49-4.50 extend F16 Buildup/Wash to basic generic
-  modes through Pin Light; the user confirmed this bundle passed. Phases
-  4.51-4.52 add Soft Light SVG, Color Dodge/Burn and HSY color modes in F16
-  Buildup/Wash; the user confirmed the real-app checks passed. Other extended
-  F16 brush modes retain CPU fallback. Phase 4.53 reuses completed projection
-  work contexts first and permits three pending serial submissions; details below.
-  The user confirmed phase 4.53 and the CPU filter/FFT readback bundle
-  (4.54-4.55). Phases 4.56-4.57 batch affine transform and layer-flip readbacks;
-  details and verification are below. Filters and transforms then still
-  executed their calculations on the CPU; phases 4.94, 4.96, 4.97 and 4.98
-  later moved the affine passes, Puppet Warp's mesh rendering, Liquify and the
-  Gaussian convolution to the GPU.
-  Phases
-  0–3 are implemented, including real-app canvas and memory-budget checks;
-  the phase 3.3 dialog checklist remains documented separately. Layer stacks of RGBA float
-  images are composited on the GPU inside `KisAsyncMerger`, directly into
-  GPU-resident projection tiles (3.1), the canvas textures are filled from
-  those tiles on the GPU through a buffer shared with OpenGL (3.2), and the
-  engine has a user setting, document conversion, and failure warnings
-  (3.3). The GPU engine is **on by default** since 2026-10-07: the embedded
-  `krita/data/kritarc` sets `Solstice/GpuEngine=true`, and the code fallback
-  stays off, so tests are unaffected (`docs/agent/settings-location.md`,
-  phase 4). It is set in Preferences → Performance → GPU Engine;
-  `KRITA_GPU_PROJECTION=1/0` overrides it. With it off, Krita's runtime
-  behavior is unchanged.
-- Implementation:
-  - `libs/gpu/` (target `kritagpu`): Vulkan foundation, shaders in
-    `libs/gpu/shaders/`, tests in `libs/gpu/tests/`;
-  - `libs/image/gpu/` (part of `kritaimage`): `KisGpuTileBackend`,
-    `KisGpuTileAccess`, `KisGpuProjectionCompositor`, `KisGpuMergeBatch`;
-    tests `libs/image/tests/KisGpuPaintDeviceTest.cpp`,
-    `KisGpuProjectionTest.cpp`;
-  - `libs/image/tiles3/KisTileGpuState.h`, `KisTileGpuHooksStub.cpp`.
-  - `plugins/paintops/defaultpaintops/brush/tests/KisGpuBrushJobsTest.cpp`:
-    real brush generation, cache and asynchronous update jobs on the image
-    worker scheduler, linked with `kritadefaultpaintops_static`.
-- Hooks in upstream files: `libs/CMakeLists.txt` (`add_subdirectory( gpu )`),
-  `libs/image/CMakeLists.txt` (sources, `kritagpu` link,
-  `HAVE_KRITA_GPU_ENGINE`), `libs/image/tests/CMakeLists.txt`, and the tile
-  engine: `tiles3/kis_tile_data_interface.h`, `kis_tile_data.h`,
-  `kis_tile_data.cc`, `kis_tile.h`, `kis_tile.cc`, `kis_tile_data_store.cc`,
-  `kis_tiled_data_manager.cc` (automatic interleaved/planar bulk readback),
-  `libs/ui/tool/strokes/kis_painter_based_stroke_strategy.cpp` (batch prefetch
-  before CPU masking-brush patch jobs),
-  the merger: `kis_async_merger.h`, `kis_async_merger.cpp`, the scheduler:
-  `kis_updater_context.cpp`, and the canvas: `libs/ui/opengl/KisOpenGLUpdateInfoBuilder.{h,cpp}`,
-  `kis_texture_tile.{h,cpp}`, `kis_texture_tile_update_info.h`,
-  `kis_opengl_image_textures.cpp`, `libs/ui/CMakeLists.txt`,
-  `libs/ui/tests/CMakeLists.txt`, and the user interface (3.3):
-  `libs/ui/KisMainWindow.cpp` (`KisGpuEngineUi::install()` in the
-  constructor, `offerConversion()` in `slotLoadCompleted()`,
-  `confirmSave()` in `saveDocument()`), `libs/ui/dialogs/kis_dlg_preferences.{h,cc}`
-  (`KisGpuEngineSettingsWidget` in the Performance tab),
-  `libs/ui/KisImportExportManager.cpp` (`mayFinishExport()` in
-  `doExportImpl()`), `plugins/impex/libkra/tests/CMakeLists.txt`, and the
-  Gaussian filters (phase 4.98): `libs/image/kis_gaussian_kernel.{h,cpp}`
-  (`runsOnGpu()`, the GPU branch of `applyGaussian()`),
-  `libs/image/filter/kis_filter.{h,cc}` (`prefersSingleCall()`),
-  `libs/ui/tool/strokes/kis_filter_stroke_strategy.cpp`,
-  `plugins/filters/blur/kis_gaussian_blur_filter.{h,cpp}`.
+- The engine accelerates RGBA F32/F16 tiles, layer projection, supported pixel
+  brushes, selected transforms and Gaussian convolution. Unsupported conditions
+  use the CPU. GPU brush painting is on by default; see the settings below.
+- Masking composite, alpha-only textures and all four predefined image-tip
+  applications support both float depths. The mask device itself is painted on
+  the CPU. Per-operation gates and numerical limits are documented below.
+- The engine's historical branch was `krita-sol-gpu`; follow the
+  [repository branch policy](../../AGENTS.md#branch-policy) for new work.
+- Dated implementation results and manual acceptance belong to the
+  [phase history](#phase-history). The original mixed reference, initial CPU
+  survey, phase plan, measurements and opening progress diary are preserved in
+  the [development snapshot](wiki/history/gpu-engine-development.md).
+- The former priority diary is preserved in the
+  [work-order snapshot](wiki/history/gpu-work-priorities-development.md).
+  Old next steps, PIDs and opt-in defaults there are historical.
+- Manual failure-warning/save-dialog acceptance was still pending in the
+  archived phase plan. Retain that outstanding check; automated save tests
+  do not establish interactive acceptance.
 
 ## Decisions approved by the user
 
 | Topic | Decision |
 | --- | --- |
-| Direction | Move the engine as a whole to the GPU. Upstream sync is given up on this branch. |
+| Direction | Move the engine as a whole to the GPU, with CPU fallbacks. Upstream intake follows the global repository policy. |
 | GPU API | Vulkan. |
-| Working color space | RGBA float only (32-bit, optionally 16-bit storage). Other color models (8/16-bit integer, CMYK, Lab, gray) are converted on import/export, not painted in. |
-| Hardware | NVIDIA Blackwell (RTX 50 series, RTX PRO Blackwell) is the only tested target. Other GPUs are untested and have no compatibility guarantee, but nothing Blackwell-specific is required: device selection accepts any GPU with the Vulkan 1.3 features in "Phase 0 technology decisions", and `isBlackwell()` only logs a warning. Docs say "untested", never that other GPUs fall back to the CPU (user decision, 2026-10-14). |
-| Priorities | All of brush latency, many-layer documents, and filters matter; the phase order below is chosen by dependency, not by priority. |
+| Working color space | GPU acceleration supports RGBA F32/F16 only. Other models remain editable on the CPU; opening conversion is optional and undoable (see the feature gate below). |
+| Hardware | NVIDIA Blackwell (RTX 50 series, RTX PRO Blackwell) is the only tested target. Other GPUs are untested and have no compatibility guarantee, but nothing Blackwell-specific is required: device selection accepts any GPU with the Vulkan 1.3 features in "Technology and device requirements", and `isBlackwell()` only logs a warning. Docs say "untested", never that other GPUs fall back to the CPU (user decision, 2026-10-14). |
+| Priorities | All of brush latency, many-layer documents, and filters matter; current work order is maintained in [GPU priorities](gpu-work-priorities.md). |
 | Implementation workflow | Bundle several related implementation tasks and their automated checks into one manual-test handoff, as requested by the user. |
-
-## Current CPU architecture (what is being replaced)
-
-Line numbers refer to `890aadc2ba`.
-
-- **Tiles.** 64x64 pixels (`libs/image/tiles3/kis_tile_data_interface.h:24`).
-  `KisPaintDevice` → `KisPaintDeviceData` → `KisDataManager`
-  (= `KisTiledDataManager`) → `KisTile` → shared `KisTileData` (raw bytes,
-  `pixelSize` from the color space). `KisTileDataStore`, `KisTileDataPooler`
-  (pre-cloning), `KisTileDataSwapper` (LZF swap to a memory-mapped file).
-  Animation frames and LOD planes are separate `KisPaintDeviceData` objects.
-- **Undo.** `KisTransaction` → `KisMementoManager`. Tile-level copy-on-write:
-  `KisTile::lockForWrite` clones shared tile data and registers the old data as
-  a memento (`kis_tile.cc:221`). Undo cost is O(changed tiles).
-- **Projection.** `KisImage` update → `KisUpdateScheduler` →
-  `KisSimpleUpdateQueue` (splits into 512x512 patches) → `KisUpdaterContext`
-  thread pool → `KisAsyncMerger::startMerge` → `KisLayerProjectionPlane::apply`
-  → `KisPainter::bitBlt` → `KoColorSpace::bitBlt` → `KoCompositeOp::composite`.
-  Adjustment layers and filter masks call `KisFilter::process` inside merge
-  jobs.
-- **Composite ops.** `libs/pigment/compositeops`. Over, alpha-darken, and copy
-  for RGBA F32 use xsimd kernels (`KoOptimizedCompositeOpOver128.h`).
-- **Painting.** `FreehandStrokeStrategy` / `KisPainterBasedStrokeStrategy`
-  open a transaction, paint ops render dabs (`KisDabRenderingExecutor`), and
-  `KisPainter::bltFixed` composites them into the indirect-painting temporary
-  target, which is merged into the layer at stroke end.
-- **Filters.** `KisFilter::processImpl(device, rect, config)`, in place on one
-  device; parallelism comes only from patch splitting.
-- **Canvas.** `KisOpenGLImageTextures::updateCache` reads projection bytes per
-  256x256 texture tile, converts them with LCMS to the display profile on the
-  CPU, and uploads them with `glTexSubImage2D`. OCIO runs in the fragment
-  shader. The Windows renderer is desktop OpenGL or ANGLE
-  (`KisOpenGL::OpenGLRenderer`); this machine uses `OpenGLRenderer=desktop`.
 
 ## Target architecture
 
+The implemented integration retains Krita's tile engine, transactions, scheduler
+and OpenGL canvas:
+
+```text
+Canvas and tools (libs/ui)
+  OpenGL uploads shared Vulkan buffers into existing canvas textures
+  KisGpuCanvasUploader / KisGpuGLSharedBuffer
+        |
+Image engine (libs/image)
+  GPU state on KisTileData, projection batches, brush/transform/filter workers
+  Existing CPU paths handle unsupported operations and synchronize stale tiles
+        |
+kritagpu (libs/gpu)
+  Vulkan device, queue/timeline, buffers, tile pool, compute pipelines, interop
 ```
-krita (canvas, tools, dockers)            libs/ui
-   │  OpenGL canvas samples shared textures (KisGpuGLSharedImage)
-   ▼
-GPU image backend (planned)               libs/image  (phase 1+)
-   │  GPU-resident paint devices, undo, projection, strokes, filters
-   ▼
-kritagpu                                   libs/gpu    (phase 0, exists)
-      device, queue, timeline, buffers, tile pool, pipelines, interop
-```
+
+The original CPU survey and proposed shared-image canvas are in the development
+snapshot. Production canvas transfer uses shared buffers; the shared-image
+primitive remains separately available for interop tests.
 
 ### Data model (implemented in phase 1)
 
@@ -279,8 +109,8 @@ it unchanged.
 - Only RGBA F32 (pixel size 16) and RGBA F16 (pixel size 8) devices are
   eligible (`KisGpuTileAccess::isSupported`). The tile engine itself stays
   color-space agnostic; eligibility is checked at the access level.
-- Converting documents in other color models to RGBA float moves to phase 3,
-  together with the user-visible GPU mode switch.
+- Opening-document conversion and its Keep/Ask policies are implemented in
+  `KisGpuEngineUi`; see the feature gate and compatibility sections below.
 
 ### GPU access API
 
@@ -332,8 +162,8 @@ Failure handling:
   `submitAndFinish()` re-checks the state under the residency mutex (which
   the backend also holds while entering the failed state), so work prepared
   before the failure is not submitted and its written tiles keep their
-  previous content. The merger and all other users fall back to the CPU. Phase 3 must surface the
-  loss to the user (and warn before saving).
+  previous content. The merger and all other users fall back to the CPU.
+  `KisGpuEngineUi` surfaces the loss and guards saving (see the feature gate below).
 - Copy-on-write clones made for GPU writes copy the source's CPU buffer, so
   their CPU buffer is never meaningless (it holds what the CPU last had).
 
@@ -363,7 +193,7 @@ composites:
 
 - `KisGpuMergeBatch::tryAdd()` defers a leaf when it is GPU-composable: plain
   `KisLayerProjectionPlane` (no layer style), a supported blend mode, channel
-  flags either empty or RGB with the alpha channel locked, the same RGBA
+  flags empty (all channels) or any four-channel RGBA mask, the same RGBA
   F32/F16 color space as the projection, and a device offset that differs
   from the projection's by a multiple of 64 pixels, inside an image whose
   own color space is RGBA F32/F16 (`mayCompositeOnGpu`; a float group in an
@@ -523,21 +353,16 @@ Continuous and Modulo Continuous ("All other blend modes").
 
 ### Canvas
 
-- The Qt build has **no Vulkan support** (`QT_FEATURE_vulkan -1` in
-  `_install/include/QtGui/qtgui-config.h`), so `QVulkanInstance`/QRhi-Vulkan
-  are unavailable. The OpenGL canvas stays, and Vulkan shares images with it
-  through `GL_EXT_memory_object_win32` / `GL_EXT_semaphore_win32`
-  (`KisGpuGLSharedImage`).
-- The projection is copied (GPU→GPU) into shared canvas textures instead of
-  `readBytes` + LCMS + `glTexSubImage2D`. The LCMS display conversion moves to
-  the GPU (3D LUT or matrix+TRC shader); OCIO stays in the fragment shader.
-- LOD/mipmaps are produced by a GPU downsample pass.
-- Requirement: desktop OpenGL on the same GPU. ANGLE (D3D11) is not supported
-  in GPU mode. Since 2026-10-07 the Windows "Auto" renderer prefers desktop
-  OpenGL when `KisGpuMergeBatch::isEnabled()`
-  (`KisOpenGL::selectSurfaceConfig()`, `preferredAutoRenderer`; ranked after
-  the driver blacklist). `krita/main.cc` falls back to "auto" instead of the
-  upstream "angle" when no renderer is set.
+- Production transfer uses `KisGpuGLSharedBuffer` and the existing OpenGL
+  texture upload path, as detailed in "Canvas from the GPU". Display conversion
+  uses supported identity or matrix/TRC paths; LUT profiles and soft proofing
+  retain CPU conversion. Existing GL texture handling generates mipmaps.
+- Interop needs desktop OpenGL on the Vulkan GPU. ANGLE disables canvas interop;
+  it does not by itself disable Vulkan projection or painting.
+- On Windows, "Auto" prefers desktop OpenGL when
+  `KisGpuMergeBatch::isEnabled()` (`KisOpenGL::selectSurfaceConfig()`,
+  `preferredAutoRenderer`; ranked after the driver blacklist).
+  `krita/main.cc` falls back to "auto" when no renderer is set.
 
 ### Threading and submission
 
@@ -546,7 +371,8 @@ Continuous and Modulo Continuous ("All other blend modes").
 - Stroke and merge jobs keep running on `KisUpdaterContext` threads, but they
   *record* GPU work (per-thread `KisGpuCommandList`) instead of touching
   pixels. Completion is tracked by timeline values, not CPU waits.
-- The GUI thread only performs GL work (acquire/release shared images).
+- The GUI thread imports shared buffers and uploads canvas textures through GL;
+  it must not read the live image while applying a prepared update.
 
 ### Feature gate and user interface (implemented in phase 3.3)
 
@@ -602,6 +428,34 @@ Continuous and Modulo Continuous ("All other blend modes").
   (active device, stopped, enabled but not started, not used, or not built
   with Vulkan).
 
+### Pixel brush integration
+
+- `KisGpuBrushPainter` accelerates supported pixel-brush Buildup dabs and
+  Wash preview/final merge, including selections, channel masks, Erase and
+  mirrors. Alpha Darken with partial channel masks retains CPU fallback.
+  `KisBrushOpResources::gpuDabs` decides description generation once per
+  stroke. Unsupported dabs can still be uploaded as materialized CPU pixels.
+- `Solstice/GpuBrush` defaults to true and is read once per process;
+  `KRITA_GPU_BRUSH=1/0` overrides it. It also requires GPU projection.
+  Do not confuse this gate with the embedded engine default and its false
+  code fallback.
+- Generated circle kinds (default/Gaussian/Soft) and image applications use
+  verification counters before skipping CPU generation (16 successful
+  comparisons per kind/application). Retain materialization, cache reuse and
+  rollback on refused/failed GPU batches.
+- GPU brush submissions use three contexts and a bounded upload pool
+  (64 MiB). Masked strokes that cannot use GPU masking use CPU Wash preview/final merge
+  via `setTemporaryTargetPaintedOnCpu()`; supported GPU masking is below.
+- GPU minimum/start update periods default to -1 (immediate), CPU minimum
+  to 0 with the adaptive period retained. Overrides include
+  `KRITA_GPU_BRUSH_MIN_UPDATE_MS` and `KRITA_CPU_BRUSH_MIN_UPDATE_MS`.
+  The early first update and after-batch retry apply to both paths.
+  Masked GPU strokes keep the adaptive period.
+- Keep full-stroke and asynchronous job coverage (`KisGpuStrokeTest`,
+  `KisGpuBrushJobsTest`, dab queue and freehand stroke tests), not only the
+  compositor microtests. See the phase records for trace evidence and the
+  still-deferred large-brush mirror investigation.
+
 ### Masking brush (phase 4.101)
 
 A brush with a masking brush paints two devices per stroke
@@ -628,7 +482,7 @@ composite ran on the CPU, so masked strokes stayed on the CPU brush.
   uploaded from `KoColorSpaceMaths<quint8, float>::scaleToA` (`KoLuts`).
   Requires `shaderFloat64`.
 - `libs/image/gpu/KisGpuMaskingWorker.*`: `supports(colorSpace, opId)` (GPU
-  brush enabled, RGBA32F, a supported mode, float64, `KRITA_GPU_MASKING` not
+  brush enabled, RGBA F32/F16, a supported mode, float64, `KRITA_GPU_MASKING` not
   `0`); `apply(stroke, mask, dst, rect, opId)` reads the mask bytes, takes
   the stroke ReadOnly and the target ReadWrite (their tile grids must match),
   records, submits and waits. It returns false without changing the devices
@@ -641,23 +495,10 @@ composite ran on the CPU, so masked strokes stayed on the CPU brush.
   union of the rects; on failure it falls back to
   `updateProjection(rc)` per rect.
 - `KisBrushOp`: a masked stroke keeps the GPU brush only when `supports()`
-  holds for the masking composite op. Masked strokes keep the adaptive update
-  period instead of the GPU minimum (4.88): each batch also costs a masking
-  composite and a projection merge, and with CPU-generated (textured) dabs the
-  GPU minimum made about seven times more batches (300px textured masked:
-  113 -> 89 ms; CPU 78 ms, GPU projection only 90 ms).
-  Re-measured after phase 4.102 (textured dabs on the GPU, 2026-10-11):
-  with the GPU minimum period for masked strokes too, masked and dense
-  mirrored rows finished within noise of the adaptive period (for example
-  300px masked textured 36.9 / 35.8 ms, 80px dense mirrored textured
-  30.5 / 29.9 ms) with the same submission counts. The adaptive period
-  stays: it still protects masked strokes whose dabs are generated on the
-  CPU (Lightness or Gradient textures, sharpness, RGBA16F textures).
-- Measurements (`KisGpuStrokeTest`, median of 5, no validation, ms; CPU /
-  GPU projection / GPU brush): masked 300px 51 / 56 / 30; masked 300px
-  textured 78 / 90 / 89; masked 150px 11 / 16 / 13; temporary dense rows
-  (spacing 0.03, both mirrors) 40px 25 / 32 / 29, 40px textured
-  29 / 36 / 36, 80px 39 / 47 / 27, 80px textured 49 / 55 / 41.
+  holds for the masking composite op. It retains the adaptive update period:
+  each batch also costs a masking composite and a projection merge. This protects
+  CPU-generated dabs (Lightness/Gradient textures and sharpness); the dated
+  comparisons that motivated this choice are in the development snapshot.
 - Tests: `KisGpuStrokeTest::testMaskingCompositeMatchesCpu` (all ten modes,
   bit-exact against `KisMaskingBrushCompositeOpFactory`, pixels outside the
   rect kept) and the masked rows of `testTexturedMaskedStroke` (RGBA32F masked
@@ -673,34 +514,26 @@ composite ran on the CPU, so masked strokes stayed on the CPU brush.
   strokes use the GPU brush. Tests: RGBA16F rows of
   `testMaskingCompositeMatchesCpu` (every mode bit-identical, including
   alphas at the half thresholds) and of `testTexturedMaskedStroke`.
-  Measurements (median of 5, no validation, ms; CPU / GPU projection / GPU
-  brush; before, RGBA16F masked strokes had only the CPU brush): 150px
-  23.8 / 19.0 / 13.6, 150px textured 25.7 / 24.2 / 14.3, 300px
-  91.7 / 91.5 / 35.9, 300px textured 129.5 / 132.4 / 36.4.
 - Not covered: LOD previews. (The strength modes, Height, Linear Height and
   their Photoshop variants, are texture modes only: the masking brush never
   offers them, `supportedCompositeOpIds()`; textures run on the GPU since
   phases 4.102 and 4.105.) Painting the mask itself stays on
   the CPU (an alpha device; GPU painting was measured and deferred on
   2026-10-11, `gpu-work-priorities.md`).
-- Manual check reported OK by the user on 2026-10-10.
+- Recorded manual acceptance: F32 on 2026-10-10, F16 on 2026-10-12.
+  See the work-order snapshot; these are past results.
 
 ### Textured dabs (phase 4.102)
 
-Before phase 4.102 a dab with a pattern texture (`KisTextureOption`) was
-generated and textured on the CPU and uploaded as pixels: the texture made
-the dab "postprocessed" (`DabGenerationInfo::needsPostprocessing`), which
-excluded it from GPU descriptions. Textured RGBA32F strokes now describe the
-circle and its texture, and the GPU evaluates both.
+Pattern-textured circle dabs (default, Gaussian, Soft) and supported predefined
+image tips can describe their texture for GPU generation at either float depth.
 
-- Scope: RGBA32F circle auto-brush dabs (default, Gaussian, Soft) whose only
-  postprocessing is a texture in one of the 14 alpha-only modes (Multiply,
-  Subtract, Darken, Overlay, Color Dodge, Color Burn, Linear Dodge, Linear
-  Burn, Hard Mix and Hard Mix Softer (Photoshop), Height, Linear Height, Height
-  and Linear Height (Photoshop)), hard and soft texturing, any strength
-  (pressure). Lightness and Gradient (they change the dab color), sharpness,
-  RGBA16F dabs and predefined (image) tips stay on the CPU (image tips:
-  phase 4.103; RGBA16F: phase 4.105).
+- Scope: the 14 alpha-only texture modes (Multiply, Subtract, Darken, Overlay,
+  Color Dodge, Color Burn, Linear Dodge, Linear Burn, Hard Mix and Hard Mix
+  Softer (Photoshop), Height, Linear Height, Height and Linear Height
+  (Photoshop)), hard/soft texturing and pressure strength. Lightness and Gradient
+  textures and sharpness keep CPU-generated pixels. Image-tip applications named
+  Lightness/Gradient Map are distinct and supported; see the next section.
 - Description: `KisProceduralDabTexture` (`libs/image/KisProceduralCircleDab.h`),
   attached as `KisProceduralCircleDab::texture`: the alpha8 pattern texels
   (`KisTextureMaskInfo::alphaBytes()`, computed once in `recalculateMask()`),
@@ -725,7 +558,7 @@ circle and its texture, and the GPU evaluates both.
   `textureBrushFlips`. `KisRenderedDab::materialize()` renders the circle with
   the brush flips, applies the CPU texture (`CpuApplier`, the real
   `KisTextureOption` code), then mirrors by the remaining flips.
-- GPU: `KisGpuDabCompositor::Circle` grows to 176 bytes (texture and table
+- GPU: `KisGpuDabCompositor::Circle` is 224 bytes including image-tip fields (texture and table
   addresses, origin, size, mode, soft, strength, inverted strength, weight,
   brush flips). The pattern bytes and the 256-entry byte-to-float table
   (`KoColorSpaceMaths<quint8, float>::scaleToA`) are uploaded once per batch
@@ -734,9 +567,8 @@ circle and its texture, and the GPU evaluates both.
   the strength composite functions of `KisMaskingBrushCompositeOp.h` with
   `precise` float operations and double divisions, including qMin/qMax/
   kisBoundFast NaN behaviour.
-- Separate shader builds: the texture code (and the 176-byte Circle
-  fields) is compiled only into `paint_dabs_textured` and
-  `paint_dabs_textured_extended` (`DAB_TEXTURE`, RGBA32F); the compositor
+- Separate shader builds: the texture code is compiled into `paint_dabs_textured` and
+  `paint_dabs_textured_extended` (`DAB_TEXTURE`) and their RGBA16F builds; the compositor
   uses them only for batches with a textured dab, and the untextured
   variants keep their previous source. Pitfall: with the (unused) texture
   code in the existing variants, RGBA16F dabs changed by one half ULP
@@ -748,12 +580,6 @@ circle and its texture, and the GPU evaluates both.
   CPU case; layer and projection against the CPU path, generated, skipped and
   textured-description counters) and the textured rows of
   `testTexturedMaskedStroke` (now expected on the GPU).
-- Measurements (`KisGpuStrokeTest`, median of 5, no validation, ms; CPU /
-  GPU projection / GPU brush): 300px textured Buildup 54 / 62 / 16 (GPU brush
-  57 before); 300px textured Wash 65 / 76 / 19 (53 before); 300px masked
-  textured 85 / 99 / 38 (106 before); temporary dense rows (spacing 0.03,
-  both mirrors, masked, textured) 40px 30 / 38 / 31 (36 before), 80px
-  51 / 57 / 27 (41 before).
 
 ### Image tip dabs (phase 4.103)
 
@@ -818,19 +644,19 @@ vendors), so even the CPU output depended on the machine.
   `Uint8ToFloat(UINT8_MULT(255 - red, alpha))` of the sampled ARGB32 pixel,
   as `KoColorSpaceTrait::fillGrayBrushWithColor()` computes it for RGBA F32
   (no SIMD specialisation exists for float). `render()` uses
-  `KisImageTipSampler::render()`. RGBA32F only.
+  `KisImageTipSampler::render()`; F16 table/rounding rules are described below.
 - `KisBrush::proceduralImageDab()` describes the dab of
   `generateMaskAndApplyMaskOrCreateDab()` (the same pyramid and
   `KisDabShape(scale * d->scale, ratio, -normalizeAngle(rotation +
-  d->angle))`) for alpha-mask brushes without preserve-lightness or a
-  gradient; auto, image pipe (`.gih`) and text brushes are refused (they
+  d->angle))`), including the applications described below;
+  auto, image pipe (`.gih`) and text brushes are refused (they
   generate their dabs differently).
 - Jobs: `buildCircleDab()` tries the image tip when the brush is not an auto
   brush; the description's size must equal the dab bounds. The kind gets its
   own verification counter (`s_verifiedDabs[3]`), so CPU generation is
   skipped after 16 verified image tip dabs; textures (phase 4.102),
   mirroring and materialization work unchanged.
-- GPU: `KisGpuDabCompositor::Circle` grows to 224 bytes (level and row
+- GPU: `KisGpuDabCompositor::Circle` is 224 bytes (level and row
   table addresses, level size, increments, identity flag). The ARGB32 level
   and each dab's row table are uploaded once per batch and distinct pointer,
   with the byte-to-float table. `paint_dabs.comp` evaluates kind 3 only in
@@ -849,12 +675,6 @@ vendors), so even the CPU output depended on the machine.
   (a GBR tip at 48 and 160px, rotation, Wash and Buildup, mirrors, a
   textured row, scale 1; layer and projection against the CPU path,
   generated and skipped counters).
-- Measurements (`KisGpuStrokeTest::testImageTipStroke`, median of 5, no
-  validation, ms; CPU / GPU projection / GPU brush; short 24-segment
-  strokes): 160px Buildup 9.6 / 13.7 / 11.0, rotated 9.9 / 15.8 / 12.5;
-  160px rotated Wash with mirrors 26.2 / 32.2 / 21.8; 120px textured with
-  mirrors 17.9 / 22.0 / 17.4, rotated 19.1 / 26.1 / 17.7; 48px 5.1 / 9.1 /
-  9.3 (no gain at small sizes, like the round dabs).
 - Applications (phase 4.104, 2026-10-11, user request): the image stamp,
   Lightness map and Gradient map tips are described as well
   (`KisProceduralCircleDab::imageApplication`). Each output channel depends
@@ -892,17 +712,12 @@ vendors), so even the CPU output depended on the machine.
     channels bit for bit), `KisGpuStrokeTest::testImageTipStroke` (stamp and
     Lightness rows; the Gradient map needs the canvas gradient, which the
     stroke harness does not provide).
-  - Measurements (`KisGpuStrokeTest::testImageTipStroke`, median of 5, no
-    validation, ms; CPU / GPU projection / GPU brush; 120px, rotated):
-    stamp textured Buildup 26.3 / 29.5 / 10.4, stamp Wash 25.6 / 28.4 /
-    12.8 (the CPU converts every dab's colors), Lightness textured Buildup
-    11.1 / 14.9 / 11.1, Lightness Wash 13.8 / 16.2 / 12.5.
   - Mirrors: dabs of different colors do not commute, and the CPU and GPU
     paths order the reflections of a batch differently, so mirrored colour
     strokes may differ slightly between the paths where dabs overlap
     (unchanged: colour dabs were already painted by the GPU brush as
     uploaded pixels).
-- Not covered: image pipe (.gih) and text brushes (RGBA16F: phase 4.105), image stamps in
+- Not covered: image pipe (.gih) and text brushes, image stamps in
   color spaces whose conversion is not per channel, Gradient maps without a
   gradient, and dabs with other postprocessing (sharpness,
   Lightness/Gradient textures) keep their pixels.
@@ -945,12 +760,8 @@ kept their pixels.
   alpha equals `KisMaskingBrushCompositeOp<half>` on every dab alpha and
   texel bit for bit), and RGBA16F rows of `testImageTipStroke` and
   `testTextureModes`.
-- Measurements (median of 5, no validation, ms; CPU / GPU projection / GPU
-  brush; RGBA16F): image tip 120px Wash with mirrors 55.4 / 43.3 / 19.9,
-  colour stamp 41.8 / 41.4 / 11.6, Lightness map 20.2 / 17.2 / 11.8, 80px
-  textured round (Multiply, hard) 14.7 / 13.1 / 10.7.
-- Still on the CPU: Lightness and Gradient textures, sharpness (RGBA16F
-  masked strokes: phase 4.106, "Masking brush").
+- Still on the CPU: Lightness and Gradient textures, sharpness. RGBA16F
+  masking composite is supported; see "Masking brush".
 
 ### Remaining blend modes (phase 4.107)
 
@@ -991,8 +802,7 @@ kept their pixels.
   of `KisGpuProjectionTest` include every mode; the existing tolerances
   (2e-5 for F32, 1/1024 for F16 dabs) hold. Darker Color with alpha locked
   leaves the stroke test's darker background unchanged on every path.
-- Still on the CPU after this phase: see "All other blend modes (phase
-  4.108)".
+- Current exclusions are listed in "All other blend modes (phase 4.108)".
 
 ### All other blend modes (phase 4.108)
 
@@ -1090,10 +900,8 @@ kept their pixels.
 - Conditions, parity (alpha-0 colors), the reason masked clones stay on
   the CPU, tests and the remaining candidates: `docs/agent/clone-layer.md`.
   Measurements: [Clone Layer updates](wiki/benchmarks/clone-layer-updates.md).
-- Found while measuring, not changed: `KisAsyncMerger::setupProjection()`
-  clears the dirty rect on the CPU, which downloads the partly covered
-  border tiles of GPU-resident projections for rects that are not
-  tile-aligned (all GPU merges). Fixed in phase 4.111.
+- Partial-tile projection clear downloads found during measurement are addressed
+  by phase 4.111 below; CPU fallbacks remain for its excluded conditions.
 
 ### Partial-tile projection clears (phase 4.111)
 
@@ -1137,9 +945,9 @@ kept their pixels.
   0.9999.
 - Measurements: [Clone Layer updates](wiki/benchmarks/clone-layer-updates.md),
   "after phase 4.111".
-- Manual check (checklist item 17): reported OK by the user on 2026-10-16.
+- Manual check (checklist item 18): reported OK by the user on 2026-10-16.
 
-## Phase 0 technology decisions
+## Technology and device requirements
 
 | Topic | Decision | Reason |
 | --- | --- | --- |
@@ -1149,193 +957,64 @@ kept their pixels.
 | Tile storage | Storage buffers addressed by 64-bit device address (`GL_EXT_buffer_reference`), not images. | Any number of tiles per dispatch through address tables; no descriptor sets, layouts, or image transitions; sub-allocation is trivial. |
 | Shader input | Push constants only (addresses + counts). | No descriptor management in the engine. |
 | Shaders | GLSL compute, compiled at build time by the SDK's `glslc` (`--target-env=vulkan1.3 -O -mfmt=num`), included as word arrays (`kis_gpu_add_shader()` in `libs/gpu/CMakeLists.txt`). | No runtime compiler dependency; build fails on shader errors. |
-| Precision | RGBA32F is the default working format; RGBA16F storage is supported with float32 arithmetic. | Parity with Krita's F32 color space; F16 halves bandwidth (measured below). |
-| Display | GL/Vulkan interop with exported memory and binary semaphores, `GL_LAYOUT_GENERAL_EXT`, dedicated allocation, device UUID check. | Qt has no Vulkan; interop keeps the existing canvas, OCIO, and decorations. |
+| Precision | RGBA F32/F16 storage; arithmetic and rounding follow each CPU operation, including double and intermediate half rounding where required. | Preserve operation-specific parity; F16 halves tile storage. |
+| Display | GL/Vulkan shared-buffer interop with exported memory, binary semaphores and device UUID check. | Retain the existing OpenGL canvas, OCIO and decorations; shared-image interop is not the production upload path. |
 | Device choice | Highest score: discrete GPU, then NVIDIA vendor; requires a graphics+compute queue with timestamps. `KisGpuDeviceInfo::isBlackwell()` (NVIDIA device id ≥ 0x2B00) is informational and logs a warning when false. | Blackwell-only target without hard-failing development on other GPUs. |
 | Validation | `KRITA_GPU_VALIDATION=1` enables `VK_LAYER_KHRONOS_validation` plus a debug messenger that counts errors (`validationErrorCount()`). | Tests assert zero validation errors. |
 
-### Parity rule found in phase 0
+### Numerical parity
 
 The color of a pixel whose alpha is exactly 0 is **unspecified** in Krita:
 `KoOptimizedCompositeOpOver128` copies the source color into lanes that stay
 transparent, while the scalar paths keep the old color. GPU parity tests
-compare such pixels by alpha only. Everything else must match `KoCompositeOp`
-within 1e-5 (F32).
+may compare such pixels by alpha only. The initial 1e-5 F32 compositing rule
+is not a universal tolerance: current projection, brush and extended-mode
+suites define their own thresholds above. Transform and generated-dab tests
+include bit-exact checks; FFT-vs-spatial Gaussian convolution uses a tolerance.
+See [parity techniques](wiki/concepts/cpu-gpu-bit-parity.md).
 
-## Phase 0 measurements
+## Transforms and Gaussian convolution
 
-RTX PRO 6000 Blackwell Workstation Edition, driver 596.86, 32-thread CPU,
-RelWithDebInfo. Normal blend of 8 layers of 4096x4096 (16.8 MPix per layer,
-10% of tiles empty, random alpha), `KisGpuEngineTest::benchmarkCompositeStack`:
+These implemented paths are distinct from merely batching CPU readback.
+They require supported RGBA F32/F16 tiles, a healthy backend, `shaderFloat64`,
+LOD 0 and no wrap-around; refusing a path retains CPU processing.
 
-| Path | Time |
-| --- | --- |
-| CPU `KoCompositeOp` (xsimd), 1 thread | 290 ms |
-| CPU `KoCompositeOp`, 32 threads | 82.8 ms |
-| GPU RGBA32F kernel | **1.55 ms** (×53 vs. 32 threads; ≈1.5 TB/s, close to the memory bandwidth limit) |
-| GPU RGBA16F kernel | **0.74 ms** (×112) |
-| Upload of the whole stack (2.1 GB F32, staging → slots) | 39 ms |
-| Readback of the result (268 MB F32) | 6.8 ms |
-| Vulkan → GL shared image round trip | functional, no CPU wait on the GL side |
+- Affine: `KisTransformWorker` plans the two resampling passes;
+  `KisGpuTransformWorker::runPlannedPasses()` uses a temporary device for the
+  first pass and writes the final union for the second, then batches CPU sync
+  before CPU default-tile purging. Fixed-point weights and CPU rounding are
+  reproduced bit for bit. Reduced editing previews remain CPU.
+- Liquify and mesh Puppet Warp: `KisGpuGridWarpWorker` records CPU polygon/copy
+  operations and uses ordered ownership (`atomicMax`) before rendering.
+  Source/destination must differ but match color space, default pixel and
+  offsets. The sampled warp is bit-exact; Puppet Warp's multi-group compositing
+  remains on the CPU and can vary by a few ulps. Preserve the separate
+  [Puppet Warp contract](puppet-warp.md), including preview/final consistency
+  and the unresolved deeply folded-joint limitation. Legacy MLS stays CPU.
+- Gaussian: `KisGaussianKernel::applyGaussian()` calls
+  `KisGpuConvolutionWorker::applySeparable()`. The worker reads a source
+  snapshot, computes horizontal/vertical passes in double into temporary
+  storage, then copies back. Eligibility includes border/channel handling
+  and a minimum source read area (about 180 x 180 pixels); small regions remain
+  CPU. `KisFilter::prefersSingleCall()` avoids splitting suitable large filter
+  applications. Gaussian Blur/High Pass and the blur part of Unsharp Mask
+  benefit; sharpening itself remains CPU.
+- Parity/Undo tests and dated acceptance are in
+  [the transform/filter phase record](wiki/history/gpu-phases-4.93-.md).
+  Affine/Liquify use exact comparisons; Gaussian's approved tolerances are
+  relative 1e-5 F32 and 1e-3 F16 against the FFT CPU path. A measured one-step
+  difference is a result for that workload, not a universal guarantee.
 
-Conclusions:
+## Historical plans and measurements
 
-1. Compositing is memory-bound; the GPU wins by 50–100× once data is resident.
-2. Upload/readback cost far more than the kernel. The engine must keep pixel
-   data **resident on the GPU** and transfer only on load, save, and
-   unported CPU access. A hybrid that uploads per operation would lose most of
-   the gain.
-3. RGBA16F storage halves the kernel time; decide per document later (default
-   F32 for parity).
-
-## Phase 1 measurements
-
-`KisGpuPaintDeviceTest::benchmarkTransfers`, 4096x4096 RGBA F32 device
-(4096 tiles, 256 MiB), wall-clock times including submission and wait:
-
-| Operation | Time |
-| --- | --- |
-| First GPU read (uploads every tile) | 63 ms |
-| GPU read when already resident | 0.7 ms |
-| GPU fill, write-only, in place | 1.6 ms |
-| `readBytes` of stale tiles (one download submission per tile) | 406 ms |
-| `syncToCpu` (256 tiles per submission) | 26 ms |
-| `readBytes` after `syncToCpu` | 20 ms |
-
-Conclusions: residency works as intended (re-reading resident data costs
-almost nothing), and per-tile synchronous downloads are ~15x slower than
-batched ones. Any bulk CPU consumer of GPU-written data must download in
-batches; the canvas must eventually not download at all (phase 3).
-
-## Phase 2 measurements
-
-`KisGpuProjectionTest::benchmarkRefresh`, 4096x4096 RGBA F32 image, 16 full
-layers (Normal/Multiply/Screen/Overlay, 86% opacity), layers already
-GPU-resident, 32 CPU threads:
-
-| Operation | CPU | GPU |
-| --- | --- | --- |
-| Full refresh (`refreshGraphAsync`) | 284 ms | 66 ms |
-| 256x256 update of one layer (`setDirty`), average of 20 | 12.7 ms | 0.88 ms |
-
-The full refresh is bounded by the projection round trip (fill, download,
-`writeBytes` of 16.8 Mpixels): the compositing kernel itself takes a few
-milliseconds. Phase 3 removes that round trip.
-
-## Phase 3.1 measurements
-
-Same benchmark as phase 2 (4096x4096 RGBA F32, 16 layers, 32 CPU threads):
-
-| Operation | CPU | Phase 2 | Phase 3.1 |
-| --- | --- | --- | --- |
-| Full refresh | 253 ms | 66 ms | 42 ms (+ 51 ms if all of it is then read back on the CPU) |
-| 256x256 update of one layer + reading the updated rect (what the canvas does) | 12.0 ms | — | 2.3 ms |
-
-## Phase 3.2 measurements
-
-`KisGpuCanvasUploadTest::benchmarkCanvasUpdate`: producing the canvas
-texture data (`buildUpdateInfo`) for a 4096x4096 RGBA F32 image with
-8 layers, linear sRGB image profile, sRGB display profile. The GPU time
-includes waiting for the GPU to finish; the GL-side texture copies are not
-included (GPU-to-GPU).
-
-| Update | CPU path (download + LCMS) | GPU path |
-| --- | --- | --- |
-| Whole image | 1025 ms | 1.6 ms |
-| 256x256 rect | 4.5 ms | 0.39 ms |
-
-## Phase plan
-
-The order of work after phase 4.57 is set in
-`docs/agent/gpu-work-priorities.md`; record measurements and phase details
-here and keep that document as the ordering reference.
-
-Each phase ends with parity tests against the CPU implementation, validation
-clean runs, and a benchmark entry in this document.
-
-| Phase | Scope | Exit criteria |
-| --- | --- | --- |
-| 0 | `kritagpu` foundation, compositing spike, GL interop spike. | Done (this document). |
-| 1 | GPU residency of `KisTileData`, download on CPU access, GPU copy-on-write with memento registration, deferred slot free, `KisGpuTileAccess`. | Done: `KisGpuPaintDeviceTest` (fill, composite parity, undo/redo, COW isolation, CPU-after-GPU writes, save/load with and without prior sync, F16, slot release, deferred release of in-flight slots, locked tiles, download failure retry and fallback, stale-upload refusal) and the existing tile/paint device/transaction/iterator tests pass. |
-| 2 | Projection on the GPU: batched layer compositing in `KisAsyncMerger`, 11 blend modes, alpha lock, adjustment layers and filter masks as split points, CPU fallback. | Done: `KisGpuProjectionTest` (every blend mode with and without alpha lock, full refresh, partial unaligned updates, adjustment layer, filter mask, F16) matches the CPU projection within the parity criteria, validation-clean with exit code 0; existing merger/projection/walker/layer tests pass with `KRITA_GPU_PROJECTION=1`. |
-| 3.1 | GPU-authoritative projection: in-place GPU compositing, tile-aligned merge job exclusivity, uploads decided at submission, COW clones by GPU copies, batched canvas downloads. | Done: `KisGpuProjectionTest` (incl. projection residency and concurrent updates sharing tiles) and all `libs/image` tests except four unrelated ones pass with and without `KRITA_GPU_PROJECTION=1`. |
-| 3.2 | Canvas from the GPU: projection tiles → display-converted pixels in a Vulkan buffer shared with GL (PBO) → existing `KisTextureTile` uploads without CPU copies; GPU display conversion for matrix-shaper profiles. | Done: `KisGpuCanvasUploadTest` writes the same texture tiles through the CPU and the GPU path and compares them: identical for equal profiles, ≤ 1 half ULP for F32→F16, ≤ 1.2e-4 for matrix-shaper conversions (sRGB/Rec.2020 linear ↔ sRGB TRC, and different white points: LargeRGB/CIE RGB ↔ sRGB; F16 image to an sRGB TRC F16 texture). `testLutProfilesUseCpu` covers the LUT fallback; `testGLImportFailureFallsBackToCpu` runs the GL-import recovery for all those conversion rows (one failed upload, an edge update, and a merged update where one upload is read back and the other uploaded by GL) with the same tolerances. |
-| 3.3 | `Solstice/GpuEngine` gate and Preferences UI; conversion of documents in other color spaces to RGBA float when opened; failure warning, pre-save warning, and no file replacement after a loss during the save. | Code done: `KisGpuProjectionTest::testConvertedDocumentUsesGpu` (F16/F32 conversion targets; an RGBA8 document converted to the target composites on the GPU with an identical 8-bit appearance), `KisGpuPaintDeviceTest::testPersistentDownloadFailureIsReported` (the failure listener fires once for two losses), `KisGpuSaveTest::testLossDuringSaveKeepsTarget` (a `.kra` save that loses the GPU-only projection fails and leaves the target file unchanged; after acknowledging, the save succeeds; fails without the guard). Conversion preferences and dialogs are covered by `KisGpuEngineUiTest` (2026-10-15); the failure/save dialogs still need the manual checklist below. |
-| 3.4 | Bounded image tile pools, idle tile eviction, and normal disk swap for evicted GPU tile data. | Done: low-budget, rollback, concurrency, disk swap, and Undo tests; the user confirmed painting, Undo/Redo, zoom, save and reopen under a 16 MiB tile budget. |
-| 3.5 | Bounded canvas transfer buffers and safe GL/Vulkan retirement; cap idle canvas work contexts. | Done: automated budget/parity/lifecycle tests; the user confirmed correct operation under a 16 MiB canvas budget. Its log confirms budget fallback with interop still enabled. Other transient allocations and stale CPU snapshots remain separate work. |
-| 4.1 | Opt-in RGBA32F Normal/Alpha Darken pixel-brush dab compositing, retaining CPU dab generation. | Sequential brush update job. GPU/CPU parity, COW/Undo/Redo, CPU-after-GPU writes, failed submit, and low-budget rollback tests. Normal and Alpha Darken/Wash manually confirmed, with successful GPU batches in both logs. Full stroke latency remains unverified. |
-| 4.2 | Selection coverage for direct GPU dab compositing. | Soft/inverted/empty selection, translated masks, deselection, CPU fallback, Undo/Redo, and both Alpha Darken variants tested. User confirmed operation; follow-up log confirms Normal with selection on GPU. |
-| 4.3 | Normal-mode alpha and RGB channel locks on GPU dabs. | All 16 channel masks, with/without selection, compared with CPU; transparent RGB, COW, Undo/Redo and fallback covered. User confirmed operation; log confirms Normal with alpha locked on GPU. |
-| 4.4 | GPU compositing for the existing horizontal/vertical mirror passes. | CPU parity for reflection order, shared dab pixels, masks, alpha lock, fractional-axis clipping fallback and mixed CPU/GPU passes. User confirmed operation; logs confirm reflected Normal and Alpha Darken passes, including Normal with selection and alpha lock together. |
-| 4.5 | Combine nearby mirror passes into one submission with immutable shared source pixels. | CPU parity, source immutability, COW/Undo/Redo and preparation/submit fallback tested. Warm benchmarks improved; user confirmed operation. Log confirms combined single-axis painting; four-pass combination remains automatically tested only. |
-| 4.6 | Exercise actual brush generation/cache/update jobs on the image worker scheduler. | 15 integration rows plus init/cleanup passed: CPU/GPU pixels, dirty regions, exact submission counts, mixed fallback, owning-image gate, COW and Undo/Redo. No runtime behavior change. |
-| 4.7 | Clip GPU dabs to the CPU painting regions, including fractional mirror axes. | CPU parity, gaps/empty regions, COW/Undo/Redo, rollback and exact combined submission counts tested. User confirmed operation; real-app log confirms four-pass combination. |
-| 4.8 | Measure complete queued strokes and batch Wash preview/final-merge readbacks. | CPU, GPU projection only, and GPU projection+brush compared through FreehandStrokeStrategy and completed projection. Input/display latency remains separate; see measurements and validation below. |
-| 4.9 | Keep unrestricted Normal RGBA32F Wash preview compositing on GPU. | CPU parity/fallback checks; user reports improved response near mirror intersection, but distant Wash/Buildup lag remains. |
-| 4.10 | Combine distant mirror passes using sparse destination tiles. | CPU parity, no gap allocation, rollback, Undo/Redo and complete distant Wash/Buildup strokes; user confirmed major improvement without Alpha Lock. |
-| 4.11 | Avoid speculative CPU-clone downloads of GPU-only tiles after stroke commits. | Residency/COW and Alpha Lock stroke tests pass; manual lag persisted, later clarified as large-brush drawing catch-up. |
-| 4.12 | Bound ready GPU brush batches by source pixel bytes. | Automated parity, queue and Undo/Redo checks passed. User confirmed residual large-brush mirror lag; further optimization explicitly deferred on 2026-10-03. |
-| 4.13 | Erase dab compositing on GPU for RGBA32F pixel brushes. | CPU parity including hidden RGB, selections, mirrored passes, rollback and Undo/Redo; real brush jobs and complete eraser strokes. User confirmed the manual eraser check. |
-| 4.14 | Keep unrestricted RGBA32F Wash Erase previews on GPU. | CPU preview/final parity including hidden RGB, channel/selection fallback, failed submit, readback limits and complete eraser strokes; user confirmed the manual check without issues. |
-| 4.15 | Final Wash merge on GPU for unrestricted RGBA32F Normal/Erase painting. | CPU parity, COW/Undo/Redo, failed submit, low-budget fallback and tile-aligned parallel final jobs; user confirmed the manual test passed. |
-| 4.16 | Selection coverage for RGBA32F Normal/Erase Wash preview and final merge. | Soft/inverted/moved/empty selections, changing/removing selections, submit fallback and full selected/mirrored strokes; user confirmed the manual check passed. |
-| 4.17 | Normal Wash Alpha Lock on GPU, including selected painting. | Bundled with 4.18-4.19; all channel masks, CPU parity, COW/Undo/Redo and full strokes; user confirmed the combined manual check passed. |
-| 4.18 | Normal Wash RGB channel locks, alone or with Alpha Lock/selection. | Bundled with 4.17/4.19; hidden RGB and channel preservation tested; user confirmed the combined manual check passed. |
-| 4.19 | CPU-compatible Erase channel handling on GPU in Buildup and Wash. | Bundled with 4.17-4.18; CPU Erase ignores channel flags, including Alpha Lock; user confirmed the combined manual check passed. |
-| 4.20 | Separable GPU blend modes for RGBA32F Buildup dabs. | Bundled with 4.21-4.22; CPU pixel parity, ordered mirrors, COW/Undo/Redo and failure tests; user confirmed the combined manual test passed. |
-| 4.21 | The same blend modes for GPU Wash preview and final merge. | Shared shader math, full strokes and GPU-path counters; user confirmed the combined manual test passed. |
-| 4.22 | Selection/channel-lock parity for the added brush modes, including sparse dab tile regions. | All 16 channel masks, hidden RGB, empty/moved/inverted selection, source-region parity and failed-submit recovery; user confirmed the combined manual test passed. |
-| 4.23 | Pipeline brush submissions without a completion wait after each batch. | Three contexts retain in-flight source/mask/table bytes; real blocked-queue parity and CPU-read tests; combined manual check passed (user confirmed). |
-| 4.24 | Reuse brush upload allocations in 256 KiB buckets. | Variable-size dabs reuse existing capacity; completed-work benchmarks include explicit waits; combined manual check passed (user confirmed). |
-| 4.25 | Bound the whole brush staging ring to 64 MiB. | Drain before slot reuse or reclamation; pressure, oversized refusal, failure/CPU fallback and Undo/Redo tests; combined manual check passed (user confirmed). |
-| 4.26 | Linear Burn, Linear Light and Pin Light for RGBA32F/RGBA16F layer compositing. | CPU parity and direct GPU clamp-boundary tests; bundled validation below. |
-| 4.27 | The same three blend modes for RGBA32F Buildup dabs. | Selections, all channel masks, mirrors, COW/Undo/Redo and submit fallback; bundled validation below. |
-| 4.28 | The same three blend modes for RGBA32F Wash previews and final merging. | Selected/restricted preview/final parity and complete strokes; bundled validation below. |
-| 4.29 | Soft Light, Dodge/Burn, Divide, Vivid Light, Hard Mix and related separable modes. | Shared F32/F16 layer and F32 brush shaders; bundled with 4.30-4.31. |
-| 4.30 | HSY Hue/Saturation/Color/Luminosity and Darker/Lighter Color. | Dedicated non-separable alpha/clamp behavior; bundled with 4.29/4.31. |
-| 4.31 | Selection, channel-lock and complete stroke coverage for the new major modes. | Representative Buildup/Wash parity and Undo/Redo; user confirmed the combined manual check passed. |
-| 4.32 | Automatically batch bulk CPU pixel reads and bound explicit prefetch storage. | F32/F16 interleaved and planar reads, padding, sparse/negative/offset regions, batch boundaries and failed-transfer retry. |
-| 4.33 | Separate initial, CPU-to-GPU transition and resident projection measurements. | GPU completion, repeated CPU/GPU medians, actual GPU-path use and full pixel parity checked. |
-| 4.34 | Batch masked-brush stroke readback before parallel CPU mask patches. | Complete masked/textured 150px and 300px strokes match CPU layers/projections and Undo/Redo. |
-| 4.35 | Reuse fitting brush staging contexts under budget pressure. | Two large buffers remain reusable within 64 MiB instead of rotating through repeated third-slot allocations; deterministic context-count and pixel regression. |
-| 4.36 | Individual RGB channel flags for F32/F16 layer projection. | All 16 channel masks, full refresh and partial updates; eight representative blend modes. User confirmed the combined manual check passed. |
-| 4.37 | CPU-compatible half alpha tests and intermediate rounding in established F16 blend modes. | Transparent RGB, near-zero/near-one alpha and Hard Light/Overlay midpoint boundaries; bundled with 4.36. User confirmed the combined manual check passed. |
-| 4.38 | Share projection upload buffers across layers in one submission. | Geometric growth up to 16 MiB chunks; F32/F16 offsets, rollover, oversized uploads, lifetime and failed-submit parity. |
-| 4.39 | Bound automatic retired-resource reclamation and destroy outside its shared lock. | Slow destructors cannot block other retirement; new tile allocation reclaims at most 16 resource entries, explicit flush drains completed entries. |
-| 4.40 | Host-cached memory for transfer-only CPU snapshots. | Original direct shader Upload memory stays unchanged; three-process transition/initial timing and CPU parity checks. |
-| 4.41 | Batch GPU tile eviction under memory pressure. | Up to 256 tiles per batch; F32/F16, mixed sizes, busy locks, failed transfers, actual released bytes and Undo/disk-swap/concurrent eviction checks. |
-| 4.42 | Refresh the performance baseline and validate measured canvas paths. | Three fresh processes per workload, completed GPU work, CPU parity and rejection of silent CPU fallback; ordinary short strokes remain slower than CPU. |
-| 4.43 | Copy retained CPU snapshots directly during GPU COW. | F32/F16 ReadWrite/WriteOnly, submission failure, shared source and Undo/Redo coverage. |
-| 4.44 | Share whole current/old tiles without CPU synchronization in exact/rough copies. | F32/F16 no-download assertions, partial-copy parity, independent later writes and Undo/Redo. |
-| 4.45 | Batch partial-clear edge downloads; discard fully cleared tiles without reading. | Aligned, negative-coordinate, one-row and failed-batch cases; combined stroke comparison below. |
-| 4.46 | RGBA16F Normal/Erase Buildup with per-dab half rounding. | Selections, channel flags, mirrors, async ring lifetime, rollback and complete-stroke checks; F16 Wash remains CPU. |
-| 4.47 | RGBA16F hard/creamy Alpha Darken dabs. | CPU variant parity, fractional flow and masks, async ring lifetime. |
-| 4.48 | RGBA16F Normal/Erase Wash preview and final merge. | Scalar half arithmetic, selection/channel flags, fallback and complete-stroke checks. |
-| 4.49 | RGBA16F basic generic dab modes through Pin Light. | Per-dab half rounding, Exclusion intermediate correction, all channel masks, alpha boundaries and async batches. |
-| 4.50 | RGBA16F basic generic Wash preview/final merge. | Soft selections, all channel locks, CPU fallback, Undo/Redo and actual brush jobs. |
-| 4.51 | RGBA16F extended major dab modes. | Soft Light SVG, Color Dodge/Burn and HSY color modes, with CPU half intermediates. |
-| 4.52 | RGBA16F extended major Wash preview/final merge. | Selection/channel/lifecycle matrix and actual mirrored strokes. |
-| 4.53 | Reuse completed projection contexts before waiting for busy ones. | Three pending serial submissions, oldest-first reuse, queue-gated lifetime/fallback/Undo tests. |
-| 4.54-4.55 | Batch CPU filter inputs/destinations and FFT cache reads. | 24 actual-filter rows, CPU parity and failure/Undo checks; user confirmed real-app operation. |
-| 4.56-4.57 | Batch affine transform and layer-flip readbacks. | F32/F16 exact CPU parity, full/partial transforms, transfer counts, failed download and Undo checks. |
-| 4.58 | Opt-in CPU timeline from input receipt through Qt frame swaps. | Infrastructure in progress; event-to-pixel attribution and real-app baseline remain open. |
-| 4.59 | Stable input/update IDs and per-widget upload/frame command coverage. | Partial lineage only; compressed-input/job/projection attribution remains open. |
-| 4.60 | Scheduled job identities and explicit creation ancestry across worker threads. | Unit/scheduler/stroke regressions pass; batch input sets and projection lineage remain open. |
-| 4.61 | Logical dab requests, cache-hit identity and explicit paint-batch membership. | Queue and stroke regressions pass; dirty/projection/frame dependency chain remains open. |
-| 4.62 | Dirty-group IDs through projection splitting/merging to canvas preparation. | All 28 regression batches reach executed projection; all 21 input-linked real-app batches reach swapped command descendants. |
-| 4.63 | Per-input request audit, stroke-start condition snapshots and tracing-cost check. | Automated checks pass; conditions installed, real-app condition capture pending. Full-region coverage and interactive baseline remain open. |
-| 4.64 | Audit every recorded projection/presentation branch, not only a successful descendant. | Python tests pass; existing real-app capture passes for 21 batches/64 request-producing inputs. Geometric coverage remains open. |
-| 4.65 | Record image-space projection and canvas-notification rectangles; exact LOD-0 containment checks. | 100 regression requests covered by executed walker request regions; no-canvas stage explicitly unverified. Upload/presentation geometry remains open. |
-| 4.66 | Record uploaded patches and logical-widget regions; invalidate pending coverage on view changes. | Automated checks pass; combined real-app capture verifies four condition records, 33 input-linked batches and all 450 upload geometries/swap chains. |
-| 4.67 | Explicit tool input-to-stroke membership and joined per-input recorded checks. | Installed; analysis tests and stroke regressions pass. Combined real-app capture verifies membership for all 106 accepted inputs and joined checks for all 94 request-producing inputs; full latency baseline remains open. |
-| 4.68 | Dirty collection/submission and compressed-update-to-upload geometry. | Installed; 28 ordinary and six masked dirty groups pass; analysis tests 24/24. Combined real-app capture passes for 94 request-producing inputs, 40 input-linked batches and all 472 uploads. |
-| 4 | Brush engine: GPU dab rendering and compositing for the pixel brush (mask generation, alpha darken, indirect painting), then color smudge. | Stroke parity tests; input-to-pixel latency measured lower than CPU. |
-| 5 | Filters and transforms: blur family, levels/curves, Liquify, Transform Tool, Puppet Warp (preview/final parity). Decide fate of remaining paint ops and color models. | Per-filter parity tests; Puppet Warp invariants from `docs/agent/puppet-warp.md` hold. |
-
-Per the user's priority change on 2026-10-06, remaining Blend Mode extensions
-are deferred until after phase 5, as the final item in
-`docs/agent/gpu-work-priorities.md`. Current overhead analysis and GPU dab
-generation retain their earlier priority; existing phase numbers are unchanged.
+The [development snapshot](wiki/history/gpu-engine-development.md) preserves
+the complete phase 0-3 measurement tables and original phase plan.
+[GPU work priorities](gpu-work-priorities.md) owns remaining work.
+For trace procedures and run provenance use
+[paint trace protocol](wiki/history/gpu-phases-4.58-4.81.md) and [baseline runs](paint-trace-baseline-runs.md);
+the [user guide](../gpu-engine.md#current-benchmarks) holds representative
+published results. Historical queued-stroke timings exclude input/display and
+must not be interpreted as current input latency.
 
 ## Build, test, and install
 
@@ -1348,8 +1027,9 @@ cmd.exe /d /s /c "call <krita-dev-root>\env.bat && ctest --test-dir <krita-dev-r
 cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_install.cmake
 ```
 
-- Known failures unrelated to the GPU engine (identical with and without
-  `KRITA_GPU_PROJECTION=1`; not re-checked against a pre-GPU build):
+- Historical test observations from the development snapshot (identical with and without
+  `KRITA_GPU_PROJECTION=1`; not re-checked against a pre-GPU build, and not
+  re-run during this extraction; not a standing waiver for new failures):
   `kis_pattern_test` (PNG pattern load), `kis_transform_mask_test` (1 px
   rect difference), `kis_cage_transform_worker_test` (reference images),
   `KisPaintOpPresetTest` (embedded pattern load).
@@ -1429,7 +1109,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `gpu/KisGpuTileAccess.*` | Public GPU access to device tiles (see above). |
 | `gpu/KisGpuMergeBatch.*` | Batches composites inside `KisAsyncMerger`; eligibility checks; CPU fallback; deferred projection clears (`deferClear()`, phase 4.111). Always compiled; inert without `HAVE_KRITA_GPU_ENGINE`. |
 | `gpu/KisGpuEngineSettings.*` | kritarc keys, the convert policy, GPU color spaces and the conversion target. Always compiled. |
-| `gpu/KisGpuProjectionCompositor.*` | Runs a batch: scratch tiles, layer accesses, dispatch, write-back; per-thread work contexts. `copyShifted()` (phase 4.110) for Clone Layer offsets. |
+| `gpu/KisGpuProjectionCompositor.*` | Composites batches in place into GPU-authoritative projection tiles; layer accesses and reusable work contexts. |
 | `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks. |
 | `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points, `deferClear` in `setupProjection` (phase 4.111). |
 | `kis_updater_context.cpp` | Tile-aligned job exclusivity when `KisGpuMergeBatch::mayCompositeOnGpu`. |
@@ -1545,7 +1225,8 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 
 ## Manual regression checklist
 
-Phase 0 has no user-visible behavior. From phase 3 on:
+Run relevant checks after rebuilding/installing changed components and restarting.
+Record the build, format, workload and result separately from earlier acceptance.
 
 1. Open, display, zoom, rotate, and mirror a multi-layer document in GPU mode.
 2. Paint, undo, redo; compare with the CPU mode result.
@@ -1605,9 +1286,16 @@ Phase 0 has no user-visible behavior. From phase 3 on:
     Hard Overlay, Penumbra A, Easy Dodge, Modulo Shift, Lambert Lighting,
     Behind, Greater, Luminosity SAI and Copy Red; each looks like the CPU;
     Destination In still works (CPU); Undo/Redo.
-16. Clone Layer offsets (phase 4.110): the checks in
-    `docs/agent/clone-layer.md` ("Manual checks").
-17. Partial-tile projection clears (phase 4.111): on an RGBA 32-bit and a
+16. Outstanding failure UI acceptance: with a reproducible test fault, confirm
+    that content loss produces one non-modal warning and stops GPU use. Check
+    Save/Save As/export/save-on-close choices (Save as New File default,
+    Save Anyway, Cancel), a later loss during export preserving the existing
+    target, and the documented autosave/`supportsIO() == false` exclusions.
+    Do not induce a real driver reset or use valuable documents to exercise
+    this check. Record acceptance separately from `KisGpuSaveTest`.
+17. Clone Layer offsets (phase 4.110): the
+    [Clone Layer manual checks](clone-layer.md#manual-checks).
+18. Partial-tile projection clears (phase 4.111): on an RGBA 32-bit and a
     16-bit float image with a background color, a group with several
     layers (one in Multiply, one with a lower opacity) and a filter layer
     at the bottom of another group, paint strokes with the GPU brush and a
@@ -1763,5 +1451,5 @@ Section index:
 - Every GPU blend mode has F16 brush and layer parity coverage since phase
   4.107; phase 4.108 added the rest except the modes listed in "All other
   blend modes", whose results the GPU cannot reproduce.
-- Python scripting (`libkis`) and file export need CPU pixel access; every such
-  call becomes a synchronous download.
+- Python scripting (`libkis`) and file export need CPU pixel access. Accesses
+  to stale CPU tiles download synchronously; already CPU-current tiles do not.

@@ -10,7 +10,7 @@ sources:
   - libs/global/KisSolsticeProfile.cpp
   - docs/agent/translations.md
 related:
-  - decisions/translation-policy.md
+  - ../decisions/translation-policy.md
 ---
 
 # Translation extraction on Windows
