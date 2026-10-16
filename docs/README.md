@@ -13,7 +13,7 @@ Technical notes for developers are in [`agent`](agent/).
 - [Versions](versioning.md): Solstice's version number, and the News area
   of the welcome page.
 - [Interface languages](languages.md): switching the language, and the
-  Simplified Chinese translation. In development.
+  Simplified Chinese translation. Added in **0.2.0-beta.7**.
 - [Explorer thumbnails](windows-shell-thumbnails.md): previews of `.kra`
   and `.krz` files in Windows Explorer.
 

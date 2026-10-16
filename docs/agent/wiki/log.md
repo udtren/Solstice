@@ -1220,3 +1220,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   (context menu, export, `krita.action`, the export warning) from 图层显示方案
   to Layer Comp, matching the docker's newer strings. Catalog still 10,432
   translated; `krita.mo` rebuilt and installed.
+
+## 2026-10-16 release: 0.2.0-beta.7
+
+- Released GitHub Release `v0.2.0-beta.7` (prerelease, commit `53685b8aae`,
+  run 38851516022): the complete Simplified Chinese interface. Package
+  checks in [GitHub Actions](../github-actions.md#simplified-chinese-package-check-2026-10-16);
+  the packaged `zh_CN` catalog is identical to the checked one.
+- README now summarizes beta.7; the guide index marks Interface languages as
+  added in 0.2.0-beta.7.
+- Website: `site.ts` points to beta.7 and the Simplified Chinese pages are
+  published with it (see the website repository's `docs/solstice-site.md`).

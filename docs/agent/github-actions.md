@@ -91,6 +91,25 @@ No broad UI tests or `kis_kra_saver_test` run here. Interactive painting,
 Undo/Redo, save/reload and Vulkan/OpenGL sharing remain manual real-hardware
 checks. No local application restart is required for workflow-only changes.
 
+## Simplified Chinese package check (2026-10-16)
+
+- Run: <https://github.com/udtren/Solstice/actions/runs/38851516022>,
+  commit `53685b8aaeabbfd3295aa1db97edfec574b19c44`, version `0.2.0-beta.7`.
+- All required steps succeeded in about 71 minutes. Artifact
+  `Solstice-windows-x64-21`: both ZIP checksums and CRC checks passed
+  (5,313 application and 220 debug entries).
+- `bin/locale/zh_CN/LC_MESSAGES/krita.mo` is byte-identical to the locally
+  built catalog and contains the new Solstice strings. Qt's own Chinese
+  texts ship as the merged `bin/translations/qt_zh_CN.qm` (210 KB; the
+  dependency install's `qt_zh_CN.qm` is only a 99-byte meta catalog).
+- The packaged `solstice.com --version` printed
+  `krita 0.2.0-beta.7 (git 53685b8)` and exited 0 with a scratch
+  `SOLSTICE_PROFILE_ROOT` and empty legacy profile paths;
+  `solstice.exe` reports `ProductName` Solstice, version
+  `0.2.0-beta.7 (git 53685b8)`.
+- Application ZIP SHA-256:
+  `147f7eddaec472b3b2d9025785db3c1653167ae9f195875252ded55bfb52b364`.
+
 ## Effects, Layer Comps and G'MIC package check (2026-10-16)
 
 - Run: <https://github.com/udtren/Solstice/actions/runs/38833086246>,
