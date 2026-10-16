@@ -199,7 +199,8 @@ void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
         if (currentLeaf->isRoot() || (item.m_position & KisMergeWalker::N_EXTRA)
             || currentLeaf->dependsOnLowerNodes()) {
             KisPaintTrace::Scope trace("merge.gpu_flush", currentLeaf->node().data());
-            m_gpuBatch.flush();
+            // Only the root's recalculation does not read it on the CPU.
+            m_gpuBatch.flush(!currentLeaf->isRoot());
         }
 
         if (currentLeaf->isRoot()) {
@@ -313,7 +314,12 @@ void KisAsyncMerger::setupProjection(KisProjectionLeafSP currentLeaf, const QRec
             m_finalProjection = parentOriginal;
         }
         else {
-            parentOriginal->clear(rect);
+            // GPU engine: clear with the first GPU composite (phase 4.111).
+            // An adjustment layer reads the cleared rect on the CPU next.
+            if (currentLeaf->dependsOnLowerNodes()
+                || !m_gpuBatch.deferClear(currentLeaf->node(), parentOriginal, rect)) {
+                parentOriginal->clear(rect);
+            }
             m_finalProjection = m_currentProjection = parentOriginal;
         }
     }
@@ -355,7 +361,7 @@ bool KisAsyncMerger::compositeWithProjection(KisProjectionLeafSP leaf, const QRe
     // GPU engine: defer supported layers into one GPU dispatch
     if (m_gpuBatch.tryAdd(leaf, m_currentProjection, rect))
         return true;
-    m_gpuBatch.flush();
+    m_gpuBatch.flush(true);
 
     KisPainter gc(m_currentProjection);
     leaf->projectionPlane()->apply(&gc, rect);

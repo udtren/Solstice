@@ -4,6 +4,7 @@ updated: 2026-10-16
 sources:
   - libs/image/tests/KisCloneLayerBenchmark.cpp (opt-in KRITA_CLONE_BENCHMARK=1)
   - libs/image/gpu/KisGpuTileBackend.cpp (downloadedTileCount)
+  - libs/image/gpu/KisGpuMergeBatch.cpp (deferClear, phase 4.111)
   - docs/agent/clone-layer.md
 related:
   - ../concepts/krita-copy-semantics.md
@@ -100,14 +101,64 @@ Tile-aligned dabs (320 px):
 | offset 64,128, transparency mask | 3.03 → 2.81 (24.6 → 24.6) | 3.43 → 2.98 (24.6 → 24.6) | 3.40 → 3.10 (24.6 → 24.6) | 3.76 → 3.23 (24.6 → 24.6) |
 | offset 64,128, blur mask | 37.66 → 36.32 (38.5 → 38.5) | 37.67 → 36.89 (38.5 → 38.5) | 39.02 → 36.84 (38.5 → 38.5) | 38.23 → 36.31 (38.5 → 38.5) |
 
+## GPU engine, RGBA F32: after phase 4.110 → after phase 4.111
+
+Phase 4.111 clears unaligned dirty rects of GPU-resident projections on the
+GPU instead of the CPU (`docs/agent/gpu-engine.md`, "Partial-tile projection
+clears (phase 4.111)"). Same benchmark, one run on 2026-10-16 (GPU rows
+only, `KRITA_CLONE_BENCHMARK_GPU_ONLY=1`). Each cell: median ms after phase
+4.110 → after phase 4.111 (downloads per dab before → after).
+
+256 px dabs (not tile-aligned):
+
+| Clone | layer | layer, depth 3 | group | group, depth 3 |
+| --- | --- | --- | --- | --- |
+| no clone | 1.01 → 0.20 (15.3 → 0.0) | 0.87 → 0.20 (15.3 → 0.0) | 1.78 → 0.23 (30.7 → 0.0) | 1.65 → 0.24 (30.7 → 0.0) |
+| offset 0,0, no mask | 1.95 → 0.25 (30.7 → 0.0) | 1.67 → 0.29 (30.7 → 0.0) | 2.58 → 0.26 (46.0 → 0.0) | 2.26 → 0.31 (46.0 → 0.0) |
+| offset 0,0, transparency mask | 3.88 → 2.61 (55.3 → 24.6) | 3.77 → 2.37 (55.3 → 24.6) | 4.11 → 2.54 (55.3 → 24.6) | 4.17 → 3.28 (55.3 → 24.6) |
+| offset 0,0, blur mask | 7.50 → 6.35 (56.8 → 24.6) | 8.21 → 6.79 (56.8 → 24.6) | 8.15 → 6.61 (56.8 → 24.6) | 8.14 → 6.59 (56.8 → 24.6) |
+| offset 37,23, no mask | 1.82 → 0.33 (33.1 → 0.0) | 1.64 → 0.32 (33.1 → 0.0) | 2.49 → 0.35 (48.4 → 0.0) | 2.48 → 0.35 (48.4 → 0.0) |
+| offset 37,23, transparency mask | 4.28 → 2.40 (57.7 → 24.6) | 4.06 → 2.90 (57.7 → 24.6) | 4.27 → 3.01 (57.7 → 24.6) | 4.38 → 2.64 (57.7 → 24.6) |
+| offset 37,23, blur mask | 10.63 → 9.39 (57.8 → 24.6) | 11.33 → 10.76 (57.8 → 24.6) | 11.65 → 9.70 (57.8 → 24.6) | 11.72 → 9.98 (57.8 → 24.6) |
+| offset 64,128, no mask | 2.25 → 0.30 (36.3 → 0.0) | 2.77 → 0.34 (36.3 → 0.0) | 2.46 → 0.36 (51.7 → 0.0) | 2.49 → 0.40 (51.7 → 0.0) |
+| offset 64,128, transparency mask | 4.42 → 3.07 (60.9 → 24.6) | 4.49 → 2.99 (60.9 → 24.6) | 4.67 → 3.19 (60.9 → 24.6) | 4.80 → 2.86 (60.9 → 24.6) |
+| offset 64,128, blur mask | 15.07 → 14.61 (62.1 → 24.6) | 14.91 → 14.21 (62.1 → 24.6) | 15.16 → 14.49 (62.1 → 24.6) | 15.86 → 14.68 (62.1 → 24.6) |
+
+Tile-aligned dabs (320 px):
+
+| Clone | layer | layer, depth 3 | group | group, depth 3 |
+| --- | --- | --- | --- | --- |
+| no clone | 0.49 → 0.42 (0.0 → 0.0) | 0.44 → 0.42 (0.0 → 0.0) | 0.53 → 0.57 (0.0 → 0.0) | 0.56 → 0.59 (0.0 → 0.0) |
+| offset 0,0, no mask | 0.57 → 0.57 (0.0 → 0.0) | 0.58 → 0.61 (0.0 → 0.0) | 0.67 → 0.80 (0.0 → 0.0) | 0.65 → 0.77 (0.0 → 0.0) |
+| offset 0,0, transparency mask | 2.40 → 2.43 (24.6 → 24.6) | 2.43 → 3.00 (24.6 → 24.6) | 2.82 → 2.62 (24.6 → 24.6) | 2.76 → 3.13 (24.6 → 24.6) |
+| offset 0,0, blur mask | 8.44 → 7.85 (48.4 → 24.6) | 8.71 → 8.22 (48.4 → 24.6) | 8.40 → 8.21 (48.4 → 24.6) | 8.59 → 8.44 (48.4 → 24.6) |
+| offset 37,23, no mask | 1.01 → 0.62 (10.9 → 0.0) | 1.10 → 0.62 (10.9 → 0.0) | 1.12 → 0.67 (10.9 → 0.0) | 1.14 → 0.67 (10.9 → 0.0) |
+| offset 37,23, transparency mask | 3.27 → 2.79 (35.5 → 24.6) | 3.27 → 2.92 (35.5 → 24.6) | 3.23 → 3.32 (35.5 → 24.6) | 3.59 → 3.44 (35.5 → 24.6) |
+| offset 37,23, blur mask | 20.64 → 20.91 (35.5 → 24.6) | 20.98 → 22.14 (35.5 → 24.6) | 20.86 → 21.87 (35.5 → 24.6) | 20.90 → 21.69 (35.5 → 24.6) |
+| offset 64,128, no mask | 0.67 → 0.76 (0.0 → 0.0) | 0.68 → 0.67 (0.0 → 0.0) | 0.80 → 0.93 (0.0 → 0.0) | 0.76 → 0.84 (0.0 → 0.0) |
+| offset 64,128, transparency mask | 2.81 → 3.33 (24.6 → 24.6) | 2.98 → 3.27 (24.6 → 24.6) | 3.10 → 3.98 (24.6 → 24.6) | 3.23 → 3.58 (24.6 → 24.6) |
+| offset 64,128, blur mask | 36.32 → 37.01 (38.5 → 24.6) | 36.89 → 38.00 (38.5 → 24.6) | 36.84 → 39.04 (38.5 → 24.6) | 36.31 → 37.75 (38.5 → 24.6) |
+
 ## Reading
 
 - A clone roughly doubles the update cost on the CPU: its second walker
   recomposites the root (`docs/agent/clone-layer.md`, "Update path").
 - Before phase 4.110, every offset clone downloaded the source tiles under
   the dab on the GPU engine. The GPU copy removes those downloads. The
-  remaining downloads with unaligned dabs come from partial-tile
-  projection clears, which every GPU merge has (the "no clone" row).
+  remaining downloads with unaligned dabs came from partial-tile
+  projection clears, which every GPU merge had (the "no clone" row).
+- Phase 4.111 removes the clear downloads: unaligned dabs without masks
+  download nothing (15.3-51.7 → 0 per dab) and take 0.20-0.40 ms instead of
+  0.87-2.77 ms, now less than the larger tile-aligned dabs. Aligned dabs
+  of an offset clone, whose shifted rect is unaligned, lose their 10.9
+  downloads. Masked clones keep 24.6 downloads per dab, the source tiles
+  their CPU masks read; their unaligned dabs are 0.5-1.9 ms faster. Aligned
+  dabs with a blur mask also drop to 24.6 downloads, without a measurable
+  time change (not verified: presumably the blur's larger rect around the
+  dab is unaligned).
+- The aligned rows otherwise differ by run-to-run noise: up to about 1 ms,
+  about 2 ms in the slow blur rows (single runs, as between the 4.110
+  columns).
 - Masks: the copy stays on the CPU (same numbers before and after). An
   intermediate version that also copied on the GPU for masked clones made
   transparency masks slower (offset 64,128: 3.95 → 5.38 ms, downloads

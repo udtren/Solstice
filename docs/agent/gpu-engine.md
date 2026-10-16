@@ -8,8 +8,8 @@ for unfinished work and deferred investigations.
 ## Status and locations
 
 The initial extraction was checked against main at
-`cc2445cc4a521d58ae0904079ee67354667b3eb6` on 2026-10-16. Phase 4.110
-is integrated from PR #5; its tests and recorded user acceptance are in
+`cc2445cc4a521d58ae0904079ee67354667b3eb6` on 2026-10-16. Phases 4.110
+and 4.111 are integrated from PRs #5/#7; tests and recorded user acceptance are in
 [Clone Layer](clone-layer.md). Work in another checkout is not included until
 merged; documentation changes alone do not establish interactive acceptance.
 
@@ -205,6 +205,12 @@ composites:
   (adjustment layers), `writeProjection()`, and the end of `startMerge()`.
   Adjustment layers and filter masks are therefore split points, and the
   result equals immediate compositing.
+- Since phase 4.111 `KisAsyncMerger::setupProjection()` hands its clear of
+  an unaligned dirty rect to the batch (`KisGpuMergeBatch::deferClear()`):
+  the next composite on that projection and rect starts with a replace
+  layer without tiles, which fills the rect with the projection's default
+  pixel on the GPU. A CPU clear downloaded the partly covered border tiles
+  first. Details: "Partial-tile projection clears (phase 4.111)" below.
 - A flush runs `KisGpuProjectionCompositor::composite()`: one dispatch of
   `composite_layers.comp` iterates over all deferred layers per pixel, inside
   the clip rect only. Layer tiles are read through `KisGpuTileAccess`
@@ -894,10 +900,52 @@ kept their pixels.
 - Conditions, parity (alpha-0 colors), the reason masked clones stay on
   the CPU, tests and the remaining candidates: `docs/agent/clone-layer.md`.
   Measurements: [Clone Layer updates](wiki/benchmarks/clone-layer-updates.md).
-- Found while measuring, not changed: `KisAsyncMerger::setupProjection()`
-  clears the dirty rect on the CPU, which downloads the partly covered
-  border tiles of GPU-resident projections for rects that are not
-  tile-aligned (all GPU merges).
+- Partial-tile projection clear downloads found during measurement are addressed
+  by phase 4.111 below; CPU fallbacks remain for its excluded conditions.
+
+### Partial-tile projection clears (phase 4.111)
+
+2026-10-16, user request (the first remaining candidate of phase 4.110).
+
+- Before: `KisAsyncMerger::setupProjection()` cleared the dirty rect of the
+  parent's projection on the CPU before the children were composited. For a
+  rect that is not tile-aligned, the partly covered border tiles of a
+  GPU-resident projection were downloaded, cleared on the CPU and uploaded
+  again by the composite: about 15 tiles of a 256 px dab per projection and
+  walker (whole-tile clears only drop tiles and download nothing).
+- Now `KisGpuMergeBatch::deferClear(node, projection, rect)` keeps the clear
+  pending. The next batch on the same projection and rect gets a leading
+  replace layer (`KisGpuProjectionCompositor::Layer::replace`) whose device
+  is an empty, cached device with the projection's color space and default
+  pixel; `composite()` already turns a replace layer without tiles into a
+  fill with that pixel. The result equals the CPU clear bit for bit.
+- The clear stays on the CPU when `deferClear()` refuses: GPU projection
+  off, an image that is not RGBA F32/F16 (`mayCompositeOnGpu()`, the same
+  job exclusivity rule as `tryAdd()`), a tile-aligned rect, wrap-around mode
+  (the wrapped strategy splits clears at the wrap rect; `composite()` does
+  not), a projection offset that is not a multiple of 64, or an unsupported
+  device. It also stays on the CPU when the first leaf is an adjustment
+  layer: the top-of-loop flush for `dependsOnLowerNodes()` runs before
+  `setupProjection()`, and the filter reads the cleared rect on the CPU
+  right after it.
+- `flush(bool cpuReadsNext)`: with only a clear pending, the clear runs on
+  the CPU when the caller reads the projection on the CPU next (a CPU
+  composite, an adjustment layer, an `N_EXTRA` leaf), since that read
+  downloads the border tiles anyway; otherwise (root recalculation,
+  `writeProjection()`, end of the pass) on the GPU. A batch whose rect
+  differs from the pending clear's flushes the clear first. If the GPU
+  fails, the CPU clears and then composites the batch. A clear-only batch
+  does not count in `gpuCompositeCount()`.
+- Tests (`KisGpuProjectionTest`): `testUnalignedUpdateDownloadsNothing`
+  (F32, F16; root with an opaque default color and a group; 0 downloads,
+  border tiles GPU-valid and CPU-stale, CPU parity) and
+  `testAdjustmentLayerFirstMatchesCpu` (a blur adjustment layer at the
+  bottom of a group). Without the fix the first test saw 16 downloads per
+  update; without the adjustment-layer rule the second one differed by
+  0.9999.
+- Measurements: [Clone Layer updates](wiki/benchmarks/clone-layer-updates.md),
+  "after phase 4.111".
+- Manual check (checklist item 18): reported OK by the user on 2026-10-16.
 
 ## Technology and device requirements
 
@@ -1059,11 +1107,11 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `tiles3/kis_tile_data_store.cc` | The swapper downloads and evicts idle GPU slots before disk swapping; prepared/in-flight slots are skipped. |
 | `gpu/KisGpuTileBackend.*` | Process-wide context, RGBA32F/RGBA16F pools, downloads, deferred slot release, retired resources. Never destroyed. |
 | `gpu/KisGpuTileAccess.*` | Public GPU access to device tiles (see above). |
-| `gpu/KisGpuMergeBatch.*` | Batches composites inside `KisAsyncMerger`; eligibility checks; CPU fallback. Always compiled; inert without `HAVE_KRITA_GPU_ENGINE`. |
+| `gpu/KisGpuMergeBatch.*` | Batches composites inside `KisAsyncMerger`; eligibility checks; CPU fallback; deferred projection clears (`deferClear()`, phase 4.111). Always compiled; inert without `HAVE_KRITA_GPU_ENGINE`. |
 | `gpu/KisGpuEngineSettings.*` | kritarc keys, the convert policy, GPU color spaces and the conversion target. Always compiled. |
 | `gpu/KisGpuProjectionCompositor.*` | Composites batches in place into GPU-authoritative projection tiles; layer accesses and reusable work contexts. |
 | `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks. |
-| `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points. |
+| `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points, `deferClear` in `setupProjection` (phase 4.111). |
 | `kis_updater_context.cpp` | Tile-aligned job exclusivity when `KisGpuMergeBatch::mayCompositeOnGpu`. |
 | `gpu/KisGpuConvolutionWorker.*` | Phase-4.98 Gaussian convolution: old-data snapshot, one GPU submission into a temporary device, CPU copy into the rect. Called by `KisGaussianKernel::applyGaussian()`. |
 | `gpu/KisGpuMaskingWorker.*` | Phase-4.101 masking brush composite for `KisPainterBasedStrokeStrategy::doMaskingBrushUpdates()`; `supports()` is also used by `KisBrushOp`. |
@@ -1247,6 +1295,14 @@ Record the build, format, workload and result separately from earlier acceptance
     this check. Record acceptance separately from `KisGpuSaveTest`.
 17. Clone Layer offsets (phase 4.110): the
     [Clone Layer manual checks](clone-layer.md#manual-checks).
+18. Partial-tile projection clears (phase 4.111): on an RGBA 32-bit and a
+    16-bit float image with a background color, a group with several
+    layers (one in Multiply, one with a lower opacity) and a filter layer
+    at the bottom of another group, paint strokes with the GPU brush and a
+    CPU-only brush (for example a Sketch brush) across tile borders, inside
+    and outside the groups; erase; Undo/Redo. Nothing is left behind or
+    missing at the stroke edges, and the result looks like the GPU Engine
+    turned off.
 
 ## Phase history
 
@@ -1359,6 +1415,7 @@ Section index:
 - [All other blend modes (phase 4.108)](wiki/history/gpu-phases-4.93-.md#all-other-blend-modes-phase-4108)
 - [Precise contraction audit (phase 4.109)](wiki/history/gpu-phases-4.93-.md#precise-contraction-audit-phase-4109)
 - [Clone Layer offsets (phase 4.110)](wiki/history/gpu-phases-4.93-.md#clone-layer-offsets-phase-4110)
+- [Partial-tile projection clears (phase 4.111)](wiki/history/gpu-phases-4.93-.md#partial-tile-projection-clears-phase-4111)
 
 ## Risks and open questions
 
