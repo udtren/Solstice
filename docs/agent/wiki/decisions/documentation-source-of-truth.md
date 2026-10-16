@@ -38,3 +38,11 @@ final architecture and persistence format. Preserve the complete
 checks, and distinguish past verification from the checks run during extraction.
 A source comment can lag the implementation too; inspect the serializer/replay
 path before carrying its wording forward.
+
+The [ABR import extraction](../../abr-import.md) also distinguishes format-version
+support from the content the loader actually converts. Keep unsupported,
+approximated and unverified behavior separate: synthetic coverage does not
+establish real-file compatibility. State where a parser limit applies instead
+of promoting it to a total memory or safety guarantee. The
+[original results](../history/abr-import-development.md) retain their dates and
+sample scope.

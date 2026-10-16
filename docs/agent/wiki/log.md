@@ -1294,3 +1294,24 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   differ only in comments, with changed-line clang-format checks passing;
   `git diff --check` passes. No native behavior, format or user workflow changed,
   and no new native build, installation or interactive verification is claimed.
+
+## 2026-10-16 documentation: ABR import reference and history
+
+- Extracted [ABR import](../abr-import.md) from the mixed plan after checking
+  parser, collection, converter and storage behavior. Preserved the full
+  286-line original in [development history](history/abr-import-development.md),
+  adjusting only two relocation links; the old plan path remains a pointer.
+- Current references now own final texture/color/scatter mapping, resource
+  identity and reload, folder tags, test scope and pending real-file checks.
+  Aligned the user guide with the implemented 16-bit precision, naming,
+  computed-only-file limitation and non-exhaustive diagnostics. No behavior
+  changed. Source comments now link to the current reference and accurately
+  scope the parser's limits.
+- Extended [the documentation decision](decisions/documentation-source-of-truth.md):
+  separate version support from content coverage, approximations from omissions,
+  and synthetic tests from real-file verification.
+- Validation: original archive body matches after the two link relocations;
+  local links/heading references and wiki metadata/index coverage pass. The
+  seven changed C++ files differ only in comments; changed-line clang-format
+  and `git diff --check` pass. No native build, installation or interactive
+  verification was run for this documentation-only extraction.
