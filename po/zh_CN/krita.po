@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-10-16 12:18+0900\n"
+"POT-Creation-Date: 2026-10-16 12:40+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -8088,9 +8088,7 @@ msgstr "典型色板 - RGB"
 
 #. i18n: Display name of resource, see context: [path-to-resources]/[resource-type]/[resource-filename]
 #: krita/data/palettes/swatche.gpl:2
-#, fuzzy, kde-format
-#| msgctxt "./krita/data/palettes/swatche.gpl"
-#| msgid "Swatches"
+#, kde-format
 msgctxt "./krita/data/palettes/swatche.gpl"
 msgid "Swatches\t"
 msgstr "典型色板 - 常规"
@@ -8120,16 +8118,12 @@ msgstr "打开资源文件夹"
 #. i18n: context: whatsThis @ Action (open_resources_directory), Actions (General), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (open_resources_directory), Actions (General), ActionCollection (Krita)
 #: krita/krita.action:8 krita/krita.action:9
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid ""
-#| "Opens a file browser at the location Krita saves resources such as "
-#| "brushes to."
+#, kde-format
 msgctxt "action"
 msgid ""
 "Opens a file browser at the location Solstice saves resources such as "
 "brushes to."
-msgstr "在文件管理器里打开 Krita 保存笔刷等资源的位置。"
+msgstr "在文件管理器里打开 Solstice 保存笔刷等资源的位置。"
 
 #. i18n: context: text @ Action (windows_cascade), Actions (General), ActionCollection (Krita)
 #: krita/krita.action:19
@@ -8291,12 +8285,10 @@ msgstr "打开/关闭数位板调试器"
 #. i18n: context: toolTip @ Action (buginfo), Actions (General), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (buginfo), Actions (General), ActionCollection (Krita)
 #: krita/krita.action:167 krita/krita.action:169 krita/krita.action:170
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Show Android log for bug reports."
+#, kde-format
 msgctxt "action"
 msgid "Show Solstice log for bug reports."
-msgstr "显示 Krita 安卓日志"
+msgstr "显示 Solstice 日志以用于报告程序缺陷。"
 
 #. i18n: context: text @ Action (sysinfo), Actions (General), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (sysinfo), Actions (General), ActionCollection (Krita)
@@ -11012,12 +11004,10 @@ msgstr "填充图层"
 
 #. i18n: context: text @ Action (add_new_brush_stroke_layer), Actions (Layers), ActionCollection (Krita)
 #: krita/krita.action:2640
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Add &Clone Layer"
+#, kde-format
 msgctxt "action"
 msgid "Add &Brush Stroke Layer"
-msgstr "新建克隆图层(&C)"
+msgstr "新建 Brush Stroke Layer(&B)"
 
 #. i18n: context: toolTip @ Action (add_new_brush_stroke_layer), Actions (Layers), ActionCollection (Krita)
 #: krita/krita.action:2642
@@ -11026,15 +11016,14 @@ msgctxt "action"
 msgid ""
 "Add a new layer that records its brush strokes, so that enlarging the image "
 "draws them again sharply"
-msgstr ""
+msgstr "新建一个记录笔画的图层，放大图像时会重新绘制这些笔画，使其保持清晰"
 
 #. i18n: context: iconText @ Action (add_new_brush_stroke_layer), Actions (Layers), ActionCollection (Krita)
 #: krita/krita.action:2643
-#, fuzzy, kde-format
-#| msgid "Brush Style"
+#, kde-format
 msgctxt "action"
 msgid "Brush Stroke Layer"
-msgstr "笔尖图像模式"
+msgstr "Brush Stroke Layer"
 
 #. i18n: context: text @ Action (add_new_file_layer), Actions (Layers), ActionCollection (Krita)
 #: krita/krita.action:2652
@@ -12698,11 +12687,10 @@ msgstr "导出"
 
 #. i18n: context: text @ Action (dninosores_export_region), Actions (File), ActionCollection (Menu)
 #: krita/kritamenu.action:104
-#, fuzzy, kde-format
-#| msgid "Export..."
+#, kde-format
 msgctxt "action"
 msgid "Export Region..."
-msgstr "导出视频..."
+msgstr "导出区域..."
 
 #. i18n: context: whatsThis @ Action (dninosores_export_region), Actions (File), ActionCollection (Menu)
 #. i18n: context: toolTip @ Action (dninosores_export_region), Actions (File), ActionCollection (Menu)
@@ -12713,14 +12701,15 @@ msgid ""
 "If part of the document is selected, export the selection. If nothing is "
 "selected, export everything in the current layer's bounding box."
 msgstr ""
+"如果文档中有选区，则导出选区内容；如果没有选区，则导出当前图层边界框内的全部"
+"内容。"
 
 #. i18n: context: iconText @ Action (dninosores_export_region), Actions (File), ActionCollection (Menu)
 #: krita/kritamenu.action:107
-#, fuzzy, kde-format
-#| msgid "Exporting"
+#, kde-format
 msgctxt "action"
 msgid "Export Region"
-msgstr "导出"
+msgstr "导出区域"
 
 #. i18n: context: text @ Action (file_export_advanced), Actions (File), ActionCollection (Menu)
 #: krita/kritamenu.action:116
@@ -14719,22 +14708,18 @@ msgstr "设置"
 
 #. i18n: context: text @ Action (options_configure), Actions (Settings), ActionCollection (Menu)
 #: krita/kritamenu.action:1787
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Configure S&hortcuts..."
+#, kde-format
 msgctxt "action"
 msgid "&Configure Solstice..."
-msgstr "配置快捷键(&H)..."
+msgstr "配置 Solstice(&C)..."
 
 #. i18n: context: toolTip @ Action (options_configure), Actions (Settings), ActionCollection (Menu)
 #. i18n: context: iconText @ Action (options_configure), Actions (Settings), ActionCollection (Menu)
 #: krita/kritamenu.action:1789 krita/kritamenu.action:1790
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Configure Shortcuts"
+#, kde-format
 msgctxt "action"
 msgid "Configure Solstice"
-msgstr "配置快捷键"
+msgstr "配置 Solstice"
 
 #. i18n: context: text @ Action (manage_bundles), Actions (Settings), ActionCollection (Menu)
 #: krita/kritamenu.action:1799
@@ -14934,22 +14919,18 @@ msgstr "帮助"
 
 #. i18n: context: text @ Action (help_contents), Actions (Help), ActionCollection (Menu)
 #: krita/kritamenu.action:1945
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Krita &Handbook"
+#, kde-format
 msgctxt "action"
 msgid "Upstream Krita &Handbook"
-msgstr "Krita 使用手册(&H)"
+msgstr "上游 Krita 使用手册(&H)"
 
 #. i18n: context: toolTip @ Action (help_contents), Actions (Help), ActionCollection (Menu)
 #. i18n: context: iconText @ Action (help_contents), Actions (Help), ActionCollection (Menu)
 #: krita/kritamenu.action:1947 krita/kritamenu.action:1948
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Krita Handbook"
+#, kde-format
 msgctxt "action"
 msgid "Upstream Krita Handbook"
-msgstr "Krita 使用手册"
+msgstr "上游 Krita 使用手册"
 
 #. i18n: context: text @ Action (help_report_bug), Actions (Help), ActionCollection (Menu)
 #: krita/kritamenu.action:1955
@@ -14971,7 +14952,7 @@ msgstr "报告程序缺陷"
 #, kde-format
 msgctxt "action"
 msgid "&About Solstice"
-msgstr ""
+msgstr "关于 Solstice(&A)"
 
 #. i18n: context: toolTip @ Action (help_about_app), Actions (Help), ActionCollection (Menu)
 #. i18n: context: iconText @ Action (help_about_app), Actions (Help), ActionCollection (Menu)
@@ -14979,7 +14960,7 @@ msgstr ""
 #, kde-format
 msgctxt "action"
 msgid "About Solstice"
-msgstr ""
+msgstr "关于 Solstice"
 
 #. i18n: context: text @ Action (help_about_kde), Actions (Help), ActionCollection (Menu)
 #: krita/kritamenu.action:1975
@@ -15005,153 +14986,136 @@ msgstr "笔刷及其他"
 
 #. i18n: context: text @ Action (create_selection_mask_alternative), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:1988
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "as Selection Mask"
+#, kde-format
 msgctxt "action"
 msgid "Create Selection Mask Alternative"
-msgstr "作为选区蒙版"
+msgstr "创建选区蒙版 (替代方式)"
 
 #. i18n: context: toolTip @ Action (create_selection_mask_alternative), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:1989
 #, kde-format
 msgctxt "action"
 msgid "Save the current selection in Selection_Mask_Group"
-msgstr ""
+msgstr "将当前选区保存到 Selection_Mask_Group 中"
 
 #. i18n: context: text @ Action (create_selection_mask_popup), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:1993
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "as Selection Mask"
+#, kde-format
 msgctxt "action"
 msgid "Create Selection Mask Popup"
-msgstr "作为选区蒙版"
+msgstr "选区蒙版弹出列表"
 
 #. i18n: context: toolTip @ Action (create_selection_mask_popup), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:1994
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Show Global Selection Mask"
+#, kde-format
 msgctxt "action"
 msgid "Show saved selection masks"
-msgstr "显示全局选区蒙版"
+msgstr "显示已保存的选区蒙版"
 
 #. i18n: context: text @ Action (fast_image_export), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:1998
-#, fuzzy, kde-format
-#| msgid "Export..."
+#, kde-format
 msgctxt "action"
 msgid "Fast Image Export..."
-msgstr "导出视频..."
+msgstr "快速导出图像..."
 
 #. i18n: context: toolTip @ Action (fast_image_export), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:1999
 #, kde-format
 msgctxt "action"
 msgid "Export active or open documents with PNG or JPEG options"
-msgstr ""
+msgstr "使用 PNG 或 JPEG 选项导出当前图像或所有已打开的图像"
 
 #. i18n: context: text @ Action (rename_alternative), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2003
-#, fuzzy, kde-format
-#| msgid "Alternative"
+#, kde-format
 msgctxt "action"
 msgid "Rename Alternative"
-msgstr "另类"
+msgstr "重命名 (替代方式)"
 
 #. i18n: context: toolTip @ Action (rename_alternative), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2004
 #, kde-format
 msgctxt "action"
 msgid "Rename the active layer using saved name and color presets"
-msgstr ""
+msgstr "使用已保存的名称和颜色预设重命名当前图层"
 
 #. i18n: context: text @ Action (screen_color_picker), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2008
 #, kde-format
 msgctxt "action"
 msgid "Pick Color from Anywhere"
-msgstr ""
+msgstr "从屏幕任意位置拾色"
 
 #. i18n: context: toolTip @ Action (screen_color_picker), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2009
 #, kde-format
 msgctxt "action"
 msgid "Pick the screen color under the cursor (Win+Shift+C)"
-msgstr ""
+msgstr "拾取光标下的屏幕颜色 (Win+Shift+C)"
 
 #. i18n: context: text @ Action (set_foreground_color1), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2012
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 1"
-msgstr "前景色"
+msgstr "设置前景色 1"
 
 #. i18n: context: text @ Action (set_foreground_color2), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2013
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 2"
-msgstr "前景色"
+msgstr "设置前景色 2"
 
 #. i18n: context: text @ Action (set_foreground_color3), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2014
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 3"
-msgstr "前景色"
+msgstr "设置前景色 3"
 
 #. i18n: context: text @ Action (set_foreground_color4), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2015
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 4"
-msgstr "前景色"
+msgstr "设置前景色 4"
 
 #. i18n: context: text @ Action (set_foreground_color5), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2016
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 5"
-msgstr "前景色"
+msgstr "设置前景色 5"
 
 #. i18n: context: text @ Action (set_foreground_color6), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2017
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 6"
-msgstr "前景色"
+msgstr "设置前景色 6"
 
 #. i18n: context: text @ Action (set_foreground_color7), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2018
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 7"
-msgstr "前景色"
+msgstr "设置前景色 7"
 
 #. i18n: context: text @ Action (set_foreground_color8), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2019
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 8"
-msgstr "前景色"
+msgstr "设置前景色 8"
 
 #. i18n: context: text @ Action (set_foreground_color9), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2020
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgctxt "action"
 msgid "Set Foreground Color 9"
-msgstr "前景色"
+msgstr "设置前景色 9"
 
 #. i18n: context: text @ Action (gradients), Actions (BrushesAndStuff), ActionCollection (Menu)
 #: krita/kritamenu.action:2023
@@ -15313,12 +15277,10 @@ msgid "Workspaces"
 msgstr "工作区"
 
 #: krita/main.cc:843
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Quit application"
+#, kde-format
 msgctxt "@info:short description"
 msgid "Digital painting application"
-msgstr "退出应用程序"
+msgstr "数字绘画软件"
 
 #: krita/main.cc:846
 #, kde-format
@@ -15326,16 +15288,14 @@ msgctxt "@info:credit"
 msgid ""
 "© 1999–2026 The Krita Developers; Solstice modifications © 2026 The Solstice "
 "Contributors"
-msgstr ""
+msgstr "© 1999–2026 Krita 开发者；Solstice 修改部分 © 2026 Solstice 贡献者"
 
 #: krita/main.cc:932 libs/ui/KisApplication.cpp:562
 #: libs/ui/KisApplication.cpp:868
-#, fuzzy, kde-format
-#| msgctxt "@title:window"
-#| msgid "Krita: Warning"
+#, kde-format
 msgctxt "@title:window"
 msgid "Solstice: Warning"
-msgstr "Krita：警告"
+msgstr "Solstice：警告"
 
 #: krita/main.cc:933
 #, kde-format
@@ -15946,11 +15906,7 @@ msgid "Optical Bounds"
 msgstr "光学边界"
 
 #: libs/flake/text/KoOpenTypeFeatureInfoFactory.cpp:75
-#, fuzzy, kde-format
-#| msgctxt "@tooltip"
-#| msgid ""
-#| "Adjusts glyphs so they align by their optical bounds. Doesn't do anything "
-#| "in Krita."
+#, kde-format
 msgctxt "@tooltip"
 msgid ""
 "Adjusts glyphs so they align by their optical bounds. Doesn't do anything in "
@@ -16115,18 +16071,14 @@ msgid "Optical size"
 msgstr "光学尺寸"
 
 #: libs/flake/text/KoOpenTypeFeatureInfoFactory.cpp:130
-#, fuzzy, kde-format
-#| msgctxt "@tooltip"
-#| msgid ""
-#| "Indicates how much the font is suitable for its current size. Does "
-#| "nothing in Krita."
+#, kde-format
 msgctxt "@tooltip"
 msgid ""
 "Indicates how much the font is suitable for its current size. Does nothing "
 "in Solstice."
 msgstr ""
-"允许字体根据其应用的字号大小，自动选择或调整最合适字形设计的功能。在 Krita 中"
-"不起作用。"
+"允许字体根据其应用的字号大小，自动选择或调整最合适字形设计的功能。在 "
+"Solstice 中不起作用。"
 
 #: libs/flake/text/KoOpenTypeFeatureInfoFactory.cpp:133
 #, kde-format
@@ -19777,12 +19729,10 @@ msgid "Unsupported unit"
 msgstr "不支持的单位"
 
 #: libs/global/kis_assert.cpp:78
-#, fuzzy, kde-format
-#| msgctxt "@title:window"
-#| msgid "Krita: Internal Error"
+#, kde-format
 msgctxt "@title:window"
 msgid "Solstice: Internal Error"
-msgstr "Krita：内部错误"
+msgstr "Solstice：内部错误"
 
 #: libs/global/kis_dom_utils.cpp:128
 #, kde-format
@@ -20423,12 +20373,9 @@ msgid "%1%"
 msgstr "%1%"
 
 #: libs/image/kis_layer_composition.cpp:264
-#, fuzzy
-#| msgctxt "action"
-#| msgid "Copy Layer"
 msgctxt "(qtundo-format)"
 msgid "Apply Layer Comp"
-msgstr "复制图层"
+msgstr "应用 Layer Comp"
 
 #: libs/image/kis_layer_properties_icons.cpp:23
 #, kde-format
@@ -21219,11 +21166,9 @@ msgid "Add the name of the tool used for creation and the modification date"
 msgstr "写入创作所用软件的名称和图像的修改日期"
 
 #: libs/metadata/kis_meta_data_filter_p.cc:99
-#, fuzzy, kde-format
-#| msgctxt "@title"
-#| msgid "Stylistic Set %1"
+#, kde-format
 msgid "Solstice %1"
-msgstr "样式集 %1"
+msgstr "Solstice %1"
 
 #: libs/metadata/kis_meta_data_merge_strategy_p.cc:38
 #, kde-format
@@ -22508,16 +22453,13 @@ msgid "Solstice"
 msgstr ""
 
 #: libs/resources/KisResourceCacheDb.cpp:359
-#, fuzzy, kde-format
-#| msgid ""
-#| "The resource database scheme has changed. Krita will backup your database "
-#| "and create a new database."
+#, kde-format
 msgid ""
 "The resource database scheme has changed. Solstice will backup your database "
 "and create a new database."
 msgstr ""
-"新版 Krita 升级了数据库结构。Krita 将备份之前的数据库，然后创建一个新的数据"
-"库。"
+"新版 Solstice 升级了数据库结构。Solstice 将备份之前的数据库，然后创建一个新的"
+"数据库。"
 
 #: libs/resources/KisResourceLocator.cpp:106
 #, kde-format
@@ -22549,7 +22491,7 @@ msgstr "无法将更新后的字体注册表与数据库同步"
 #, kde-format
 msgid ""
 "Solstice is setting up its resources. This takes a moment the first time."
-msgstr ""
+msgstr "Solstice 正在设置资源。首次运行需要稍等片刻。"
 
 #: libs/resources/KisResourceLocator.cpp:1051
 #, kde-format
@@ -23309,19 +23251,13 @@ msgid "Style Presets"
 msgstr "文本样式预设"
 
 #: libs/ui/KisApplication.cpp:515 libs/ui/KisApplication.cpp:527
-#, fuzzy, kde-format
-#| msgctxt "@title:window"
-#| msgid "Krita: Fatal error"
+#, kde-format
 msgctxt "@title:window"
 msgid "Solstice: Fatal error"
-msgstr "Krita：发生严重错误"
+msgstr "Solstice：发生严重错误"
 
 #: libs/ui/KisApplication.cpp:516
-#, fuzzy, kde-format
-#| msgid ""
-#| "%1\n"
-#| "\n"
-#| "Krita will quit now."
+#, kde-format
 msgid ""
 "%1\n"
 "\n"
@@ -23329,14 +23265,10 @@ msgid ""
 msgstr ""
 "%1\n"
 "\n"
-"Krita 将会立即退出。"
+"Solstice 将会立即退出。"
 
 #: libs/ui/KisApplication.cpp:529
-#, fuzzy, kde-format
-#| msgid ""
-#| "\n"
-#| "\n"
-#| "Krita will quit now."
+#, kde-format
 msgid ""
 "\n"
 "\n"
@@ -23344,7 +23276,7 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"Krita 将会立即退出。"
+"Solstice 将会立即退出。"
 
 #: libs/ui/KisApplication.cpp:563
 #, kde-format
@@ -23405,12 +23337,10 @@ msgstr "文件图层"
 #: libs/ui/KisApplication.cpp:852 libs/ui/KisApplication.cpp:858
 #: libs/ui/KisApplication.cpp:1113 libs/ui/KisApplication.cpp:1133
 #: libs/ui/KisApplication.cpp:1138
-#, fuzzy, kde-format
-#| msgctxt "@title:window"
-#| msgid "Krita:Warning"
+#, kde-format
 msgctxt "@title:window"
 msgid "Solstice:Warning"
-msgstr "Krita：警告"
+msgstr "Solstice：警告"
 
 #: libs/ui/KisApplication.cpp:853 libs/ui/KisApplication.cpp:1134
 #, kde-format
@@ -23418,16 +23348,7 @@ msgid "Cannot add %1 as a file layer: the file does not exist."
 msgstr "无法将 %1 添加为文件图层: 该文件不存在。"
 
 #: libs/ui/KisApplication.cpp:859
-#, fuzzy, kde-format
-#| msgid ""
-#| "Cannot add the file layer: no document is open.\n"
-#| "\n"
-#| "You can create a new document using the --new-image option, or you can "
-#| "open an existing file.\n"
-#| "\n"
-#| "If you instead want to add the file layer to a document in an already "
-#| "running instance of Krita, check the \"Allow only one instance of Krita\" "
-#| "checkbox in the settings (Settings -> General -> Window)."
+#, kde-format
 msgid ""
 "Cannot add the file layer: no document is open.\n"
 "\n"
@@ -23442,8 +23363,9 @@ msgstr ""
 "\n"
 "您可以使用 --new-image 参数新建一个图像，也可以打开一个已有图像。\n"
 "\n"
-"如果您想要将文件图层添加到某个已经在运行的 Krita 实例，请检查是否在设置 (菜单"
-"栏 -> 设置 -> 配置 Krita -> 常规 -> 窗口) 中勾选了“只允许一个 Krita 实例”。"
+"如果您想要将文件图层添加到某个已经在运行的 Solstice 实例，请检查是否在设置 "
+"(菜单栏 -> 设置 -> 配置 Solstice -> 常规 -> 窗口) 中勾选了“只允许一个 "
+"Solstice 实例”。"
 
 #: libs/ui/KisApplication.cpp:869
 #, kde-format
@@ -23481,13 +23403,7 @@ msgid "Template %1 failed to load."
 msgstr "模板 %1 加载失败。"
 
 #: libs/ui/KisApplication.cpp:1317
-#, fuzzy, kde-format
-#| msgid ""
-#| "Krita configurations reset!\n"
-#| "\n"
-#| "Backup file was created at: %1\n"
-#| "\n"
-#| "Restart Krita for changes to take effect."
+#, kde-format
 msgid ""
 "Solstice configurations reset!\n"
 "\n"
@@ -23495,11 +23411,11 @@ msgid ""
 "\n"
 "Restart Solstice for changes to take effect."
 msgstr ""
-"Krita 的配置文件已经重置。\n"
+"Solstice 的配置文件已经重置。\n"
 "\n"
 "原配置文件已经备份至：%1\n"
 "\n"
-"请重新启动 Krita 使更改生效。"
+"请重新启动 Solstice 使更改生效。"
 
 #: libs/ui/KisApplication.cpp:1331
 #, kde-format
@@ -23554,28 +23470,24 @@ msgstr ""
 "    * F32 (32 位浮点)\n"
 
 #: libs/ui/KisApplicationArguments.cpp:85
-#, fuzzy, kde-format
-#| msgid "The name of the workspace to open Krita with"
+#, kde-format
 msgid "The name of the workspace to open Solstice with"
-msgstr "Krita 启动时使用的工作区名称"
+msgstr "Solstice 启动时使用的工作区名称"
 
 #: libs/ui/KisApplicationArguments.cpp:88
-#, fuzzy, kde-format
-#| msgid "The name of the window layout to open Krita with"
+#, kde-format
 msgid "The name of the window layout to open Solstice with"
-msgstr "Krita 启动时使用的窗口布局名称"
+msgstr "Solstice 启动时使用的窗口布局名称"
 
 #: libs/ui/KisApplicationArguments.cpp:92
-#, fuzzy, kde-format
-#| msgid "The name of the session to open Krita with"
+#, kde-format
 msgid "The name of the session to open Solstice with"
-msgstr "Krita 启动时加载的会话名称"
+msgstr "Solstice 启动时加载的会话名称"
 
 #: libs/ui/KisApplicationArguments.cpp:95
-#, fuzzy, kde-format
-#| msgid "Start Krita in canvas-only mode"
+#, kde-format
 msgid "Start Solstice in canvas-only mode"
-msgstr "Krita 启动为隐藏面板模式"
+msgstr "Solstice 启动为隐藏面板模式"
 
 #: libs/ui/KisApplicationArguments.cpp:96
 #, kde-format
@@ -23583,10 +23495,9 @@ msgid "Do not show the splash screen"
 msgstr "不显示启动画面"
 
 #: libs/ui/KisApplicationArguments.cpp:98
-#, fuzzy, kde-format
-#| msgid "Start Krita in full-screen mode"
+#, kde-format
 msgid "Start Solstice in full-screen mode"
-msgstr "以全屏模式启动 Krita"
+msgstr "以全屏模式启动 Solstice"
 
 #: libs/ui/KisApplicationArguments.cpp:100
 #, kde-format
@@ -23614,12 +23525,10 @@ msgid "File layer to be added to existing or new file"
 msgstr "要添加到已有文件或者新文件的文件图层"
 
 #: libs/ui/KisApplicationArguments.cpp:110
-#, fuzzy, kde-format
-#| msgid ""
-#| "A location that overrides the configured location for Krita's resources"
+#, kde-format
 msgid ""
 "A location that overrides the configured location for Solstice's resources"
-msgstr "用于覆盖已配置的 Krita 资源位置的位置"
+msgstr "用于覆盖已配置的 Solstice 资源位置的位置"
 
 #: libs/ui/KisApplicationArguments.cpp:112
 #, kde-format
@@ -23668,12 +23577,14 @@ msgid ""
 "brush changed it. Scaling it will now scale its pixels. Undo that edit to "
 "keep it sharp."
 msgstr ""
+"“%1”与其记录的笔画不再一致：除笔刷以外的编辑更改了它。现在缩放该图层会缩放其"
+"像素。撤销该编辑可保持清晰。"
 
 #: libs/ui/KisBrushStrokeLayer.cpp:380
 #, kde-format
 msgctxt "floating message"
 msgid "\"%1\" matches its recorded brush strokes again."
-msgstr ""
+msgstr "“%1”再次与其记录的笔画一致。"
 
 #: libs/ui/KisBrushStrokeLayer.cpp:1008
 #, kde-format
@@ -23682,14 +23593,12 @@ msgid ""
 "\"%1\" was drawn again, except about %2% of it that no longer matches its "
 "recorded brush strokes: that part was scaled as pixels."
 msgstr ""
+"“%1”已重新绘制，但其中约 %2% 的部分与记录的笔画不再一致：该部分已按像素缩放。"
 
 #: libs/ui/KisBrushStrokeLayer.cpp:1016
-#, fuzzy
-#| msgctxt "(qtundo-format)"
-#| msgid "Scripted Brush Stroke"
 msgctxt "(qtundo-format)"
 msgid "Redraw Brush Strokes"
-msgstr "脚本编程的笔画"
+msgstr "重新绘制笔画"
 
 #: libs/ui/KisCloneDocumentStroke.cpp:25
 msgctxt "(qtundo-format)"
@@ -24067,12 +23976,10 @@ msgid "The file could not be resized."
 msgstr "文件无法调整大小。"
 
 #: libs/ui/KisImportExportErrorCode.cpp:50
-#, fuzzy, kde-format
-#| msgid ""
-#| "Permission denied. Krita is not allowed to read or write to the file."
+#, kde-format
 msgid ""
 "Permission denied. Solstice is not allowed to read or write to the file."
-msgstr "没有权限。系统不允许 Krita 读写该文件。"
+msgstr "没有权限。系统不允许 Solstice 读写该文件。"
 
 #: libs/ui/KisImportExportErrorCode.cpp:52
 #, kde-format
@@ -24100,10 +24007,9 @@ msgid "The file doesn't exist."
 msgstr "文件不存在。"
 
 #: libs/ui/KisImportExportErrorCode.cpp:157
-#, fuzzy, kde-format
-#| msgid "Permission denied: Krita is not allowed to read the file."
+#, kde-format
 msgid "Permission denied: Solstice is not allowed to read the file."
-msgstr "没有权限：系统不允许 Krita 读取该文件。"
+msgstr "没有权限：系统不允许 Solstice 读取该文件。"
 
 #: libs/ui/KisImportExportErrorCode.cpp:159
 #, kde-format
@@ -24131,10 +24037,9 @@ msgid "The file cannot be created."
 msgstr "文件无法创建。"
 
 #: libs/ui/KisImportExportErrorCode.cpp:171
-#, fuzzy, kde-format
-#| msgid "Permission denied: Krita is not allowed to write to the file."
+#, kde-format
 msgid "Permission denied: Solstice is not allowed to write to the file."
-msgstr "没有权限：系统不允许 Krita 写入该文件。"
+msgstr "没有权限：系统不允许 Solstice 写入该文件。"
 
 #: libs/ui/KisImportExportErrorCode.cpp:173
 #, kde-format
@@ -24147,10 +24052,9 @@ msgid "Error occurred while writing to the file."
 msgstr "写入文件时发生错误。"
 
 #: libs/ui/KisImportExportErrorCode.cpp:177
-#, fuzzy, kde-format
-#| msgid "Krita does not support this file format."
+#, kde-format
 msgid "Solstice does not support this file format."
-msgstr "Krita 不支持此文件格式。"
+msgstr "Solstice 不支持此文件格式。"
 
 #: libs/ui/KisImportExportErrorCode.cpp:181
 #, kde-format
@@ -24343,12 +24247,10 @@ msgid "Reasons:"
 msgstr "原因："
 
 #: libs/ui/KisImportExportManager.cpp:624
-#, fuzzy, kde-format
-#| msgctxt "@title:window"
-#| msgid "Krita: Export Error"
+#, kde-format
 msgctxt "@title:window"
 msgid "Solstice: Export Error"
-msgstr "Krita：导出错误"
+msgstr "Solstice：导出错误"
 
 #: libs/ui/KisImportExportManager.cpp:642
 #, kde-format
@@ -24382,18 +24284,14 @@ msgid "Convert image color space on import"
 msgstr "导入时转换图像色彩空间"
 
 #: libs/ui/KisImportExportUtils.cpp:51
-#, fuzzy, kde-format
-#| msgctxt "the argument is the ICC profile name"
-#| msgid ""
-#| "The image has a profile attached that Krita cannot edit images in "
-#| "(\"%1\"), please select a space to convert to for editing: \n"
+#, kde-format
 msgctxt "the argument is the ICC profile name"
 msgid ""
 "The image has a profile attached that Solstice cannot edit images in "
 "(\"%1\"), please select a space to convert to for editing: \n"
 msgstr ""
-"图像包含 (“%1”) 色彩空间特性文件，Krita 不支持在这种色彩空间中编辑图像。请选"
-"择要转换为的色彩空间：\n"
+"图像包含 (“%1”) 色彩空间特性文件，Solstice 不支持在这种色彩空间中编辑图像。请"
+"选择要转换为的色彩空间：\n"
 
 #: libs/ui/KisLayerThumbnailCache.cpp:48
 msgctxt "(qtundo-format)"
@@ -24431,18 +24329,16 @@ msgid "Wor&kspace"
 msgstr "工作区(&K)"
 
 #: libs/ui/KisMainWindow.cpp:444
-#, fuzzy, kde-format
-#| msgctxt "@info:tooltip"
-#| msgid "Lock Docker"
+#, kde-format
 msgctxt "@action:inmenu"
 msgid "Lock Docked Docker Widths"
-msgstr "锁定面板"
+msgstr "锁定停靠面板的宽度"
 
 #: libs/ui/KisMainWindow.cpp:445
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "Lock Docked Docker Heights"
-msgstr ""
+msgstr "锁定停靠面板的高度"
 
 #: libs/ui/KisMainWindow.cpp:618
 #, kde-format
@@ -24498,33 +24394,27 @@ msgid "Saving As"
 msgstr "保存为"
 
 #: libs/ui/KisMainWindow.cpp:2003
-#, fuzzy, kde-format
-#| msgid "Exporting"
+#, kde-format
 msgid "Export Region"
-msgstr "导出"
+msgstr "导出区域"
 
 #: libs/ui/KisMainWindow.cpp:2005
-#, fuzzy, kde-format
-#| msgid "Exporting"
+#, kde-format
 msgid "Exported Region"
-msgstr "导出"
+msgstr "已导出区域"
 
 #: libs/ui/KisMainWindow.cpp:2014
-#, fuzzy, kde-format
-#| msgid "Exporting"
+#, kde-format
 msgid "Exporting Region"
-msgstr "导出"
+msgstr "正在导出区域"
 
 #: libs/ui/KisMainWindow.cpp:2064
-#, fuzzy, kde-format
-#| msgid ""
-#| "Could not save %1\n"
-#| "Reason: %2"
+#, kde-format
 msgid ""
 "Could not export %1\n"
 "Reason: %2"
 msgstr ""
-"无法保存 %1\n"
+"无法导出 %1\n"
 "原因：%2"
 
 #: libs/ui/KisMainWindow.cpp:2196
@@ -24615,14 +24505,11 @@ msgid "%1 %2"
 msgstr "%1 %2"
 
 #: libs/ui/KisMainWindow.cpp:3215
-#, fuzzy, kde-format
-#| msgid ""
-#| "The Krita LittleCMS color management plugin is not installed. Krita will "
-#| "quit now."
+#, kde-format
 msgid ""
 "The Solstice LittleCMS color management plugin is not installed. Solstice "
 "will quit now."
-msgstr "Krita 的 LittleCMS 色彩管理插件没有安装。Krita 将立即退出。"
+msgstr "Solstice 的 LittleCMS 色彩管理插件没有安装。Solstice 将立即退出。"
 
 #: libs/ui/KisMainWindow.cpp:3231
 #, kde-format
@@ -24824,26 +24711,22 @@ msgid "Could not download %1."
 msgstr "无法下载 %1。"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:226
-#, fuzzy, kde-format
-#| msgid "Remove Layer"
+#, kde-format
 msgid "Rename Layer"
-msgstr "移除图层"
+msgstr "重命名图层"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:288
-#, fuzzy, kde-format
-#| msgid "Layer name:"
+#, kde-format
 msgid "Layer name"
-msgstr "图层名称："
+msgstr "图层名称"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:370
-#, fuzzy, kde-format
-#| msgid "Selection Mask"
+#, kde-format
 msgid "Selection Masks"
 msgstr "选区蒙版"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:375
-#, fuzzy, kde-format
-#| msgid "Create new mask"
+#, kde-format
 msgid "Create Mask"
 msgstr "新建蒙版"
 
@@ -24859,34 +24742,25 @@ msgid "Refresh"
 msgstr "刷新"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:432
-#, fuzzy, kde-format
-#| msgid "There is no active document."
+#, kde-format
 msgid "No active document"
-msgstr "无活动图像。"
+msgstr "没有活动图像"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:433
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "The 'use selection as boundary' checkbox in fill tool to use selection "
-#| "borders as boundary when filling"
-#| msgid "Use selection as boundary"
+#, kde-format
 msgid "No saved selections found"
-msgstr "选区被视作填充边界"
+msgstr "未找到已保存的选区"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:433
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "The 'use selection as boundary' checkbox in fill tool to use selection "
-#| "borders as boundary when filling"
-#| msgid "Use selection as boundary"
+#, kde-format
 msgid "No selection masks found"
-msgstr "选区被视作填充边界"
+msgstr "未找到选区蒙版"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:457 libs/ui/KisSolsticeLazyTools.cpp:525
 #: libs/ui/KisSolsticeLazyTools.cpp:572
 #, kde-format
 msgid "Fast Image Export"
-msgstr ""
+msgstr "快速导出图像"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:464
 #: plugins/python/exportlayers/uiexportlayers.py:84
@@ -24901,46 +24775,39 @@ msgid "JPEG"
 msgstr "JPEG"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:467
-#, fuzzy, kde-format
-#| msgid "Select one document."
+#, kde-format
 msgid "Active document"
-msgstr "选择一个图像。"
+msgstr "当前图像"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:468
-#, fuzzy, kde-format
-#| msgid "Opening document"
+#, kde-format
 msgid "All open documents"
-msgstr "正在打开图像"
+msgstr "所有已打开的图像"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:470
-#, fuzzy, kde-format
-#| msgid "Select at least one document."
+#, kde-format
 msgid "Same folder as the document"
-msgstr "请至少选择一个图像。"
+msgstr "与图像相同的文件夹"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:471
-#, fuzzy, kde-format
-#| msgid "Configure Toolbars"
+#, kde-format
 msgid "Configured export folder"
-msgstr "配置工具栏"
+msgstr "已配置的导出文件夹"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:472
-#, fuzzy, kde-format
-#| msgid "Choose a color"
+#, kde-format
 msgid "Choose a folder now"
-msgstr "选择颜色"
+msgstr "现在选择文件夹"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:474
-#, fuzzy, kde-format
-#| msgid "Browse..."
+#, kde-format
 msgid "Browse…"
-msgstr "浏览..."
+msgstr "浏览…"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:481
-#, fuzzy, kde-format
-#| msgid "Preserve alpha channel"
+#, kde-format
 msgid "Save alpha channel"
-msgstr "保留透明度通道"
+msgstr "保存透明度通道"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:486
 #: plugins/python/comics_project_management_tools/comics_metadata_dialog.py:344
@@ -24957,11 +24824,9 @@ msgid "Documents:"
 msgstr "图像："
 
 #: libs/ui/KisSolsticeLazyTools.cpp:488
-#, fuzzy, kde-format
-#| msgctxt "Blending mode - Destination In"
-#| msgid "Destination In"
+#, kde-format
 msgid "Destination:"
-msgstr "目标内部"
+msgstr "目标位置："
 
 #: libs/ui/KisSolsticeLazyTools.cpp:489
 #: plugins/python/comics_project_management_tools/comics_project_settings_dialog.py:130
@@ -24970,49 +24835,40 @@ msgid "Export folder:"
 msgstr "导出文件夹："
 
 #: libs/ui/KisSolsticeLazyTools.cpp:490
-#, fuzzy, kde-format
-#| msgctxt "Title for label. PNG Compression level"
-#| msgid "Compression:"
+#, kde-format
 msgid "PNG compression:"
-msgstr "压缩："
+msgstr "PNG 压缩："
 
 #: libs/ui/KisSolsticeLazyTools.cpp:492
-#, fuzzy, kde-format
-#| msgid "Quality:"
+#, kde-format
 msgid "JPEG quality:"
-msgstr "品质："
+msgstr "JPEG 品质："
 
 #: libs/ui/KisSolsticeLazyTools.cpp:501 libs/ui/KisSolsticeLazyTools.cpp:519
-#, fuzzy, kde-format
-#| msgid "Select a Folder"
+#, kde-format
 msgid "Select Export Folder"
-msgstr "选择文件夹"
+msgstr "选择导出文件夹"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:525
-#, fuzzy, kde-format
-#| msgid "Select the frame export options"
+#, kde-format
 msgid "Select an export folder first."
-msgstr "选择帧导出选项"
+msgstr "请先选择一个导出文件夹。"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:549
-#, fuzzy, kde-format
-#| msgid "Unknown Input"
+#, kde-format
 msgid "Unknown document"
-msgstr "未知输入"
+msgstr "未知图像"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:573
 #, kde-format
 msgid "Exported %1 document. Skipped: %2"
 msgid_plural "Exported %1 documents. Skipped: %2"
-msgstr[0] ""
+msgstr[0] "已导出 %1 个图像。已跳过：%2"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:653
-#, fuzzy
-#| msgctxt "action"
-#| msgid "as Selection Mask"
 msgctxt "(qtundo-format)"
 msgid "Create Selection Mask Alternative"
-msgstr "作为选区蒙版"
+msgstr "创建选区蒙版 (替代方式)"
 
 #: libs/ui/KisTemplateCreateDia.cpp:87
 #: plugins/python/comics_project_management_tools/comics_template_dialog.py:96
@@ -25064,10 +24920,9 @@ msgid "Use the new template as default"
 msgstr "默认加载此模板"
 
 #: libs/ui/KisTemplateCreateDia.cpp:153
-#, fuzzy, kde-format
-#| msgid "Use the new template every time Krita starts"
+#, kde-format
 msgid "Use the new template every time Solstice starts"
-msgstr "Krita 每次启动时加载此新模板"
+msgstr "Solstice 每次启动时加载此新模板"
 
 #: libs/ui/KisTemplateCreateDia.cpp:286
 #, kde-format
@@ -25141,11 +24996,9 @@ msgid "Use This Template"
 msgstr "加载此模板"
 
 #: libs/ui/KisToolOptionsParameters.cpp:169
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Show Tool Options"
+#, kde-format
 msgid "Show in Tool Options"
-msgstr "显示工具选项"
+msgstr "在工具选项中显示"
 
 #: libs/ui/KisView.cpp:593 libs/ui/actions/KisPasteActionFactories.cpp:298
 #: libs/ui/actions/KisPasteActionFactories.cpp:399
@@ -25598,23 +25451,19 @@ msgid "Enable news and check for new releases"
 msgstr "显示最新资讯/检查软件更新"
 
 #: libs/ui/KisWelcomePageWidget.cpp:186
-#, fuzzy, kde-format
-#| msgid "Enable news and check for new releases"
+#, kde-format
 msgid "Enable Krita news and Solstice releases"
-msgstr "显示最新资讯/检查软件更新"
+msgstr "启用 Krita 资讯和 Solstice 版本发布信息"
 
 #: libs/ui/KisWelcomePageWidget.cpp:190
-#, fuzzy, kde-format
-#| msgid ""
-#| "Show news about Krita: this needs internet to retrieve information from "
-#| "the krita.org website"
+#, kde-format
 msgid ""
 "Show upstream Krita news and Solstice releases: this needs internet to "
 "retrieve information from the krita.org website and Solstice's GitHub "
 "repository"
 msgstr ""
-"显示 Krita 的官方网站的最新资讯并检测新版软件。重要文章均有中文版，打开后可自"
-"动或手动在网站右上角切换中文。"
+"显示上游 Krita 的资讯和 Solstice 的版本发布信息：需要联网，从 krita.org 网站"
+"和 Solstice 的 GitHub 仓库获取信息"
 
 #: libs/ui/KisWelcomePageWidget.cpp:194
 #: plugins/python/comics_project_management_tools/comics_metadata_dialog.py:357
@@ -25628,31 +25477,25 @@ msgid "English news is always up to date."
 msgstr "英文资讯内容更加及时和齐全。"
 
 #: libs/ui/KisWelcomePageWidget.cpp:391
-#, fuzzy, kde-format
-#| msgid "Support Krita"
+#, kde-format
 msgid "Support Upstream Krita"
-msgstr "捐款支持"
+msgstr "支持上游 Krita"
 
 #: libs/ui/KisWelcomePageWidget.cpp:396
-#, fuzzy, kde-format
-#| msgid "Krita Website"
+#, kde-format
 msgid "Upstream Krita Website"
-msgstr "官方网站"
+msgstr "上游 Krita 官方网站"
 
 #: libs/ui/KisWelcomePageWidget.cpp:410
-#, fuzzy, kde-format
-#| msgid ""
-#| "You can <a href=\"ignored\" style=\"color: COLOR_PLACEHOLDER; text-"
-#| "decoration: underline;\">enable news</a> from krita.org in various "
-#| "languages with the menu above"
+#, kde-format
 msgid ""
 "You can <a href=\"ignored\" style=\"color: COLOR_PLACEHOLDER; text-"
 "decoration: underline;\">enable news</a> from krita.org in various "
 "languages, and Solstice's releases, with the menu above"
 msgstr ""
-"<a href=\"ignored\" style=\"color: COLOR_PLACEHOLDER; text-decoration: "
-"underline;\">点击启用最新资讯功能</a>，即可在此显示 Krita 官方网站的新闻并在"
-"新版 Krita 推出时通知您。资讯的语言可从右上方菜单按钮中选择。"
+"您可以通过上方的菜单<a href=\"ignored\" style=\"color: COLOR_PLACEHOLDER; "
+"text-decoration: underline;\">启用资讯</a>，显示来自 krita.org 的多语言资讯"
+"和 Solstice 的版本发布信息"
 
 #: libs/ui/KisWelcomePageWidget.cpp:670
 #: plugins/dockers/presethistory/presethistory_dock.cpp:302
@@ -25661,10 +25504,9 @@ msgid "Forget \"%1\""
 msgstr "忘记“%1”"
 
 #: libs/ui/KisWelcomePageWidget.cpp:772
-#, fuzzy, kde-format
-#| msgid "New version of Krita is available."
+#, kde-format
 msgid "A new upstream Krita version is available."
-msgstr "Krita 已经推出了新版本。"
+msgstr "上游 Krita 已推出新版本。"
 
 #: libs/ui/KisWelcomePageWidget.cpp:800
 #, kde-format
@@ -26021,16 +25863,10 @@ msgstr "创建工作目录失败。请确保您有写入权限。"
 #, kde-format
 msgctxt "Title for a messagebox"
 msgid "Solstice"
-msgstr ""
+msgstr "Solstice"
 
 #: libs/ui/animation/KisDlgImportVideoAnimation.cpp:188
-#, fuzzy, kde-format
-#| msgid ""
-#| "Warning: you are trying to import more than 100 frames into Krita.\n"
-#| "\n"
-#| "This means you might be overloading your system.\n"
-#| "If you want to edit a clip larger than 100 frames, consider using a real "
-#| "video editor, like Kdenlive (https://kdenlive.org)."
+#, kde-format
 msgid ""
 "Warning: you are trying to import more than 100 frames into Solstice.\n"
 "\n"
@@ -26038,7 +25874,7 @@ msgid ""
 "If you want to edit a clip larger than 100 frames, consider using a real "
 "video editor, like Kdenlive (https://kdenlive.org)."
 msgstr ""
-"警告：您正在尝试向 Krita 导入超过 100 帧图像。\n"
+"警告：您正在尝试向 Solstice 导入超过 100 帧图像。\n"
 "\n"
 "这可能会导致系统超负荷工作。\n"
 "如果您要编辑 100 帧以上的动画片段，请改用一款真正的视频编辑软件进行操作，如 "
@@ -26144,16 +25980,12 @@ msgid ""
 msgstr "这将占用一半以上的可用运行内存，进而影响编辑效率。"
 
 #: libs/ui/animation/KisDlgImportVideoAnimation.cpp:528
-#, fuzzy, kde-format
-#| msgctxt "part of warning in video importer."
-#| msgid ""
-#| "Krita does not support the video transfer curve (%1), it will be loaded "
-#| "as linear."
+#, kde-format
 msgctxt "part of warning in video importer."
 msgid ""
 "Solstice does not support the video transfer curve (%1), it will be loaded "
 "as linear."
-msgstr "Krita 不支持视频阶调曲线 (%1)，它将被加载为线性。"
+msgstr "Solstice 不支持视频阶调曲线 (%1)，它将被加载为线性。"
 
 #: libs/ui/animation/KisDlgImportVideoAnimation.cpp:561
 #: libs/ui/animation/KisDlgImportVideoAnimation.cpp:563
@@ -26903,19 +26735,15 @@ msgstr "灵敏度"
 
 #. i18n: context: string @ property (toolTip), widget (KisDoubleSliderSpinBox, sensitivitySpinbox)
 #: libs/ui/animation/VideoImportDialog.ui:315
-#, fuzzy, kde-format
-#| msgid ""
-#| "How sensitive should the duplicate frame filter be when determining\n"
-#| "which frames are added to Krita.\n"
-#| "The higher the sensitivity, the more frames are added to Krita."
+#, kde-format
 msgid ""
 "How sensitive should the duplicate frame filter be when determining\n"
 "which frames are added to the animation.\n"
 "The higher the sensitivity, the more frames are added."
 msgstr ""
-"设置在检测要添加到 Krita 的帧时，\n"
+"设置在检测要添加到动画的帧时，\n"
 "重复帧过滤器的灵敏度。\n"
-"灵敏度越高，添加到 Krita 的帧数就越多。"
+"灵敏度越高，添加的帧数就越多。"
 
 #. i18n: context: string @ property (text), widget (QLabel, importDocumentLabel)
 #: libs/ui/animation/VideoImportDialog.ui:325
@@ -27628,19 +27456,15 @@ msgid "None"
 msgstr "无"
 
 #: libs/ui/canvas/kis_canvas2.cpp:1584
-#, fuzzy, kde-format
-#| msgid ""
-#| "WARNING: HDR mode was activated on surface working in 8-bit mode!\n"
-#| "Please activate 10-bit mode in Krita's Preferences dialog and restart "
-#| "Krita to avoid color banding!"
+#, kde-format
 msgid ""
 "WARNING: HDR mode was activated on surface working in 8-bit mode!\n"
 "Please activate 10-bit mode in Solstice's Preferences dialog and restart "
 "Solstice to avoid color banding!"
 msgstr ""
 "警告：在 8 位模式下工作的表面启用了 HDR 模式！\n"
-"请在 Krita 的“首选项”对话框中激活 10 位模式，然后重新启动 Krita 以避免出现颜"
-"色条带现象！"
+"请在 Solstice 的“首选项”对话框中激活 10 位模式，然后重新启动 Solstice 以避免"
+"出现颜色条带现象！"
 
 #: libs/ui/canvas/kis_canvas_controller.cpp:223
 #, kde-format
@@ -27861,18 +27685,14 @@ msgstr ""
 "%4"
 
 #: libs/ui/dialogs/KisDlgConfigureCumulativeUndo.cpp:54
-#, fuzzy, kde-format
-#| msgctxt "@info:tooltip"
-#| msgid ""
-#| "The amount of time during which the strokes will be kept unmerged. When a "
-#| "stroke becomes old enough, Krita will try to merge it"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid ""
 "The amount of time during which the strokes will be kept unmerged. When a "
 "stroke becomes old enough, Solstice will try to merge it"
 msgstr ""
 "多个笔画在被合并为一条历史记录之前的等待时间。如果一个笔画在绘制后经过了足够"
-"长的时间，Krita 将尝试合并它。"
+"长的时间，Solstice 将尝试合并它。"
 
 #: libs/ui/dialogs/KisDlgConfigureCumulativeUndo.cpp:58
 #: libs/ui/dialogs/KisDlgConfigureCumulativeUndo.cpp:79
@@ -27889,11 +27709,7 @@ msgid "Wait before merging strokes:"
 msgstr "笔画合并前的等待时间："
 
 #: libs/ui/dialogs/KisDlgConfigureCumulativeUndo.cpp:65
-#, fuzzy, kde-format
-#| msgctxt "@info:tooltip"
-#| msgid ""
-#| "The number of last strokes that Krita will not merge (even if they are "
-#| "old enough)"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid ""
 "The number of last strokes that Solstice will not merge (even if they are "
@@ -27936,15 +27752,7 @@ msgid "Max group duration:"
 msgstr "笔画组持续时间上限："
 
 #: libs/ui/dialogs/KisDlgConfigureCumulativeUndo.cpp:98
-#, fuzzy, kde-format
-#| msgid ""
-#| "Cumulative Undo allows Krita to merge undo actions and make undo history "
-#| "cleaner. Krita will still keep a few latest actions unmerged according to "
-#| "\"Wait before merging strokes\" and \"Exclude last strokes from merge\" "
-#| "options. Whenever an action gets outdated using the time limit and this "
-#| "action is not excluded using \"Exclude last strokes from merge\", Krita "
-#| "will try  to merge this action into a group. The groups are formed using "
-#| "\"Max group strokes delay\" and \"Max group duration\" options."
+#, kde-format
 msgid ""
 "Cumulative Undo allows Solstice to merge undo actions and make undo history "
 "cleaner. Solstice will still keep a few latest actions unmerged according to "
@@ -27954,11 +27762,11 @@ msgid ""
 "will try  to merge this action into a group. The groups are formed using "
 "\"Max group strokes delay\" and \"Max group duration\" options."
 msgstr ""
-"合并撤销通过将多个操作合并为一条历史记录以精简撤销历史的步骤。Krita 会根据“笔"
-"画合并前的等待时间”、“暂不合并的最近笔画数”等选项来确定暂不合并的笔画。如果一"
-"个笔画在完成后经过了“笔画合并前的等待时间”，且不属于“暂不合并的最近笔画数”之"
-"内，Krita 将尝试把它合并到一个笔画组内。笔画组将根据“同组笔画的最大间隔”和“笔"
-"画组持续时间上限”等选项的限制来生成。"
+"合并撤销通过将多个操作合并为一条历史记录以精简撤销历史的步骤。Solstice 会根"
+"据“笔画合并前的等待时间”、“暂不合并的最近笔画数”等选项来确定暂不合并的笔画。"
+"如果一个笔画在完成后经过了“笔画合并前的等待时间”，且不属于“暂不合并的最近笔画"
+"数”之内，Solstice 将尝试把它合并到一个笔画组内。笔画组将根据“同组笔画的最大间"
+"隔”和“笔画组持续时间上限”等选项的限制来生成。"
 
 #: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:20
 #, kde-format
@@ -28150,7 +27958,7 @@ msgstr ""
 #: libs/ui/dialogs/KisRecoverNamedAutosaveDialog.ui:21 libs/ui/wdgsplash.ui:309
 #, kde-format
 msgid "Solstice"
-msgstr ""
+msgstr "Solstice"
 
 #. i18n: context: string @ property (text), widget (QRadioButton, rbOpenAutosave)
 #: libs/ui/dialogs/KisRecoverNamedAutosaveDialog.ui:37
@@ -28215,26 +28023,10 @@ msgstr "新名称："
 #: libs/ui/dialogs/kis_about_application.cpp:35
 #, kde-format
 msgid "About Solstice"
-msgstr ""
+msgstr "关于 Solstice"
 
 #: libs/ui/dialogs/kis_about_application.cpp:54
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><h1 align=\"center\"><b>Your Rights</b></h1><p>Krita "
-#| "is released under the GNU General Public License (version 3 or any later "
-#| "version).</p><p>This license grants people a number of freedoms:</"
-#| "p><ul><li>You are free to use Krita, for any purpose</li><li>You are free "
-#| "to distribute Krita</li><li>You can study how Krita works and change it</"
-#| "li><li>You can distribute changed versions of Krita</li></ul><p>The Krita "
-#| "Foundation and its projects on krita.org are <b>committed</b> to "
-#| "preserving Krita as free software.</p><h1 align=\"center\">Your artwork</"
-#| "h1><p>What you create with Krita is your sole property. All your artwork "
-#| "is free for you to use as you like.</p><p>That means that Krita can be "
-#| "used commercially, for any purpose. There are no restrictions whatsoever."
-#| "</p><p>Krita’s GNU GPL license guarantees you this freedom. Nobody is "
-#| "ever permitted to take it away, in contrast to trial or educational "
-#| "versions of commercial software that will forbid your work in commercial "
-#| "situations.</p><br/><hr/><pre>"
+#, kde-format
 msgid ""
 "<html><head/><body><h1 align=\"center\"><b>Your Rights</b></h1><p>Solstice "
 "is an independent distribution based on Krita. It is not affiliated with or "
@@ -28253,31 +28045,29 @@ msgid ""
 "or educational versions of commercial software that will forbid your work in "
 "commercial situations.</p><br/><hr/><pre>"
 msgstr ""
-"<html><head/><body><h1 align=\"center\"><b>用户的权利</b></h1><p>Krita 是在 "
-"GNU 通用公共许可证 (第 3 版或者其后续版本) 下发布的。</p><p>此许可证赋予人们"
-"以下自由的权利：</p><ul><li>任何人都可以为了任何目的自由地使用 Krita</li><li>"
-"任何人都可以自由地分发 Krita</li><li>任何人都可以自由地研究、修改 Krita</"
-"li><li>任何人都可以自由地分发修改后的 Krita 版本</li></ul><p>Krita 基金会和它"
-"在 krita.org 运营的其他项目将尽一切努力确保 Krita 始终是一款自由软件。</"
-"p><h1 align=\"center\">用户作品的权利</h1><p>用户使用 Krita 创作的作品是该用"
-"户独占的个人财产，该用户享有自由支配这些作品的权利。</p><p>Krita 对软件的使用"
-"场景不做任何限制。用户可以在包括商业用途在内的任意场景自由地使用 Krita。</"
-"p><p>Krita 通过 GPL 许可证赋予用户上述自由，任何人无权剥夺。</p><br/><hr/"
-"><pre>"
+"<html><head/><body><h1 align=\"center\"><b>用户的权利</b></h1><p>Solstice 是"
+"基于 Krita 的独立发行版，与 Krita 基金会没有隶属关系，也未获得其认可。</"
+"p><p>Solstice 是在 GNU 通用公共许可证 (第 3 版或者其后续版本) 下发布的。</"
+"p><p>此许可证赋予人们以下自由的权利：</p><ul><li>任何人都可以为了任何目的自由"
+"地使用 Solstice</li><li>任何人都可以自由地分发 Solstice</li><li>任何人都可以"
+"自由地研究、修改 Solstice</li><li>任何人都可以自由地分发修改后的 Solstice 版"
+"本</li></ul><p>上游 Krita 项目及其贡献者保留各自的版权和署名。</p><h1 align="
+"\"center\">用户作品的权利</h1><p>用户使用 Solstice 创作的作品是该用户独占的个"
+"人财产，该用户享有自由支配这些作品的权利。</p><p>这意味着用户可以在包括商业用"
+"途在内的任意场景自由地使用 Solstice，没有任何限制。</p><p>Solstice 的 GNU "
+"GPL 许可证保障用户的上述自由，任何人无权剥夺。这与禁止在商业场合使用作品的商"
+"业软件试用版或教育版不同。</p><br/><hr/><pre>"
 
 #: libs/ui/dialogs/kis_about_application.cpp:96
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><h1 align=\"center\"><b>Third-party Libraries used by "
-#| "Krita</b></h1><p>Krita is built on the following free software libraries:"
-#| "</p><p><ul>"
+#, kde-format
 msgid ""
 "<html><head/><body><h1 align=\"center\"><b>Third-party Libraries used by "
 "Solstice</b></h1><p>Solstice, through its Krita base, is built on the "
 "following free software libraries:</p><p><ul>"
 msgstr ""
-"<html><head/><body><h1 align=\"center\"><b>Krita 使用的第三方程序库</b></"
-"h1><p>Krita 在构建时使用了下列自由软件程序库：</p><p><ul>"
+"<html><head/><body><h1 align=\"center\"><b>Solstice 使用的第三方程序库</b></"
+"h1><p>Solstice 通过其 Krita 基础，在构建时使用了下列自由软件程序库：</"
+"p><p><ul>"
 
 #: libs/ui/dialogs/kis_delayed_save_dialog.cpp:57
 #, kde-format
@@ -28349,19 +28139,15 @@ msgstr "滤镜：%1"
 
 #. i18n: context: string @ property (text), widget (QLabel, label)
 #: libs/ui/dialogs/kis_dlg_hlg_import.ui:20
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>This is an Hybrid Log Gamma image. Krita does not "
-#| "support sending HLG to the monitor, so for import it is recommended to "
-#| "convert from scene linear to display linear.</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>This is an Hybrid Log Gamma image. Solstice does not "
 "support sending HLG to the monitor, so for import it is recommended to "
 "convert from scene linear to display linear.</p></body></html>"
 msgstr ""
 "<html><head/><body><p>这是一张混合对数伽马 (Hybrid Log Gamma, HLG) 图像。"
-"Krita 不支持将 HLG 信号发送到显示器，建议在导入图像时将它从场景线性转换为显示"
-"器线性。</p></body></html>"
+"Solstice 不支持将 HLG 信号发送到显示器，建议在导入图像时将它从场景线性转换为"
+"显示器线性。</p></body></html>"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkApplyOOTF)
 #: libs/ui/dialogs/kis_dlg_hlg_import.ui:30
@@ -28684,7 +28470,7 @@ msgstr "圆形轮廓 + 笔身倾斜指示器"
 #: libs/ui/dialogs/kis_dlg_preferences.cc:356
 #, kde-format
 msgid "Solstice interface (docker titles, document tabs, toolbars)"
-msgstr ""
+msgstr "Solstice 界面 (面板标题、文档标签页、工具栏)"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:358
 #, kde-format
@@ -28693,11 +28479,13 @@ msgid ""
 "an underline on the current tab, separates toolbars with a line, and shows "
 "the settings pages as a compact list. The colors follow the current theme."
 msgstr ""
+"为面板标题添加标题栏，按标题调整文档标签页的宽度并为当前标签页加下划线，用线"
+"条分隔工具栏，并将设置页面显示为紧凑的列表。颜色跟随当前主题。"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:363
 #, kde-format
 msgid "Update the Overview docker while painting"
-msgstr ""
+msgstr "绘画时更新总览图面板"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:365
 #, kde-format
@@ -28706,17 +28494,17 @@ msgid ""
 "times a second. When off, the Overview updates after the image stops "
 "changing."
 msgstr ""
+"绘制笔画时更新总览图缩略图中发生变化的部分，大约每秒十次。关闭时，总览图会在"
+"图像停止变化后再更新。"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:383
-#, fuzzy, kde-format
-#| msgid "%"
+#, kde-format
 msgctxt "percent suffix"
 msgid "%"
 msgstr "%"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:385
-#, fuzzy, kde-format
-#| msgid "(needs restart)"
+#, kde-format
 msgid "(requires restart)"
 msgstr "(需要重启)"
 
@@ -28726,13 +28514,13 @@ msgid ""
 "Scales the whole interface, on top of the system's display scaling. Values "
 "other than 100%, 150% and 200% can make thin lines and icons slightly blurry."
 msgstr ""
+"在系统显示缩放的基础上缩放整个界面。100%、150% 和 200% 以外的值可能会使细线和"
+"图标略微模糊。"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:402
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Change Interface Scale"
+#, kde-format
 msgid "Interface scale:"
-msgstr "更改界面缩放比例"
+msgstr "界面缩放："
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:459
 #, kde-format
@@ -28794,10 +28582,9 @@ msgid "Show session manager"
 msgstr "显示会话管理器"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:636
-#, fuzzy, kde-format
-#| msgid "You will need to Restart Krita for the changes to take an effect."
+#, kde-format
 msgid "You will need to Restart Solstice for the changes to take an effect."
-msgstr "您需要重启 Krita 才能使更改生效。"
+msgstr "您需要重启 Solstice 才能使更改生效。"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:664
 #, kde-format
@@ -28883,16 +28670,7 @@ msgid "Enable canvas color management"
 msgstr "启用画布色彩管理"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:1291
-#, fuzzy, kde-format
-#| msgid ""
-#| "<p>Enabling canvas color management automatically creates a separate "
-#| "native surface for the canvas. It might cause performance issues on some "
-#| "systems.</p><p>If color management is disabled, Krita will render the "
-#| "canvas into the surface of the main window, which is considered sRGB. It "
-#| "will cause two limitations:<ol>    <li>the color gamut will be limited to "
-#| "sRGB</li>    <li>color proofing mode will be limited to \"use global "
-#| "display settings\",         i.e. paper white proofing will become "
-#| "impossible</li></ol></p>"
+#, kde-format
 msgid ""
 "<p>Enabling canvas color management automatically creates a separate native "
 "surface for the canvas. It might cause performance issues on some systems.</"
@@ -28903,10 +28681,10 @@ msgid ""
 "\",         i.e. paper white proofing will become impossible</li></ol></p>"
 msgstr ""
 "<p>启用画布色彩管理会自动为画布创建一个单独的本地表面。这可能会在某些系统上造"
-"成性能问题。</p><p>如果禁用色彩管理，Krita 将把画布渲染到主窗口的表面，该表面"
-"被视作 sRGB 色彩空间。这会带来两个限制：<ol><li>色域将被限制为 sRGB</li><li>"
-"色彩校样模式将被限制为“使用全局显示设置”，导致无法针对纸张白点进行校样等情"
-"况。</li></ol></p>"
+"成性能问题。</p><p>如果禁用色彩管理，Solstice 将把画布渲染到主窗口的表面，该"
+"表面被视作 sRGB 色彩空间。这会带来两个限制：<ol><li>色域将被限制为 sRGB</"
+"li><li>色彩校样模式将被限制为“使用全局显示设置”，导致无法针对纸张白点进行校样"
+"等情况。</li></ol></p>"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:1311
 #, kde-format
@@ -29169,11 +28947,9 @@ msgid "<b>Warning:</b> current display doesn't support HDR rendering"
 msgstr "<b>警告：</b>当前显示不支持 HDR 渲染"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2386
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Configure Shortcuts"
+#, kde-format
 msgid "Configure Solstice"
-msgstr "配置快捷键"
+msgstr "配置 Solstice"
 
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2406
 #, kde-format
@@ -29287,24 +29063,21 @@ msgstr "总是使用此模板"
 
 #. i18n: context: string @ property (text), widget (QLabel, labelKritaNews)
 #: libs/ui/forms/KisNewsPage.ui:55
-#, fuzzy, kde-format
-#| msgid "Krita files"
+#, kde-format
 msgid "Krita news"
-msgstr "Krita 文件"
+msgstr "Krita 资讯"
 
 #. i18n: context: string @ property (text), widget (QLabel, labelSolsticeReleases)
 #: libs/ui/forms/KisNewsPage.ui:100
-#, fuzzy, kde-format
-#| msgctxt "@title"
-#| msgid "Stylistic Alternates"
+#, kde-format
 msgid "Solstice releases"
-msgstr "风格替代"
+msgstr "Solstice 版本发布"
 
 #. i18n: context: string @ property (text), widget (QLabel, labelNoReleases)
 #: libs/ui/forms/KisNewsPage.ui:113
 #, kde-format
 msgid "No Solstice release has been published yet."
-msgstr ""
+msgstr "尚未发布任何 Solstice 版本。"
 
 #. i18n: context: string @ property (text), widget (QLabel, startTitleLabel)
 #: libs/ui/forms/KisWelcomePage.ui:97
@@ -29941,18 +29714,14 @@ msgstr "应用特性文件"
 
 #. i18n: context: string @ property (text), widget (QLabel, textLabel1)
 #: libs/ui/forms/wdgapplyprofile.ui:33
-#, fuzzy, kde-format
-#| msgid ""
-#| "The image data you want to paste does not have an ICM profile associated "
-#| "with it. If you do not select a profile, Krita will assume that the image "
-#| "data is encoded in the import profile defined in the Settings dialog."
+#, kde-format
 msgid ""
 "The image data you want to paste does not have an ICM profile associated "
 "with it. If you do not select a profile, Solstice will assume that the image "
 "data is encoded in the import profile defined in the Settings dialog."
 msgstr ""
-"您正在粘贴的图像数据不含 ICM 色彩特性文件。如果您不指定一个特性文件，Krita 将"
-"假设该图像色彩空间与 Krita 色彩管理设置中的特性文件相同。"
+"您正在粘贴的图像数据不含 ICM 色彩特性文件。如果您不指定一个特性文件，"
+"Solstice 将假设该图像色彩空间与 Solstice 色彩管理设置中的特性文件相同。"
 
 #. i18n: context: string @ property (text), widget (QLabel, lblProfile)
 #: libs/ui/forms/wdgapplyprofile.ui:60
@@ -30105,10 +29874,9 @@ msgstr "新建图像默认色彩模型："
 #. i18n: context: string @ property (title), widget (QGroupBox, grpPasteBehaviour)
 #. i18n: context: string @ property (title), widget (QGroupBox, grpPasteFrom)
 #: libs/ui/forms/wdgcolorsettings.ui:77 libs/ui/forms/wdggeneralsettings.ui:250
-#, fuzzy, kde-format
-#| msgid "When Pasting Into Krita From Other Applications"
+#, kde-format
 msgid "When Pasting Into Solstice From Other Applications"
-msgstr "从其他程序粘贴图像至 Krita 时"
+msgstr "从其他程序粘贴图像至 Solstice 时"
 
 #. i18n: context: string @ property (text), widget (QRadioButton, radioPasteWeb)
 #: libs/ui/forms/wdgcolorsettings.ui:83
@@ -30130,12 +29898,10 @@ msgstr "每次询问(&K)"
 
 #. i18n: context: string @ property (text), widget (QLabel, textLabel1_2_2)
 #: libs/ui/forms/wdgcolorsettings.ui:104
-#, fuzzy, kde-format
-#| msgid ""
-#| "Note: When copying/pasting inside Krita color info is always preserved."
+#, kde-format
 msgid ""
 "Note: When copying/pasting inside Solstice color info is always preserved."
-msgstr "提示：在 Krita 内部复制/粘贴图像时将始终保留色彩信息。"
+msgstr "提示：在 Solstice 内部复制/粘贴图像时将始终保留色彩信息。"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkBlackpoint)
 #: libs/ui/forms/wdgcolorsettings.ui:114
@@ -30401,16 +30167,12 @@ msgstr "使用黑点补偿(&C)"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkAllowLCMSOptimization)
 #: libs/ui/forms/wdgconvertcolorspace.ui:140
-#, fuzzy, kde-format
-#| msgid ""
-#| "Krita tries to automatically check or uncheck this based on the "
-#| "information it can get from the profile you are converting from and the "
-#| "profile you are converting to."
+#, kde-format
 msgid ""
 "Solstice tries to automatically check or uncheck this based on the "
 "information it can get from the profile you are converting from and the "
 "profile you are converting to."
-msgstr "Krita 会根据来源和目标的特性文件的信息来自动勾选或取消此选项。"
+msgstr "Solstice 会根据来源和目标的特性文件的信息来自动勾选或取消此选项。"
 
 #. i18n: context: string @ property (text), widget (QLabel, textLabel1)
 #: libs/ui/forms/wdgcustompattern.ui:23
@@ -30867,19 +30629,15 @@ msgstr "文件："
 
 #. i18n: context: string @ property (text), widget (QLabel, lblWarning)
 #: libs/ui/forms/wdgdlgfilelayer.ui:87
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>Warning: Krita uses a relative path to store the "
-#| "location of the file in the .kra. If you move the .kra but not the file, "
-#| "the file layer may be broken.</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>Warning: Solstice uses a relative path to store the "
 "location of the file in the .kra. If you move the .kra but not the file, the "
 "file layer may be broken.</p></body></html>"
 msgstr ""
-"<html><head/><body><p>警告：Krita 使用相对路径保存 KRA 图像所包含的文件图层。"
-"如果您移动了 KRA 图像文件的位置，它所包含的文件图层可能会失效。</p></body></"
-"html>"
+"<html><head/><body><p>警告：Solstice 使用相对路径保存 KRA 图像所包含的文件图"
+"层。如果您移动了 KRA 图像文件的位置，它所包含的文件图层可能会失效。</p></"
+"body></html>"
 
 #. i18n: context: string @ property (title), widget (QGroupBox, grpScalingOptions)
 #: libs/ui/forms/wdgdlgfilelayer.ui:112
@@ -30991,10 +30749,9 @@ msgstr "XML"
 
 #. i18n: context: string @ property (text), widget (QLabel, label)
 #: libs/ui/forms/wdgfullscreensettings.ui:25
-#, fuzzy, kde-format
-#| msgid "Select which parts of Krita will be hidden in canvas-only mode."
+#, kde-format
 msgid "Select which parts of Solstice will be hidden in canvas-only mode."
-msgstr "选择在隐藏面板模式下要隐藏的 Krita 部件。"
+msgstr "选择在隐藏面板模式下要隐藏的 Solstice 部件。"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkMenu)
 #: libs/ui/forms/wdgfullscreensettings.ui:35
@@ -31022,10 +30779,9 @@ msgstr "滚动条"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkTitlebar)
 #: libs/ui/forms/wdgfullscreensettings.ui:63
-#, fuzzy, kde-format
-#| msgid "Titlebar (hiding the titlebar will make Krita go full-screen)"
+#, kde-format
 msgid "Titlebar (hiding the titlebar will make Solstice go full-screen)"
-msgstr "标题栏 (隐藏标题栏后 Krita 将全屏显示)"
+msgstr "标题栏 (隐藏标题栏后 Solstice 将全屏显示)"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkStatusbar)
 #: libs/ui/forms/wdgfullscreensettings.ui:70
@@ -31680,14 +31436,13 @@ msgstr "自定义"
 #: libs/ui/forms/wdggeneralsettings.ui:1265
 #, kde-format
 msgid "Enable Color Pick from Anywhere (Win+Shift+C)"
-msgstr ""
+msgstr "启用从屏幕任意位置拾色 (Win+Shift+C)"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkDisableTopMenuShortcuts)
 #: libs/ui/forms/wdggeneralsettings.ui:1272
-#, fuzzy, kde-format
-#| msgid "Save Custom Shortcuts"
+#, kde-format
 msgid "Disable top menu shortcuts"
-msgstr "保存快捷键方案"
+msgstr "禁用菜单栏的快捷键"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkRestNoteEnabled)
 #: libs/ui/forms/wdggeneralsettings.ui:1279
@@ -31697,98 +31452,86 @@ msgid ""
 "Turning it on takes effect after restarting Solstice; turning it off stops "
 "the timer at once."
 msgstr ""
+"在“设置 > 面板列表”中显示 Rest Note 面板 (工作与休息计时器)。开启后需重启 "
+"Solstice 才能生效；关闭后计时器会立即停止。"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkRestNoteEnabled)
 #: libs/ui/forms/wdggeneralsettings.ui:1282
-#, fuzzy, kde-format
-#| msgctxt "@info:tooltip"
-#| msgid "Enable type setting mode."
+#, kde-format
 msgid "Enable the Rest Note docker"
-msgstr "启用画布排版模式。"
+msgstr "启用 Rest Note 面板"
 
 #. i18n: context: string @ property (title), widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1289
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color Shortcut Slots"
-msgstr "前景色"
+msgstr "前景色快捷槽位"
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1292
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 1:"
-msgstr "前景色"
+msgstr "前景色 1："
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1294
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 2:"
-msgstr "前景色"
+msgstr "前景色 2："
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1296
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 3:"
-msgstr "前景色"
+msgstr "前景色 3："
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1298
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 4:"
-msgstr "前景色"
+msgstr "前景色 4："
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1300
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 5:"
-msgstr "前景色"
+msgstr "前景色 5："
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1302
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 6:"
-msgstr "前景色"
+msgstr "前景色 6："
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1304
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 7:"
-msgstr "前景色"
+msgstr "前景色 7："
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1306
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 8:"
-msgstr "前景色"
+msgstr "前景色 8："
 
 #. i18n: context: string @ item, widget (QGroupBox, grpForegroundColorSlots)
 #: libs/ui/forms/wdggeneralsettings.ui:1308
-#, fuzzy, kde-format
-#| msgid "Foreground Color"
+#, kde-format
 msgid "Foreground Color 9:"
-msgstr "前景色"
+msgstr "前景色 9："
 
 #. i18n: context: string @ property (text), widget (QLabel, label_12)
 #: libs/ui/forms/wdggeneralsettings.ui:1377
-#, fuzzy, kde-format
-#| msgid "When Krita starts:"
+#, kde-format
 msgid "When Solstice starts:"
-msgstr "Krita 启动时："
+msgstr "Solstice 启动时："
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkSaveSessionOnQuit)
 #: libs/ui/forms/wdggeneralsettings.ui:1394
-#, fuzzy, kde-format
-#| msgid "Save session when Krita closes"
+#, kde-format
 msgid "Save session when Solstice closes"
-msgstr "退出 Krita 时保存会话"
+msgstr "退出 Solstice 时保存会话"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, m_chkConvertOnImport)
 #: libs/ui/forms/wdggeneralsettings.ui:1401
@@ -31985,13 +31728,7 @@ msgstr "隐藏面板的滚动条"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkIgnoreHighFunctionKeys)
 #: libs/ui/forms/wdggeneralsettings.ui:1793
-#, fuzzy, kde-format
-#| msgid ""
-#| "Some applications may emulate presses of function keys with high numbers "
-#| "(e.g. F22) to bring themselves to the foreground. This may break Krita's "
-#| "shortcuts and actions system. If you have a keyboard with F13 or higher "
-#| "function keys, and you wish to use them, try disabling this option, but "
-#| "take this potential problem into account."
+#, kde-format
 msgid ""
 "Some applications may emulate presses of function keys with high numbers (e."
 "g. F22) to bring themselves to the foreground. This may break Solstice's "
@@ -32000,8 +31737,8 @@ msgid ""
 "this potential problem into account."
 msgstr ""
 "某些应用程序会模拟高位功能键的按下操作来抢占焦点 (例如微信和 Chrome 会按住 "
-"F22 键)。这可能会干扰Krita 的快捷键和操作。如果您的键盘带有 F13 及以上的高位"
-"功能键，禁用此选项可让您使用这些功能键，但也会增加 Krita 被干扰的风险。"
+"F22 键)。这可能会干扰Solstice 的快捷键和操作。如果您的键盘带有 F13 及以上的高"
+"位功能键，禁用此选项可让您使用这些功能键，但也会增加 Solstice 被干扰的风险。"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkIgnoreHighFunctionKeys)
 #: libs/ui/forms/wdggeneralsettings.ui:1796
@@ -32800,8 +32537,7 @@ msgstr "清除此框内容"
 
 #. i18n: context: string @ property (text), widget (QLabel, label_10)
 #: libs/ui/forms/wdgperformancesettings.ui:38
-#, fuzzy, kde-format
-#| msgid "Note: Krita will need to be restarted for changes to take effect"
+#, kde-format
 msgid "Note: Solstice will need to be restarted for changes to take effect"
 msgstr "提示：更改此页面任何设置后必须重新启动程序才能生效。"
 
@@ -32827,10 +32563,9 @@ msgstr "XXX MiB"
 #. i18n: context: string @ property (toolTip), widget (KisDoubleSliderSpinBox, sliderMemoryLimit)
 #: libs/ui/forms/wdgperformancesettings.ui:84
 #: libs/ui/forms/wdgperformancesettings.ui:102
-#, fuzzy, kde-format
-#| msgid "Krita will not use more memory than this limit."
+#, kde-format
 msgid "Solstice will not use more memory than this limit."
-msgstr "Krita 使用的系统内存空间将不会超出此比例。"
+msgstr "Solstice 使用的系统内存空间将不会超出此比例。"
 
 #. i18n: context: string @ property (text), widget (QLabel, label)
 #: libs/ui/forms/wdgperformancesettings.ui:87
@@ -32921,16 +32656,13 @@ msgstr "CPU 可用线程上限："
 
 #. i18n: context: string @ property (toolTip), widget (KisSliderSpinBox, sliderThreadsLimit)
 #: libs/ui/forms/wdgperformancesettings.ui:275
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>Krita will not use more CPU cores than selected by "
-#| "this limit</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>Solstice will not use more CPU cores than selected by "
 "this limit</p></body></html>"
 msgstr ""
-"<html><head/><body><p>Krita 将不会使用超出此限制数量的 CPU 进程</p></body></"
-"html>"
+"<html><head/><body><p>Solstice 将不会使用超出此限制数量的 CPU 进程</p></"
+"body></html>"
 
 #. i18n: context: string @ property (text), widget (QLabel, label_9)
 #: libs/ui/forms/wdgperformancesettings.ui:282
@@ -32940,17 +32672,7 @@ msgstr "动画处理线程上限："
 
 #. i18n: context: string @ property (toolTip), widget (KisSliderSpinBox, sliderFrameClonesLimit)
 #: libs/ui/forms/wdgperformancesettings.ui:295
-#, fuzzy, no-c-format, kde-format
-#| msgid ""
-#| "<html><head/><body><p>When rendering animation frames (into files or "
-#| "during animation cache regeneration), Krita will make the specified "
-#| "number of copies of your image and will work on them in parallel. Each "
-#| "copy will demand more RAM for its storage (about 20% of the size of you "
-#| "image), so raise this limit only if you have enough RAM installed.</"
-#| "p><p><br/></p><p><span style=\" font-weight:600;\">Recommended value:</"
-#| "span> set Clones Limit to the number of <span style=\" text-decoration: "
-#| "underline;\">physical</span> (non-hyperthreaded) cores your CPU has</p></"
-#| "body></html>"
+#, no-c-format, kde-format
 msgid ""
 "<html><head/><body><p>When rendering animation frames (into files or during "
 "animation cache regeneration), Solstice will make the specified number of "
@@ -32962,8 +32684,8 @@ msgid ""
 "\">physical</span> (non-hyperthreaded) cores your CPU has</p></body></html>"
 msgstr ""
 "<html><head/><body><p>在对动画帧进行处理时 (导出为帧序列或者生成动画缓存) ，"
-"Krita 会在后台将图像复制多份副本后并行处理。每个并行处理副本都会占用内存 (约"
-"为图像本身大小的 20% )，如果计算机具备足够的内存，提高此上限可提升性能。</"
+"Solstice 会在后台将图像复制多份副本后并行处理。每个并行处理副本都会占用内存 "
+"(约为图像本身大小的 20% )，如果计算机具备足够的内存，提高此上限可提升性能。</"
 "p><p><span style=\" font-weight:600;\">建议设置</span>：与计算机 CPU 的 "
 "<span style=\" text-decoration: underline;\">物理核心</span> (非超线程) 的数"
 "量一致。</p></body></html>"
@@ -33001,19 +32723,14 @@ msgstr "帧速率限制："
 
 #. i18n: context: string @ property (toolTip), widget (KisSliderSpinBox, sliderFpsLimit)
 #: libs/ui/forms/wdgperformancesettings.ui:344
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>Krita will try to limit the number of screen "
-#| "updates per second to the given number. A lower number will decrease "
-#| "visual responsiveness but increase stylus precision on some systems like "
-#| "macOS.<p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>Solstice will try to limit the number of screen "
 "updates per second to the given number. A lower number will decrease visual "
 "responsiveness but increase stylus precision on some systems like macOS.<p></"
 "body></html>"
 msgstr ""
-"<html><head/><body><p>Krita 会尝试将笔刷绘制时的每秒更新次数限制在此数值以"
+"<html><head/><body><p>Solstice 会尝试将笔刷绘制时的每秒更新次数限制在此数值以"
 "下。数值较低时画面响应会变得卡顿，但在 mac OS 等某些系统下面适当调低此数值能"
 "改善压感笔的精确度。<p></body></html>"
 
@@ -33067,23 +32784,17 @@ msgstr "记录程序性能日志"
 
 #. i18n: context: string @ property (text), widget (QLabel, label_7)
 #: libs/ui/forms/wdgperformancesettings.ui:415
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>When performance logging is enabled Krita saves "
-#| "timing information into the <tt>&lt;working_dir&gt;/log</tt> folder. If "
-#| "you experience performance problems and want to help us, enable this "
-#| "option and add the contents of the directory to a bug report.</p></body></"
-#| "html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>When performance logging is enabled Solstice saves "
 "timing information into the <tt>&lt;working_dir&gt;/log</tt> folder. If you "
 "experience performance problems and want to help us, enable this option and "
 "add the contents of the directory to a bug report.</p></body></html>"
 msgstr ""
-"<html><head/><body><p>启用“记录程序性能日志”后，Krita 会将信息按时序保存到 "
-"<tt>&lt;当前图像目录&gt;/log</tt> 文件夹”中。 如果您在使用 Krita 时遇到性能问"
-"题并希望协助我们改进，请启用此选项，并将该目录中生成的内容附到缺陷报告中。</"
-"p></body></html>"
+"<html><head/><body><p>启用“记录程序性能日志”后，Solstice 会将信息按时序保存"
+"到 <tt>&lt;当前图像目录&gt;/log</tt> 文件夹”中。 如果您在使用 Solstice 时遇到"
+"性能问题并希望协助我们改进，请启用此选项，并将该目录中生成的内容附到缺陷报告"
+"中。</p></body></html>"
 
 #. i18n: context: string @ attribute (title), widget (QWidget, AnimationCache)
 #: libs/ui/forms/wdgperformancesettings.ui:442
@@ -33241,11 +32952,7 @@ msgstr "强制快速预渲染"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkFiltersForceLodMode)
 #: libs/ui/forms/wdgperformancesettings.ui:578
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>The filter dialog will always use instant preview, "
-#| "even if instant preview is disabled in the &quot;View&quot; menu</p></"
-#| "body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>The filter dialog will always use instant preview, "
 "even if instant preview is disabled in the \"View\" menu</p></body></html>"
@@ -33261,11 +32968,7 @@ msgstr "滤镜"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkTransformToolForceLodMode)
 #: libs/ui/forms/wdgperformancesettings.ui:588
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>The transform tool preview will always use instant "
-#| "preview, even if instant preview is disabled in the &quot;View&quot; "
-#| "menu</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>The transform tool preview will always use instant "
 "preview, even if instant preview is disabled in the \"View\" menu</p></"
@@ -33282,11 +32985,7 @@ msgstr "变形工具"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkMoveToolForceLodMode)
 #: libs/ui/forms/wdgperformancesettings.ui:598
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>The move tool preview will always use instant "
-#| "preview, even if instant preview is disabled in the &quot;View&quot; "
-#| "menu</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>The move tool preview will always use instant preview, "
 "even if instant preview is disabled in the \"View\" menu</p></body></html>"
@@ -33842,8 +33541,7 @@ msgstr "0.0"
 
 #. i18n: context: string @ property (title), widget (QGroupBox, grpTabletApi)
 #: libs/ui/forms/wdgtabletsettings.ui:130
-#, fuzzy, kde-format
-#| msgid "Tablet Input API (changing this requires restarting Krita)"
+#, kde-format
 msgid "Tablet Input API (changing this requires restarting Solstice)"
 msgstr "数位板软件接口 (无压感时请切换接口) (需要重启)："
 
@@ -33868,14 +33566,7 @@ msgstr "Windows Ink"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkUseRightMiddleClickWorkaround)
 #: libs/ui/forms/wdgtabletsettings.ui:177
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>Some tablet devices don't pass barrel-button clicks "
-#| "via tablet API. If you have such a device, you can try activate this "
-#| "workaround. Krita will try to read right- and middle-button clicks from "
-#| "the mouse events stream. It may or may not work on your device (depends "
-#| "on the tablet driver implementation).</p><p><br/></p><p>After changing "
-#| "this option Krita should be restarted.</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>Some tablet devices don't pass barrel-button clicks "
 "via tablet API. If you have such a device, you can try activate this "
@@ -33886,8 +33577,8 @@ msgid ""
 msgstr ""
 "<html><head/><body><p>某些数位板只能分配一个笔身按钮给右键/中键，另一个按钮被"
 "锁定为橡皮擦。可以安装 Wacom Feel Driver 或者第三方程序将两个笔身按钮模拟为鼠"
-"标键。勾选此项后，Krita 将尝试通过鼠标事件来获取右键/中键点击。</p></body></"
-"html>"
+"标键。勾选此项后，Solstice 将尝试通过鼠标事件来获取右键/中键点击。</p></"
+"body></html>"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkUseRightMiddleClickWorkaround)
 #: libs/ui/forms/wdgtabletsettings.ui:180
@@ -33925,14 +33616,11 @@ msgstr ""
 
 #. i18n: context: string @ property (toolTip), widget (KisSliderSpinBox, intBrushSpeedSmoothing)
 #: libs/ui/forms/wdgtabletsettings.ui:227
-#, fuzzy, kde-format
-#| msgid ""
-#| "Amount of smoothing Krita should do to speed sensor. This value is very "
-#| "hardware-dependent"
+#, kde-format
 msgid ""
 "Amount of smoothing Solstice should do to speed sensor. This value is very "
 "hardware-dependent"
-msgstr "Krita 对速度传感器数据的平滑程度。此数值视设备的具体情况而定。"
+msgstr "Solstice 对速度传感器数据的平滑程度。此数值视设备的具体情况而定。"
 
 #. i18n: context: string @ property (toolTip), widget (KisAngleSelector, tiltDirectionOffsetAngle)
 #: libs/ui/forms/wdgtabletsettings.ui:240
@@ -35346,10 +35034,9 @@ msgid "Convert to a file layer"
 msgstr "转换为文件图层"
 
 #: libs/ui/kis_layer_manager.cc:698
-#, fuzzy, kde-format
-#| msgid "Brush Style"
+#, kde-format
 msgid "Brush Stroke Layer"
-msgstr "笔尖图像模式"
+msgstr "Brush Stroke Layer"
 
 #: libs/ui/kis_layer_manager.cc:766
 #, kde-format
@@ -35862,52 +35549,41 @@ msgstr ""
 "<html><head/><body><p><b><span style=\" color:%1;\">最近图像</span></b></p>"
 
 #: libs/ui/kis_splash_screen.cpp:205
-#, fuzzy, kde-format
-#| msgid "<p><span style=\" color:%1;\"><b>Using Krita</b></span></p>"
+#, kde-format
 msgid "<p><span style=\" color:%1;\"><b>Using Solstice</b></span></p>"
-msgstr "<p><span style=\" color:%1;\"><b>使用 Krita 创作</b></span></p>"
+msgstr "<p><span style=\" color:%1;\"><b>使用 Solstice 创作</b></span></p>"
 
 #: libs/ui/kis_splash_screen.cpp:213
-#, fuzzy, kde-format
-#| msgid ""
-#| "<p><a href=\"https://krita.org/\"><span style=\" text-decoration: "
-#| "underline; color:%1;\">Krita Website</span></a></p>"
+#, kde-format
 msgid ""
 "<p><a href=\"https://github.com/udtren/Solstice\"><span style=\" text-"
 "decoration: underline; color:%1;\">Solstice Website</span></a></p>"
 msgstr ""
-"<p><a href=\"https://krita.org/\"><span style=\" text-decoration: underline; "
-"color:%1;\">Krita 官方网站</span></a></p>"
+"<p><a href=\"https://github.com/udtren/Solstice\"><span style=\" text-"
+"decoration: underline; color:%1;\">Solstice 网站</span></a></p>"
 
 #: libs/ui/kis_splash_screen.cpp:222
-#, fuzzy, kde-format
-#| msgid ""
-#| "<p><a href=\"https://docs.krita.org/\"><span style=\" text-decoration: "
-#| "underline; color:%1;\">Manual</span></a></p>"
+#, kde-format
 msgid ""
 "<p><a href=\"https://github.com/udtren/Solstice/tree/krita-sol-gpu/docs"
 "\"><span style=\" text-decoration: underline; color:%1;\">Documentation</"
 "span></a></p>"
 msgstr ""
-"<p><a href=\"https://docs.krita.org/zh_CN/\"><span style=\" text-decoration: "
-"underline; color:%1;\">使用手册</span></a></p>"
+"<p><a href=\"https://github.com/udtren/Solstice/tree/krita-sol-gpu/docs"
+"\"><span style=\" text-decoration: underline; color:%1;\">文档</span></a></p>"
 
 #: libs/ui/kis_splash_screen.cpp:225
-#, fuzzy, kde-format
-#| msgid "<p><span style=\" color:%1;\"><b>Coding Krita</b></span></p>"
+#, kde-format
 msgid "<p><span style=\" color:%1;\"><b>Coding Solstice</b></span></p>"
-msgstr "<p><span style=\" color:%1;\"><b>编写 Krita 代码</b></span></p>"
+msgstr "<p><span style=\" color:%1;\"><b>编写 Solstice 代码</b></span></p>"
 
 #: libs/ui/kis_splash_screen.cpp:227
-#, fuzzy, kde-format
-#| msgid ""
-#| "<p><a href=\"https://invent.kde.org/graphics/krita\"><span style=\" text-"
-#| "decoration: underline; color:%1;\">Source Code</span></a></p>"
+#, kde-format
 msgid ""
 "<p><a href=\"https://github.com/udtren/Solstice\"><span style=\" text-"
 "decoration: underline; color:%1;\">Source Code</span></a></p>"
 msgstr ""
-"<p><a href=\"https://invent.kde.org/graphics/krita\"><span style=\" text-"
+"<p><a href=\"https://github.com/udtren/Solstice\"><span style=\" text-"
 "decoration: underline; color:%1;\">源代码</span></a></p>"
 
 #: libs/ui/kis_splash_screen.cpp:293
@@ -35955,13 +35631,7 @@ msgstr ""
 "交换数据总量：%8"
 
 #: libs/ui/kis_statusbar.cc:325
-#, fuzzy, kde-format
-#| msgctxt "tooltip on statusbar memory reporting button"
-#| msgid ""
-#| "\n"
-#| "\n"
-#| "WARNING:\tOut of memory! Swapping has been started.\n"
-#| "\t\tPlease configure more RAM for Krita in Settings dialog"
+#, kde-format
 msgctxt "tooltip on statusbar memory reporting button"
 msgid ""
 "\n"
@@ -35972,7 +35642,7 @@ msgstr ""
 "\n"
 "\n"
 "警告：\t内存不足！数据将被交换到硬盘，造成拖慢。\n"
-"\t\t请在设置对话框的性能页面为 Krita 分配更多内存。"
+"\t\t请在设置对话框的性能页面为 Solstice 分配更多内存。"
 
 #: libs/ui/kis_statusbar.cc:337
 #, kde-format
@@ -37034,13 +36704,7 @@ msgid "Pre&view"
 msgstr "预览(&V)"
 
 #: libs/ui/opengl/KisOpenGLCanvasRenderer.cpp:337
-#, fuzzy, kde-format
-#| msgid ""
-#| "Krita could not initialize the OpenGL canvas:\n"
-#| "\n"
-#| "%1\n"
-#| "\n"
-#| " Krita will disable OpenGL and close now."
+#, kde-format
 msgid ""
 "Solstice could not initialize the OpenGL canvas:\n"
 "\n"
@@ -37048,11 +36712,11 @@ msgid ""
 "\n"
 " Solstice will disable OpenGL and close now."
 msgstr ""
-"Krita 无法初始化 OpenGL 画布：\n"
+"Solstice 无法初始化 OpenGL 画布：\n"
 "\n"
 "%1\n"
 "\n"
-"Krita 将在禁用 OpenGL 选项后立即关闭。"
+"Solstice 将在禁用 OpenGL 选项后立即关闭。"
 
 #: libs/ui/opengl/kis_opengl.cpp:174
 #, kde-format
@@ -37101,13 +36765,13 @@ msgstr "颜色采样器无法对此图层进行采样。"
 #: libs/ui/tool/KisToolOptionsBrushSection.cpp:346
 #, kde-format
 msgid "This brush engine has no options to show here yet."
-msgstr ""
+msgstr "此笔刷引擎暂时没有可在此处显示的选项。"
 
 #: libs/ui/tool/KisToolOptionsBrushSection.cpp:372
 #, kde-format
 msgid ""
 "Click the eye next to an option in the Brush Editor (F5) to show it here."
-msgstr ""
+msgstr "在笔刷编辑器 (F5) 中点击选项旁边的眼睛图标，即可在此处显示该选项。"
 
 #: libs/ui/tool/KisToolOutlineBase.cpp:163
 #: libs/ui/tool/kis_tool_polyline_base.cpp:116
@@ -37571,98 +37235,83 @@ msgstr "蒙版已禁用"
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:86
 #, kde-format
 msgid "Show presets from the checked brush engines."
-msgstr ""
+msgstr "显示勾选的笔刷引擎中的预设。"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:89
 #, kde-format
 msgid ""
 "Show presets stored in the checked bundles. This does not enable or disable "
 "bundles."
-msgstr ""
+msgstr "显示勾选的资源包中的预设。这不会启用或禁用资源包。"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:90
 #, kde-format
 msgid ""
 "Show the items stored in the checked bundles. This does not enable or "
 "disable bundles."
-msgstr ""
+msgstr "显示勾选的资源包中的项目。这不会启用或禁用资源包。"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:93
-#, fuzzy, kde-format
-#| msgid "Looping"
+#, kde-format
 msgid "No Grouping"
-msgstr "循环"
+msgstr "不分组"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:95
-#, fuzzy, kde-format
-#| msgctxt "JPEG-XL encoder options"
-#| msgid "Group size"
+#, kde-format
 msgid "Group by Engine"
-msgstr "组块大小"
+msgstr "按笔刷引擎分组"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:97
-#, fuzzy, kde-format
-#| msgid "Group as layer"
+#, kde-format
 msgid "Group by Bundle"
-msgstr "图层组作为图层"
+msgstr "按资源包分组"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:98
 #, kde-format
 msgid "Show the presets in groups by brush engine or by bundle."
-msgstr ""
+msgstr "按笔刷引擎或资源包分组显示预设。"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:99
 #, kde-format
 msgid "Show the items in groups by bundle."
-msgstr ""
+msgstr "按资源包分组显示项目。"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:147
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:207
-#, fuzzy, kde-format
-#| msgid "Unknown Input"
+#, kde-format
 msgid "Unknown engine"
-msgstr "未知输入"
+msgstr "未知笔刷引擎"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:177
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:221
-#, fuzzy, kde-format
-#| msgctxt "in-app purchases, a bundle that the user can't acquire"
-#| msgid "Not available."
+#, kde-format
 msgid "Not in a bundle"
-msgstr "不可用。"
+msgstr "不属于任何资源包"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:253
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Close All"
+#, kde-format
 msgid "Clear All"
-msgstr "关闭全部图像"
+msgstr "全部清除"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:301
-#, fuzzy, kde-format
-#| msgctxt "Brush engine type, in resource manager"
-#| msgid "Engine: "
+#, kde-format
 msgid "Engines: %1"
-msgstr "笔刷引擎："
+msgstr "笔刷引擎：%1"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:301
-#, fuzzy, kde-format
-#| msgctxt "Brush engine type, in resource manager"
-#| msgid "Engine: "
+#, kde-format
 msgid "Engines: All"
-msgstr "笔刷引擎："
+msgstr "笔刷引擎：全部"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:302
-#, fuzzy, kde-format
-#| msgid "Bundle"
+#, kde-format
 msgid "Bundles: %1"
-msgstr "资源包"
+msgstr "资源包：%1"
 
 #: libs/ui/widgets/KisPresetDockerFilters.cpp:302
-#, fuzzy, kde-format
-#| msgid "Bundle"
+#, kde-format
 msgid "Bundles: All"
-msgstr "资源包"
+msgstr "资源包：全部"
 
 #: libs/ui/widgets/KisWarningWidget.cpp:41
 #, kde-format
@@ -38425,17 +38074,7 @@ msgstr ""
 "绘画后将 RGB 图像转换到其他色彩空间。RGB 也是 HDR 编辑的推荐色彩空间。"
 
 #: libs/ui/widgets/kis_advanced_color_space_selector.cc:410
-#, fuzzy, kde-format
-#| msgctxt "If the selected model is CMYK"
-#| msgid ""
-#| "<b><a href=\"https://en.wikipedia.org/wiki/CMYK_color_model\">CMYK (Cyan, "
-#| "Magenta, Yellow, Key)</a></b>, is the model used by printers and other "
-#| "ink-based media.<br/>CMYK is a subtractive model, meaning that adding "
-#| "colors together will turn them darker. Because of CMYK profiles being "
-#| "very specific per printer, it is recommended to work in RGB space, and "
-#| "then later convert to a CMYK profile, preferably one delivered by your "
-#| "printer. <br/>CMYK is <b>not</b> recommended for painting.Unfortunately, "
-#| "Krita cannot retrieve colorants or the TRC for this space."
+#, kde-format
 msgctxt "If the selected model is CMYK"
 msgid ""
 "<b><a href=\"https://en.wikipedia.org/wiki/CMYK_color_model\">CMYK (Cyan, "
@@ -38451,8 +38090,8 @@ msgstr ""
 "机以及其他运用色料产生图像的媒体使用的色彩模型。<br/>CMYK 是一种减色模型，颜"
 "色在相互叠加时结果变暗。每台打印机的 CMYK 特性文件都有差异，因此我们推荐先使"
 "用 RGB 色彩模型绘制作品，然后再把图像用目标打印机的 CMYK 特性文件来进行转换。"
-"<br/>我们<b>不建议</b> 把 CMYK 用于绘画过程。Krita 也无法获取此色彩空间的原色"
-"色度信息或阶调响应曲线 (TRC) 信息。"
+"<br/>我们<b>不建议</b> 把 CMYK 用于绘画过程。Solstice 也无法获取此色彩空间的"
+"原色色度信息或阶调响应曲线 (TRC) 信息。"
 
 #: libs/ui/widgets/kis_advanced_color_space_selector.cc:423
 #, kde-format
@@ -38472,14 +38111,7 @@ msgstr ""
 "的。"
 
 #: libs/ui/widgets/kis_advanced_color_space_selector.cc:432
-#, fuzzy, kde-format
-#| msgctxt "If the selected model is Grayscale"
-#| msgid ""
-#| "<b><a href=\"https://en.wikipedia.org/wiki/Grayscale\">Grayscale</a></b> "
-#| "only allows for gray values and transparent values. Grayscale images use "
-#| "half the memory and disk space compared to an RGB image of the same bit-"
-#| "depth.<br/>Grayscale is useful for inking and grayscale images. In Krita, "
-#| "you can mix Grayscale and RGB layers in the same image."
+#, kde-format
 msgctxt "If the selected model is Grayscale"
 msgid ""
 "<b><a href=\"https://en.wikipedia.org/wiki/Grayscale\">Grayscale</a></b> "
@@ -38490,24 +38122,11 @@ msgid ""
 msgstr ""
 "<b><a href=\"https://baike.baidu.com/item/灰阶\">灰阶 </a></b>仅允许灰度值和"
 "透明值。与相同位深的 RGB 图像相比，灰阶图像对内存和磁盘空间的占用率仅为一半。"
-"<br/>灰阶图像适用于绘制线稿和灰度作品。Krita 允许在同一图像中同时包含 RGB 和"
-"灰度图层。"
+"<br/>灰阶图像适用于绘制线稿和灰度作品。Solstice 允许在同一图像中同时包含 RGB "
+"和灰度图层。"
 
 #: libs/ui/widgets/kis_advanced_color_space_selector.cc:443
-#, fuzzy, kde-format
-#| msgctxt "If the selected model is LAB"
-#| msgid ""
-#| "<b><a href=\"https://en.wikipedia.org/wiki/Lab_color_space\">L*a*b</a></"
-#| "b>. <b>L</b> stands for Lightness, the <b>a</b> and <b>b</b> components "
-#| "represent color channels.<br/>L*a*b is a special model for color "
-#| "correction. It is based on human perception, meaning that it tries to "
-#| "encode the difference in lightness, red-green balance and yellow-blue "
-#| "balance. This makes it useful for color correction, but the vast majority "
-#| "of color maths in the blending modes do <b>not</b> work as expected here."
-#| "<br/>Similarly, Krita does not support HDR in LAB, meaning that HDR "
-#| "images converted to LAB lose color information. This colorspace is "
-#| "<b>not</b> recommended for painting, nor for export, but best as a space "
-#| "to do post-processing in. The TRC is assumed to be the L* TRC."
+#, kde-format
 msgctxt "If the selected model is LAB"
 msgid ""
 "<b><a href=\"https://en.wikipedia.org/wiki/Lab_color_space\">L*a*b</a></b>. "
@@ -38525,11 +38144,11 @@ msgstr ""
 "<b><a href=\"https://baike.baidu.com/item/Lab颜色模型/3944053\">L*a*b</a></"
 "b> 的 <b>L</b> 代表亮度， <b>a</b> 和 <b>b</b> 表示颜色通道。<br/>L*a*b 是为"
 "色彩校对而设计的特殊色彩模型。它基于人类对色彩的感知原理将色彩以亮度、红绿平"
-"衡以及黄蓝平衡三个参数进行编码。虽然此模型便于色彩校对，但 Krita 大多数的混合"
-"模式所使用的算法<b>不能</b>在此模型下正常工作。<br/>因为类似的原因 Krita 在 "
-"LAB 色彩空间下不支持 HDR，一切 HDR 图像在转换为 LAB 色彩空间时都会丢失色彩信"
-"息。我们<b>不建议</b>将此色彩空间用于绘画或导出，但是可以用于做后期处理。此色"
-"彩空间的阶调响应曲线 (TRC) 假设为 L* TRC。"
+"衡以及黄蓝平衡三个参数进行编码。虽然此模型便于色彩校对，但 Solstice 大多数的"
+"混合模式所使用的算法<b>不能</b>在此模型下正常工作。<br/>因为类似的原因 "
+"Solstice 在 LAB 色彩空间下不支持 HDR，一切 HDR 图像在转换为 LAB 色彩空间时都"
+"会丢失色彩信息。我们<b>不建议</b>将此色彩空间用于绘画或导出，但是可以用于做后"
+"期处理。此色彩空间的阶调响应曲线 (TRC) 假设为 L* TRC。"
 
 #: libs/ui/widgets/kis_advanced_color_space_selector.cc:456
 #, kde-format
@@ -38620,19 +38239,7 @@ msgstr ""
 "情况，如计算机运行过慢则应用回 8 位整数通道。"
 
 #: libs/ui/widgets/kis_advanced_color_space_selector.cc:503
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "When the selected Bitdepth is 64bit float, but this isn't actually "
-#| "available in Krita at the moment."
-#| msgid ""
-#| "<b>64 bit float point</b>: 64 bit float is as precise as it gets in "
-#| "current technology, and this depth is used most of the time for images "
-#| "that are generated or used as an input for software. It being floating "
-#| "point is an absolute requirement for Scene Referred (HDR) images. This "
-#| "does take eight times as much space on the RAM and hard-drive than any "
-#| "given 8 bit image of the same properties, and for some devices it takes "
-#| "much more processing power. We recommend watching the RAM usage of the "
-#| "file carefully, or otherwise use 8 bit if your computer slows down."
+#, kde-format
 msgctxt ""
 "When the selected Bitdepth is 64bit float, but this isn't actually available "
 "in Solstice at the moment."
@@ -39207,24 +38814,20 @@ msgstr "缩略图"
 
 #: libs/ui/widgets/kis_paintop_presets_chooser_popup.cpp:204
 #: libs/ui/widgets/kis_paintop_presets_editor.cpp:180
-#, fuzzy, kde-format
-#| msgid "Preview Outline"
+#, kde-format
 msgid "Preview Size"
-msgstr "笔尖形状轮廓"
+msgstr "预览大小"
 
 #: libs/ui/widgets/kis_paintop_presets_chooser_popup.cpp:213
-#, fuzzy, kde-format
-#| msgid "Selection"
+#, kde-format
 msgctxt "@title Brush Presets docker display menu"
 msgid "Selection"
-msgstr "选区"
+msgstr "选中项"
 
 #: libs/ui/widgets/kis_paintop_presets_chooser_popup.cpp:214
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Switch to Selected Snapshot"
+#, kde-format
 msgid "Scroll to Selected Preset"
-msgstr "加载选中快照"
+msgstr "滚动到选中的预设"
 
 #: libs/ui/widgets/kis_paintop_presets_chooser_popup.cpp:217
 #, kde-format
@@ -39232,6 +38835,7 @@ msgid ""
 "When a brush is selected elsewhere, scroll the list to show it. Otherwise "
 "the list keeps its position and only the highlight moves."
 msgstr ""
+"在别处选中笔刷时，滚动列表以显示该笔刷。否则列表保持当前位置，仅移动高亮。"
 
 #: libs/ui/widgets/kis_paintop_presets_editor.cpp:102
 #: plugins/generators/seexpr/kis_wdg_seexpr.cpp:47
@@ -39978,17 +39582,13 @@ msgid "Toggle Preview"
 msgstr "打开/关闭预览图"
 
 #: libs/widgetutils/KoFileDialog.cpp:318
-#, fuzzy, kde-format
-#| msgid ""
-#| "The selected file name does not have a file extension that Krita "
-#| "understands.\n"
-#| "Make sure the file name ends in '.%1' for example."
+#, kde-format
 msgid ""
 "The selected file name does not have a file extension that Solstice "
 "understands.\n"
 "Make sure the file name ends in '.%1' for example."
 msgstr ""
-"选中的文件名没有包含 Krita 能解析的扩展名。\n"
+"选中的文件名没有包含 Solstice 能解析的扩展名。\n"
 "请确保文件名以“.%1”结尾。"
 
 #: libs/widgetutils/KoFileDialog.cpp:504
@@ -42223,10 +41823,9 @@ msgid "Frames dropped:\t%1%"
 msgstr "跳帧率：%1%"
 
 #: plugins/dockers/animation/KisAnimTimelineFramesModel.cpp:699
-#, fuzzy, kde-format
-#| msgid "Dropped frames are not available in this Krita instance"
+#, kde-format
 msgid "Dropped frames are not available in this Solstice instance"
-msgstr "跳帧在此 Krita 实例中不可用。"
+msgstr "跳帧在此 Solstice 实例中不可用。"
 
 #: plugins/dockers/animation/KisAnimTimelineFramesModel.cpp:880
 #, kde-format
@@ -43170,25 +42769,24 @@ msgid "Layers"
 msgstr "图层"
 
 #: plugins/dockers/layerdocker/LayerBox.cpp:180
-#, fuzzy, kde-format
-#| msgid "Arrange"
+#, kde-format
 msgid "Orange"
-msgstr "矢量图形排列控制"
+msgstr "橙色"
 
 #: plugins/dockers/layerdocker/LayerBox.cpp:181
 #, kde-format
 msgid "Brown"
-msgstr ""
+msgstr "棕色"
 
 #: plugins/dockers/layerdocker/LayerBox.cpp:181
 #, kde-format
 msgid "Grey"
-msgstr ""
+msgstr "灰色"
 
 #: plugins/dockers/layerdocker/LayerBox.cpp:181
 #, kde-format
 msgid "Purple"
-msgstr ""
+msgstr "紫色"
 
 #: plugins/dockers/layerdocker/LayerBox.cpp:288
 #, kde-format
@@ -43329,17 +42927,15 @@ msgstr "是"
 
 #. i18n: context: string @ property (toolTip), widget (QComboBox, cmbColorLabel)
 #: plugins/dockers/layerdocker/WdgLayerBox.ui:51
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Set the source for the selected clone layer(s)."
+#, kde-format
 msgid "Set color label for selected layers"
-msgstr "设置选中的克隆图层的源。"
+msgstr "为选中的图层设置颜色标签"
 
 #. i18n: context: string @ property (toolTip), widget (QComboBox, cmbColorVisibility)
 #: plugins/dockers/layerdocker/WdgLayerBox.ui:59
 #, kde-format
 msgid "Toggle visibility of layers with a color label"
-msgstr ""
+msgstr "切换带有颜色标签的图层的可见性"
 
 #. i18n: context: string @ property (toolTip), widget (KisCompositeOpComboBox, cmbComposite)
 #: plugins/dockers/layerdocker/WdgLayerBox.ui:72 libs/image/kis_layer.cc:280
@@ -43728,14 +43324,11 @@ msgid "Palette exported successfully"
 msgstr "色板导出成功"
 
 #: plugins/dockers/palettedocker/palettedocker_dock.cpp:398
-#, fuzzy, kde-format
-#| msgctxt "@tooltip"
-#| msgid ""
-#| "Save palette explicitly, will also happen automatically on exiting Krita."
+#, kde-format
 msgctxt "@tooltip"
 msgid ""
 "Save palette explicitly, will also happen automatically on exiting Solstice."
-msgstr "手动保存色板，且在退出 Krita 时将自动再次保存。"
+msgstr "手动保存色板，且在退出 Solstice 时将自动再次保存。"
 
 #: plugins/dockers/palettedocker/palettedocker_dock.cpp:401
 #, kde-format
@@ -43815,180 +43408,148 @@ msgstr "配置笔刷预设显示数量..."
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:344
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:358
-#, fuzzy, kde-format
-#| msgid "Select a Color"
+#, kde-format
 msgctxt "@title:window"
 msgid "Select Color"
 msgstr "选择颜色"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:482
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Quick_circle_layout.kpp"
-#| msgid "Quick circle layout"
+#, kde-format
 msgctxt "@title:window"
 msgid "Quick Access Palette"
-msgstr "快速 圆形 构图"
+msgstr "Quick Access Palette"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:532
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:768
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Keep popup open after selecting an item"
-msgstr ""
+msgstr "选择项目后保持弹出窗口打开"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:544
-#, fuzzy, kde-format
-#| msgid "Close"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Close"
 msgstr "关闭"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:562
-#, fuzzy, kde-format
-#| msgid "Menu"
+#, kde-format
 msgctxt "@action:button"
 msgid "Menu"
 msgstr "菜单"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:588
-#, fuzzy, kde-format
-#| msgid "Current Brush"
+#, kde-format
 msgid "Add Current Brush"
-msgstr "当前笔刷"
+msgstr "添加当前笔刷"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:600
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Reset Settings"
+#, kde-format
 msgid "Gesture Settings"
-msgstr "重置设置"
+msgstr "手势设置"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:606
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format)"
-#| msgid "Edit Guides"
+#, kde-format
 msgid "Edit Grid"
-msgstr "编辑参考线"
+msgstr "编辑网格"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:612
-#, fuzzy, kde-format
-#| msgid "Configuration:"
+#, kde-format
 msgid "Configuration"
-msgstr "配置文件："
+msgstr "配置"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:622
-#, fuzzy, kde-format
-#| msgid "Add Page"
+#, kde-format
 msgctxt "@action"
 msgid "Add Tab"
-msgstr "添加页面"
+msgstr "添加标签页"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:624
-#, fuzzy, kde-format
-#| msgid "Current Brush"
+#, kde-format
 msgctxt "@action"
 msgid "Add Current Brush"
-msgstr "当前笔刷"
+msgstr "添加当前笔刷"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:625
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format)"
-#| msgid "Add Layer"
+#, kde-format
 msgctxt "@action"
 msgid "Add Label"
-msgstr "添加图层"
+msgstr "添加文字标签"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:626
-#, fuzzy, kde-format
-#| msgid "Horizontal Shear"
+#, kde-format
 msgctxt "@action"
 msgid "Add Horizontal Separator"
-msgstr "水平斜切"
+msgstr "添加水平分隔线"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:629
-#, fuzzy, kde-format
-#| msgid "Vertical Shear"
+#, kde-format
 msgctxt "@action"
 msgid "Add Vertical Separator"
-msgstr "垂直斜切"
+msgstr "添加垂直分隔线"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:632
-#, fuzzy, kde-format
-#| msgctxt "@title:dialog"
-#| msgid "Add a new Color Swatch"
+#, kde-format
 msgctxt "@action"
 msgid "Add Color Swatch"
-msgstr "新建色块"
+msgstr "添加色块"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:633
-#, fuzzy, kde-format
-#| msgid "Brush size"
+#, kde-format
 msgctxt "@action"
 msgid "Add Brush Size"
-msgstr "笔刷大小"
+msgstr "添加笔刷大小"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:634
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Previous Blending Mode"
+#, kde-format
 msgctxt "@action"
 msgid "Add Brush Blending Mode"
-msgstr "上一个混合模式"
+msgstr "添加笔刷混合模式"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:635
-#, fuzzy, kde-format
-#| msgid "Add Script"
+#, kde-format
 msgctxt "@action"
 msgid "Add Python Script"
-msgstr "添加脚本"
+msgstr "添加 Python 脚本"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:767
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Allow popup to close after selecting an item"
-msgstr ""
+msgstr "允许选择项目后关闭弹出窗口"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:824
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:954
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:967
-#, fuzzy, kde-format
-#| msgid "Assign Profile"
+#, kde-format
 msgctxt "@title:window"
 msgid "Quick Access Profile"
-msgstr "分配色彩特性文件"
+msgstr "Quick Access 配置方案"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:825
-#, fuzzy, kde-format
-#| msgid ""
-#| "The following reference images could not be loaded:\n"
-#| "%1"
+#, kde-format
 msgid ""
 "The Quick Access profile could not be loaded:\n"
 "%1"
 msgstr ""
-"无法加载下列参考图像：\n"
+"无法加载 Quick Access 配置方案：\n"
 "%1"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:837
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:947
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Quick_circle_big.kpp"
-#| msgid "Quick circle big"
+#, kde-format
 msgctxt "@title:window"
 msgid "Quick Access Migration"
-msgstr "快速 圆形 大"
+msgstr "Quick Access 迁移"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:838
-#, fuzzy, kde-format
-#| msgid "The position in the file could not be changed."
+#, kde-format
 msgid ""
 "The imported Quick Access profile could not be saved:\n"
 "%1"
-msgstr "文件中的位置无法更改。"
+msgstr ""
+"无法保存导入的 Quick Access 配置方案：\n"
+"%1"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:948
 #, kde-format
@@ -43996,191 +43557,154 @@ msgid ""
 "The legacy Quick Access configuration could not be imported:\n"
 "%1"
 msgstr ""
+"无法导入旧版 Quick Access 配置：\n"
+"%1"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:955
-#, fuzzy, kde-format
-#| msgid ""
-#| "The following reference images could not be loaded:\n"
-#| "%1"
+#, kde-format
 msgid ""
 "The default Quick Access profile could not be saved:\n"
 "%1"
 msgstr ""
-"无法加载下列参考图像：\n"
+"无法保存默认的 Quick Access 配置方案：\n"
 "%1"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:968
-#, fuzzy, kde-format
-#| msgid "The file could not be removed."
+#, kde-format
 msgid ""
 "The Quick Access profile could not be saved:\n"
 "%1"
-msgstr "文件无法移除。"
+msgstr ""
+"无法保存 Quick Access 配置方案：\n"
+"%1"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1338
 #: plugins/dockers/quickaccess/QuickAccessGridEditDialog.cpp:830
-#, fuzzy, kde-format
-#| msgid "Remove"
+#, kde-format
 msgctxt "@action"
 msgid "Remove"
 msgstr "移除"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1340
-#, fuzzy, kde-format
-#| msgid "Properties"
+#, kde-format
 msgctxt "@action"
 msgid "Properties"
-msgstr "图层属性"
+msgstr "属性"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1385
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2013
 #: plugins/dockers/quickaccess/QuickAccessGridEditDialog.cpp:90
-#, fuzzy, kde-format
-#| msgctxt "Script list label"
-#| msgid "Script"
+#, kde-format
 msgid "Script"
-msgstr "脚本列表"
+msgstr "脚本"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1396
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1482
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Quick_circle_big.kpp"
-#| msgid "Quick circle big"
+#, kde-format
 msgctxt "@title:window"
 msgid "Quick Access"
-msgstr "快速 圆形 大"
+msgstr "Quick Access"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1454
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2123
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Quick_circle_layout.kpp"
-#| msgid "Quick circle layout"
+#, kde-format
 msgctxt "@title:window"
 msgid "Quick Access Layout"
-msgstr "快速 圆形 构图"
+msgstr "Quick Access 布局"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1455
-#, fuzzy, kde-format
-#| msgid "The file could not be opened."
+#, kde-format
 msgid "The item could not be placed in the active grid."
-msgstr "文件无法打开。"
+msgstr "无法将该项目放入当前网格。"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1482
-#, fuzzy, kde-format
-#| msgid "Brush preset icon"
+#, kde-format
 msgid "No brush preset is active."
-msgstr "笔刷预设图标"
+msgstr "没有活动的笔刷预设。"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1497
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format)"
-#| msgid "Add Layer"
+#, kde-format
 msgctxt "@title:window"
 msgid "Add Label"
-msgstr "添加图层"
+msgstr "添加文字标签"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1498
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Rake_texture.kpp"
-#| msgid "Rake texture"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Label text:"
-msgstr "刮刀 纹理"
+msgstr "标签文字："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1528
-#, fuzzy, kde-format
-#| msgctxt "@title:dialog"
-#| msgid "Add a new Color Swatch"
+#, kde-format
 msgctxt "@title:window"
 msgid "Add Color Swatch"
-msgstr "新建色块"
+msgstr "添加色块"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1543
-#, fuzzy, kde-format
-#| msgid "Brush size"
+#, kde-format
 msgctxt "@title:window"
 msgid "Add Brush Size"
-msgstr "笔刷大小"
+msgstr "添加笔刷大小"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1544
-#, fuzzy, kde-format
-#| msgid "Brush size"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Brush size:"
-msgstr "笔刷大小"
+msgstr "笔刷大小："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1565
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Previous Blending Mode"
+#, kde-format
 msgctxt "@title:window"
 msgid "Add Brush Blending Mode"
-msgstr "上一个混合模式"
+msgstr "添加笔刷混合模式"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1566
-#, fuzzy, kde-format
-#| msgid "Blending mode:"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Blending mode ID:"
-msgstr "混合模式："
+msgstr "混合模式 ID："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1583
-#, fuzzy, kde-format
-#| msgid "Add Script"
+#, kde-format
 msgctxt "@title:window"
 msgid "Add Python Script"
-msgstr "添加脚本"
+msgstr "添加 Python 脚本"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1585
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2018
-#, fuzzy, kde-format
-#| msgid "Python files (*.py)"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Python scripts (*.py)"
-msgstr "Python 文件 (*.py)"
+msgstr "Python 脚本 (*.py)"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1600
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Quick_circle_big.kpp"
-#| msgid "Quick circle big"
+#, kde-format
 msgctxt "@title:window"
 msgid "Add Quick Access Tab"
-msgstr "快速 圆形 大"
+msgstr "添加 Quick Access 标签页"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1601
-#, fuzzy, kde-format
-#| msgid "Base name:"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Tab name:"
-msgstr "主文件名："
+msgstr "标签页名称："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1603
-#, fuzzy, kde-format
-#| msgid "New tag"
+#, kde-format
 msgid "New Tab"
-msgstr "新建标签"
+msgstr "新标签页"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1875
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2085
-#, fuzzy, kde-format
-#| msgid "File Layer Properties"
+#, kde-format
 msgctxt "@title:window"
 msgid "Quick Access Item Properties"
-msgstr "文件图层属性"
+msgstr "Quick Access 项目属性"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1911
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:88
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:101
-#, fuzzy, kde-format
-#| msgid "Font Size:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Font size:"
 msgstr "字体大小："
@@ -44189,45 +43713,39 @@ msgstr "字体大小："
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:76
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:90
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:103
-#, fuzzy, kde-format
-#| msgid "Background color"
+#, kde-format
 msgctxt "@label"
 msgid "Background color:"
-msgstr "背景色"
+msgstr "背景色："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1922
-#, fuzzy, kde-format
-#| msgid "Text Colors"
+#, kde-format
 msgctxt "@label"
 msgid "Text color:"
-msgstr "文本颜色"
+msgstr "文字颜色："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1945
-#, fuzzy, kde-format
-#| msgid "Select ASL file"
+#, kde-format
 msgctxt "@title:window"
 msgid "Select File"
-msgstr "选择 ASL 文件"
+msgstr "选择文件"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1961
-#, fuzzy, kde-format
-#| msgid "Modifiers"
+#, kde-format
 msgctxt "@label"
 msgid "Identifier:"
-msgstr "修饰键"
+msgstr "标识符："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1962
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2009
-#, fuzzy, kde-format
-#| msgid "Buttons size:"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Button name:"
-msgstr "按钮大小："
+msgstr "按钮名称："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1967
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2019
-#, fuzzy, kde-format
-#| msgid "Icon:"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Icon:"
 msgstr "图标："
@@ -44235,81 +43753,69 @@ msgstr "图标："
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1968
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2015
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2020
-#, fuzzy, kde-format
-#| msgid "Browse..."
+#, kde-format
 msgctxt "@action:button"
 msgid "Browse…"
-msgstr "浏览..."
+msgstr "浏览…"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1971
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2023
 #, kde-format
 msgctxt "@item:inlistbox"
 msgid "Images (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
-msgstr ""
+msgstr "图像 (*.png *.jpg *.jpeg *.bmp *.gif);;所有文件 (*)"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1975
-#, fuzzy, kde-format
-#| msgid "Layer name:"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Label name:"
-msgstr "图层名称："
+msgstr "标签名称："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1985
-#, fuzzy, kde-format
-#| msgid "Thickness:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Thickness:"
 msgstr "线条粗细："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1989
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:1995
-#, fuzzy, kde-format
-#| msgid "Color:"
+#, kde-format
 msgctxt "@label"
 msgid "Color:"
 msgstr "颜色："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2001
-#, fuzzy, kde-format
-#| msgid "Size:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Size:"
 msgstr "大小："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2005
-#, fuzzy, kde-format
-#| msgid "Blending mode:"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Blending mode:"
 msgstr "混合模式："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2014
-#, fuzzy, kde-format
-#| msgctxt "@label:listbox"
-#| msgid "Script:"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Script:"
-msgstr "书写系统："
+msgstr "脚本："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2091
-#, fuzzy, kde-format
-#| msgid "Brush"
+#, kde-format
 msgctxt "@label"
 msgid "Brush:"
-msgstr "笔刷"
+msgstr "笔刷："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2093
-#, fuzzy, kde-format
-#| msgid "Show Preview"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Stroke Preview"
-msgstr "显示预览效果"
+msgstr "笔画预览"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2094
-#, fuzzy, kde-format
-#| msgctxt "WebP presets"
-#| msgid "Icon"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Icon"
 msgstr "图标"
@@ -44317,28 +43823,24 @@ msgstr "图标"
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2097
 #, kde-format
 msgid "A stroke preview uses two cells; an icon uses one."
-msgstr ""
+msgstr "笔画预览占用两个单元格；图标占用一个。"
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2098
-#, fuzzy, kde-format
-#| msgid "Display:"
+#, kde-format
 msgctxt "@label:listbox"
 msgid "Display:"
 msgstr "显示："
 
 #: plugins/dockers/quickaccess/QuickAccessDock.cpp:2124
-#, fuzzy, kde-format
-#| msgid "The file could not be resized."
+#, kde-format
 msgid "The item could not be resized in the active grid."
-msgstr "文件无法调整大小。"
+msgstr "无法在当前网格中调整该项目的大小。"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:338
-#, fuzzy, kde-format
-#| msgctxt "@title:window"
-#| msgid "Text Property Configuration"
+#, kde-format
 msgctxt "@title:window"
 msgid "Gesture Configuration"
-msgstr "文本属性配置"
+msgstr "手势配置"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:350
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:56
@@ -44346,8 +43848,7 @@ msgstr "文本属性配置"
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:97
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:110
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:114
-#, fuzzy, kde-format
-#| msgid " px"
+#, kde-format
 msgctxt "@item:valuesuffix"
 msgid " px"
 msgstr " 像素"
@@ -44356,398 +43857,330 @@ msgstr " 像素"
 #, kde-format
 msgctxt "@label"
 msgid "Enable gesture system:"
-msgstr ""
+msgstr "启用手势系统："
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:355
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "Maximum distance the black/white points can be moved from their relative "
-#| "extremes in auto levels"
-#| msgid "Maximum offset:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Minimum movement:"
-msgstr "最大偏移："
+msgstr "最小移动距离："
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:356
-#, fuzzy, kde-format
-#| msgid "Show Preview"
+#, kde-format
 msgctxt "@label"
 msgid "Show gesture preview:"
-msgstr "显示预览效果"
+msgstr "显示手势预览："
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:362
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format)"
-#| msgid "Add reference image"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Add gesture page"
-msgstr "添加参考图像"
+msgstr "添加手势页面"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:365
-#, fuzzy, kde-format
-#| msgid "Remove current palette"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Remove current gesture page"
-msgstr "移除选中色板"
+msgstr "移除当前手势页面"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:438
-#, fuzzy, kde-format
-#| msgid "Gesture"
+#, kde-format
 msgctxt "@label:textbox"
 msgid "Gesture key:"
-msgstr "手势"
+msgstr "手势按键："
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:500
-#, fuzzy, kde-format
-#| msgctxt "%1 is the name of the widget"
-#| msgid "Configure %1 dockers"
+#, kde-format
 msgctxt "@title:window"
 msgid "Configure %1 Gesture"
-msgstr "配置 %1 面板"
+msgstr "配置 %1 手势"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:504
-#, fuzzy, kde-format
-#| msgctxt "Empty locale"
-#| msgid "Empty"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Empty"
 msgstr "空"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:505
-#, fuzzy, kde-format
-#| msgid "Action"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Action"
 msgstr "操作"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:506
-#, fuzzy, kde-format
-#| msgid "Brush"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Brush"
 msgstr "笔刷"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:507
-#, fuzzy, kde-format
-#| msgid "Docker:"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Docker"
-msgstr "面板："
+msgstr "面板"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:513
-#, fuzzy, kde-format
-#| msgid "Type:"
+#, kde-format
 msgctxt "@label:listbox"
 msgid "Type:"
 msgstr "类型："
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:514
-#, fuzzy, kde-format
-#| msgid "Resource"
+#, kde-format
 msgctxt "@label:listbox"
 msgid "Resource:"
-msgstr "资源"
+msgstr "资源："
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:613
-#, fuzzy, kde-format
-#| msgctxt "Empty locale"
-#| msgid "Empty"
+#, kde-format
 msgctxt "@label"
 msgid "[Empty]"
-msgstr "空"
+msgstr "[空]"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:617
-#, fuzzy, kde-format
-#| msgid "Action:"
+#, kde-format
 msgid ""
 "Action:\n"
 "%1"
-msgstr "操作："
+msgstr ""
+"操作：\n"
+"%1"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:619
-#, fuzzy, kde-format
-#| msgid "Brush"
+#, kde-format
 msgid ""
 "Brush:\n"
 "%1"
-msgstr "笔刷"
+msgstr ""
+"笔刷：\n"
+"%1"
 
 #: plugins/dockers/quickaccess/QuickAccessGesture.cpp:621
-#, fuzzy, kde-format
-#| msgid "Docker:"
+#, kde-format
 msgid ""
 "Docker:\n"
 "%1"
-msgstr "面板："
+msgstr ""
+"面板：\n"
+"%1"
 
 #: plugins/dockers/quickaccess/QuickAccessGridEditDialog.cpp:649
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format)"
-#| msgid "Edit Guides"
+#, kde-format
 msgctxt "@title:window"
 msgid "Edit Grid"
-msgstr "编辑参考线"
+msgstr "编辑网格"
 
 #: plugins/dockers/quickaccess/QuickAccessGridEditDialog.cpp:657
-#, fuzzy, kde-format
-#| msgid "Undo"
+#, kde-format
 msgctxt "@action"
 msgid "Undo"
 msgstr "撤销"
 
 #: plugins/dockers/quickaccess/QuickAccessGridEditDialog.cpp:831
-#, fuzzy, kde-format
-#| msgid "Copy of"
+#, kde-format
 msgctxt "@title:menu"
 msgid "Copy to Tab"
-msgstr "副本"
+msgstr "复制到标签页"
 
 #: plugins/dockers/quickaccess/QuickAccessGridEditDialog.cpp:832
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Move_tool.kpp"
-#| msgid "Move tool"
+#, kde-format
 msgctxt "@title:menu"
 msgid "Move to Tab"
-msgstr "移动工具"
+msgstr "移动到标签页"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:49
 #, kde-format
 msgid "No canvas is active."
-msgstr ""
+msgstr "没有活动的画布。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:80
-#, fuzzy, kde-format
-#| msgid "%1 could not be opened"
+#, kde-format
 msgid "Python script '%1' could not be opened."
-msgstr "%1 无法打开"
+msgstr "无法打开 Python 脚本“%1”。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:86
 #, kde-format
 msgid ""
 "Solstice's Python engine is not initialized. Enable Python support and "
 "restart Solstice."
-msgstr ""
+msgstr "Solstice 的 Python 引擎尚未初始化。请启用 Python 支持并重启 Solstice。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:119
-#, fuzzy, kde-format
-#| msgid "Select a script file:"
+#, kde-format
 msgid "Python script failed: %1"
-msgstr "选择脚本文件："
+msgstr "Python 脚本执行失败：%1"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:120
-#, fuzzy, kde-format
-#| msgid "Unknown error."
+#, kde-format
 msgid "Unknown Python error"
-msgstr "未知错误。"
+msgstr "未知的 Python 错误"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:131
 #, kde-format
 msgid "This Solstice build does not include Python support."
-msgstr ""
+msgstr "此 Solstice 版本不包含 Python 支持。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:143
-#, fuzzy, kde-format
-#| msgid "%1 could not be opened"
+#, kde-format
 msgid "Brush preset '%1' could not be found."
-msgstr "%1 无法打开"
+msgstr "找不到笔刷预设“%1”。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:158
-#, fuzzy, kde-format
-#| msgid "%1 could not be opened"
+#, kde-format
 msgid "Action '%1' could not be found."
-msgstr "%1 无法打开"
+msgstr "找不到操作“%1”。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:163
-#, fuzzy, kde-format
-#| msgid "This service is currently unavailable."
+#, kde-format
 msgid "Action '%1' is currently unavailable."
-msgstr "此服务当前不可用。"
+msgstr "操作“%1”当前不可用。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:186
-#, fuzzy, kde-format
-#| msgid "%1 could not be opened"
+#, kde-format
 msgid "Docker '%1' could not be found."
-msgstr "%1 无法打开"
+msgstr "找不到面板“%1”。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:198
-#, fuzzy, kde-format
-#| msgid "The name you entered is invalid."
+#, kde-format
 msgid "The configured color is invalid."
-msgstr "您输入的名称无效。"
+msgstr "配置的颜色无效。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:213
-#, fuzzy, kde-format
-#| msgid "The name you entered is invalid."
+#, kde-format
 msgid "The configured brush size is invalid."
-msgstr "您输入的名称无效。"
+msgstr "配置的笔刷大小无效。"
 
 #: plugins/dockers/quickaccess/QuickAccessItemExecutor.cpp:225
-#, fuzzy, kde-format
-#| msgid "%1 could not be opened"
+#, kde-format
 msgid "Blending mode '%1' could not be found."
-msgstr "%1 无法打开"
+msgstr "找不到混合模式“%1”。"
 
 #: plugins/dockers/quickaccess/QuickAccessLegacyImporter.cpp:77
-#, fuzzy, kde-format
-#| msgid "Could not open '%1'."
+#, kde-format
 msgid "Could not read '%1': %2"
-msgstr "无法打开“%1”。"
+msgstr "无法读取“%1”：%2"
 
 #: plugins/dockers/quickaccess/QuickAccessLegacyImporter.cpp:84
-#, fuzzy, kde-format
-#| msgid "Could not open '%1'."
+#, kde-format
 msgid "Could not parse '%1': %2"
-msgstr "无法打开“%1”。"
+msgstr "无法解析“%1”：%2"
 
 #: plugins/dockers/quickaccess/QuickAccessModel.cpp:111
-#, fuzzy, kde-format
-#| msgid "File Layer Properties"
+#, kde-format
 msgid "A Quick Access item has no id."
-msgstr "文件图层属性"
+msgstr "Quick Access 项目缺少 ID。"
 
 #: plugins/dockers/quickaccess/QuickAccessModel.cpp:119
-#, fuzzy, kde-format
-#| msgid "Layer %1 has an unsupported type."
+#, kde-format
 msgid "Item '%1' has an unsupported type."
-msgstr "图层 %1 包含不支持的类型。"
+msgstr "项目“%1”的类型不受支持。"
 
 #: plugins/dockers/quickaccess/QuickAccessModel.cpp:165
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Quick_circle_big.kpp"
-#| msgid "Quick circle big"
+#, kde-format
 msgid "A Quick Access grid has no id."
-msgstr "快速 圆形 大"
+msgstr "Quick Access 网格缺少 ID。"
 
 #: plugins/dockers/quickaccess/QuickAccessModel.cpp:200
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Quick_circle_big.kpp"
-#| msgid "Quick circle big"
+#, kde-format
 msgid "A Quick Access tab has no id."
-msgstr "快速 圆形 大"
+msgstr "Quick Access 标签页缺少 ID。"
 
 #: plugins/dockers/quickaccess/QuickAccessModel.cpp:259
 #, kde-format
 msgid "Unsupported Quick Access format version %1."
-msgstr ""
+msgstr "不支持的 Quick Access 格式版本 %1。"
 
 #: plugins/dockers/quickaccess/QuickAccessModel.cpp:278
-#, fuzzy, kde-format
-#| msgid ""
-#| "The following reference images could not be loaded:\n"
-#| "%1"
+#, kde-format
 msgid "A Quick Access profile must contain at least one tab."
-msgstr ""
-"无法加载下列参考图像：\n"
-"%1"
+msgstr "Quick Access 配置方案必须至少包含一个标签页。"
 
 #: plugins/dockers/quickaccess/QuickAccessProfileRepository.cpp:55
-#, fuzzy, kde-format
-#| msgid "Could not create the file for saving"
+#, kde-format
 msgid "Could not create the profile folder '%1'."
-msgstr "无法创建文件进行保存"
+msgstr "无法创建配置方案文件夹“%1”。"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:73
 #, kde-format
 msgctxt "@item:inlistbox"
 msgid ""
 "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp *.svg *.ico);;All Files (*)"
-msgstr ""
+msgstr "图像 (*.png *.jpg *.jpeg *.bmp *.gif *.webp *.svg *.ico);;所有文件 (*)"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:84
-#, fuzzy, kde-format
-#| msgid "Resources"
+#, kde-format
 msgctxt "@title:window"
 msgid "Resources"
 msgstr "资源"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:95
-#, fuzzy, kde-format
-#| msgid "ID:"
+#, kde-format
 msgctxt "@title:column"
 msgid "ID"
-msgstr "ID："
+msgstr "ID"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:96
-#, fuzzy, kde-format
-#| msgid "Shortcut"
+#, kde-format
 msgctxt "@title:column"
 msgid "Shortcut"
 msgstr "快捷键"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:97
-#, fuzzy, kde-format
-#| msgid "Custom Pattern"
+#, kde-format
 msgctxt "@title:column"
 msgid "Custom Name"
-msgstr "自定义图案"
+msgstr "自定义名称"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:98
-#, fuzzy, kde-format
-#| msgid "RGB Colors"
+#, kde-format
 msgctxt "@title:column"
 msgid "BG Color"
-msgstr "RGB 颜色"
+msgstr "背景色"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:99
-#, fuzzy, kde-format
-#| msgid "Sort Colors"
+#, kde-format
 msgctxt "@title:column"
 msgid "Font Color"
-msgstr "整理颜色"
+msgstr "字体颜色"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:100
-#, fuzzy, kde-format
-#| msgid "Size"
+#, kde-format
 msgctxt "@title:column"
 msgid "Size"
 msgstr "大小"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:101
-#, fuzzy, kde-format
-#| msgctxt "WebP presets"
-#| msgid "Icon"
+#, kde-format
 msgctxt "@title:column"
 msgid "Icon"
 msgstr "图标"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:102
-#, fuzzy, kde-format
-#| msgid "Reset"
+#, kde-format
 msgctxt "@title:column"
 msgid "Reset"
 msgstr "重置"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:103
-#, fuzzy, kde-format
-#| msgid "Add"
+#, kde-format
 msgctxt "@title:column"
 msgid "Add"
 msgstr "添加"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:126
-#, fuzzy, kde-format
-#| msgid "Actions"
+#, kde-format
 msgctxt "@title:tab"
 msgid "Actions"
 msgstr "操作"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:127
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Dockers"
+#, kde-format
 msgctxt "@title:tab"
 msgid "Dockers"
-msgstr "面板列表"
+msgstr "面板"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:128
-#, fuzzy, kde-format
-#| msgid "Brushes"
+#, kde-format
 msgctxt "@title:tab"
 msgid "Brushes"
 msgstr "笔刷"
@@ -44756,150 +44189,130 @@ msgstr "笔刷"
 #, kde-format
 msgctxt "@info:placeholder"
 msgid "Filter by name or internal ID…"
-msgstr ""
+msgstr "按名称或内部 ID 筛选…"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:138
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Select brush preset"
+#, kde-format
 msgctxt "@action:button"
 msgid "Add Selected Brushes"
-msgstr "选择笔刷预设"
+msgstr "添加选中的笔刷"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:232
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Choose Background Color"
+#, kde-format
 msgctxt "@title:window"
 msgid "Choose Background Color"
 msgstr "选择背景色"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:240
-#, fuzzy, kde-format
-#| msgid "Choose a color"
+#, kde-format
 msgctxt "@title:window"
 msgid "Choose Text Color"
-msgstr "选择颜色"
+msgstr "选择文字颜色"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:249
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:391
-#, fuzzy, kde-format
-#| msgid "Default"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Default"
 msgstr "默认"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:253
-#, fuzzy, kde-format
-#| msgctxt "WebP presets"
-#| msgid "Icon"
+#, kde-format
 msgctxt "@action:button"
 msgid "Icon"
 msgstr "图标"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:262
-#, fuzzy, kde-format
-#| msgid "Reset"
+#, kde-format
 msgctxt "@action:button"
 msgid "Reset"
 msgstr "重置"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:268
-#, fuzzy, kde-format
-#| msgid "Add"
+#, kde-format
 msgctxt "@action:button"
 msgid "Add"
 msgstr "添加"
 
 #: plugins/dockers/quickaccess/QuickAccessResourcesDialog.cpp:364
-#, fuzzy, kde-format
-#| msgid "Choose Icon"
+#, kde-format
 msgctxt "@title:window"
 msgid "Choose Icon"
 msgstr "选择图标"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:43
-#, fuzzy, kde-format
-#| msgid "Quick Settings Docker"
+#, kde-format
 msgctxt "@title:window"
 msgid "Quick Access Settings"
-msgstr "笔刷常用数值一键切换面板"
+msgstr "Quick Access 设置"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:49
-#, fuzzy, kde-format
-#| msgid "Grid"
+#, kde-format
 msgctxt "@title:group"
 msgid "Grid"
 msgstr "网格"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:58
-#, fuzzy, kde-format
-#| msgid "Columns:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Columns:"
 msgstr "列数："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:59
-#, fuzzy, kde-format
-#| msgid "When Docker Resizes: "
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Docker icon size:"
-msgstr "面板空间自适应："
+msgstr "面板图标大小："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:60
 #, kde-format
 msgctxt "@option:check"
 msgid "Enable gesture recognition"
-msgstr ""
+msgstr "启用手势识别"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:62
-#, fuzzy, kde-format
-#| msgid "Enable Script"
+#, kde-format
 msgctxt "@option:check"
 msgid "Enable HueSVC docker"
-msgstr "启用脚本"
+msgstr "启用 HueSVC 面板"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:64
 #, kde-format
 msgctxt "@option:check"
 msgid "Enable Quick Brush Adjustments docker"
-msgstr ""
+msgstr "启用 Quick Brush Adjustments 面板"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:72
-#, fuzzy, kde-format
-#| msgid "Clear Button"
+#, kde-format
 msgctxt "@title:group"
 msgid "Header Buttons"
-msgstr "清除按钮"
+msgstr "标题栏按钮"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:77
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:89
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:102
-#, fuzzy, kde-format
-#| msgid "Spot color:"
+#, kde-format
 msgctxt "@label"
 msgid "Font color:"
-msgstr "专色："
+msgstr "字体颜色："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:80
-#, fuzzy, kde-format
-#| msgid "Active"
+#, kde-format
 msgctxt "@title:group"
 msgid "Active Tab"
-msgstr "活动"
+msgstr "当前标签页"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:93
-#, fuzzy, kde-format
-#| msgid "Other"
+#, kde-format
 msgctxt "@title:group"
 msgid "Other Tabs"
-msgstr "其他"
+msgstr "其他标签页"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:106
 #, kde-format
 msgctxt "@title:group"
 msgid "Settings Dialog Size"
-msgstr ""
+msgstr "设置对话框大小"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:116
 #: plugins/dockers/textproperties/qml/CssStylePresetEdit.qml:177
@@ -44919,11 +44332,10 @@ msgstr "高度："
 #, kde-format
 msgctxt "@title:group"
 msgid "Popup and HueSVC"
-msgstr ""
+msgstr "弹出面板和 HueSVC"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:126
-#, fuzzy, kde-format
-#| msgid "Percentage"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Percentage"
 msgstr "百分比"
@@ -44932,249 +44344,208 @@ msgstr "百分比"
 #, kde-format
 msgctxt "@item:inlistbox"
 msgid "0–255 values"
-msgstr ""
+msgstr "0–255 数值"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:141
-#, fuzzy, kde-format
-#| msgid "Palette options"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Palette popup icon size:"
-msgstr "色板属性"
+msgstr "弹出面板图标大小："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:142
-#, fuzzy, kde-format
-#| msgid "Display:"
+#, kde-format
 msgctxt "@label"
 msgid "RGB display:"
-msgstr "显示："
+msgstr "RGB 显示方式："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:143
-#, fuzzy, kde-format
-#| msgid "Selector Size:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Selector width:"
-msgstr "拾色器大小："
+msgstr "拾色器宽度："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:144
-#, fuzzy, kde-format
-#| msgid "Grid height:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Popup height:"
-msgstr "网格高度："
+msgstr "弹出窗口高度："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:145
-#, fuzzy, kde-format
-#| msgid "Initial width:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Controls width:"
-msgstr "初始宽度："
+msgstr "控件宽度："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:146
-#, fuzzy, kde-format
-#| msgid "Crop files before resize"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Controls font size:"
-msgstr "调整大小前裁剪文件"
+msgstr "控件字体大小："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:149
-#, fuzzy, kde-format
-#| msgid "Reset Adjustments"
+#, kde-format
 msgctxt "@title:group"
 msgid "Quick Brush Adjustments"
-msgstr "重置参数"
+msgstr "Quick Brush Adjustments"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:156
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Show Brush Presets"
+#, kde-format
 msgctxt "@option:check"
 msgid "Show brush size slider"
-msgstr "显示笔刷预设"
+msgstr "显示笔刷大小滑动条"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:157
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Brush option slider 1"
+#, kde-format
 msgctxt "@option:check"
 msgid "Show brush opacity slider"
-msgstr "笔刷数值滑动条 1"
+msgstr "显示笔刷不透明度滑动条"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:160
-#, fuzzy, kde-format
-#| msgctxt "Open the folder when the new created video is placed"
-#| msgid "Show in folder"
+#, kde-format
 msgctxt "@option:check"
 msgid "Show brush flow slider"
-msgstr "打开所在目录"
+msgstr "显示笔刷流量滑动条"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:161
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Show MyPaint selector"
+#, kde-format
 msgctxt "@option:check"
 msgid "Show layer opacity slider"
-msgstr "显示 MyPaint 拾色器"
+msgstr "显示图层不透明度滑动条"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:164
-#, fuzzy, kde-format
-#| msgid "Clear color history"
+#, kde-format
 msgctxt "@option:check"
 msgid "Enable color history"
-msgstr "清除颜色历史"
+msgstr "启用颜色历史"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:171
-#, fuzzy, kde-format
-#| msgid "Color count:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Color history count:"
-msgstr "颜色数量："
+msgstr "颜色历史数量："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:172
-#, fuzzy, kde-format
-#| msgid "Sort Color History Ring By:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Color history icon size:"
-msgstr "颜色历史环排序方式："
+msgstr "颜色历史图标大小："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:173
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Increase brush Opacity"
+#, kde-format
 msgctxt "@option:check"
 msgid "Enable brush history"
-msgstr "提高笔刷不透明度"
+msgstr "启用笔刷历史"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:180
-#, fuzzy, kde-format
-#| msgid "Brush Cursor Icon:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Brush history count:"
-msgstr "笔刷光标图标："
+msgstr "笔刷历史数量："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:181
-#, fuzzy, kde-format
-#| msgid "Brush Cursor Icon:"
+#, kde-format
 msgctxt "@label:spinbox"
 msgid "Brush history icon size:"
-msgstr "笔刷光标图标："
+msgstr "笔刷历史图标大小："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:185
-#, fuzzy, kde-format
-#| msgid "Temporary Resources"
+#, kde-format
 msgctxt "@label"
 msgid "Temporary eraser key:"
-msgstr "临时资源"
+msgstr "临时橡皮擦按键："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:186
 #, kde-format
 msgctxt "@label"
 msgid "Temporary preserve-alpha key:"
-msgstr ""
+msgstr "临时锁定透明度按键："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:187
-#, fuzzy, kde-format
-#| msgid "Temporary File Location"
+#, kde-format
 msgctxt "@label"
 msgid "Temporary freehand-selection key:"
-msgstr "临时文件夹"
+msgstr "临时手绘轮廓选区按键："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:188
-#, fuzzy, kde-format
-#| msgid "Encoding options"
+#, kde-format
 msgctxt "@option:check"
 msgid "Enable floating Tool Options"
-msgstr "编码选项"
+msgstr "启用浮动工具选项"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:192
-#, fuzzy, kde-format
-#| msgctxt "Edit left side of segment in segment editor"
-#| msgid "Left Color:"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Left of docker"
-msgstr "左侧颜色："
+msgstr "面板左侧"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:193
-#, fuzzy, kde-format
-#| msgctxt "Edit right side of segment in segment editor"
-#| msgid "Right Color:"
+#, kde-format
 msgctxt "@item:inlistbox"
 msgid "Right of docker"
-msgstr "右侧颜色："
+msgstr "面板右侧"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:194
 #, kde-format
 msgctxt "@item:inlistbox"
 msgid "Below docker, left aligned"
-msgstr ""
+msgstr "面板下方，左对齐"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:197
-#, fuzzy, kde-format
-#| msgid "Tool Options"
+#, kde-format
 msgctxt "@label"
 msgid "Tool Options position:"
-msgstr "工具选项"
+msgstr "工具选项位置："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:200
-#, fuzzy, kde-format
-#| msgid "Set the blend mode for the layer"
+#, kde-format
 msgctxt "@info:placeholder"
 msgid "Enter blend mode IDs, one per line"
-msgstr "设置图层的混合模式"
+msgstr "输入混合模式 ID，每行一个"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:203
-#, fuzzy, kde-format
-#| msgid "Blending mode:"
+#, kde-format
 msgctxt "@label"
 msgid "Blending mode list:"
-msgstr "混合模式："
+msgstr "混合模式列表："
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:206
-#, fuzzy, kde-format
-#| msgid "Temporary Resources"
+#, kde-format
 msgctxt "@title:group"
 msgid "Temporary Brush Sets"
-msgstr "临时资源"
+msgstr "临时笔刷组"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:210
-#, fuzzy, kde-format
-#| msgctxt "@item:inmenu"
-#| msgid "Hold Frames"
+#, kde-format
 msgctxt "@title:column"
 msgid "Hold Key"
-msgstr "定格帧"
+msgstr "按住的按键"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:211
-#, fuzzy, kde-format
-#| msgid "Brush Presets"
+#, kde-format
 msgctxt "@title:column"
 msgid "Brush Preset"
 msgstr "笔刷预设"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:212
-#, fuzzy, kde-format
-#| msgid "Scale"
+#, kde-format
 msgctxt "@title:column"
 msgid "Size Scale"
-msgstr "缩放"
+msgstr "大小倍率"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:227
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format)"
-#| msgid "Add Nodes"
+#, kde-format
 msgctxt "@action:button"
 msgid "Add Row"
-msgstr "添加图层节点"
+msgstr "添加行"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:228
-#, fuzzy, kde-format
-#| msgid "Remove"
+#, kde-format
 msgctxt "@action:button"
 msgid "Remove Row"
-msgstr "移除"
+msgstr "移除行"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:272
-#, fuzzy, kde-format
-#| msgid "General"
+#, kde-format
 msgctxt "@title:tab"
 msgid "General"
 msgstr "常规"
@@ -45183,205 +44554,172 @@ msgstr "常规"
 #, kde-format
 msgctxt "@title:tab"
 msgid "Popup and HueSVC"
-msgstr ""
+msgstr "弹出面板和 HueSVC"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:274
-#, fuzzy, kde-format
-#| msgid "Reset Adjustments"
+#, kde-format
 msgctxt "@title:tab"
 msgid "Quick Brush Adjustments"
-msgstr "重置参数"
+msgstr "Quick Brush Adjustments"
 
 #: plugins/dockers/quickaccess/QuickAccessSettingsDialog.cpp:275
-#, fuzzy, kde-format
-#| msgid "Temporary Resources"
+#, kde-format
 msgctxt "@title:tab"
 msgid "Temporary Brushes"
-msgstr "临时资源"
+msgstr "临时笔刷"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:90
-#, fuzzy, kde-format
-#| msgid "Reset Adjustments"
+#, kde-format
 msgctxt "@title:window"
 msgid "Quick Brush Adjustments"
-msgstr "重置参数"
+msgstr "Quick Brush Adjustments"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:112
-#, fuzzy, kde-format
-#| msgid "Size:"
+#, kde-format
 msgctxt "@label:slider, followed by the brush size"
 msgid "Size: "
 msgstr "大小："
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:114
-#, fuzzy, kde-format
-#| msgid "Opacity: "
+#, kde-format
 msgctxt "@label:slider, followed by a percentage"
 msgid "Opacity: "
 msgstr "不透明度："
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:115
-#, fuzzy, kde-format
-#| msgid "Flow:"
+#, kde-format
 msgctxt "@label:slider, followed by a percentage"
 msgid "Flow: "
 msgstr "流量："
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:126
-#, fuzzy, kde-format
-#| msgid "Brush Settings"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Brush rotation"
-msgstr "笔刷选项"
+msgstr "笔刷旋转"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:135
-#, fuzzy, kde-format
-#| msgid "Reload the brush preset"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Reload the current brush preset"
-msgstr "重置为预设原始状态"
+msgstr "重新加载当前笔刷预设"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:141
-#, fuzzy, kde-format
-#| msgid "Layer Opacity"
+#, kde-format
 msgctxt "@label:slider, followed by a percentage"
 msgid "Layer Opacity: "
-msgstr "图层不透明度"
+msgstr "图层不透明度："
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:191
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Show Tool Options"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Show Tool Options"
 msgstr "显示工具选项"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:193
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Toggle eraser preset"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Toggle eraser mode"
-msgstr "切换橡皮擦预设"
+msgstr "切换橡皮擦模式"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:195
-#, fuzzy, kde-format
-#| msgctxt "action"
-#| msgid "Toggle layer alpha"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Toggle preserve alpha"
-msgstr "打开/关闭 - 锁定透明度"
+msgstr "切换锁定透明度"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:197
-#, fuzzy, kde-format
-#| msgid "Toggle pin selection actions bar"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Toggle selection outline"
-msgstr "固定/取消固定选区操作浮动工具条"
+msgstr "切换选区轮廓显示"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:199
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Toggle Quick Access gestures"
-msgstr ""
+msgstr "切换 Quick Access 手势"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:378
 #, kde-format
 msgctxt "@info"
 msgid "Tool Options are open beside Quick Brush Adjustments."
-msgstr ""
+msgstr "工具选项已在 Quick Brush Adjustments 旁边打开。"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:621
-#, fuzzy, kde-format
-#| msgid "Size"
+#, kde-format
 msgctxt "@action:button"
 msgid "Size"
 msgstr "大小"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:622
-#, fuzzy, kde-format
-#| msgid "Opacity"
+#, kde-format
 msgctxt "@action:button"
 msgid "Opacity"
 msgstr "不透明度"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:623
-#, fuzzy, kde-format
-#| msgid "Flow"
+#, kde-format
 msgctxt "@action:button"
 msgid "Flow"
 msgstr "流量"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:624
-#, fuzzy, kde-format
-#| msgid "Rotation"
+#, kde-format
 msgctxt "@action:button"
 msgid "Rotation"
 msgstr "旋转"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:665
-#, fuzzy, kde-format
-#| msgctxt "layer dimensions"
-#| msgid "(%1, %2), (%3, %4)"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "RGB: %1, %2, %3"
-msgstr "(%1，%2)，(%3，%4)"
+msgstr "RGB：%1, %2, %3"
 
 #: plugins/dockers/quickaccess/QuickAdjustDock.cpp:692
-#, fuzzy, kde-format
-#| msgid "Brush"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Brush: %1"
-msgstr "笔刷"
+msgstr "笔刷：%1"
 
 #: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:85
-#, fuzzy, kde-format
-#| msgid "Background color selector"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Background color; click to swap colors"
-msgstr "背景色拾色器"
+msgstr "背景色；点击可交换颜色"
 
 #: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:86
-#, fuzzy, kde-format
-#| msgid "Foreground color selector"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Foreground color; click to swap colors"
-msgstr "前景色拾色器"
+msgstr "前景色；点击可交换颜色"
 
 #: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:94
-#, fuzzy, kde-format
-#| msgctxt "(qtundo-format) Delete one shape"
-#| msgid "Delete shape"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Selector shape"
-msgstr "删除形状"
+msgstr "拾色器形状"
 
 #: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:105
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Square inside a hue ring"
-msgstr ""
+msgstr "色相环内的方形"
 
 #: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:106
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Pixelart_square.kpp"
-#| msgid "Pixelart square"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Hue bar and square"
-msgstr "像素画 方形"
+msgstr "色相条和方形"
 
 #: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:321
-#, fuzzy, kde-format
-#| msgid "Foreground color"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Foreground color"
 msgstr "前景色"
 
 #: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:322
-#, fuzzy, kde-format
-#| msgid "Background color"
+#, kde-format
 msgctxt "@info:tooltip"
 msgid "Background color"
 msgstr "背景色"
@@ -45390,53 +44728,49 @@ msgstr "背景色"
 #, kde-format
 msgctxt "@title:window"
 msgid "HueSVC"
-msgstr ""
+msgstr "HueSVC"
 
 #. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
 #: plugins/dockers/quickaccess/quickaccess.action:4
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Quick_circle_big.kpp"
-#| msgid "Quick circle big"
+#, kde-format
 msgctxt "action"
 msgid "Quick Access"
-msgstr "快速 圆形 大"
+msgstr "Quick Access"
 
 #. i18n: context: text @ Action (quick_access_palette_popup), Actions (Scripts), ActionCollection (Scripts)
 #: plugins/dockers/quickaccess/quickaccess.action:6
 #, kde-format
 msgctxt "action"
 msgid "Quick Access Palette Popup"
-msgstr ""
+msgstr "Quick Access Palette 弹出窗口"
 
 #. i18n: context: text @ Action (hue_svc_popup), Actions (Scripts), ActionCollection (Scripts)
 #: plugins/dockers/quickaccess/quickaccess.action:12
 #, kde-format
 msgctxt "action"
 msgid "HueSVC Popup"
-msgstr ""
+msgstr "HueSVC 弹出窗口"
 
 #. i18n: context: text @ Action (toggle_gesture_recognition), Actions (Scripts), ActionCollection (Scripts)
 #: plugins/dockers/quickaccess/quickaccess.action:18
 #, kde-format
 msgctxt "action"
 msgid "Toggle Gesture Recognition"
-msgstr ""
+msgstr "切换手势识别"
 
 #. i18n: context: text @ Action (move_quick_access_palette_docker_to_cursor), Actions (Scripts), ActionCollection (Scripts)
 #: plugins/dockers/quickaccess/quickaccess.action:24
 #, kde-format
 msgctxt "action"
 msgid "Move Quick Access Palette Docker to Cursor"
-msgstr ""
+msgstr "将 Quick Access Palette 面板移动到光标处"
 
 #. i18n: context: text @ Action (move_quick_adjust_docker_to_cursor), Actions (Scripts), ActionCollection (Scripts)
 #: plugins/dockers/quickaccess/quickaccess.action:30
 #, kde-format
 msgctxt "action"
 msgid "Move Quick Adjust Docker to Cursor"
-msgstr ""
+msgstr "将 Quick Adjust 面板移动到光标处"
 
 #. i18n: context: text @ Actions (Recorder), ActionCollection (Recorder)
 #: plugins/dockers/recorder/recorder.action:4
@@ -46225,14 +45559,11 @@ msgstr ""
 "后重新开始录制。"
 
 #: plugins/dockers/recorder/recorderdocker_dock.cpp:746
-#, fuzzy, kde-format
-#| msgid ""
-#| "Krita was unable to stop the recorder probably. Please try to restart "
-#| "Krita."
+#, kde-format
 msgid ""
 "Solstice was unable to stop the recorder probably. Please try to restart "
 "Solstice."
-msgstr "Krita 无法停止录像。请尝试重启 Krita。"
+msgstr "Solstice 无法停止录像。请尝试重启 Solstice。"
 
 #: plugins/dockers/recorder/recorderdocker_dock.cpp:751
 #, kde-format
@@ -49551,44 +48882,32 @@ msgid "Preview:"
 msgstr "预览："
 
 #: plugins/extensions/buginfo/DlgColorManagementInfo.cpp:69
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "Caption of the dialog with color management information for bug reports"
-#| msgid ""
-#| "Krita Color Management Information: please paste this information to the "
-#| "bug report"
+#, kde-format
 msgctxt ""
 "Caption of the dialog with color management information for bug reports"
 msgid ""
 "Solstice Color Management Information: please paste this information to the "
 "bug report"
-msgstr "Krita 色彩管理信息：请将此信息粘贴到程序缺陷报告中"
+msgstr "Solstice 色彩管理信息：请将此信息粘贴到程序缺陷报告中"
 
 #: plugins/extensions/buginfo/DlgCrashLog.cpp:34
-#, fuzzy, kde-format
-#| msgctxt "Caption of the dialog with crash log for bug reports"
-#| msgid "Krita Crash Log: please paste this information to the bug report"
+#, kde-format
 msgctxt "Caption of the dialog with crash log for bug reports"
 msgid "Solstice Crash Log: please paste this information to the bug report"
-msgstr "Krita 崩溃日志：请将此信息粘贴到程序缺陷报告中"
+msgstr "Solstice 崩溃日志：请将此信息粘贴到程序缺陷报告中"
 
 #: plugins/extensions/buginfo/DlgKritaLog.cpp:25
-#, fuzzy, kde-format
-#| msgctxt "Caption of the dialog with Krita usage log for bug reports"
-#| msgid "Krita Usage Log: please paste this information to the bug report"
+#, kde-format
 msgctxt "Caption of the dialog with Solstice usage log for bug reports"
 msgid "Solstice Usage Log: please paste this information to the bug report"
-msgstr "Krita 使用日志：请将此信息粘贴到程序缺陷报告中"
+msgstr "Solstice 使用日志：请将此信息粘贴到程序缺陷报告中"
 
 #: plugins/extensions/buginfo/DlgSysInfo.cpp:25
-#, fuzzy, kde-format
-#| msgctxt "Caption of the dialog with system information for bug reports"
-#| msgid ""
-#| "Krita System Information: please paste this information to the bug report"
+#, kde-format
 msgctxt "Caption of the dialog with system information for bug reports"
 msgid ""
 "Solstice System Information: please paste this information to the bug report"
-msgstr "Krita 系统信息：请将此信息粘贴到程序缺陷报告中"
+msgstr "Solstice 系统信息：请将此信息粘贴到程序缺陷报告中"
 
 #: plugins/extensions/buginfo/dlg_buginfo.cpp:36
 #, kde-format
@@ -51534,16 +50853,13 @@ msgstr "Ctrl+S"
 
 #. i18n: context: string @ property (text), widget (QLabel, label)
 #: plugins/extensions/pykrita/plugin/manager.ui:21
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p><span style=\" font-weight:600;\">Note:</span> you "
-#| "need to restart Krita to enable or disable plugins.</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p><span style=\" font-weight:600;\">Note:</span> you "
 "need to restart Solstice to enable or disable plugins.</p></body></html>"
 msgstr ""
 "<html><head/><body><p><span style=\" font-weight:600;\">注意：</span>启用或禁"
-"用插件后必须重启 Krita 才能生效。</p></body></html>"
+"用插件后必须重启 Solstice 才能生效。</p></body></html>"
 
 #. i18n: context: string @ property (text), widget (QLabel, errorLabel)
 #: plugins/extensions/pykrita/plugin/manager.ui:43
@@ -51573,13 +50889,12 @@ msgstr "Python 插件管理"
 #: plugins/extensions/qmic/QMic.cpp:82 plugins/extensions/qmic/QMic.cpp:135
 #, kde-format
 msgid "G'MIC"
-msgstr ""
+msgstr "G'MIC"
 
 #: plugins/extensions/qmic/QMic.cpp:83
-#, fuzzy, kde-format
-#| msgid "Do you want to clear the settings file?"
+#, kde-format
 msgid "Cannot create the G'MIC settings folder."
-msgstr "您想要清除设置文件吗？"
+msgstr "无法创建 G'MIC 设置文件夹。"
 
 #: plugins/extensions/qmic/QMic.cpp:96
 #, kde-format
@@ -51587,21 +50902,20 @@ msgid "The GMic plugin is not installed or could not be loaded."
 msgstr "G'MIC 插件没有安装或无法加载。"
 
 #: plugins/extensions/qmic/QMic.cpp:124
-#, fuzzy, kde-format
-#| msgid "Krita cannot launch the gmic-qt plugin. No bundled library found."
+#, kde-format
 msgid "Solstice cannot launch the gmic-qt plugin. No bundled library found."
-msgstr "Krita 无法启动 gmic-qt 插件，找不到自带程序库。"
+msgstr "Solstice 无法启动 gmic-qt 插件，找不到自带程序库。"
 
 #: plugins/extensions/qmic/kis_qmic_interface.cpp:227
 #, kde-format
 msgid ""
 "This G'MIC output destination is not supported. The image was not changed."
-msgstr ""
+msgstr "不支持此 G'MIC 输出目标。图像未被更改。"
 
 #: plugins/extensions/qmic/kis_qmic_interface.cpp:235
 #, kde-format
 msgid "The G'MIC document is no longer active. The result was not applied."
-msgstr ""
+msgstr "G'MIC 处理的图像已不再处于活动状态。结果未被应用。"
 
 #: plugins/extensions/qmic/kis_qmic_interface.cpp:254
 msgctxt "(qtundo-format)"
@@ -51611,7 +50925,7 @@ msgstr "G'MIC 滤镜"
 #: plugins/extensions/qmic/kis_qmic_interface.cpp:261
 #, kde-format
 msgid "A G'MIC input layer is locked. The image was not changed."
-msgstr ""
+msgstr "G'MIC 的某个输入图层已被锁定。图像未被更改。"
 
 #: plugins/extensions/resourcemanager/DlgResourceManager.cpp:37
 #, kde-format
@@ -51740,14 +51054,11 @@ msgstr "创建资源包"
 
 #. i18n: context: string @ property (toolTip), widget (QPushButton, btnExtractTagsToResourceFolder)
 #: plugins/extensions/resourcemanager/WdgDlgResourceManager.ui:116
-#, fuzzy, kde-format
-#| msgid ""
-#| "Make a backup of all your tags in the resource folder so they won't get "
-#| "lost on upgrading Krita"
+#, kde-format
 msgid ""
 "Make a backup of all your tags in the resource folder so they won't get lost "
 "on upgrading Solstice"
-msgstr "备份资源文件夹中的所有标签，以免在升级 Krita 时丢失"
+msgstr "备份资源文件夹中的所有标签，以免在升级 Solstice 时丢失"
 
 #. i18n: context: string @ property (text), widget (QPushButton, btnExtractTagsToResourceFolder)
 #: plugins/extensions/resourcemanager/WdgDlgResourceManager.ui:119
@@ -52436,7 +51747,7 @@ msgstr "镜头模糊(&L)..."
 msgid ""
 "Highlight enhancement converts colors through floating-point RGB and back; "
 "appearance may change."
-msgstr ""
+msgstr "高光增强会将颜色转换为浮点 RGB 后再转换回来，外观可能会改变。"
 
 #: plugins/filters/blur/kis_lens_blur_filter.h:30
 #, kde-format
@@ -52456,14 +51767,14 @@ msgstr "动态模糊"
 #: plugins/filters/blur/kis_wdg_lens_blur.cpp:36
 #, kde-format
 msgid "Zero keeps the original polygon; 100% makes a circle."
-msgstr ""
+msgstr "为零时保持原始多边形；100% 时变为圆形。"
 
 #: plugins/filters/blur/kis_wdg_lens_blur.cpp:38
 #, kde-format
 msgid ""
 "Emphasizes bright color values while blurring opacity normally. Zero keeps "
 "the original blur."
-msgstr ""
+msgstr "强调明亮的颜色值，同时正常模糊不透明度。为零时保持原始模糊效果。"
 
 #. i18n: context: string @ property (text), widget (QLabel, label_2)
 #. i18n: context: string @ property (text), widget (QLabel, textLabel2)
@@ -52586,17 +51897,15 @@ msgstr "旋转："
 
 #. i18n: context: string @ property (text), widget (QLabel, roundnessLabel)
 #: plugins/filters/blur/wdg_lens_blur.ui:103
-#, fuzzy, kde-format
-#| msgid "Randomness:"
+#, kde-format
 msgid "Roundness:"
-msgstr "随机度："
+msgstr "圆度："
 
 #. i18n: context: string @ property (text), widget (QLabel, highlightLabel)
 #: plugins/filters/blur/wdg_lens_blur.ui:111
-#, fuzzy, kde-format
-#| msgid "H&ighlight Mode:"
+#, kde-format
 msgid "Highlight enhancement:"
-msgstr "高光模式(&I)："
+msgstr "高光增强："
 
 #. i18n: context: string @ property (text), widget (QLabel, label)
 #. i18n: context: string @ property (text), widget (QLabel, textLabel5)
@@ -55630,7 +54939,7 @@ msgstr "正反向交替"
 #, kde-format
 msgctxt "The position will be set in pixels"
 msgid "Pixels"
-msgstr ""
+msgstr "像素"
 
 #: plugins/generators/gradient/KisGradientGeneratorConfigWidget.cpp:45
 #, kde-format
@@ -56433,14 +55742,7 @@ msgid "Selection mode:"
 msgstr "笔尖图像顺序："
 
 #: plugins/impex/exr/exr_converter.cc:919
-#, fuzzy, kde-format
-#| msgctxt "@info"
-#| msgid ""
-#| "The image contains pixels with zero alpha channel and non-zero color "
-#| "channels. Krita has modified those pixels to have at least some alpha. "
-#| "The initial values will <i>not</i> be reverted on saving the image back."
-#| "<br/><br/>This will hardly make any visual difference just keep it in "
-#| "mind."
+#, kde-format
 msgctxt "@info"
 msgid ""
 "The image contains pixels with zero alpha channel and non-zero color "
@@ -56448,9 +55750,9 @@ msgid ""
 "The initial values will <i>not</i> be reverted on saving the image back.<br/"
 "><br/>This will hardly make any visual difference just keep it in mind."
 msgstr ""
-"此图像同时包含透明度通道为零值和非零值的像素。Krita 已将所有像素调整为带有一"
-"定透明度。像素的原始数值在保存时将<b>不会</b>被还原。<br/>虽然这并不会造成视"
-"觉上的明显区别，但请记住软件做过上述处理以防万一。"
+"此图像同时包含透明度通道为零值和非零值的像素。Solstice 已将所有像素调整为带有"
+"一定透明度。像素的原始数值在保存时将<b>不会</b>被还原。<br/>虽然这并不会造成"
+"视觉上的明显区别，但请记住软件做过上述处理以防万一。"
 
 #: plugins/impex/exr/exr_converter.cc:926
 #, kde-format
@@ -56626,20 +55928,15 @@ msgstr "保持原色色度信息，SMPTE ST 428 编码"
 
 #: plugins/impex/heif/HeifExport.cpp:576
 #: plugins/impex/jxl/kis_wdg_options_jpegxl.cpp:230
-#, fuzzy, kde-format
-#| msgctxt "@tooltip"
-#| msgid ""
-#| "The image will be linearized first, and then encoded with SMPTE ST 428. "
-#| "Krita always opens images like these as linear floating point, this "
-#| "option is there to reverse that"
+#, kde-format
 msgctxt "@tooltip"
 msgid ""
 "The image will be linearized first, and then encoded with SMPTE ST 428. "
 "Solstice always opens images like these as linear floating point, this "
 "option is there to reverse that"
 msgstr ""
-"图像将首先被线性化，然后通过 SMPTE ST 428 曲线进行编码。Krita 本来会始终将此"
-"类图像作为线性浮点图像打开，而此选项则用于反转此行为。"
+"图像将首先被线性化，然后通过 SMPTE ST 428 曲线进行编码。Solstice 本来会始终将"
+"此类图像作为线性浮点图像打开，而此选项则用于反转此行为。"
 
 #: plugins/impex/heif/HeifExport.cpp:582
 #, kde-format
@@ -56732,21 +56029,16 @@ msgstr ""
 #. i18n: context: string @ property (toolTip), widget (QGroupBox, chkHLGOOTF)
 #: plugins/impex/heif/WdgHeifExport.ui:129
 #: plugins/impex/jxl/kis_wdg_options_jpegxl.ui:334
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>Hybrid Log Gamma needs an extra conversion step in "
-#| "between, as Krita currently cannot send HLG data directly to the display. "
-#| "Therefore we apply the HLG opto-optical curve to convert from display to "
-#| "scene linear.</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>Hybrid Log Gamma needs an extra conversion step in "
 "between, as Solstice currently cannot send HLG data directly to the display. "
 "Therefore we apply the HLG opto-optical curve to convert from display to "
 "scene linear.</p></body></html>"
 msgstr ""
-"<html><head/><body><p>混合对数伽马需要进行额外的中间转换，因为 Krita 当前不能"
-"直接向显示器发送 HLG 数据。在从显示器线性转换为场景线性时将应用 HLG 光电曲线 "
-"(OOTF)。</p></body></html>"
+"<html><head/><body><p>混合对数伽马需要进行额外的中间转换，因为 Solstice 当前"
+"不能直接向显示器发送 HLG 数据。在从显示器线性转换为场景线性时将应用 HLG 光电"
+"曲线 (OOTF)。</p></body></html>"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkHLGOOTF)
 #. i18n: context: string @ property (title), widget (QGroupBox, chkHLGOOTF)
@@ -56764,13 +56056,7 @@ msgstr "无损(&L)"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkMonochromesRGB)
 #: plugins/impex/heif/WdgHeifExport.ui:161
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>Not all encoders for AV1 and by extension avif "
-#| "support saving to monochrome and use a YCbCr fallback. Krita will be able "
-#| "to open these files just fine, but not all programs do. Converting to "
-#| "sRGB first before saving solves this at the cost of larger file size.</"
-#| "p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>Not all encoders for AV1 and by extension avif support "
 "saving to monochrome and use a YCbCr fallback. Solstice will be able to open "
@@ -56778,8 +56064,9 @@ msgid ""
 "before saving solves this at the cost of larger file size.</p></body></html>"
 msgstr ""
 "<html><head/><body><p>并不是所有 AV1 编码器或 AVIF 扩展名的文件都支持保存到单"
-"色和使用 YCbCr 作为后备方案。Krita 可以正常打开这些文件，但其他程序则不一定。"
-"在保存前先转换为 sRGB 可以解决此问题，但文件体积会变大。</p></body></html>"
+"色和使用 YCbCr 作为后备方案。Solstice 可以正常打开这些文件，但其他程序则不一"
+"定。在保存前先转换为 sRGB 可以解决此问题，但文件体积会变大。</p></body></"
+"html>"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkMonochromesRGB)
 #: plugins/impex/heif/WdgHeifExport.ui:164
@@ -57442,25 +56729,7 @@ msgstr ""
 
 #. i18n: context: string @ property (toolTip), widget (QTabWidget, tabWidget)
 #: plugins/impex/jxl/kis_wdg_options_jpegxl.ui:27
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p><span style=\" font-size:18pt; text-decoration: "
-#| "underline;\">Advanced</span></p><p>The option &quot;Default (encoder "
-#| "chooses)&quot; is common. It means that the encoder automatically selects "
-#| "optimal settings based on your quality/speed tradeoff selection. This "
-#| "option is recommended for most users.</p><p><span style=\" font-"
-#| "size:14pt; text-decoration: underline;\">Encoder Parameters:</span></"
-#| "p><p>general settings that apply to the overall JPEG XL encoding process, "
-#| "regardless of which compression method is used.</p><p><span style=\" font-"
-#| "size:14pt; text-decoration: underline;\">VarDCT parameters:</span></"
-#| "p><p>Variable Discrete Cosine Transform (Optimized for photographic "
-#| "content)</p><p>This one is in the same family of compression techniques "
-#| "as used by the original JPEG, and thus best for ‘Natural’ images, such as "
-#| "photographs and images with a lot of gradients and textures.</p><p><span "
-#| "style=\" font-size:14pt; text-decoration: underline;\">Modular Parameters:"
-#| "</span></p><p>Settings for Modular mode - optimized for graphical "
-#| "content, illustrations, and lossless compression.</p><p><br/></p><p><br/"
-#| "></p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p><span style=\" font-size:18pt; text-decoration: "
 "underline;\">Advanced</span></p><p>The option \"Default (encoder chooses)\" "
@@ -57490,14 +56759,7 @@ msgstr ""
 "和具有大量渐变和纹理的图像。</p><p><span style=\" font-size:14pt; text-"
 "decoration: underline;\">模块化参数：</span></p><p>模块化模式的设置 - 针对几"
 "何图形内容、插图和无损压缩进行优化。</p><p><br/></p><p><br/></p></body></"
-"html>\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"模块化参数：\n"
-"\n"
-"模块化模式的设置 - 针对图形内容、插图和无损压缩进行了优化。"
+"html>"
 
 #. i18n: context: string @ property (title), widget (QGroupBox, groupBox)
 #: plugins/impex/jxl/kis_wdg_options_jpegxl.ui:40
@@ -58455,7 +57717,7 @@ msgstr "无法对配置 %1 进行过滤。"
 #: plugins/impex/libkra/kis_kra_load_visitor.cpp:726
 #, kde-format
 msgid "Could not load the brush strokes of layer %1; its pixels are kept."
-msgstr ""
+msgstr "无法加载图层 %1 的笔画记录；已保留其像素。"
 
 #: plugins/impex/libkra/kis_kra_load_visitor.cpp:755
 #, kde-format
@@ -58577,12 +57839,7 @@ msgid "Failure loading layer %1 of type: %2."
 msgstr "加载类型为 %2 的图层 %1 时失败。"
 
 #: plugins/impex/libkra/kis_kra_loader.cpp:1022
-#, fuzzy, kde-format
-#| msgid ""
-#| "Layer \"%1\" has blending mode \"%2\" that has changed its behavior for "
-#| "CMYK color in Krita 5.2. Please check the result and consider enabling "
-#| "legacy \"Additive\" algorithm in Settings->Configure Krita->General-"
-#| ">Tools->CMYK blending mode"
+#, kde-format
 msgid ""
 "Layer \"%1\" has blending mode \"%2\" that has changed its behavior for CMYK "
 "color in Krita 5.2. Please check the result and consider enabling legacy "
@@ -58590,8 +57847,8 @@ msgid ""
 "blending mode"
 msgstr ""
 "图层“%1”使用了“%2”混合模式，它在 CMYK 色彩空间中的行为在 Krita 5.2 已被更改。"
-"请检查图像的效果是否正确。如果图像显示效果异常，可在“配置 Krita->常规->工具-"
-">CMYK 混合模式”中将该选项设置为旧版的“加色法”"
+"请检查图像的效果是否正确。如果图像显示效果异常，可在“设置->配置 Solstice->常"
+"规->工具->CMYK 混合模式”中将该选项设置为旧版的“加色法”"
 
 #: plugins/impex/libkra/kis_kra_loader.cpp:1144
 #, kde-format
@@ -58643,10 +57900,9 @@ msgid "Failed to save the annotations for layer %1."
 msgstr "保存图层 %1 的注释失败。"
 
 #: plugins/impex/libkra/kis_kra_save_visitor.cpp:137
-#, fuzzy, kde-format
-#| msgid "Failed to save the selection for layer %1."
+#, kde-format
 msgid "Failed to save the brush strokes for layer %1."
-msgstr "保存图层 %1 的选区失败。"
+msgstr "保存图层 %1 的笔画记录失败。"
 
 #: plugins/impex/libkra/kis_kra_save_visitor.cpp:155
 #, kde-format
@@ -61013,10 +60269,9 @@ msgid "Line width"
 msgstr "线条宽度"
 
 #: plugins/paintops/curvebrush/KisCurveOpOptionWidget.cpp:78
-#, fuzzy, kde-format
-#| msgid "History size:"
+#, kde-format
 msgid "History size"
-msgstr "曲线距离："
+msgstr "曲线距离"
 
 #: plugins/paintops/curvebrush/KisCurveOpOptionWidget.cpp:79
 #: plugins/paintops/curvebrush/KisCurveStandardOptionData.h:26
@@ -61418,22 +60673,19 @@ msgstr "滤镜"
 #: plugins/paintops/libpaintop/kis_brush_option_widget.cpp:111
 #: plugins/paintops/roundmarker/KisRoundMarkerOpOptionWidget.cpp:69
 #: plugins/paintops/spray/KisSprayOpOptionWidget.cpp:243
-#, fuzzy, kde-format
-#| msgid "Diameter:"
+#, kde-format
 msgid "Diameter"
-msgstr "直径："
+msgstr "直径"
 
 #: plugins/paintops/gridbrush/KisGridOpOptionWidget.cpp:125
-#, fuzzy, kde-format
-#| msgid "Grid width:"
+#, kde-format
 msgid "Grid width"
-msgstr "网格宽度："
+msgstr "网格宽度"
 
 #: plugins/paintops/gridbrush/KisGridOpOptionWidget.cpp:126
-#, fuzzy, kde-format
-#| msgid "Grid height:"
+#, kde-format
 msgid "Grid height"
-msgstr "网格高度："
+msgstr "网格高度"
 
 #: plugins/paintops/gridbrush/KisGridShapeOptionWidget.cpp:44
 #, kde-format
@@ -62484,13 +61736,9 @@ msgid "Texture->Pattern (low quality preview)"
 msgstr "纹理 -> 图案 (低品质快速预渲染)"
 
 #: plugins/paintops/libpaintop/KisTextureOptionWidget.cpp:38
-#, fuzzy, kde-format
-#| msgctxt ""
-#| "./krita/data/bundles/Krita_3_Default_Resources.bundle:paintoppresets/"
-#| "Texture_hair.kpp"
-#| msgid "Texture hair"
+#, kde-format
 msgid "Texture Scale"
-msgstr "纹理 毛发"
+msgstr "纹理缩放"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, jitterMoveBox)
 #: plugins/paintops/libpaintop/forms/wdgBrushSizeOptions.ui:53
@@ -62934,14 +62182,7 @@ msgstr ""
 
 #. i18n: context: string @ property (text), widget (QLabel, label)
 #: plugins/paintops/libpaintop/forms/wdgincremental.ui:58
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html>\n"
-#| "<p><b>Painting mode</b>: Krita offers a choice between two painting "
-#| "modes: <i>buildup</i> and <i>wash</i>. The first choice builds up color "
-#| "while painting in one stroke, the second choices gives you an even color "
-#| "in one stroke even if you go over the same place again and again.</p></"
-#| "html>"
+#, kde-format
 msgid ""
 "<html>\n"
 "<p><b>Painting mode</b>: Solstice offers a choice between two painting "
@@ -62950,8 +62191,8 @@ msgid ""
 "one stroke even if you go over the same place again and again.</p></html>"
 msgstr ""
 "<html>\n"
-"<p><b>绘画模式</b>：Krita 有两种绘画模式：<b>堆积</b>和<b>冲染</b>。堆积模式"
-"下，同一条笔画中的笔尖印迹会在互相重叠处加深 ，一条笔画内部的颜色可能会不均"
+"<p><b>绘画模式</b>：Solstice 有两种绘画模式：<b>堆积</b>和<b>冲染</b>。堆积模"
+"式下，同一条笔画中的笔尖印迹会在互相重叠处加深 ，一条笔画内部的颜色可能会不均"
 "匀；冲染模式下，同一条笔画中的笔尖印迹不会在互相重叠处加深，一条笔画内部的颜"
 "色总是均匀的。</p></html>"
 
@@ -63134,16 +62375,14 @@ msgid "Auto Spacing"
 msgstr "自动间距"
 
 #: plugins/paintops/libpaintop/kis_brush_option_widget.cpp:140
-#, fuzzy, kde-format
-#| msgid "Precision:"
+#, kde-format
 msgid "Precision"
-msgstr "精度："
+msgstr "精度"
 
 #: plugins/paintops/libpaintop/kis_brush_option_widget.cpp:142
-#, fuzzy, kde-format
-#| msgid "Precision:"
+#, kde-format
 msgid "Auto Precision"
-msgstr "精度："
+msgstr "自动精度"
 
 #: plugins/paintops/libpaintop/kis_brush_selection_widget.cpp:47
 #, kde-format
@@ -63748,10 +62987,9 @@ msgid "Gravity"
 msgstr "重力"
 
 #: plugins/paintops/particle/KisParticleOpOptionWidget.cpp:84
-#, fuzzy, kde-format
-#| msgid "Opacity weight:"
+#, kde-format
 msgid "Opacity weight"
-msgstr "不透明度权重："
+msgstr "不透明度权重"
 
 #: plugins/paintops/particle/kis_particle_paintop_settings.cpp:79
 #, kde-format
@@ -65319,18 +64557,13 @@ msgid "Config cannot be used"
 msgstr "配置无法使用"
 
 #: plugins/python/comics_project_management_tools/comics_project_manager_docker.py:352
-#, fuzzy
-#| msgid ""
-#| "Krita doesn't have write access to this folder, so new files cannot be "
-#| "made. Please configure the folder access or move the project to a folder "
-#| "that can be written to."
 msgid ""
 "Solstice doesn't have write access to this folder, so new files cannot be "
 "made. Please configure the folder access or move the project to a folder "
 "that can be written to."
 msgstr ""
-"Krita 没有此文件夹的写入权限，因此无法创建新文件。请配置文件夹的访问权限或者"
-"把漫画项目移动到一个可以写入的文件夹。"
+"Solstice 没有此文件夹的写入权限，因此无法创建新文件。请配置文件夹的访问权限或"
+"者把漫画项目移动到一个可以写入的文件夹。"
 
 #: plugins/python/comics_project_management_tools/comics_project_manager_docker.py:386
 msgid "Loading Pages..."
@@ -65429,14 +64662,6 @@ msgid "Where are the extra auto-completion keys located?"
 msgstr "附加的自动填充关键词在哪里？"
 
 #: plugins/python/comics_project_management_tools/comics_project_settings_dialog.py:124
-#, fuzzy
-#| msgid ""
-#| "The location for extra autocompletion keys in the metadata editor. Point "
-#| "this at a folder containing key_characters/key_format/key_genre/"
-#| "key_rating/key_author_roles/key_other with inside txt files (csv for "
-#| "rating) containing the extra auto-completion keys, each on a new line. "
-#| "This path is stored in the Krita configuration, and not the project "
-#| "configuration."
 msgid ""
 "The location for extra autocompletion keys in the metadata editor. Point "
 "this at a folder containing key_characters/key_format/key_genre/key_rating/"
@@ -65447,7 +64672,7 @@ msgstr ""
 "元数据编辑器中使用的附加自动填充关键词的位置。将此位置指向一个包含 "
 "key_characters、key_format、key_genre、key_rating、key_author_roles、"
 "key_other 等项的文本文件 (csv 用于评分)，每行一个附加自动完成关键词。此路径存"
-"储在 Krita 配置中，而不是项目配置中。"
+"储在 Solstice 配置中，而不是项目配置中。"
 
 #: plugins/python/comics_project_management_tools/comics_project_settings_dialog.py:127
 #: plugins/python/comics_project_management_tools/comics_project_setup_wizard.py:124
@@ -65487,14 +64712,11 @@ msgid "Folder cannot be used"
 msgstr "文件夹无法使用"
 
 #: plugins/python/comics_project_management_tools/comics_project_setup_wizard.py:63
-#, fuzzy
-#| msgid ""
-#| "Krita doesn't have write access to this folder, so files cannot be made. "
-#| "Please choose a different folder."
 msgid ""
 "Solstice doesn't have write access to this folder, so files cannot be made. "
 "Please choose a different folder."
-msgstr "Krita 没有此文件夹的写入权限，因此无法创建文件。请选择另一个文件夹。"
+msgstr ""
+"Solstice 没有此文件夹的写入权限，因此无法创建文件。请选择另一个文件夹。"
 
 #: plugins/python/comics_project_management_tools/comics_project_setup_wizard.py:69
 msgid "Comic Project Setup"
@@ -66066,11 +65288,7 @@ msgstr "简要说明"
 
 #. i18n: context: string @ property (toolTip), widget (QLineEdit, e_comment)
 #: plugins/python/krita_script_starter/bbdkss.ui:99
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>This will appear in the &quot;comment&quot; entry "
-#| "in the dialog where a user can enable or disable Krita scripts. </p></"
-#| "body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>This will appear in the \"comment\" entry in the "
 "dialog where a user can enable or disable Krita scripts. </p></body></html>"
@@ -66160,94 +65378,68 @@ msgid "Mutator"
 msgstr "绘制参数随机变化器"
 
 #: plugins/python/mutator/mutator.py:170
-#, fuzzy
-#| msgid ""
-#| "Controls the degree to which mutation affects Krita's global brush size."
 msgid ""
 "Controls the degree to which mutation affects Solstice's global brush size."
-msgstr "控制随机变化对 Krita 全局笔刷大小影响的程度。"
+msgstr "控制随机变化对 Solstice 全局笔刷大小影响的程度。"
 
 #: plugins/python/mutator/mutator.py:172
 msgid "Size Mutation: "
 msgstr "大小变化："
 
 #: plugins/python/mutator/mutator.py:179
-#, fuzzy
-#| msgid ""
-#| "Controls the degree to which mutation affects Krita's global brush "
-#| "rotation."
 msgid ""
 "Controls the degree to which mutation affects Solstice's global brush "
 "rotation."
-msgstr "控制随机变化对 Krita 全局笔刷旋转影响的程度。"
+msgstr "控制随机变化对 Solstice 全局笔刷旋转影响的程度。"
 
 #: plugins/python/mutator/mutator.py:181
 msgid "Rotation Mutation: "
 msgstr "旋转变化："
 
 #: plugins/python/mutator/mutator.py:188
-#, fuzzy
-#| msgid ""
-#| "Controls the degree to which mutation affects Krita's global brush "
-#| "opacity."
 msgid ""
 "Controls the degree to which mutation affects Solstice's global brush "
 "opacity."
-msgstr "控制随机变化对 Krita 全局笔刷不透明度影响的程度。"
+msgstr "控制随机变化对 Solstice 全局笔刷不透明度影响的程度。"
 
 #: plugins/python/mutator/mutator.py:190
 msgid "Opacity Mutation: "
 msgstr "不透明度变化："
 
 #: plugins/python/mutator/mutator.py:197
-#, fuzzy
-#| msgid ""
-#| "Controls the degree to which mutation affects Krita's global brush flow."
 msgid ""
 "Controls the degree to which mutation affects Solstice's global brush flow."
-msgstr "控制随机变化对 Krita 全局笔刷流量影响的程度。"
+msgstr "控制随机变化对 Solstice 全局笔刷流量影响的程度。"
 
 #: plugins/python/mutator/mutator.py:199
 msgid "Flow Mutation: "
 msgstr "流量变化："
 
 #: plugins/python/mutator/mutator.py:206
-#, fuzzy
-#| msgid ""
-#| "Controls the degree to which mutation affects Krita's global foreground "
-#| "color hue."
 msgid ""
 "Controls the degree to which mutation affects Solstice's global foreground "
 "color hue."
-msgstr "控制随机变化对 Krita 全局前景色色相影响的程度。"
+msgstr "控制随机变化对 Solstice 全局前景色色相影响的程度。"
 
 #: plugins/python/mutator/mutator.py:208
 msgid "Hue Mutation: "
 msgstr "色相变化："
 
 #: plugins/python/mutator/mutator.py:215
-#, fuzzy
-#| msgid ""
-#| "Controls the degree to which mutation affects Krita's global foreground "
-#| "color saturation."
 msgid ""
 "Controls the degree to which mutation affects Solstice's global foreground "
 "color saturation."
-msgstr "控制随机变化对 Krita 全局前景色饱和度影响的程度。"
+msgstr "控制随机变化对 Solstice 全局前景色饱和度影响的程度。"
 
 #: plugins/python/mutator/mutator.py:217
 msgid "Saturation Mutation: "
 msgstr "饱和度变化："
 
 #: plugins/python/mutator/mutator.py:224
-#, fuzzy
-#| msgid ""
-#| "Controls the degree to which mutation affects Krita's global foreground "
-#| "color value."
 msgid ""
 "Controls the degree to which mutation affects Solstice's global foreground "
 "color value."
-msgstr "控制随机变化对 Krita 全局前景色明度影响的程度。"
+msgstr "控制随机变化对 Solstice 全局前景色明度影响的程度。"
 
 #: plugins/python/mutator/mutator.py:226
 msgid "Value Mutation: "
@@ -66709,14 +65901,10 @@ msgstr "首先在下面列表选中一个笔刷预设，然后点击上方快捷
 
 #: plugins/python/tenbrushes/uitenbrushes.py:61
 #: plugins/python/tenscripts/uitenscripts.py:53
-#, fuzzy
-#| msgid ""
-#| "Shortcuts are configurable through the <i>Keyboard Shortcuts</i> "
-#| "interface in Krita's settings."
 msgid ""
 "Shortcuts are configurable through the <i>Keyboard Shortcuts</i> interface "
 "in Solstice's settings."
-msgstr "快捷键可以通过 Krita 设置中的 <b>键盘快捷键</b> 页面进行配置。"
+msgstr "快捷键可以通过 Solstice 设置中的 <b>键盘快捷键</b> 页面进行配置。"
 
 #. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
 #: plugins/python/tenscripts/tenscripts.action:4
@@ -67454,14 +66642,11 @@ msgid "Fill Tool"
 msgstr "填充工具/油漆桶"
 
 #: plugins/tools/basictools/kis_tool_gradient.cc:112
-#, fuzzy, kde-format
-#| msgid ""
-#| "The brush tool cannot paint on this layer.  Please select a paint layer "
-#| "or mask."
+#, kde-format
 msgid ""
 "The gradient tool cannot paint on this layer. Please select a paint layer or "
 "mask."
-msgstr "笔刷工具无法在此图层绘画，请选中一个颜料图层或者蒙版图层。"
+msgstr "渐变工具无法在此图层绘画，请选中一个颜料图层或者蒙版图层。"
 
 #: plugins/tools/basictools/kis_tool_gradient.cc:167
 msgctxt "(qtundo-format)"
@@ -68173,13 +67358,7 @@ msgstr "锚点锁定"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkUniformScaling)
 #: plugins/tools/defaulttool/defaulttool/DefaultToolGeometryWidget.ui:202
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>When &quot;Scale Styles&quot; is <span style=\" "
-#| "font-weight:600;\">enabled</span>, the shape's stroke is scaled with the "
-#| "shape itself.</p><p>In the <span style=\" font-weight:600;\">disabled</"
-#| "span> state, only the shape is resized, keeping the stroke width and "
-#| "style unaltered.</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>When \"Scale Styles\" is <span style=\" font-"
 "weight:600;\">enabled</span>, the shape's stroke is scaled with the shape "
@@ -68200,14 +67379,7 @@ msgstr "等比例缩放样式"
 
 #. i18n: context: string @ property (toolTip), widget (QCheckBox, chkGlobalCoordinates)
 #: plugins/tools/defaulttool/defaulttool/DefaultToolGeometryWidget.ui:218
-#, fuzzy, kde-format
-#| msgid ""
-#| "<html><head/><body><p>In &quot;Global Coordinates&quot; mode Width and "
-#| "Height fields show the size of the shape's bounding box in image-aligned "
-#| "coordinates, even when the shape is rotated or has any other transform. </"
-#| "p><p>If &quot;Global Coordinates&quot; mode is disabled, Width and Height "
-#| "fields show the shape's &quot;local&quot; size, before application of any "
-#| "transformations.</p></body></html>"
+#, kde-format
 msgid ""
 "<html><head/><body><p>In \"Global Coordinates\" mode Width and Height fields "
 "show the size of the shape's bounding box in image-aligned coordinates, even "
@@ -68215,10 +67387,10 @@ msgid ""
 "Coordinates\" mode is disabled, Width and Height fields show the shape's "
 "\"local\" size, before application of any transformations.</p></body></html>"
 msgstr ""
-"<html><head/><body><p>当“使用全局坐标”被勾选时，已变形的形状的宽度和高度将以"
-"画布为参照物，显示绝对坐标。</p><p>不勾选时，已变形的形状的宽度和高度将以自身"
-"为参照物，显示相对坐标。</p><p>在旋转或者斜切时勾选与否的数值差别最为明显。</"
-"p></body></html>"
+"<html><head/><body><p>在“全局坐标”模式下，宽度和高度字段显示形状在与图像对齐"
+"的坐标中的边界框大小，即使形状已被旋转或进行了其他变形。 </p><p>如果禁用“全局"
+"坐标”模式，宽度和高度字段显示形状在应用任何变形之前的“局部”大小。</p></"
+"body></html>"
 
 #. i18n: context: string @ property (text), widget (QCheckBox, chkGlobalCoordinates)
 #: plugins/tools/defaulttool/defaulttool/DefaultToolGeometryWidget.ui:221
@@ -69520,12 +68692,10 @@ msgid "Remove all set text properties from the selection."
 msgstr "移除选中对象的所有文本属性。"
 
 #: plugins/tools/svgtexttool/SvgTextTool.cpp:310
-#, fuzzy, kde-format
-#| msgctxt "@title:window"
-#| msgid "Krita - Edit Text"
+#, kde-format
 msgctxt "@title:window"
 msgid "Solstice - Edit Text"
-msgstr "Krita - 文本编辑器"
+msgstr "Solstice - 文本编辑器"
 
 #: plugins/tools/svgtexttool/SvgTextToolFactory.cpp:21
 #, kde-format
@@ -70719,21 +69889,16 @@ msgid "Transform Tool (Mesh Transform)"
 msgstr "变形工具 (曲线网格变形)"
 
 #: plugins/tools/tool_transform2/kis_free_transform_strategy_gsl_helpers.cpp:438
-#, fuzzy, kde-format
-#| msgid ""
-#| "Krita was built without the support of GNU Scientific Library, so you "
-#| "cannot scale the selection with handles. Please compile Krita with GNU "
-#| "Scientific Library support, or use options widget for editing scale "
-#| "values manually."
+#, kde-format
 msgid ""
 "Solstice was built without the support of GNU Scientific Library, so you "
 "cannot scale the selection with handles. Please compile Solstice with GNU "
 "Scientific Library support, or use options widget for editing scale values "
 "manually."
 msgstr ""
-"当前 Krita 副本在构建时并未启用 GNU Scientific 程序库支持，因此不能使用控制点"
-"缩放对象。请在工具选项面板手动输入数值，或在启用了该程序库的环境下重新构建 "
-"Krita。"
+"当前 Solstice 副本在构建时并未启用 GNU Scientific 程序库支持，因此不能使用控"
+"制点缩放对象。请在工具选项面板手动输入数值，或在启用了该程序库的环境下重新构"
+"建 Solstice。"
 
 #: plugins/tools/tool_transform2/kis_tool_transform.cc:124
 #, kde-format
