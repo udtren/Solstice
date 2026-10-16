@@ -134,7 +134,7 @@ move and rotate the parts around them. See the
 > supported hardware and platforms are limited.
 
 Download the unsigned Windows x64 ZIP from
-[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.7),
+[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.8),
 extract it and start `solstice.exe`.
 
 Source code and newer Windows x64 trial ZIPs are also available from successful
