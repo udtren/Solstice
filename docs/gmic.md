@@ -1,6 +1,6 @@
 # G'MIC-Qt filters
 
-Solstice includes G'MIC-Qt 3.7.4.1 in its Windows development build. Its image
+Solstice includes G'MIC-Qt 3.7.4.1 in its Windows package from 0.2.0-beta.6. Its image
 processing runs on the CPU, with OpenMP parallel processing where the filter
 supports it. Enabling Solstice's GPU canvas does not move G'MIC computation
 to the GPU.

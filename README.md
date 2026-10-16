@@ -36,12 +36,11 @@ testing; see [Versions](docs/versioning.md) for the version numbering.
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[In development](#in-development) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[What's new](#whats-new-in-v020-beta6) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 
-## In development
+## What's new in v0.2.0-beta.6
 
-The following additions are in development and have not yet been published
-in a release:
+The sixth beta adds illustration filters and layer visibility workflows:
 
 - **[Effects & Color](docs/effects-filters.md)**: illustration filters for
   color, lighting, texture and line-art extraction, plus extended Lens Blur.
@@ -49,9 +48,10 @@ in a release:
   from an image or gradient, with drag-and-drop image import.
 - **[Layer Comps](docs/layer-comps.md)**: save, switch and export layer
   visibility variations.
+- **[G'MIC-Qt](docs/gmic.md)**: bundled CPU runtime, offline catalog and
+  standard data packs.
 
-See [GitHub Releases](https://github.com/udtren/Solstice/releases) for
-published versions and their release notes.
+See the [full release notes and download](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.6).
 
 ## Highlights
 
@@ -135,8 +135,12 @@ move and rotate the parts around them. See the
 > turned off. It does not yet replace every CPU processing path, and its
 > supported hardware and platforms are limited.
 
-Solstice is available as source code and as unsigned Windows x64 trial ZIPs
-from successful manual [GitHub Actions builds](https://github.com/udtren/Solstice/actions/workflows/windows-build.yml).
+Download the unsigned Windows x64 ZIP from
+[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.2.0-beta.6),
+extract it and start `solstice.exe`.
+
+Source code and newer Windows x64 trial ZIPs are also available from successful
+manual [GitHub Actions builds](https://github.com/udtren/Solstice/actions/workflows/windows-build.yml).
 These temporary artifacts expire after seven days and are development builds,
 not stable releases. See [Experimental Windows builds](docs/test-builds.md)
 for download instructions and packaging limitations. To show `.kra`

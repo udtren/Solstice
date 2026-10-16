@@ -84,6 +84,11 @@ appears in the version strings.
    `windows-dependencies.lock.json`, and follow the previous release's
    notes (what's new, download, highlights, supported environment, build
    commit, run and SHA-256).
+   Verify the downloaded ZIPs and checksums before publishing. Keep README's
+   new-feature summary marked `In development` until the release exists;
+   then replace it with the released version and link, update the user-guide
+   index, and push those documentation changes. Keep only the latest release
+   summary in README; older release notes remain in GitHub Releases.
 4. Update the website the same day (user decision, 2026-10-14), in
    `https://github.com/udtren/tidalboxstudio-web`:
    - on `develop`, set `links.release`, `version` and `versionName` in
@@ -107,12 +112,9 @@ appears in the version strings.
 | `0.2.0-beta.3` | 2026-10-14 | Third beta (user request): first upstream Krita intake (2026-W42: thumbnail cache crash, animation curves scrolling, second-wheel horizontal scrolling, perspective transform conditions, PSD group collapse and layer locks). Released 2026-10-14 as GitHub Release `v0.2.0-beta.3` (prerelease, commit `c89bc02475`, run 38503291774); website updated the same day. |
 | `0.2.0-beta.4` | 2026-10-14 | Fourth beta (user request): fixes the crash in `KisImage::enableDirtyRequests()` during repeated Python `Node.save()` (thread-safe projection updates filter stack), and Python `Node.save()`, `Filter.apply()`, `Scratchpad.setScale()` return `bool`. Released 2026-10-15 as GitHub Release `v0.2.0-beta.4` (prerelease, commit `3575bbb59c`, run 38584970834); website updated the same day. |
 | `0.2.0-beta.5` | 2026-10-15 | Fifth beta (user request): RGBA16F document conversion choices, document tool-state restoration, Quick Access hold ownership, and the Brush Stroke Layer and Puppet Warp audit fixes. Released 2026-10-15 as GitHub Release `v0.2.0-beta.5` (prerelease, commit `dd9e48c152`, run 38669973004); website updated the same day. |
+| `0.2.0-beta.6` | 2026-10-16 | Sixth beta (user request): Effects & Color, Color Reference with image drag and drop, Layer Comps, and the bundled CPU G'MIC runtime. Released as GitHub Release `v0.2.0-beta.6` (prerelease, commit `b7ee343e81fe`, run 38833086246); website updated the same day with Effects & Color and Layer Comps pages. |
 
 ## Checks
-
-Release preparation (2026-10-16): `0.2.0-beta.6` includes Effects & Color,
-Color Reference, Layer Comps and the bundled CPU G'MIC runtime. Release and
-website publication are pending the Windows workflow and package checks.
 
 - After reconfiguring, check the CMake output for
   `-- Solstice version: <version>`, and check that

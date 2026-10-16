@@ -38,14 +38,14 @@ Technical notes for developers are in [`agent`](agent/).
 
 - [Effects & Color](effects-filters.md): illustration filters for color,
   lighting, texture and line-art extraction, including Color Reference and
-  extended Lens Blur. **In development.**
+  extended Lens Blur. Added in **0.2.0-beta.6**.
 - [G'MIC-Qt](gmic.md): a separate CPU filter dialog, input/output modes
   and supported scope.
 
 ## Workflow and interface
 
 - [Layer Comps](layer-comps.md): save, switch and export layer visibility
-  variations. **In development.**
+  variations. Added in **0.2.0-beta.6**.
 - [Tools when switching documents](document-tool-state.md): tool restoration
   when moving between canvases with a mouse, pen, or eraser.
 - [Quick Access Manager](quick-access.md): configurable action, docker and
