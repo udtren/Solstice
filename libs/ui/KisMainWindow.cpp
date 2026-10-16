@@ -472,7 +472,7 @@ KisMainWindow::KisMainWindow(QUuid uuid)
         d->styleMenu->addAction(d->actionMap.value(styleName));
     }
 
-    // Solstice: Fusion with flat common controls (ui-modernization-plan.md)
+    // Solstice: Fusion with flat common controls (docs/agent/ui-modernization.md)
     action = new QAction(KisSolsticeStyle::styleKey(), d->styleActions);
     action->setCheckable(true);
     d->actionMap.insert(KisSolsticeStyle::styleKey(), action);
@@ -1012,7 +1012,7 @@ void KisMainWindow::customizeTabBar()
            )")
            .arg(closeButtonImageUrl, closeButtonHoverColor);
 
-    // Solstice interface (docs/agent/ui-modernization-plan.md, phase 2):
+    // Solstice interface (docs/agent/ui-modernization.md):
     // document tabs, toolbars and docker titles in the theme's colors.
     const bool solsticeLook = KisConfig(true).readEntry<bool>("Solstice/ModernInterface", true);
     QString toolBarStyleSheet;
