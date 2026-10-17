@@ -2,6 +2,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #include <KisGlobalResourcesInterface.h>
 #include <KisReferenceImage.h>
+#include <KisReferenceFilterTemplates.h>
+#include <QTemporaryDir>
+#include <QDir>
+#include <QFile>
 #include <KoColor.h>
 #include <QDomDocument>
 #include <filter/kis_filter.h>
@@ -117,6 +121,69 @@ private Q_SLOTS:
         image->getPixel(QPointF(0, 0));
         image.reset(); // The worker must not retain a pointer to the shape.
         QTest::qWait(100);
+    }
+    void templatesRoundTripAndReuse()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        KisReferenceFilterTemplates store(directory.path());
+        KisReferenceFilterTemplates::Template original;
+        original.name = QString::fromUtf8("../Study & 色調");
+        original.enabled = false;
+        original.effects = {{"missing-plugin", "<params>&saved</params>", false},
+                            {"levels", "<params/>", true},
+                            {"levels", "<different/>", true}};
+        QString error;
+        QVERIFY2(store.save(original, false, &error), qPrintable(error));
+        QCOMPARE(QDir(directory.path()).entryList(QDir::Files).size(), 1);
+        KisReferenceFilterTemplates reopened(directory.path());
+        QCOMPARE(reopened.names(), QStringList{original.name});
+        KisReferenceFilterTemplates::Template loaded;
+        QVERIFY2(reopened.load(original.name, &loaded, &error), qPrintable(error));
+        QCOMPARE(loaded.effects.size(), 3);
+        QCOMPARE(loaded.effects[0].id, original.effects[0].id);
+        QCOMPARE(loaded.effects[0].configuration, original.effects[0].configuration);
+        QVERIFY(!loaded.effects[0].enabled);
+        QCOMPARE(loaded.effects[2].configuration, original.effects[2].configuration);
+        QVERIFY(!loaded.enabled);
+        KisReferenceImage first, second;
+        first.setFilterEffects(loaded.effects, loaded.enabled);
+        second.setFilterEffects(loaded.effects, loaded.enabled);
+        first.setFilterEffects({}, true);
+        QCOMPARE(second.filterEffects().size(), 3);
+        original.effects.clear();
+        QVERIFY(!store.save(original, false, &error));
+        QVERIFY(store.load(original.name, &loaded, &error));
+        QCOMPARE(loaded.effects.size(), 3);
+        QVERIFY(store.save(original, true, &error));
+        QVERIFY(store.load(original.name, &loaded, &error));
+        QVERIFY(loaded.effects.isEmpty());
+        QVERIFY(store.remove(original.name, &error));
+        QVERIFY(reopened.names().isEmpty());
+        QCOMPARE(second.filterEffects().size(), 3);
+    }
+    void templatesInvalidDataAndNames()
+    {
+        QTemporaryDir directory;
+        KisReferenceFilterTemplates store(directory.path());
+        QString error;
+        QVERIFY(!store.save({"  ", {}, true}, false, &error));
+        QVERIFY(store.save({"CON", {}, true}, false, &error));
+        QVERIFY(store.contains(" con "));
+        QVERIFY(!store.save({"con", {}, true}, false, &error));
+        const auto paths = QDir(directory.path()).entryList({"*.json"}, QDir::Files);
+        QCOMPARE(paths.size(), 1);
+        QFile file(QDir(directory.path()).filePath(paths.first()));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("{\"version\":99,\"name\":\"CON\",\"effects\":[],\"enabled\":true}");
+        file.close();
+        KisReferenceFilterTemplates::Template unchanged{"sentinel", {}, false};
+        QVERIFY(!store.load("CON", &unchanged, &error));
+        QCOMPARE(unchanged.name, QString("sentinel"));
+        QVERIFY(store.names().isEmpty());
+        QVERIFY(store.contains("CON")); // Unsupported files are never deleted.
+        KisReferenceFilterTemplates blocked(file.fileName());
+        QVERIFY(!blocked.save({"test", {}, true}, false, &error));
     }
 };
 SIMPLE_TEST_MAIN(KisReferenceImageFiltersTest)

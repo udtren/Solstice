@@ -14,6 +14,28 @@ Original pixels and placement remain unchanged. Effects are saved in `.kra`
 and `.krf`. Existing Saturation and Opacity apply after the stack. The color
 picker samples the displayed result.
 
+## Reusable templates
+
+Use **Filter → Save as Template…** to name the current stack. On another image
+or in another document, choose **Filter → Apply Template → name**. This replaces
+the stack in one undoable operation. Templates survive restarting Solstice.
+
+Templates include effect order, parameters, individual enabled flags and the
+whole-stack enabled state. Pixels, placement, Saturation and Opacity are not
+included. Applying creates an independent copy: later template edits/deletion
+do not affect images already using those settings.
+
+The manager also provides **Save as Template…** and **Apply Template…**. Saving
+there captures the edited stack immediately; Cancel restores image edits but
+does not remove an explicitly saved template. Applying there is previewed until
+OK and can be cancelled. Save with the same name to overwrite (confirmation
+required). Names ignore surrounding spaces and case. **Delete Template → name**
+deletes after confirmation. Template writes are not part of document Undo.
+
+Templates are stored in the active profile's configuration directory under
+`reference-image-filter-templates`. Invalid/newer unsupported files are kept
+but omitted from menus. External filter resources are not bundled.
+
 ## Supported scope
 
 - Native mask-compatible filters; no G'MIC. One selected image at a time.
