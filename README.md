@@ -50,6 +50,8 @@ removes the Beta label and includes:
 
 ## Highlights
 
+- [Reference Image Filters](docs/reference-image-filters.md) (in development)
+
 - **[Experimental Vulkan engine](docs/gpu-engine.md)**: GPU-resident image
   tiles, accelerated layer compositing and canvas data preparation.
 - **[GPU brush](docs/gpu-engine.md)**: on by default; pixel brushes on RGBA

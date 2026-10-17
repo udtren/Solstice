@@ -84,6 +84,10 @@ Add or update current source locations in the table when changing a feature;
 do not append new implementation diaries to this inventory.
 
 ## Undocumented custom changes
+Reference Image Filters: `libs/ui/KisReferenceImage.*`,
+`libs/ui/KisReferenceImageFilters.*`, the Reference Images Tool context menu and
+`KisReferenceImageFiltersTest.cpp`. See [maintenance reference](reference-image-filters.md).
+
 
 These have no dedicated documents yet. When modifying one, create its user and
 agent documents first (see "Adding a new feature" below).

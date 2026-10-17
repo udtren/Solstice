@@ -122,6 +122,8 @@ Read these before adding or updating any feature:
 
 ### Feature documents
 
+- Reference Image Filters: [development notes](docs/agent/reference-image-filters.md).
+
 Feature status, active work and verification evidence belong in the linked
 document, not in this index. See [Document roles](docs/agent/README.md) for
 maintained references, plans and historical records.
