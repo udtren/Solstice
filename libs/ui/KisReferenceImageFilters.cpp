@@ -3,6 +3,7 @@
 #include "KisReferenceImageFilters.h"
 #include "KisDocument.h"
 #include "KisReferenceImage.h"
+#include "KisReferenceFilterTemplates.h"
 #include "KisViewManager.h"
 #include "flake/KisReferenceImagesLayer.h"
 #include "widgets/kis_filter_selector_widget.h"
@@ -14,6 +15,9 @@
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QListWidget>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QMessageBox>
 #include <QMenu>
 #include <QPushButton>
 #include <QSignalBlocker>
@@ -56,6 +60,40 @@ QString effectName(const KisReferenceImage::FilterEffect &effect)
 {
     auto filter = KisFilterRegistry::instance()->value(effect.id);
     return filter ? filter->name() : i18n("Unavailable filter: %1", effect.id);
+}
+void saveTemplate(QWidget *parent, const Effects &effects, bool enabled)
+{
+    bool accepted = false;
+    const QString name = QInputDialog::getText(parent,
+                                               i18n("Save Filter Template"),
+                                               i18n("Template name:"),
+                                               QLineEdit::Normal,
+                                               QString(),
+                                               &accepted)
+                             .trimmed();
+    if (!accepted)
+        return;
+    KisReferenceFilterTemplates store;
+    const bool overwrite = store.contains(name);
+    if (overwrite
+        && QMessageBox::question(parent,
+                                 i18n("Save Filter Template"),
+                                 i18n("Replace the filter template “%1”?", name),
+                                 QMessageBox::Yes | QMessageBox::No,
+                                 QMessageBox::No)
+            != QMessageBox::Yes)
+        return;
+    QString error;
+    if (!store.save({name, effects, enabled}, overwrite, &error))
+        QMessageBox::warning(parent, i18n("Save Filter Template"), error);
+}
+bool loadTemplate(QWidget *parent, const QString &name, KisReferenceFilterTemplates::Template *value)
+{
+    QString error;
+    if (KisReferenceFilterTemplates().load(name, value, &error))
+        return true;
+    QMessageBox::warning(parent, i18n("Apply Filter Template"), error);
+    return false;
 }
 void editFilters(KisReferenceImage *image, KoCanvasBase *canvas, KisViewManager *view, int selected, bool adding)
 {
@@ -190,6 +228,33 @@ void editFilters(KisReferenceImage *image, KoCanvasBase *canvas, KisViewManager 
     button(i18n("Move Down"), [&]() {
         move(1);
     });
+    button(i18n("Save as Template…"), [&]() {
+        saveTemplate(&dialog, effects, enabled->isChecked());
+    });
+    button(i18n("Apply Template…"), [&]() {
+        const auto names = KisReferenceFilterTemplates().names();
+        if (names.isEmpty()) {
+            QMessageBox::information(&dialog, i18n("Apply Filter Template"), i18n("No saved filter templates."));
+            return;
+        }
+        bool accepted = false;
+        const QString name = QInputDialog::getItem(&dialog,
+                                                   i18n("Apply Filter Template"),
+                                                   i18n("Replace the current filter stack with:"),
+                                                   names,
+                                                   0,
+                                                   false,
+                                                   &accepted);
+        KisReferenceFilterTemplates::Template value;
+        if (!accepted || !loadTemplate(&dialog, name, &value))
+            return;
+        effects = value.effects;
+        enabled->setChecked(value.enabled);
+        const int row = effects.isEmpty() ? -1 : 0;
+        refresh(row);
+        load(row);
+        preview.start();
+    });
     refresh(selected);
     load(selected);
     if (adding)
@@ -256,4 +321,35 @@ void populateReferenceImageFilterMenu(QMenu *menu, KisReferenceImage *image, KoC
     menu->addAction(i18n("Clear Filters"), menu, [=]() {
         canvas->addCommand(new SetFiltersCommand(image, {}, image->filtersEnabled()));
     });
+    menu->addSeparator();
+    menu->addAction(i18n("Save as Template…"), menu, [=]() {
+        saveTemplate(view->mainWindowAsQWidget(), image->filterEffects(), image->filtersEnabled());
+    });
+    auto *templates = menu->addMenu(i18n("Apply Template"));
+    auto *remove = menu->addMenu(i18n("Delete Template"));
+    const auto names = KisReferenceFilterTemplates().names();
+    templates->setEnabled(!names.isEmpty());
+    remove->setEnabled(!names.isEmpty());
+    for (const auto &name : names) {
+        const QString label = QString(name).replace("&", "&&");
+        templates->addAction(label, menu, [=]() {
+            KisReferenceFilterTemplates::Template value;
+            if (loadTemplate(view->mainWindowAsQWidget(), name, &value))
+                canvas->addCommand(new SetFiltersCommand(image, value.effects, value.enabled));
+        });
+        remove->addAction(label, menu, [=]() {
+            auto *parent = view->mainWindowAsQWidget();
+            if (QMessageBox::question(
+                    parent,
+                    i18n("Delete Template"),
+                    i18n("Delete the filter template “%1”? Images already using it will not change.", name),
+                    QMessageBox::Yes | QMessageBox::No,
+                    QMessageBox::No)
+                != QMessageBox::Yes)
+                return;
+            QString error;
+            if (!KisReferenceFilterTemplates().remove(name, &error))
+                QMessageBox::warning(parent, i18n("Delete Template"), error);
+        });
+    }
 }

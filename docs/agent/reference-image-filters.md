@@ -12,10 +12,17 @@ to the shared test prefix on 2026-10-17.
 Interactive acceptance remains pending.
 G'MIC and multi-image editing are outside scope.
 
+Template extension verified 2026-10-17: native targets and the expanded
+KisReferenceImageFiltersTest pass, including reload/reuse, independent image
+copies, overwrite protection, deletion, safe names and unsupported-file handling.
+Documentation checks and msgfmt pass (10,459 translated messages). Shared UI,
+tool plugin and Chinese catalog installed; interactive acceptance is pending.
+
 ## Source locations
 
 - `libs/ui/KisReferenceImage.*`: model, XML, asynchronous rendering/cache.
 - `libs/ui/KisReferenceImageFilters.*`: modal editor, context menu, undo.
+- `libs/ui/KisReferenceFilterTemplates.*`: profile-wide named stack persistence.
 - `plugins/tools/defaulttool/referenceimagestool/ToolReferenceImages.cpp`: hook.
 - `libs/ui/tests/KisReferenceImageFiltersTest.cpp`: rendering and persistence.
 - `libs/ui/widgets/kis_filter_selector_widget.cc`: explicit configurations take
@@ -39,7 +46,23 @@ command. Clones clear caches to avoid inheriting transient previews.
 store `id`, `enabled` and escaped configuration XML text. KRA and KRF both use
 the shared serializer. Missing stack means empty/enabled. Unknown ids and
 configurations survive. Embedded PNGs remain original; linked paths retain
-existing behavior. No new global settings, clipboard format or resource bundle.
+existing behavior. No new clipboard format or resource bundle.
+
+### Templates
+
+`KisSolsticePaths::configDir()/reference-image-filter-templates` holds one JSON
+file per named stack. Version 1 stores `version`, `name`, `enabled`, and ordered
+`effects` (`id`, configuration XML string `configuration`, `enabled`). Names
+are trimmed, Unicode-normalized and case-folded before SHA-256 filename hashing;
+labels never become paths. QSaveFile commits atomically; a per-file QLockFile
+guards save/delete. Existing names require confirmed overwrite. Invalid or
+unsupported files are preserved but omitted from enumeration. Load failures
+leave outputs unchanged. Unknown filter ids/configuration strings survive.
+
+Each menu opening and manager apply reloads disk state, sharing templates across
+windows/documents. Apply copies the stack through the existing undo command or
+manager transaction. Explicit saves in the manager are profile writes independent
+of image Cancel/Undo. Pixels, placement, Saturation and Opacity are excluded.
 
 ## Invariants
 
@@ -65,6 +88,10 @@ and `plugins/tools/defaulttool` plus rebuilt shared dependencies. Restart.
 6. Delete images/close documents during processing; undo deletion.
 7. Multiple selection disables Filter; check two views and documents.
 8. Check Simplified Chinese labels and dialog layout.
+9. Save and apply across images/documents, undo/redo, restart and reapply.
+   Overwrite/delete templates; previously applied images must stay independent.
+10. Save/apply in the manager then Cancel: explicit template saves persist,
+    while cancelled image edits do not.
 
 ## Known limitations
 
