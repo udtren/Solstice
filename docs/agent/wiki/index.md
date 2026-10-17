@@ -200,6 +200,8 @@ Document ownership and lifecycle are defined in
   the maintained Actions guide for current operation.
 - [0.3.0 release verification](history/release-0.3.0.md): exact build identity,
   package checks, publication and the boundary of existing feature-test evidence.
+- [0.4.0 release verification](history/release-0.4.0.md): Reference Tool release,
+  package integrity, isolated version checks and dependency-lock line endings.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

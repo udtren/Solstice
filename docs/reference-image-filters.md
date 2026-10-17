@@ -48,5 +48,3 @@ but omitted from menus. External filter resources are not bundled.
 - Missing filters are skipped, labeled unavailable and their settings preserved.
 - Copy continues to copy original pixels, not the effect stack.
 - Older applications may discard effect settings when saving the document.
-
-Interactive validation is pending.
