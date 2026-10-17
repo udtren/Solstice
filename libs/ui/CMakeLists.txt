@@ -483,6 +483,7 @@ set(kritaui_LIB_SRCS
     KisReferenceImagesDecoration.cpp
     KisReferenceImage.cpp
     KisReferenceImageFilters.cpp
+    KisReferenceFilterTemplates.cpp
     flake/KisReferenceImagesLayer.cpp
     flake/KisReferenceImagesLayer.h
     KisMouseClickEater.cpp

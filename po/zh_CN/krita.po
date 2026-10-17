@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-10-17 11:57+0900\n"
+"POT-Creation-Date: 2026-10-17 12:10+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -24636,6 +24636,33 @@ msgstr ""
 "%1\n"
 "原因如下：%2"
 
+#: libs/ui/KisReferenceFilterTemplates.cpp:94
+#: libs/ui/KisReferenceFilterTemplates.cpp:112
+#, kde-format
+msgid "Invalid or unsupported filter template."
+msgstr "滤镜模板无效或不受支持。"
+
+#: libs/ui/KisReferenceFilterTemplates.cpp:101
+#, kde-format
+msgid "Enter a template name."
+msgstr "请输入模板名称。"
+
+#: libs/ui/KisReferenceFilterTemplates.cpp:103
+#, kde-format
+msgid "Could not create the filter template folder."
+msgstr "无法创建滤镜模板文件夹。"
+
+#: libs/ui/KisReferenceFilterTemplates.cpp:106
+#: libs/ui/KisReferenceFilterTemplates.cpp:130
+#, kde-format
+msgid "This filter template is being modified. Try again."
+msgstr "此滤镜模板正在修改中。请重试。"
+
+#: libs/ui/KisReferenceFilterTemplates.cpp:108
+#, kde-format
+msgid "A filter template with this name already exists."
+msgstr "已存在同名滤镜模板。"
+
 #: libs/ui/KisReferenceImage.cpp:124
 msgctxt "(qtundo-format)"
 msgid "Set saturation"
@@ -24646,64 +24673,127 @@ msgstr "设置饱和度"
 msgid "Could not load %1."
 msgstr "无法加载 %1。"
 
-#: libs/ui/KisReferenceImageFilters.cpp:33
+#: libs/ui/KisReferenceImageFilters.cpp:37
 msgctxt "(qtundo-format)"
 msgid "Change reference image filters"
 msgstr "更改参考图像滤镜"
 
-#: libs/ui/KisReferenceImageFilters.cpp:58
+#: libs/ui/KisReferenceImageFilters.cpp:62
 #, kde-format
 msgid "Unavailable filter: %1"
 msgstr "不可用的滤镜：%1"
 
-#: libs/ui/KisReferenceImageFilters.cpp:67
+#: libs/ui/KisReferenceImageFilters.cpp:68
+#: libs/ui/KisReferenceImageFilters.cpp:80
+#: libs/ui/KisReferenceImageFilters.cpp:88
+#, kde-format
+msgid "Save Filter Template"
+msgstr "保存滤镜模板"
+
+#: libs/ui/KisReferenceImageFilters.cpp:69
+#, kde-format
+msgid "Template name:"
+msgstr "模板名称："
+
+#: libs/ui/KisReferenceImageFilters.cpp:81
+#, kde-format
+msgid "Replace the filter template “%1”?"
+msgstr "替换滤镜模板“%1”？"
+
+#: libs/ui/KisReferenceImageFilters.cpp:95
+#: libs/ui/KisReferenceImageFilters.cpp:237
+#: libs/ui/KisReferenceImageFilters.cpp:242
+#, kde-format
+msgid "Apply Filter Template"
+msgstr "应用滤镜模板"
+
+#: libs/ui/KisReferenceImageFilters.cpp:105
 #, kde-format
 msgid "Reference Image Filters"
 msgstr "Reference Image Filters"
 
-#: libs/ui/KisReferenceImageFilters.cpp:70
-#: libs/ui/KisReferenceImageFilters.cpp:208
+#: libs/ui/KisReferenceImageFilters.cpp:108
+#: libs/ui/KisReferenceImageFilters.cpp:275
 #, kde-format
 msgid "Enable Filters"
 msgstr "启用滤镜"
 
-#: libs/ui/KisReferenceImageFilters.cpp:153
-#: libs/ui/KisReferenceImageFilters.cpp:248
+#: libs/ui/KisReferenceImageFilters.cpp:191
+#: libs/ui/KisReferenceImageFilters.cpp:315
 #, kde-format
 msgid "Add Filter…"
 msgstr "添加滤镜…"
 
-#: libs/ui/KisReferenceImageFilters.cpp:154
+#: libs/ui/KisReferenceImageFilters.cpp:192
 #, kde-format
 msgid "Add Selected Filter"
 msgstr "添加所选滤镜"
 
-#: libs/ui/KisReferenceImageFilters.cpp:185
-#: libs/ui/KisReferenceImageFilters.cpp:229
+#: libs/ui/KisReferenceImageFilters.cpp:225
+#: libs/ui/KisReferenceImageFilters.cpp:296
 #, kde-format
 msgid "Move Up"
 msgstr "上移"
 
-#: libs/ui/KisReferenceImageFilters.cpp:188
-#: libs/ui/KisReferenceImageFilters.cpp:235
+#: libs/ui/KisReferenceImageFilters.cpp:228
+#: libs/ui/KisReferenceImageFilters.cpp:302
 #, kde-format
 msgid "Move Down"
 msgstr "下移"
 
-#: libs/ui/KisReferenceImageFilters.cpp:226
+#: libs/ui/KisReferenceImageFilters.cpp:231
+#: libs/ui/KisReferenceImageFilters.cpp:325
+#, kde-format
+msgid "Save as Template…"
+msgstr "保存为模板…"
+
+#: libs/ui/KisReferenceImageFilters.cpp:234
+#, kde-format
+msgid "Apply Template…"
+msgstr "应用模板…"
+
+#: libs/ui/KisReferenceImageFilters.cpp:237
+#, kde-format
+msgid "No saved filter templates."
+msgstr "没有已保存的滤镜模板。"
+
+#: libs/ui/KisReferenceImageFilters.cpp:243
+#, kde-format
+msgid "Replace the current filter stack with:"
+msgstr "将当前滤镜堆栈替换为："
+
+#: libs/ui/KisReferenceImageFilters.cpp:293
 #, kde-format
 msgid "Edit…"
 msgstr "编辑…"
 
-#: libs/ui/KisReferenceImageFilters.cpp:251
+#: libs/ui/KisReferenceImageFilters.cpp:318
 #, kde-format
 msgid "Manage Filters…"
 msgstr "管理滤镜…"
 
-#: libs/ui/KisReferenceImageFilters.cpp:254
+#: libs/ui/KisReferenceImageFilters.cpp:321
 #, kde-format
 msgid "Clear Filters"
 msgstr "清除滤镜"
+
+#: libs/ui/KisReferenceImageFilters.cpp:328
+#, kde-format
+msgid "Apply Template"
+msgstr "应用模板"
+
+#: libs/ui/KisReferenceImageFilters.cpp:329
+#: libs/ui/KisReferenceImageFilters.cpp:344
+#: libs/ui/KisReferenceImageFilters.cpp:352
+#, kde-format
+msgid "Delete Template"
+msgstr "删除模板"
+
+#: libs/ui/KisReferenceImageFilters.cpp:345
+#, kde-format
+msgid ""
+"Delete the filter template “%1”? Images already using it will not change."
+msgstr "删除滤镜模板“%1”？已应用此模板的图像不会改变。"
 
 #: libs/ui/KisRemoteFileFetcher.cpp:43
 #, kde-format
@@ -31837,8 +31927,8 @@ msgstr "添加图像..."
 #: libs/ui/forms/wdgimportimagesequence.ui:44
 #: libs/ui/input/config/kis_edit_profiles_dialog.ui:44
 #: plugins/tools/tool_lazybrush/kis_tool_lazy_brush_options_widget.ui:159
-#: libs/ui/KisReferenceImageFilters.cpp:166
-#: libs/ui/KisReferenceImageFilters.cpp:241
+#: libs/ui/KisReferenceImageFilters.cpp:206
+#: libs/ui/KisReferenceImageFilters.cpp:308
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:85
 #: libs/widgetutils/xmlgui/kswitchlanguagedialog_p.cpp:430
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:464
@@ -59708,7 +59798,7 @@ msgstr "自动调整滤镜强度"
 #: plugins/impex/webp/kis_wdg_options_webp.ui:691
 #: plugins/impex/webp/kis_wdg_options_webp.ui:737
 #: plugins/impex/webp/kis_wdg_options_webp.ui:757
-#: libs/ui/KisReferenceImageFilters.cpp:218
+#: libs/ui/KisReferenceImageFilters.cpp:285
 #, kde-format
 msgid "Enabled"
 msgstr "已启用"
