@@ -1562,3 +1562,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   Kept the Actions snapshot frozen and linked the new evidence separately.
 - Existing feature regression/manual records remain distinct from CI package
   verification; #8's real-app acceptance is still unrecorded.
+
+## 2026-10-17 implementation: reusable reference filter templates
+
+- Added profile-wide named stack snapshots for reuse across images/documents.
+  Hashed filenames keep labels separate from paths; atomic writes and explicit
+  overwrite protect saved templates. Applied images own independent copies.
+- Saving a template in the editor is a profile operation, separate from image
+  Cancel/Undo. Recorded this boundary in the [cache concept](concepts/reference-image-filter-cache.md).
+- Native builds, expanded regression test, documentation checker and translated
+  catalog validation passed. Test installation updated; interactive acceptance
+  remains pending in the [feature reference](../reference-image-filters.md).

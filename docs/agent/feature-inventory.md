@@ -86,7 +86,8 @@ do not append new implementation diaries to this inventory.
 ## Undocumented custom changes
 Reference Image Filters: `libs/ui/KisReferenceImage.*`,
 `libs/ui/KisReferenceImageFilters.*`, the Reference Images Tool context menu and
-`KisReferenceImageFiltersTest.cpp`. See [maintenance reference](reference-image-filters.md).
+`KisReferenceImageFiltersTest.cpp`; profile-wide named stacks in
+`libs/ui/KisReferenceFilterTemplates.*`. See [maintenance reference](reference-image-filters.md).
 
 
 These have no dedicated documents yet. When modifying one, create its user and
