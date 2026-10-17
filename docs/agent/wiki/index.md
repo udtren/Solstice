@@ -68,6 +68,9 @@ Document ownership and lifecycle are defined in
 
 ### Concepts
 
+- [Reference image filter cache](concepts/reference-image-filter-cache.md): shape
+  effects, preview isolation and asynchronous result ownership.
+
 - [Native refactor boundaries](concepts/native-refactor-boundaries.md): sharing
   services without changing compatibility or QObject/deferred-work ownership.
 
