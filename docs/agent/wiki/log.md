@@ -1580,3 +1580,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   Highlight 09, with an illustrated overview in the repository and website.
 - Bumped only the Solstice version to 0.4.0; release packaging/publication
   follows the [version procedure](../versioning.md). No new runtime claims.
+
+## 2026-10-17 release: 0.4.0
+
+- Published the regular latest release at the exact successful CI build commit.
+  Recorded ZIP integrity, five uploaded asset digests, isolated version output
+  and the distinction from existing feature regression/acceptance evidence in
+  [release verification](history/release-0.4.0.md).
+- Dependency-lock comparison must account for Windows checkout CRLF versus
+  Git-blob LF while still rejecting any other content change.
+- Replaced README's previous release summary with Reference Tool 0.4.0;
+  the illustrated overview remains the ninth Highlights entry. Website
+  publication follows the release, using the repository guides as the source.
