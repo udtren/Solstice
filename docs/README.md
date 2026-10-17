@@ -24,6 +24,8 @@ and settings remain compatible.
 
 ## Painting and brushes
 
+- [Reference Image Filters](reference-image-filters.md)
+
 - [GPU engine](gpu-engine.md): the Vulkan engine and the GPU brush, what
   runs on the GPU, and measured results.
 - [Brush Presets](brush-stroke-preview.md): stroke previews, engine and

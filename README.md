@@ -40,6 +40,8 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## In development — 0.3.0
 
+- [Reference Image Filters](docs/reference-image-filters.md)
+
 The next release removes the Beta label and includes:
 
 - [GPU Clone Layer offsets and projection updates](docs/gpu-engine.md)

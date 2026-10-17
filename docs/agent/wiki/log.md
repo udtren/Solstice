@@ -1540,3 +1540,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   until the verified package is actually published.
 - Build/package validation and release publication are pending; this entry
   does not claim new interactive verification.
+
+## 2026-10-17 implementation: Reference Image Filters
+
+- Added ordered native filter stacks, source preservation, KRA/KRF metadata and
+  undoable editing. Preview overrides remain outside serialized state because
+  autosave can run inside a modal event loop.
+- Recorded [cache ownership](concepts/reference-image-filter-cache.md).
+- Native builds and the dedicated regression test pass; translations and
+  documentation validation pass. Interactive acceptance remains pending.
