@@ -107,7 +107,7 @@ appears in the version strings.
 
 | Version | Date | Reason |
 | --- | --- | --- |
-| `0.3.0` | 2026-10-16 | User-requested release without the Beta label. Includes PR #5 (GPU Clone Layer offsets and Move Tool X/Y guard), #7 (partial-tile GPU projection clears), #8 (provisional layer thumbnails), and repository documentation maintenance/checks. Release preparation: build and publication pending. Krita compatibility version is unchanged. |
+| `0.3.0` | 2026-10-17 (JST) | User-requested release without the Beta label. Includes PR #5 (GPU Clone Layer offsets and Move Tool X/Y guard), #7 (partial-tile GPU projection clears), #8 (provisional layer thumbnails), and repository documentation maintenance/checks. Released as regular GitHub Release `v0.3.0` at `f947bc31421b` (PR #20, run 38915897544); [package verification](wiki/history/release-0.3.0.md). Krita compatibility version is unchanged. |
 | `0.2.0-beta.8` | 2026-10-16 | Eighth beta (user request): share Asset Library services and separate responsibilities in Quick Access, Grid Edit, Quick Brush Adjustments, gestures, Rest Note, Lazy Tools and Brush Stroke Layer. Existing behavior/settings retained and user-confirmed. Released as GitHub Release `v0.2.0-beta.8` (prerelease, merge commit `4e92a41ee78c`, PR #3, run 38872500400). Feature branches now merge into main through pull requests. |
 | `0.1.0-alpha` | 2026-10-07 | First Solstice version. |
 | `0.2.0-alpha` | 2026-10-10 | Milestone (user request): GPU brush by default, masking brush on the GPU, ABR import improvements, Solstice icons and splash, Explorer thumbnails. |
