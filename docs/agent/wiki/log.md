@@ -1573,3 +1573,10 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Native builds, expanded regression test, documentation checker and translated
   catalog validation passed. Test installation updated; interactive acceptance
   remains pending in the [feature reference](../reference-image-filters.md).
+
+## 2026-10-17 release preparation: 0.4.0
+
+- User accepted the Reference Tool enhancement and requested it as website
+  Highlight 09, with an illustrated overview in the repository and website.
+- Bumped only the Solstice version to 0.4.0; release packaging/publication
+  follows the [version procedure](../versioning.md). No new runtime claims.
