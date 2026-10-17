@@ -9,7 +9,6 @@ XML/legacy/clone isolation, asynchronous invalidation and destruction).
 Documentation checks and msgfmt passed (10,443 translated messages).
 Rebuilt shared libraries, the tool plugin and Chinese catalog were installed
 to the shared test prefix on 2026-10-17.
-Interactive acceptance remains pending.
 The user accepted the filter/template enhancement on 2026-10-17 and supplied
 the screenshot used in the [Reference Tool overview](../reference-tool.md).
 This confirms that demonstrated workflow, not every regression checklist item.
@@ -19,7 +18,8 @@ Template extension verified 2026-10-17: native targets and the expanded
 KisReferenceImageFiltersTest pass, including reload/reuse, independent image
 copies, overwrite protection, deletion, safe names and unsupported-file handling.
 Documentation checks and msgfmt pass (10,459 translated messages). Shared UI,
-tool plugin and Chinese catalog installed; interactive acceptance is pending.
+tool plugin and Chinese catalog installed. The demonstrated workflow was
+accepted as noted above; the complete manual checklist below remains unrecorded.
 
 ## Source locations
 

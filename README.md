@@ -36,22 +36,17 @@ Krita edition, and development no longer tracks upstream Krita. See
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[What's new](#whats-new-in-030) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+[What's new](#whats-new-in-040) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
 
-## What's new in 0.3.0
+## What's new in 0.4.0
 
-[Solstice 0.3.0](https://github.com/udtren/Solstice/releases/tag/v0.3.0)
-removes the Beta label and includes:
+[Solstice 0.4.0](https://github.com/udtren/Solstice/releases/tag/v0.4.0)
+enhances the [Reference Tool](docs/reference-tool.md):
 
-- [GPU Clone Layer offsets and projection updates](docs/gpu-engine.md)
-- Move Tool X/Y input fix
-- Faster provisional Layers docker thumbnails after duplication
-- Repository documentation cleanup and automatic PR documentation checks
-
-## In development — 0.4.0
-
-- [Reference Tool](docs/reference-tool.md): non-destructive native filter stacks
-  and reusable templates for reference images.
+- Non-destructive native filter stacks with editable settings and ordering
+- Per-effect and whole-stack enable/disable, removal and undo
+- Named templates reusable across reference images and documents
+- Illustrated [overview](docs/reference-tool.md) and [filter guide](docs/reference-image-filters.md)
 
 ## Highlights
 
@@ -137,7 +132,7 @@ move and rotate the parts around them. See the
 > supported hardware and platforms are limited.
 
 Download the unsigned Windows x64 ZIP from
-[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.3.0),
+[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.4.0),
 extract it and start `solstice.exe`.
 
 Source code and newer Windows x64 trial ZIPs are also available from successful
