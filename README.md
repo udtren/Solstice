@@ -157,6 +157,9 @@ required.
   open assets from the welcome page before opening a document.
 - **[Popup Palette removed](docs/quick-access.md)**: the right-click Popup
   Palette and the On-Canvas Brush Editor are replaced by Quick Access.
+- **Native Export Region**: the export feature of the Export Region plugin is
+  now built in as **File > Export Region...** (`Alt+Shift+E`), which exports
+  the selection or the active layer's bounds.
 - **Performance improvements and bug fixes** across the application.
 
 See the [user guides](docs/README.md) for every Solstice feature.
