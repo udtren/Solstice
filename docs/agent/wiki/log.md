@@ -1603,3 +1603,8 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `.webp` was removed.
 - The effects guide shows each filter on one example portrait
   (`docs/images/20161016/`; `Normal.jpg` is the unfiltered original).
+
+## 2026-10-17 docs: Puppet Warp image name
+
+- Renamed `docs/images/Solstice_images.png` to `docs/images/puppet_warp.png`;
+  README and `docs/puppet-warp.md` use the new name.

@@ -90,7 +90,7 @@ enhances the [Reference Tool](docs/reference-tool.md):
 <p><b><a href="docs/brush-editor.md#brush-options-in-tool-options">Brush options in Tool Options</a></b><br>Eye marks put Brush Editor settings in Tool Options.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<a href="docs/puppet-warp.md"><img src="docs/images/Solstice_images.png" alt="A painted figure and a copy reposed with Puppet Warp, with pins on the Transform Tool's mesh and the Puppet Warp Tool Options" width="100%"></a>
+<a href="docs/puppet-warp.md"><img src="docs/images/puppet_warp.png" alt="A painted figure and a copy reposed with Puppet Warp, with pins on the Transform Tool's mesh and the Puppet Warp Tool Options" width="100%"></a>
 <p><b><a href="docs/puppet-warp.md">Puppet Warp</a></b><br>Repose artwork with movable, rotatable pins in the Transform Tool.</p>
 </td>
 </tr>
