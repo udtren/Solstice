@@ -197,9 +197,7 @@ from the welcome page, and Puppet Warp is integrated into the Transform Tool.
 
 Android support and its build and packaging infrastructure have been removed.
 The right-click Popup Palette and the On-Canvas Brush Editor have been removed
-as well; [Quick Access](docs/quick-access.md) provides a color selector, a
-brush grid and brush adjustments instead, and the tools' right-click menus
-remain.
+as well.
 Solstice does not merge upstream Krita wholesale; upstream changes are
 reviewed regularly and adopted selectively as needed. Solstice-specific
 changes and support are maintained in this repository.
