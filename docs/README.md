@@ -24,7 +24,8 @@ thumbnails, and fixes Move Tool X/Y input.
 
 ## Painting and brushes
 
-- [Reference Image Filters](reference-image-filters.md)
+- [Reference Tool](reference-tool.md): editable filter stacks and reusable
+  templates, added in 0.4.0. [Detailed filter guide](reference-image-filters.md).
 
 - [GPU engine](gpu-engine.md): the Vulkan engine and the GPU brush, what
   runs on the GPU, and measured results.

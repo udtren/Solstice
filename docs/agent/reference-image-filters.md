@@ -10,6 +10,9 @@ Documentation checks and msgfmt passed (10,443 translated messages).
 Rebuilt shared libraries, the tool plugin and Chinese catalog were installed
 to the shared test prefix on 2026-10-17.
 Interactive acceptance remains pending.
+The user accepted the filter/template enhancement on 2026-10-17 and supplied
+the screenshot used in the [Reference Tool overview](../reference-tool.md).
+This confirms that demonstrated workflow, not every regression checklist item.
 G'MIC and multi-image editing are outside scope.
 
 Template extension verified 2026-10-17: native targets and the expanded

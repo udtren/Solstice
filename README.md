@@ -48,9 +48,12 @@ removes the Beta label and includes:
 - Faster provisional Layers docker thumbnails after duplication
 - Repository documentation cleanup and automatic PR documentation checks
 
-## Highlights
+## In development — 0.4.0
 
-- [Reference Image Filters](docs/reference-image-filters.md) (in development)
+- [Reference Tool](docs/reference-tool.md): non-destructive native filter stacks
+  and reusable templates for reference images.
+
+## Highlights
 
 - **[Experimental Vulkan engine](docs/gpu-engine.md)**: GPU-resident image
   tiles, accelerated layer compositing and canvas data preparation.
@@ -69,6 +72,7 @@ removes the Beta label and includes:
   background removal and Smart Fill.
 - **[Puppet Warp](docs/puppet-warp.md)**: pose and reshape artwork with movable
   and rotatable pins in the Transform Tool.
+- **[Reference Tool](docs/reference-tool.md)**.
 - **[Docker locks](docs/docker-locks.md)**: lock the widths and heights of
   docked dockers.
 - **[Settings folder](docs/settings-folder.md)**: Solstice keeps its
