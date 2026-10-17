@@ -38,7 +38,7 @@ Krita 6 codebase.**
 </table>
 
 Solstice is independently maintained and desktop-only. It is not an official
-Krita edition, and development no longer tracks upstream Krita. See
+Krita edition; upstream Krita changes are adopted selectively as needed. See
 [Versions](docs/versioning.md) for its pre-1.0 version numbering.
 
 **Learning Solstice:** for the basics of using the application, see the
@@ -197,7 +197,8 @@ The right-click Popup Palette and the On-Canvas Brush Editor have been removed
 as well; [Quick Access](docs/quick-access.md) provides a color selector, a
 brush grid and brush adjustments instead, and the tools' right-click menus
 remain.
-Upstream Krita synchronization has been discontinued; Solstice-specific
+Solstice does not merge upstream Krita wholesale; upstream changes are
+reviewed regularly and adopted selectively as needed. Solstice-specific
 changes and support are maintained in this repository.
 
 ## GPU engine
