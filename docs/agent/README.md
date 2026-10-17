@@ -13,6 +13,8 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 
 ## Maintained references
 
+- [Reference Image Filters](reference-image-filters.md)
+
 - [Codebase map](codebase-map.md), [extension points](extension-points.md),
   [coding rules](coding-rules.md) and [development workflow](development-workflow.md)
   cover shared implementation rules.
