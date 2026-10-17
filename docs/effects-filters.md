@@ -6,7 +6,13 @@ Drop Shadow, Line Art Extraction and Color Reference are implemented.
 [G'MIC-Qt](gmic.md) is also available as a separate CPU filter dialog.
 These additions are included in **0.2.0-beta.6**.
 
+The examples on this page apply each effect to this portrait:
+
+<img src="images/20161016/Normal.jpg" alt="The example portrait without effects" width="60%">
+
 ## Color Reference
+
+<img src="images/20161016/Color%20Reference.jpg" alt="The example portrait with Color Reference applied" width="60%">
 
 Choose **Filter > Adjust > Color Reference** to recolor a layer from an
 image or gradient. Selections, filter masks and filter layers are supported.
@@ -55,6 +61,8 @@ Technical record: [Color Reference](agent/color-reference.md).
 
 ## Sharpness
 
+<img src="images/20161016/Sharpness.jpg" alt="The example portrait with Sharpness applied" width="60%">
+
 Choose **Filter > Enhance > Sharpness**. **Strength** ranges from 0 (no
 change) to 100, with a default of 50. It strengthens fine brightness detail
 while limiting light/dark halos around hard edges. It uses a fixed detail
@@ -74,6 +82,8 @@ Undo/Redo. The user confirmed Sharpness operation on 2026-10-15.
 Technical record: [Illustration filters](agent/illustration-filters.md#sharpness).
 
 ## Color Filter
+
+<img src="images/20161016/Color%20Filter.jpg" alt="The example portrait with Color Filter applied" width="60%">
 
 Choose **Filter > Adjust > Color Filter**. The **Look** tab offers None,
 Vivid, Warm, Cool, Lemonade, Cobalt Blue, Aquamarine, Aurora, Sepia and
@@ -116,6 +126,8 @@ Technical record: [Illustration filters](agent/illustration-filters.md#color-fil
 
 ## Glow
 
+<img src="images/20161016/Glow.jpg" alt="The example portrait with Glow applied" width="60%">
+
 Choose **Filter > Artistic > Glow** to softly brighten highlights and spread
 their light into nearby painted areas. The controls range from 0 to 100:
 
@@ -147,6 +159,8 @@ selections, Undo/Redo, cancellation and filter-mask settings.
 Technical record: [Illustration filters](agent/illustration-filters.md#glow).
 
 ## Drop Shadow
+
+<img src="images/20161016/Drop%20Shadow.jpg" alt="The example portrait with Drop Shadow applied" width="60%">
 
 Choose **Filter > Artistic > Drop Shadow** on a layer with transparency.
 The filter creates a shadow underneath the original paint. For editable
@@ -186,6 +200,8 @@ Technical record: [Illustration filters](agent/illustration-filters.md#drop-shad
 
 ## Line Art Extraction
 
+<img src="images/20161016/Line%20Art%20Extraction.jpg" alt="The example portrait with Line Art Extraction applied" width="60%">
+
 Choose **Filter > Other > Line Art Extraction** on an imported scan or photo
 of dark drawing marks on light paper. The filter estimates the paper's
 brightness, reduces mild lighting unevenness and produces lines on a
@@ -224,6 +240,8 @@ Technical record: [Illustration filters](agent/illustration-filters.md#line-art-
 
 ## Film Grain
 
+<img src="images/20161016/Film%20Grain.jpg" alt="The example portrait with Film Grain applied" width="60%">
+
 Choose **Filter > Other > Film Grain** on a paint layer. Adjust the preview,
 then apply the result or cancel. Undo restores the previous image. The same
 filter is available for filter layers and filter masks.
@@ -250,6 +268,8 @@ Other color models use noise in their native channels and have not yet been
 visually verified.
 
 ## Chromatic Aberration
+
+<img src="images/20161016/Chromatic%20Aberration.jpg" alt="The example portrait with Chromatic Aberration applied" width="60%">
 
 Choose **Filter > Artistic > Chromatic Aberration**. The effect offsets the
 red and blue channels in opposite directions while keeping green in place.
@@ -281,6 +301,8 @@ coverage includes Gray/Alpha at all four depths and CMYK/Alpha and Lab/Alpha at
 16-bit integer; their artistic appearance still needs visual review.
 
 ## Film
+
+<img src="images/20161016/Film.jpg" alt="The example portrait with Film applied" width="60%">
 
 Choose **Filter > Artistic > Film**. This combines chromatic aberration,
 color treatment, light leak and grain in one preview and one undoable operation.
@@ -327,6 +349,8 @@ can change appearance; grain uses native color channels. Grayscale stays gray.
 
 ## Crystal
 
+<img src="images/20161016/Crystal.jpg" alt="The example portrait with Crystal applied" width="60%">
+
 Choose **Filter > Artistic > Crystal** to turn the image into polygonal color
 cells. It also works in filter layers and filter masks.
 
@@ -360,6 +384,8 @@ Native channel bytes are copied without color conversion or an 8-bit
 intermediate, preserving the profile and float HDR values.
 
 ## Lens Blur
+
+<img src="images/20161016/Lens%20Blur.jpg" alt="The example portrait with Lens Blur applied" width="60%">
 
 Choose **Filter > Blur > Lens Blur**. The existing polygon shapes, radius and
 rotation remain available, along with two new controls:
@@ -401,6 +427,8 @@ calls also need substantial temporary memory; interactive performance depends
 on the host's patch scheduling and image size.
 
 ## Pencil
+
+<img src="images/20161016/Pencil.jpg" alt="The example portrait with Pencil applied" width="60%">
 
 Choose **Filter > Artistic > Pencil** to add pencil-like outlines and strokes.
 It is also available in filter layers and filter masks.

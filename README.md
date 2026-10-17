@@ -6,6 +6,15 @@
 
 <p align="center"><b>A GPU-focused digital painting application for Windows, derived from Krita.</b></p>
 
+## Project page
+
+**Website: <https://solstice.tidalboxstudio.com>**: an overview, the
+download page and pages for the main features.
+
+This [GitHub repository](https://github.com/udtren/Solstice) holds the
+source code, the releases and the [user guides](docs/README.md); the
+[highlights](#highlights) link to individual feature guides.
+
 ![Solstice main window painting the Solstice splash artwork, with the Brush Presets docker grouped by bundle, Quick Brush Adjustments, HueSVC, the Quick Access Palette, Layers and the Brush section of Tool Options](docs/images/solstice-main-window.webp)
 
 **Solstice is an open-source digital painting application derived from the
@@ -29,14 +38,26 @@ Krita 6 codebase.**
 </table>
 
 Solstice is independently maintained and desktop-only. It is not an official
-Krita edition, and development no longer tracks upstream Krita. See
+Krita edition; upstream Krita changes are adopted selectively as needed. See
 [Versions](docs/versioning.md) for its pre-1.0 version numbering.
 
 **Learning Solstice:** for the basics of using the application, see the
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The
 features Solstice adds are described in its [user guides](docs/README.md).
 
-[What's new](#whats-new-in-040) | [Highlights](#highlights) | [Screenshots](#screenshots) | [Development & downloads](#development-and-downloads) | [GPU engine](#gpu-engine) | [Benchmarks](#benchmarks) | [Supported environment](#supported-environment)
+## Contents
+
+- [What's new in 0.4.0](#whats-new-in-040)
+- [Highlights](#highlights)
+  - [New Features](#new-features)
+  - [Ported Plugins](#ported-plugins)
+  - [Other Major Changes](#other-major-changes)
+- [Development and downloads](#development-and-downloads)
+- [Differences from Krita](#differences-from-krita)
+- [GPU engine](#gpu-engine)
+- [Benchmarks](#benchmarks)
+- [Supported environment](#supported-environment)
+- [Relationship to Krita](#relationship-to-krita)
 
 ## What's new in 0.4.0
 
@@ -50,80 +71,98 @@ enhances the [Reference Tool](docs/reference-tool.md):
 
 ## Highlights
 
-- **[Experimental Vulkan engine](docs/gpu-engine.md)**: GPU-resident image
-  tiles, accelerated layer compositing and canvas data preparation.
-- **[GPU brush](docs/gpu-engine.md)**: on by default; pixel brushes on RGBA
-  32-bit and 16-bit float layers composite nearly every blend mode on the GPU
-  in Buildup and Wash, with selections, alpha lock and mirror painting. In a
-  hand-drawn comparison, input to display took about 5 ms, against 18–22 ms
-  with the CPU brush.
-- **Native productivity tools**: [Quick Access Manager](docs/quick-access.md),
-  [Asset Library](docs/asset-library.md), [Rest Note](docs/rest-note.md) and
-  [Lazy Tools](docs/lazy-tools.md).
-- **[Effects & Color](docs/effects-filters.md)**.
-- **[G'MIC-Qt CPU filters](docs/gmic.md)**.
-- **[Layer Comps](docs/layer-comps.md)**.
-- **[Vision ML](docs/vision-ml.md)**: native tools for AI-assisted selection,
-  background removal and Smart Fill.
-- **[Puppet Warp](docs/puppet-warp.md)**: pose and reshape artwork with movable
-  and rotatable pins in the Transform Tool.
-- **[Reference Tool](docs/reference-tool.md)**.
-- **[Docker locks](docs/docker-locks.md)**: lock the widths and heights of
-  docked dockers.
-- **[Settings folder](docs/settings-folder.md)**: Solstice keeps its
-  settings and resources in `%APPDATA%\Solstice`, separate from Krita, and can
-  import a Krita profile on the first start.
-- **[Overview live update](docs/overview-live-update.md)**: the Overview
-  docker follows the canvas while painting.
-- **[Solstice interface](docs/ui-modernization.md)**: the bundled Cantarell UI
-  font, an optional Solstice Dark theme, refined docker titles, document tabs
-  and toolbars, and a flat Solstice widget style.
-- **[Brush Presets](docs/brush-stroke-preview.md)**: cached stroke previews in
-  a grid that adapts to the docker's width, with multi-select engine and bundle
-  filters alongside tags and search, and optional grouping by engine or
-  bundle.
-- **[Brush Editor](docs/brush-editor.md)**: the options of every brush
-  engine live in a shared model, so one change updates only that option in
-  the preset.
-- **[Brush options in Tool Options](docs/brush-editor.md#brush-options-in-tool-options)**:
-  as with Clip Studio Paint's eye marks, an eye next to a Brush Editor
-  setting shows it in the Tool Options docker, under the current brush's
-  stroke preview.
-- **[Brush Stroke Layer](docs/brush-stroke-layer.md)**: a paint layer that
-  remembers its brush strokes; scaling the image or layer, or transforming it
-  with the Transform Tool, redraws them at the new size, so small line art
-  enlarges without blurring. The strokes are saved in `.kra`, and Krita opens
-  the layer as a paint layer.
-- **[Photoshop brushes](docs/photoshop-brushes.md)**: an `.abr` file is
-  imported like a bundle, with its brush tips, patterns and brush presets
-  (converted to Pixel Brush presets, with their dynamics, texture, dual
-  brush and color dynamics) and its Brushes panel folders as tags.
+### New Features
 
-## Screenshots
+<table>
+<tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/gpu-engine.md"><img src="docs/images/gpu_engine.png" alt="The GPU Engine (Vulkan) section of Settings > Performance, with the GPU engine and GPU brush options enabled" width="100%"></a>
+<p><b><a href="docs/gpu-engine.md">GPU Engine</a></b><br>Vulkan layer compositing and a GPU brush, both on by default.</p>
+</td>
+<td width="50%" align="center" valign="top">
+<a href="docs/brush-stroke-preview.md"><img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="100%"></a>
+<p><b><a href="docs/brush-stroke-preview.md">Brush Presets</a></b><br>Stroke previews, engine and bundle filters, and grouping.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/brush-editor.md#brush-options-in-tool-options"><img src="docs/images/tool-options-brush.png" alt="Brush Editor with eyes on brush settings, and the Brush section of Tool Options showing them under the stroke preview" width="100%"></a>
+<p><b><a href="docs/brush-editor.md#brush-options-in-tool-options">Brush options in Tool Options</a></b><br>Eye marks put Brush Editor settings in Tool Options.</p>
+</td>
+<td width="50%" align="center" valign="top">
+<a href="docs/puppet-warp.md"><img src="docs/images/Solstice_images.png" alt="A painted figure and a copy reposed with Puppet Warp, with pins on the Transform Tool's mesh and the Puppet Warp Tool Options" width="100%"></a>
+<p><b><a href="docs/puppet-warp.md">Puppet Warp</a></b><br>Repose artwork with movable, rotatable pins in the Transform Tool.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/brush-stroke-layer.md"><img src="docs/images/brush-stroke-layer.png" alt="A small figure sketch and a copy enlarged and drawn again at the new size, on two Brush Stroke Layers" width="100%"></a>
+<p><b><a href="docs/brush-stroke-layer.md">Brush Stroke Layer</a></b><br>Strokes are redrawn at the new size when scaled, without blurring.</p>
+</td>
+<td width="50%" align="center" valign="top">
+<a href="docs/effects-filters.md"><img src="docs/images/more_filter.png" alt="Nine versions of one portrait with Solstice effects such as Chromatic Aberration, Color Filter, Crystal, Drop Shadow, Color Reference and Film Grain" width="100%"></a>
+<p><b><a href="docs/effects-filters.md">Effects &amp; Color</a></b><br>New native filters such as Film Grain, Glow and Color Reference.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/reference-tool.md"><img src="docs/images/reference-tool-filters.png" alt="A selected reference drawing with Desaturate, Posterize and Glow in the Filter menu; Glow offers enable, edit, reorder and remove controls" width="100%"></a>
+<p><b><a href="docs/reference-tool.md">Reference Tool filters</a></b><br>Non-destructive filter stacks and templates for reference images.</p>
+</td>
+<td width="50%" align="center" valign="top">
+<a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Layer Comps docker with two comps, Apply and Export columns, and its action buttons" width="100%"></a>
+<p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states.</p>
+</td>
+</tr>
+</table>
 
-<img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="480">
+### Ported Plugins
 
-The Brush Presets docker grouped by bundle, with the Engines filter open. See
-the [Brush Presets guide](docs/brush-stroke-preview.md) for preview behavior,
-filters and grouping.
+Python plugins reimplemented natively in C++, with no Python installation
+required.
 
-<img src="docs/images/tool-options-brush.png" alt="Brush Editor with eyes on brush tip settings, Blending Mode, Opacity and Flow, and the Brush section of Tool Options showing them under the stroke preview" width="480">
+<table>
+<tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/quick-access.md"><img src="docs/images/ported_plugin/quick_access_manager.png" alt="Quick Brush Adjustments, HueSVC, the Quick Access Palette and the Gesture Configuration dialog" width="100%"></a>
+<p><b><a href="docs/quick-access.md">Quick Access Manager</a></b><br>Brush and action palettes, a color selector, brush adjustments and gestures.</p>
+</td>
+<td width="50%" align="center" valign="top">
+<a href="docs/lazy-tools.md"><img src="docs/images/ported_plugin/lazy_tool.png" alt="Lazy Tools settings with foreground color slots, the Rename Layer dialog with name buttons, and the Selection Masks dialog" width="100%"></a>
+<p><b><a href="docs/lazy-tools.md">Lazy Tools</a></b><br>Quick layer renaming, selection masks and color shortcuts.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/asset-library.md"><img src="docs/images/ported_plugin/asset_library.png" alt="The Asset Library docker showing .kra character thumbnails grouped by folder" width="100%"></a>
+<p><b><a href="docs/asset-library.md">Asset Library</a></b><br>Browse and open your image folders as thumbnails.</p>
+</td>
+<td width="50%" align="center" valign="top">
+<a href="docs/rest-note.md"><img src="docs/images/ported_plugin/rest_note.png" alt="The Rest Note docker showing a working timer and the next eye break" width="100%"></a>
+<p><b><a href="docs/rest-note.md">Rest Note</a></b><br>A work timer with eye-break and break reminders.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/vision-ml.md"><img src="docs/images/ported_plugin/vision_tool.png" alt="The Background Removal filter dialog with the BiRefNet model and CPU and GPU backends" width="100%"></a>
+<p><b><a href="docs/vision-ml.md">Vision Tools</a></b><br>On-device AI selection, background removal and Smart Fill.</p>
+</td>
+<td width="50%"></td>
+</tr>
+</table>
 
-Eyes in the Brush Editor choose the settings that the Tool Options docker
-shows in its Brush section. See
-[Brush options in Tool Options](docs/brush-editor.md#brush-options-in-tool-options).
+### Other Major Changes
 
-<img src="docs/images/brush-stroke-layer.png" alt="A small figure sketch and a copy enlarged and drawn again at the new size, on two Brush Stroke Layers" width="480">
+- **[Asset Library on the welcome page](docs/asset-library.md)**: browse and
+  open assets from the welcome page before opening a document.
+- **[Popup Palette removed](docs/quick-access.md)**: the right-click Popup
+  Palette and the On-Canvas Brush Editor are replaced by Quick Access.
+- **Native Export Region**: the export feature of the Export Region plugin is
+  now built in as **File > Export Region...** (`Alt+Shift+E`), which exports
+  the selection or the active layer's bounds.
+- **Performance improvements and bug fixes** across the application.
 
-A figure sketch on a Brush Stroke Layer and a copy of it enlarged with
-Image > Scale Image: the strokes are drawn again at the new size instead of
-being resampled. See the [Brush Stroke Layer guide](docs/brush-stroke-layer.md).
-
-<img src="docs/images/puppet-warp.webp" alt="A painted figure and a copy reposed with Puppet Warp: the Transform Tool's triangle mesh over the figure, with pins on the head, the shoulder, the raised arm, the waist and the legs, and the Puppet Warp Tool Options" width="480">
-
-A figure reposed with Puppet Warp in the Transform Tool: pins on the mesh
-move and rotate the parts around them. See the
-[Puppet Warp guide](docs/puppet-warp.md).
+See the [user guides](docs/README.md) for every Solstice feature.
 
 ## Development and downloads
 
@@ -148,15 +187,6 @@ The primary development and default branch is `main`. For source
 builds, see the [development environment](AGENTS.md#shared-development-environment) and [build workflow](docs/agent/development-workflow.md#build).
 Check the [supported environment](#supported-environment) before building.
 
-## Project page
-
-**Website: <https://solstice.tidalboxstudio.com>**: an overview, the
-download page and pages for the main features.
-
-This [GitHub repository](https://github.com/udtren/Solstice) holds the
-source code, the releases and the [user guides](docs/README.md); the
-[highlights](#highlights) link to individual feature guides.
-
 ## Differences from Krita
 
 Solstice follows its own development direction, centered on an experimental
@@ -167,10 +197,9 @@ from the welcome page, and Puppet Warp is integrated into the Transform Tool.
 
 Android support and its build and packaging infrastructure have been removed.
 The right-click Popup Palette and the On-Canvas Brush Editor have been removed
-as well; [Quick Access](docs/quick-access.md) provides a color selector, a
-brush grid and brush adjustments instead, and the tools' right-click menus
-remain.
-Upstream Krita synchronization has been discontinued; Solstice-specific
+as well.
+Solstice does not merge upstream Krita wholesale; upstream changes are
+reviewed regularly and adopted selectively as needed. Solstice-specific
 changes and support are maintained in this repository.
 
 ## GPU engine
