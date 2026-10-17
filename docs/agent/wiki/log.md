@@ -1592,3 +1592,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Replaced README's previous release summary with Reference Tool 0.4.0;
   the illustrated overview remains the ninth Highlights entry. Website
   publication follows the release, using the repository guides as the source.
+
+## 2026-10-17 README: illustrated Highlights
+
+- Moved Project page to the top, added a Contents list above What's new and
+  replaced the Highlights bullet list with two-column image tables (New
+  Features, Ported Plugins) plus Other Major Changes; removed Screenshots.
+- `docs/images/Solstice_images.png` shows Puppet Warp despite its name; it
+  replaces `docs/images/puppet-warp.webp` in `docs/puppet-warp.md`, and the
+  `.webp` was removed.
+- The effects guide shows each filter on one example portrait
+  (`docs/images/20161016/`; `Normal.jpg` is the unfiltered original).
