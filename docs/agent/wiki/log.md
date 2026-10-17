@@ -1549,3 +1549,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Recorded [cache ownership](concepts/reference-image-filter-cache.md).
 - Native builds and the dedicated regression test pass; translations and
   documentation validation pass. Interactive acceptance remains pending.
+
+## 2026-10-17 release: 0.3.0 publication
+
+- Published regular release `v0.3.0` at the exact verified build commit
+  `f947bc31421b1b819336c2ad53489179a86999b1`, with all five assets and
+  prerelease disabled. GitHub identifies it as latest.
+- Recorded build identity, ZIP checks, packaged version smoke check,
+  uploaded-asset hash/size comparison and verification limits in
+  [0.3.0 release verification](history/release-0.3.0.md).
+- Updated README, the user-guide index and version history after publication.
+  Kept the Actions snapshot frozen and linked the new evidence separately.
+- Existing feature regression/manual records remain distinct from CI package
+  verification; #8's real-app acceptance is still unrecorded.
