@@ -54,16 +54,35 @@ arrive as cherry-picks or patches.
    belongs to another user, so it passes `safe.directory` per command. A
    persistent `upstream` remote stays forbidden by `AGENTS.md`.
 3. Keep one Solstice commit per upstream commit. When `git am` stops on a
-   conflict, resolve it (next step), `git am --continue`, and add the
+   conflict, resolve it (step 5), `git am --continue`, and add the
    message lines by hand.
-4. Resolve conflicts in favor of Solstice behavior: removed Android
+4. Re-author each Solstice commit with the local identity (the user or the
+   agent) and keep the upstream author as a trailer (user decision,
+   2026-10-19; rule in `AGENTS.md`, "Commit authorship and Contributors").
+   `git am` keeps the upstream author, and GitHub lists every commit author
+   on `main` under the repository's Contributors. Right after each helper run (or
+   `git am --continue`), before applying the next upstream commit, run once:
+
+   ```bash
+   git commit --amend --no-edit --reset-author --trailer "Upstream-Author: $(git log -1 --format='%an <%ae>')"
+   ```
+
+   The command substitution reads the upstream author before the amend
+   runs. Running it a second time would add a trailer with your own
+   identity, so check the result with `git log -1 --format='%an <%ae>%n%B'`.
+   Do not record the upstream author as `Co-authored-by`, because GitHub
+   counts that trailer as co-authorship. `--reset-author` takes the local
+   `user.name` and `user.email`. The commits adopted in 2026-W42 were
+   re-authored the same way by a one-time rewrite of `main` on 2026-10-19.
+5. Resolve conflicts in favor of Solstice behavior: removed Android
    branches stay removed, application strings keep "Solstice", and the
    touch points in `feature-inventory.md` keep working. When the conflict
    is more than mechanical, stop and ask the user.
-5. Format, build, test and install as the touched area requires
+6. Format, build, test and install as the touched area requires
    (`development-workflow.md`, the feature documents), then run the item's
    `claude_notes` checks and list the manual checks for the user.
-6. Record the decision in the ledger below in the same change. Update
+7. Record the decision in the ledger below in the same change, with the
+   Solstice commit SHA after the amend of step 4. Update
    `feature-inventory.md` only when the adoption changes a Solstice touch
    point.
 
@@ -81,19 +100,21 @@ backports whose `cherry picked from` line names them) are not reported
 again. `held` rows stay candidates, so the next report re-checks them.
 
 Decision values: `adopted`, `rejected`, `held`. The Solstice commit column is
-the adopting commit (`-` otherwise).
+the adopting commit (`-` otherwise). The 2026-W42 rows give the commits on
+`main` after the 2026-10-19 author rewrite; the pre-rewrite SHAs are in
+[the decision page](wiki/decisions/upstream-selective-intake.md).
 
 | Item | Upstream commit | Branch | Decision | Solstice commit | Date | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| U-2026W42-01 | `653c3b6bb7f7bbb43821a886fb9d71de241e0d90` | krita/6.0 | adopted | `c822f0df82` | 2026-10-14 | Relax an assert to a safe assert in KisResourceThumbnailCache |
-| U-2026W42-02 | `efabcb3781ee37b7d9e83276a9b280f1c6700e00` | krita/6.0 | adopted | `0c9a2cb628` | 2026-10-14 | Disable left-click scrolling on animation curves |
-| U-2026W42-03 | `65ad64022b39bede8697e13b7be354d5b7adac66` | krita/6.0 | adopted | `1bf931f228` | 2026-10-14 | Fix invalid widget class name |
-| U-2026W42-04 | `c21eee1b878b2c24c86e1685960ee94412141e08` | master | adopted | `bd85d92d6c` | 2026-10-14 | Fix conditions for 4-point transformation |
-| U-2026W42-04 | `3ee2270d8ead36966a055ab72265b8d767d162b8` | master | adopted | `b6a32e1e33` | 2026-10-14 | Make perspective transform build under Qt5 again |
-| U-2026W42-05 | `4bdaa2f4ac08e0cba011f2c6e561e005d1639f23` | master | adopted | `8639d50eac` | 2026-10-14 | Fix horizontal scrolling with the second mouse wheel |
-| U-2026W42-06 | `fa7e98c931d646e7d7f52188c5b414cf6b5ddff2` | master | adopted | `d831de684b` | 2026-10-14 | Save and load the collapse state of layer groups to PSD files |
-| U-2026W42-06 | `496f786bdb7cbbe6db0657f757c46e023c9f47e3` | master | adopted | `50efcbd662` | 2026-10-14 | Implement layer locking read/write in the PSD format |
-| U-2026W42-06 | `4216dd347f843d59ca51c1e097a0dc8af7c753aa` | master | adopted | `d9e6bbff69` | 2026-10-14 | [psd] Add a unittest for user-lock and collapsed PSD fields |
+| U-2026W42-01 | `653c3b6bb7f7bbb43821a886fb9d71de241e0d90` | krita/6.0 | adopted | `fa988b9f36` | 2026-10-14 | Relax an assert to a safe assert in KisResourceThumbnailCache |
+| U-2026W42-02 | `efabcb3781ee37b7d9e83276a9b280f1c6700e00` | krita/6.0 | adopted | `00bdbc4e36` | 2026-10-14 | Disable left-click scrolling on animation curves |
+| U-2026W42-03 | `65ad64022b39bede8697e13b7be354d5b7adac66` | krita/6.0 | adopted | `e2b788f4cc` | 2026-10-14 | Fix invalid widget class name |
+| U-2026W42-04 | `c21eee1b878b2c24c86e1685960ee94412141e08` | master | adopted | `e536c7ebfa` | 2026-10-14 | Fix conditions for 4-point transformation |
+| U-2026W42-04 | `3ee2270d8ead36966a055ab72265b8d767d162b8` | master | adopted | `f5f9a771ad` | 2026-10-14 | Make perspective transform build under Qt5 again |
+| U-2026W42-05 | `4bdaa2f4ac08e0cba011f2c6e561e005d1639f23` | master | adopted | `01c5c30ec0` | 2026-10-14 | Fix horizontal scrolling with the second mouse wheel |
+| U-2026W42-06 | `fa7e98c931d646e7d7f52188c5b414cf6b5ddff2` | master | adopted | `6a385a0f23` | 2026-10-14 | Save and load the collapse state of layer groups to PSD files |
+| U-2026W42-06 | `496f786bdb7cbbe6db0657f757c46e023c9f47e3` | master | adopted | `6cebbc0dc3` | 2026-10-14 | Implement layer locking read/write in the PSD format |
+| U-2026W42-06 | `4216dd347f843d59ca51c1e097a0dc8af7c753aa` | master | adopted | `51e4754500` | 2026-10-14 | [psd] Add a unittest for user-lock and collapsed PSD fields |
 | U-2026W42-07 | `8972b631af37631af33c480741d18deb7b6b1565` | krita/6.0 | rejected | - | 2026-10-14 | Add miscellaneous frame icons; user: not adopted (recommendation consider) |
 | U-2026W42-07 | `b4960514a46f9dec6004e87ea8294debb50149cb` | krita/6.0 | rejected | - | 2026-10-14 | Add isolate group / layer icons; user: not adopted (recommendation consider) |
 | U-2026W42-07 | `fa1e3484ff8f1b06e654e64747c1594bc0fd62c6` | krita/6.0 | rejected | - | 2026-10-14 | Add brush option slider 1-5 icons; user: not adopted (recommendation consider) |

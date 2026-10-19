@@ -48,6 +48,27 @@ The active `Solstice` repository is independent of the Krita fork network;
 its three existing branch histories are preserved. Do not use the archive
 as an upstream synchronization source.
 
+## Commit authorship and Contributors
+
+GitHub lists every commit author on `main` under the repository's
+Contributors. The only human contributor is the user, `udtren`; LLM agents
+such as Claude and Codex may appear there too (user decision, 2026-10-19).
+
+- Author commits with the user's identity or an LLM agent's identity.
+  LLM attribution trailers such as `Co-Authored-By: Claude ...` stay.
+- Never commit with another person's identity as author, and never name
+  another person in a `Co-authored-by` trailer: GitHub counts both. This
+  covers upstream Krita intake and any outside contribution. Record the
+  original author in an `Upstream-Author: Name <email>` trailer instead.
+  The intake steps are in `docs/agent/upstream-intake.md`.
+- `main` was rewritten once, on 2026-10-19 at the user's request, to
+  re-author the nine 2026-W42 intake commits. Every commit from the first
+  of them onward has a new SHA; release tags `v0.2.0-beta.3` to `v0.4.0`
+  still point to the pre-rewrite commits their builds came from. SHAs in
+  documents written before the rewrite refer to that history; the mapping
+  is in `docs/agent/wiki/decisions/upstream-selective-intake.md`. Do not
+  rewrite `main` again unless the user asks for it.
+
 ## Releases and the website
 
 Every new GitHub Release of Solstice is followed, the same day, by a website
