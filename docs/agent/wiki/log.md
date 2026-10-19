@@ -1608,3 +1608,31 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 - Renamed `docs/images/Solstice_images.png` to `docs/images/puppet_warp.png`;
   README and `docs/puppet-warp.md` use the new name.
+
+## 2026-10-19 upstream intake: Solstice-authored commits
+
+- GitHub's Contributors list showed four Krita developers because the
+  2026-W42 intake kept the upstream commit authors (`git am`). From now on
+  each adopted commit is amended to the local author with an
+  `Upstream-Author:` trailer (`docs/agent/upstream-intake.md`, step 4;
+  [upstream-selective-intake](decisions/upstream-selective-intake.md)).
+- At the user's request `main` was rewritten and force-pushed so that the
+  nine W42 commits carry the local author too (`4e849ed12c` to
+  `6dec99bbce`, identical trees). Release tags stay on the pre-rewrite
+  commits; the old-to-new SHA table is on the decision page, and the
+  ledger lists the new SHAs.
+- New rule in `AGENTS.md` ("Commit authorship and Contributors"): the
+  user `udtren` is the only human contributor; LLM agents may be listed.
+
+## 2026-10-19 README: GPU and CPU coverage table
+
+- The README's GPU engine section now opens with a table of what runs on the
+  GPU and what stays CPU only, per area (color spaces, compositing, canvas,
+  blend modes, brushes, tips, textures, masking brush, Transform Tool,
+  filters, Clone Layers). Sources: `docs/gpu-engine.md`,
+  `docs/agent/gpu-engine.md` ("Projection", "Pixel brush integration",
+  "Transforms and Gaussian convolution").
+- Two CPU-only cases the user guide did not list were added to it: layers
+  moved by a distance that is not a multiple of 64 pixels
+  (`KisGpuMergeBatch::tryAdd()`), and brush engines other than the pixel
+  brush (only `plugins/paintops/defaultpaintops/brush` uses the GPU brush).

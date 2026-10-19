@@ -55,6 +55,11 @@ long without AVX2).
   Large or densely spaced strokes using them can take time to catch up.
 - Alpha Darken with some channels turned off, and the blend modes listed
   above.
+- Compositing a layer moved by a distance that is not a multiple of 64
+  pixels.
+- Painting with brush engines other than the pixel brush (Color Smudge,
+  Sketch and so on). The layers they paint on are still composited on the
+  GPU.
 - Copying the source of a Clone Layer that has transparency or filter
   masks (the masks themselves run on the CPU).
 - Soft proofing, channel selection in the Channels docker, and some display
