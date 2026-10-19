@@ -58,8 +58,9 @@ non-destructive native filter stacks and reusable templates to the
   variations. Added in **0.2.0-beta.6**.
 - [Tools when switching documents](document-tool-state.md): tool restoration
   when moving between canvases with a mouse, pen, or eraser.
-- [Quick Access Manager](quick-access.md): configurable action, docker and
-  brush grids, gesture menus, Quick Brush Adjustments and a HueSVC selector.
+- [Quick Access Manager](quick-access.md): the Quick Access Palette of
+  brushes, actions and dockers, keyboard-and-mouse gestures, Quick Brush
+  Adjustments with temporary keys and brushes, and the HueSVC selector.
 - [Asset Library](asset-library.md): browsing asset folders and inserting
   files as layers.
 - [Rest Note](rest-note.md): a work timer with eye-break and full-break

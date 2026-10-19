@@ -1636,3 +1636,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   moved by a distance that is not a multiple of 64 pixels
   (`KisGpuMergeBatch::tryAdd()`), and brush engines other than the pixel
   brush (only `plugins/paintops/defaultpaintops/brush` uses the GPU brush).
+
+## 2026-10-19 Quick Access guide and Layer Comps image
+
+- `docs/quick-access.md` is now a full user guide built from the Python
+  plugin's README (`krita-plugin/quick_access_manager/README.md`), with its
+  screenshots and GIFs copied to `docs/images/quick_access_manager/`. The
+  text was checked against the native sources: menu and dialog labels come
+  from `QuickAccessDock.cpp`, `QuickAccessGestureDialog.cpp` and
+  `QuickAccessSettingsDialog.cpp`.
+- Where the native version differs from the plugin README: the gesture key
+  is typed into a field (no "Config Key" button); gesture, temporary-key and
+  temporary-brush settings apply on Save without a restart (the key
+  controller reads KConfig on every key event); only the HueSVC and Quick
+  Brush Adjustments enable switches need a restart (read in
+  `QuickAccessDockerPlugin.cpp`); brush rotation exists only in the HueSVC
+  popup; the selection button of Quick Brush Adjustments only shows whether
+  the selection outline is displayed.
+- The README's Quick Access highlight uses `quick_access_manager/1_overview.png`;
+  `ported_plugin/quick_access_manager.png` was removed. `docs/images/Layer_Comps.png`
+  was replaced by the user. The website copies both images.

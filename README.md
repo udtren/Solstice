@@ -110,7 +110,7 @@ enhances the [Reference Tool](docs/reference-tool.md):
 <p><b><a href="docs/reference-tool.md">Reference Tool filters</a></b><br>Non-destructive filter stacks and templates for reference images.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Layer Comps docker with two comps, Apply and Export columns, and its action buttons" width="100%"></a>
+<a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Layer Comps docker with four comps checked for export, Apply and Export columns, and its action buttons" width="100%"></a>
 <p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states.</p>
 </td>
 </tr>
@@ -124,7 +124,7 @@ required.
 <table>
 <tr>
 <td width="50%" align="center" valign="top">
-<a href="docs/quick-access.md"><img src="docs/images/ported_plugin/quick_access_manager.png" alt="Quick Brush Adjustments, HueSVC, the Quick Access Palette and the Gesture Configuration dialog" width="100%"></a>
+<a href="docs/quick-access.md"><img src="docs/images/quick_access_manager/1_overview.png" alt="The Quick Brush Adjustments, HueSVC and Quick Access Palette dockers, and two pages of the Gesture Configuration dialog" width="100%"></a>
 <p><b><a href="docs/quick-access.md">Quick Access Manager</a></b><br>Brush and action palettes, a color selector, brush adjustments and gestures.</p>
 </td>
 <td width="50%" align="center" valign="top">
