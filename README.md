@@ -204,38 +204,42 @@ changes and support are maintained in this repository.
 
 ## GPU engine
 
-The experimental engine uses Vulkan compute for supported RGBA floating-point
-layer compositing in RGBA32F and RGBA16F and shares data with the OpenGL canvas
-for display. Supported layer modes include Normal, Multiply, Screen, Overlay,
-Soft Light and the HSY, HSL, HSV and HSI color modes; every blend mode runs
-on the GPU except Dissolve, Marker, Destination In/Atop and Divisive Modulo
-(and its Continuous variants), including individual channel locks. It is
-enabled by default and falls back to CPU paths for unsupported operations.
+The experimental engine uses Vulkan compute on RGBA 32-bit and 16-bit float
+documents and shares its data with the OpenGL canvas for display. It is
+enabled by default; anything it does not support runs on the CPU as in Krita.
+This is an ongoing rewrite, not a fully GPU-based painting pipeline.
 
-The GPU pixel brush (on by default) also composites the same blend modes,
-Erase and Alpha Darken on the GPU, with selections, alpha lock and mirror
-painting. Supported Buildup strokes and Wash
-previews and final merges use GPU paths with CPU-compatible channel handling.
-RGBA16F brushes support the same modes in Buildup and Wash, including Wash's
-Alpha Darken painting buffer. Blend modes without a GPU version retain CPU
-fallback.
+What has moved to the GPU so far, and what still runs only on the CPU. The
+GPU column applies to RGBA 32-bit and 16-bit float layers only.
+
+| Area | On the GPU | CPU only |
+| --- | --- | --- |
+| Color spaces | RGBA 32-bit and 16-bit float | Every other color space and depth (8/16-bit integer, CMYK, Lab, grayscale), also as single layers in a float document; file layers |
+| Layer compositing | Layer projection, including alpha lock and individual channel locks | Layer styles, Colorize Mask; layers moved by a distance that is not a multiple of 64 pixels |
+| Canvas display | Handing the projection to the OpenGL canvas | ANGLE/Direct3D renderer, soft proofing, channel selection in the Channels docker, LUT-based display profiles, absolute colorimetric intent |
+| Blend modes | Every mode not listed as CPU only | Dissolve, Marker, Destination In, Destination Atop, Divisive Modulo and its Continuous variants |
+| Brush strokes | Pixel brush in Buildup and Wash, with Erase, Alpha Darken, selections, alpha lock and mirror painting | Painting with other brush engines (Color Smudge, Sketch and so on); Alpha Darken with some channels turned off; a single oversized dab |
+| Brush tips | Circle, Gaussian and soft auto-brush tips; image tips (predefined and imported Photoshop brushes) as alpha mask, Image Stamp, Lightness Map or Gradient Map | Animated (`.gih`) and text tips; the Sharpness option; Image Stamp with a color profile that does not convert each channel separately |
+| Brush textures | Pattern textures | The Lightness and Gradient texture modes |
+| Masking brush | Combining the mask with the stroke | Painting the mask itself; the whole masked stroke on GPUs without 64-bit float shader support |
+| Transform Tool | Applying Free Transform (scale, rotate, shear), Liquify and Puppet Warp | Perspective, Warp, Cage and Mesh transforms; older Puppet Warp transforms; the preview while editing; combining Puppet Warp's parts; wrap-around mode |
+| Filters | Gaussian Blur, also inside Unsharp Mask and Gaussian High Pass, in the Filter dialog, filter layers and filter masks | All other filters; the sharpening step of Unsharp Mask; areas smaller than about 180 x 180 pixels; Instant Preview; wrap-around mode |
+| Clone Layers | Copying the source of a Clone Layer moved away from its source | Clone Layers with transparency or filter masks |
+
+Free Transform and Liquify results are identical to the CPU results, pixel
+for pixel; so are Puppet Warp's parts, which are then combined on the CPU.
+Gaussian Blur matches within one rounding step. Blend modes based on powers,
+exponentials or trigonometry match the CPU closely rather than exactly.
+
+The GPU brush can be turned off with **Paint brush strokes on the GPU** next
+to the GPU engine option; `KRITA_GPU_BRUSH=1` or `0` overrides the setting.
 Batched tile transfers and reusable upload buffers reduce transfer waits,
 including for textured and masked brushes. Layer and Wash compositing reuse
 completed work buffers and can queue consecutive updates. Whole-tile copies
 can retain GPU pixels, and CPU filters, FFT convolution, affine transforms
-and layer flips now batch their GPU readbacks.
-
-The GPU brush can be turned off with **Paint brush strokes on the GPU** next
-to the GPU engine option; `KRITA_GPU_BRUSH=1` or `0` overrides the setting. On RGBA32F
-and RGBA16F layers, circle, Gaussian and soft auto-brush dabs, image-based brush tips (also as
-colour stamps, Lightness or Gradient maps) and their pattern textures are
-also computed on the GPU, and so is the masking brush composite. The masking brush's
-own mask, most filter calculations and most transform
-calculations still run on the CPU; the Transform Tool's
-affine transforms, Liquify, Puppet Warp and Gaussian Blur (also inside
-Unsharp Mask and Gaussian High Pass) are applied on the GPU for float layers. Large mirrored brushes with
-Alpha Lock can still catch up after pen release; further tuning of that case
-is deferred. This is an ongoing rewrite, not a fully GPU-based painting pipeline.
+and layer flips batch their GPU readbacks. Large mirrored brushes with Alpha
+Lock can still catch up after pen release; further tuning of that case is
+deferred.
 
 See the [GPU Engine guide](docs/gpu-engine.md) for setup and limitations.
 

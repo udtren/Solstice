@@ -1623,3 +1623,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   ledger lists the new SHAs.
 - New rule in `AGENTS.md` ("Commit authorship and Contributors"): the
   user `udtren` is the only human contributor; LLM agents may be listed.
+
+## 2026-10-19 README: GPU and CPU coverage table
+
+- The README's GPU engine section now opens with a table of what runs on the
+  GPU and what stays CPU only, per area (color spaces, compositing, canvas,
+  blend modes, brushes, tips, textures, masking brush, Transform Tool,
+  filters, Clone Layers). Sources: `docs/gpu-engine.md`,
+  `docs/agent/gpu-engine.md` ("Projection", "Pixel brush integration",
+  "Transforms and Gaussian convolution").
+- Two CPU-only cases the user guide did not list were added to it: layers
+  moved by a distance that is not a multiple of 64 pixels
+  (`KisGpuMergeBatch::tryAdd()`), and brush engines other than the pixel
+  brush (only `plugins/paintops/defaultpaintops/brush` uses the GPU brush).
