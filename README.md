@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 0.4.0](#whats-new-in-040)
+- [In development: 0.5.0](#in-development-050)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,15 +59,15 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 0.4.0
+## In development: 0.5.0
 
-[Solstice 0.4.0](https://github.com/udtren/Solstice/releases/tag/v0.4.0)
-enhances the [Reference Tool](docs/reference-tool.md):
+Solstice 0.5.0 adds [Remove Dust](docs/remove-dust.md):
 
-- Non-destructive native filter stacks with editable settings and ordering
-- Per-effect and whole-stack enable/disable, removal and undo
-- Named templates reusable across reference images and documents
-- Illustrated [overview](docs/reference-tool.md) and [filter guide](docs/reference-image-filters.md)
+- A Remove Dust Tool that removes or selects small specks inside an area
+  you enclose, or fills small transparent gaps with the surrounding color
+- A Remove Dust filter for whole layers, filter masks and filter layers
+- Modes for dust on transparency, dust on a white background and
+  transparent gaps, with Dust size and Tolerance
 
 ## Highlights
 
@@ -114,6 +114,13 @@ enhances the [Reference Tool](docs/reference-tool.md):
 <p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states.</p>
 </td>
 </tr>
+<tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/remove-dust.md"><img src="docs/images/remove_dust.png" alt="A rectangle drawn with the Remove Dust Tool around specks on a sketch, and the same area afterwards without the specks" width="100%"></a>
+<p><b><a href="docs/remove-dust.md">Remove Dust</a></b><br>Remove or select small specks, and fill small gaps, with a tool or a filter.</p>
+</td>
+<td width="50%"></td>
+</tr>
 </table>
 
 ### Ported Plugins
@@ -157,8 +164,6 @@ required.
   open assets from the welcome page before opening a document.
 - **[Popup Palette removed](docs/quick-access.md)**: the right-click Popup
   Palette and the On-Canvas Brush Editor are replaced by Quick Access.
-- **[Remove Dust](docs/remove-dust.md)**: a tool and a filter that remove
-  small specks and fill small holes.
 - **Native Export Region**: the export feature of the Export Region plugin is
   now built in as **File > Export Region...** (`Alt+Shift+E`), which exports
   the selection or the active layer's bounds.

@@ -1671,3 +1671,11 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Pitfalls added to [Build, format and test pitfalls](pitfalls/build-format-test.md):
   defaulted smart-pointer parameters, const lambda captures, the filter
   registry in plugin tests, and per-case test output.
+
+## 2026-10-21 release preparation: 0.5.0
+
+- The user requested a release with Remove Dust as a new feature, illustrated
+  with `docs/images/remove_dust.png` in README and on the website, and chose
+  version 0.5.0.
+- Bumped only the Solstice version; README marks 0.5.0 as in development until
+  the GitHub Release exists ([version procedure](../versioning.md#releasing)).

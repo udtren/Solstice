@@ -1,7 +1,8 @@
 # Remove Dust
 
 Remove Dust cleans up small specks left on line art and scanned drawings,
-and fills small holes left in flat color. It comes in two forms:
+and fills small holes left in flat color. It was added in Solstice 0.5.0
+and comes in two forms:
 
 - the **Remove Dust Tool**, in the fill section of the toolbox, which works on
   an area you enclose on the canvas;
