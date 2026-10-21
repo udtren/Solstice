@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-17
+updated: 2026-10-21
 ---
 
 # Agent wiki
@@ -116,7 +116,9 @@ Document ownership and lifecycle are defined in
 
 - [Build, format and test pitfalls](pitfalls/build-format-test.md):
   clang-format include sorting, shells, shader and struct layout mistakes,
-  test environment, installation (including plugins after a vtable change).
+  test environment (filter registry in plugin tests, per-case output),
+  installation (including plugins after a vtable change), smart-pointer
+  default arguments and lambda captures.
 - [Weak pointers as ordered map keys](pitfalls/weak-pointer-map-keys.md):
   a `KisWeakSharedPtr` key turns into `nullptr` when its object dies and
   corrupts the map (missing layer docker thumbnails).

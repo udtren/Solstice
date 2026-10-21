@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.4.0` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.5.0` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -104,6 +104,11 @@ appears in the version strings.
      release.
 
 ## History
+
+0.5.0 is being prepared on 2026-10-21: the Remove Dust tool and filter
+(branch `claude/remove-dust`), with an illustrated user guide. The user chose
+0.5.0. Publication and package verification are pending; the Krita version
+is unchanged.
 
 | Version | Date | Reason |
 | --- | --- | --- |

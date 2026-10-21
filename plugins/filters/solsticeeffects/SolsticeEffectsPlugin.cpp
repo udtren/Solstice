@@ -13,6 +13,7 @@
 #include "KisGlowFilter.h"
 #include "KisLineArtFilter.h"
 #include "KisPencilFilter.h"
+#include "KisRemoveDustFilter.h"
 #include "KisSharpnessFilter.h"
 
 #include <QObject>
@@ -37,6 +38,7 @@ public:
         KisFilterRegistry::instance()->add(new KisDropShadowFilter());
         KisFilterRegistry::instance()->add(new KisLineArtFilter());
         KisFilterRegistry::instance()->add(new KisColorReferenceFilter());
+        KisFilterRegistry::instance()->add(new KisRemoveDustFilter());
     }
 };
 

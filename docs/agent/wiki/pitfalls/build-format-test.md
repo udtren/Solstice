@@ -1,11 +1,12 @@
 ---
 type: pitfall
-updated: 2026-10-12
+updated: 2026-10-21
 sources:
   - docs/agent/coding-rules.md ("Formatting and diffs")
   - docs/agent/development-workflow.md (build, test, install)
   - docs/agent/gpu-engine.md ("Build, test, and install")
   - experience from the 2026-10 sessions (Quick Access, docker locks, GPU Liquify)
+  - docs/agent/remove-dust.md (2026-10-21, KisDustDetector, KisRemoveDustFilterTest, KisToolRemoveDust)
 related:
   - ../concepts/cpu-gpu-bit-parity.md
 ---
@@ -61,6 +62,15 @@ wrong anyway.
 
 - `KisPaintDevice::fastBitBltPossible()` is protected. Compare `x()`, `y()`
   and color spaces instead.
+- **A defaulted smart-pointer parameter needs the full type at every call.**
+  `KisPixelSelectionSP enclosure = nullptr` in an exported header made every
+  caller fail with "member access into incomplete type" unless it included
+  `kis_pixel_selection.h`. Add an overload without the parameter instead
+  (`KisDustDetector::detect()`).
+- **Copied `KisSharedPtr` captures are const in a lambda.** Calling
+  `setDirty()` or `invalidateOutlineCache()` on a node or selection captured
+  by `[=]` does not compile. Mark `KisCommandUtils::LambdaCommand` lambdas
+  `mutable`, as `KisToolSelectContiguous` does.
 
 ## Tests
 
@@ -74,6 +84,14 @@ wrong anyway.
   this is environmental, not a regression.
 - Do not run the `libs-ui-*` suite through ctest or `kis_kra_saver_test`
   on the desktop session: they open blocking dialogs.
+- **A filter mask finds its filter in `KisFilterRegistry`**, which in a
+  plugin test only holds installed plugins. A new filter's mask test fails
+  ("Could not retrieve filter") until the plugin is installed; register the
+  filter in `initTestCase()` (`KisRemoveDustFilterTest`).
+- **ctest prints no per-case results** for these test programs, even with
+  `-V`. To see them, run the program with `-o <file>,txt` from PowerShell
+  (`cmd.exe /d /c "call env.bat && <test>.exe -o <file>,txt"`) and read the
+  file.
 - **Test programs embed the MIME database** (since 2026-10-07). Qt 6 in
   this build has no built-in MIME database; the application embeds
   `krita/data/mime-database/freedesktop.org.xml` at
