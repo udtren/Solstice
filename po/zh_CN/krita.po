@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-10-17 12:10+0900\n"
+"POT-Creation-Date: 2026-10-21 16:10+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -27267,6 +27267,7 @@ msgstr "导出为视频"
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:65
 #: plugins/filters/solsticeeffects/KisFilmConfigWidget.cpp:74
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:51
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:37
 #: plugins/generators/screentone/KisScreentoneConfigWidget.cpp:74
 #: plugins/generators/screentone/KisScreentoneConfigWidget.cpp:80
 #: plugins/generators/screentone/KisScreentoneConfigWidget.cpp:86
@@ -27306,6 +27307,7 @@ msgstr "导出为视频"
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:502
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:516
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:528
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:526
 #: plugins/tools/tool_lazybrush/kis_tool_lazy_brush_options_widget.cpp:106
 #: plugins/tools/tool_lazybrush/kis_tool_lazy_brush_options_widget.cpp:116
 #: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:160
@@ -30488,6 +30490,7 @@ msgstr "出现倍率："
 #: plugins/filters/blur/kis_wdg_lens_blur.cpp:33
 #: plugins/filters/solsticeeffects/KisCrystalConfigWidget.cpp:49
 #: plugins/filters/solsticeeffects/KisPencilConfigWidget.cpp:48
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:40
 #: plugins/filters/solsticeeffects/KisSharpnessConfigWidget.cpp:22
 #: plugins/paintops/curvebrush/kis_curve_paintop_settings.cpp:137
 #: plugins/paintops/experiment/kis_experiment_paintop_settings.cpp:78
@@ -30509,6 +30512,7 @@ msgstr "出现倍率："
 #: plugins/paintops/mypaint/MyPaintSensorPack.cpp:49
 #: plugins/paintops/mypaint/MyPaintSensorPack.cpp:50
 #: plugins/paintops/spray/KisSprayShapeOptionModel.cpp:88
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:532
 #, no-c-format, kde-format
 msgid "%"
 msgstr "%"
@@ -33423,6 +33427,7 @@ msgstr "线条："
 #: libs/ui/forms/wdgstrokeselectionproperties.ui:224
 #: plugins/tools/basictools/kis_tool_fill.cc:644
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:556
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:522
 #, kde-format
 msgid "Foreground color"
 msgstr "前景色"
@@ -40893,6 +40898,7 @@ msgstr "无限直线"
 #. i18n: context: text @ Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: text @ Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: text @ Actions (tool-shortcuts), ActionCollection (Tools)
+#. i18n: context: text @ Actions (tool-shortcuts), ActionCollection (Tools)
 #: plugins/assistants/Assistants/KisAssistantTool.action:4
 #: plugins/tools/basictools/KisToolPath.action:4
 #: plugins/tools/basictools/KisToolPencil.action:4
@@ -40907,6 +40913,7 @@ msgstr "无限直线"
 #: plugins/tools/selectiontools/KisToolSelectSimilar.action:4
 #: plugins/tools/tool_crop/KisToolCrop.action:4
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.action:4
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.action:4
 #: plugins/tools/tool_polygon/KisToolPolygon.action:4
 #: plugins/tools/tool_polyline/KisToolPolyline.action:4
 #: plugins/tools/tool_transform2/KisToolTransform.action:4
@@ -52022,6 +52029,7 @@ msgstr "圆形"
 #: plugins/dockers/griddocker/grid_config_widget.cpp:63
 #: plugins/flake/pathshapes/rectangle/RectangleShapeFactory.cpp:23
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:548
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:557
 #, kde-format
 msgid "Rectangle"
 msgstr "矩形"
@@ -52903,6 +52911,7 @@ msgstr "独立颜色通道"
 #: plugins/filters/halftone/KisHalftoneConfigWidget.ui:50
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:2042
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:52
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:42
 #: plugins/python/highpass/highpass.py:67
 #, kde-format
 msgid "Mode:"
@@ -54487,6 +54496,90 @@ msgstr "粗糙度："
 #, kde-format
 msgid "&Pencil..."
 msgstr "Pencil(&P)..."
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:31
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:475
+#, kde-format
+msgid "Remove dust from transparency"
+msgstr "去除透明背景上的灰尘"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:32
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:478
+#, kde-format
+msgid "Remove dust from white background"
+msgstr "去除白色背景上的灰尘"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:33
+#, kde-format
+msgid "Fill transparent gaps with surrounding color"
+msgstr "用周围颜色填充透明空隙"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:34
+#, kde-format
+msgid "Fill transparent gaps with a color"
+msgstr "用指定颜色填充透明空隙"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:43
+#, kde-format
+msgid "Dust size:"
+msgstr "灰尘大小："
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:44
+#, kde-format
+msgid "Tolerance:"
+msgstr "容差："
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:45
+#, kde-format
+msgid "Fill color:"
+msgstr "填充颜色："
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:46
+#, kde-format
+msgid "Choose what counts as dust and what replaces it."
+msgstr "选择哪些内容算作灰尘，以及用什么替换它们。"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:47
+#, kde-format
+msgid ""
+"Spots whose width and height are both at most this size are treated as dust."
+msgstr "宽度和高度都不超过此大小的斑点会被视为灰尘。"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:48
+#, kde-format
+msgid ""
+"Spots touching the edge of a selection may be changed only partly. Use the "
+"Remove Dust tool to work on an enclosed area."
+msgstr "接触选区边缘的斑点可能只有一部分被处理。要处理圈选的区域，请使用除尘工具。"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:73
+#, kde-format
+msgid "Pixels at or below this opacity count as transparent."
+msgstr "不透明度不高于此值的像素被视为透明。"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:75
+#, kde-format
+msgid ""
+"Colors this close to white count as white. Raise it for scanned or off-white "
+"paper."
+msgstr "与白色的差异不超过此值的颜色被视为白色。处理扫描稿或米白色纸张时请调高此值。"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:76
+#, kde-format
+msgid ""
+"Pixels at least this much below full opacity count as gaps. Zero treats any "
+"pixel that is not fully opaque as a gap."
+msgstr "不透明度比完全不透明至少低此值的像素被视为空隙。为零时，任何不是完全不透明的像素都被视为空隙。"
+
+#: plugins/filters/solsticeeffects/KisRemoveDustFilter.cpp:26
+#, kde-format
+msgid "&Remove Dust..."
+msgstr "Remove Dust(&R)..."
+
+#: plugins/filters/solsticeeffects/KisRemoveDustFilter.cpp:26
+#, kde-format
+msgid "Remove Dust"
+msgstr "Remove Dust"
 
 #: plugins/filters/solsticeeffects/KisSharpnessFilter.cpp:33
 #, kde-format
@@ -60677,6 +60770,7 @@ msgstr "细分级别"
 #: plugins/assistants/Assistants/EllipseAssistant.cc:197
 #: plugins/flake/pathshapes/ellipse/EllipseShapeFactory.cpp:21
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:549
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:558
 #, kde-format
 msgid "Ellipse"
 msgstr "椭圆"
@@ -66329,6 +66423,7 @@ msgstr "椭圆工具"
 
 #: plugins/tools/basictools/kis_tool_fill.cc:139
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:179
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:183
 #, kde-format
 msgid "You cannot use this tool with the selected layer type"
 msgstr "您无法在所选图层类型上使用此工具"
@@ -66394,6 +66489,7 @@ msgstr "羽化半径："
 
 #: plugins/tools/basictools/kis_tool_fill.cc:625
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:543
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:551
 #, kde-format
 msgid "Use active layer"
 msgstr "使用活动图层"
@@ -66561,6 +66657,7 @@ msgstr "拖动开始处的相似色 (适用于填充线稿)"
 
 #: plugins/tools/basictools/kis_tool_fill.cc:675
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:580
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:580
 #, kde-format
 msgid "Reset the options to their default values"
 msgstr "重置所有选项为默认值"
@@ -67104,6 +67201,7 @@ msgstr "轴心："
 #: plugins/tools/basictools/wdgmultihandtool.ui:228
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:84
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:463
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:571
 #, kde-format
 msgid "Add"
 msgstr "添加"
@@ -69290,11 +69388,13 @@ msgid "Reset"
 msgstr "重置"
 
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:550
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:559
 #, kde-format
 msgid "Bezier Curve"
 msgstr "贝塞尔曲线"
 
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:551
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:560
 #, kde-format
 msgid "Lasso"
 msgstr "手绘轮廓"
@@ -69410,6 +69510,220 @@ msgstr "被包围区域：被透明、特定颜色包围"
 #, kde-format
 msgid "Enclose and Fill Tool"
 msgstr "闭合填充工具/圈涂"
+
+#. i18n: context: text @ Action (KisToolRemoveDust), Actions (tool-shortcuts), ActionCollection (Tools)
+#. i18n: context: toolTip @ Action (KisToolRemoveDust), Actions (tool-shortcuts), ActionCollection (Tools)
+#. i18n: context: iconText @ Action (KisToolRemoveDust), Actions (tool-shortcuts), ActionCollection (Tools)
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.action:7
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.action:9
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.action:10
+#, kde-format
+msgctxt "action"
+msgid "Remove Dust Tool"
+msgstr "除尘工具"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:341
+msgctxt "(qtundo-format)"
+msgid "Remove Dust"
+msgstr "除尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:341
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:384
+msgctxt "(qtundo-format)"
+msgid "Select Dust"
+msgstr "选择灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:358
+#, kde-format
+msgid "No dust found"
+msgstr "未发现灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:359
+#, kde-format
+msgid "Selected 1 dust spot"
+msgid_plural "Selected %1 dust spots"
+msgstr[0] "已选择 %1 处灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:360
+#, kde-format
+msgid "Removed 1 dust spot"
+msgid_plural "Removed %1 dust spots"
+msgstr[0] "已去除 %1 处灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:475
+#, kde-format
+msgid "Select dust on transparency"
+msgstr "选择透明背景上的灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:477
+#, kde-format
+msgid "Select dust on white background"
+msgstr "选择白色背景上的灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:479
+#, kde-format
+msgid "Fill transparent gaps"
+msgstr "填充透明空隙"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:479
+#, kde-format
+msgid "Select transparent gaps"
+msgstr "选择透明空隙"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:505
+#, kde-format
+msgctxt "Remove Dust tool action"
+msgid "Remove"
+msgstr "去除"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:506
+#, kde-format
+msgctxt "Remove Dust tool action"
+msgid "Select"
+msgstr "选择"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:521
+#, kde-format
+msgid "Surrounding color"
+msgstr "周围颜色"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:525
+#, kde-format
+msgctxt "The 'dust size' spinbox prefix in Remove Dust tool options"
+msgid "Dust size: "
+msgstr "灰尘大小："
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:531
+#, kde-format
+msgctxt "The 'tolerance' spinbox prefix in Remove Dust tool options"
+msgid "Tolerance: "
+msgstr "容差："
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:553
+#, kde-format
+msgctxt "The 'reset' button in Remove Dust tool options"
+msgid "Reset"
+msgstr "重置"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:555
+#, kde-format
+msgid "Remove the dust found in the enclosed area"
+msgstr "去除圈选区域内找到的灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:556
+#, kde-format
+msgid "Select the dust found in the enclosed area"
+msgstr "选择圈选区域内找到的灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:561
+#, kde-format
+msgid "Brush: also catches dust that the stroke only partly covers"
+msgstr "笔刷：笔画只覆盖了一部分的灰尘也会被处理"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:562
+#, kde-format
+msgid "Choose what counts as dust"
+msgstr "选择哪些内容算作灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:563
+#, kde-format
+msgid "Fill each gap with the main color around it"
+msgstr "用每个空隙周围的主要颜色填充它"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:564
+#, kde-format
+msgid "Fill gaps with the foreground color"
+msgstr "用前景色填充空隙"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:565
+#, kde-format
+msgid ""
+"Spots whose width and height are both at most this size are treated as dust"
+msgstr "宽度和高度都不超过此大小的斑点会被视为灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:567
+#, kde-format
+msgid ""
+"Transparency: pixels at or below this opacity count as transparent. White "
+"background: colors this close to white count as white. Gaps: pixels at least "
+"this much below full opacity count as gaps."
+msgstr "透明：不透明度不高于此值的像素被视为透明。白色背景：与白色的差异不超过此值的颜色被视为白色。空隙：不透明度比完全不透明至少低此值的像素被视为空隙。"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:569
+#, kde-format
+msgid "Replace"
+msgstr "替换"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:570
+#, kde-format
+msgid "Intersect"
+msgstr "交集"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:572
+#, kde-format
+msgid "Subtract"
+msgstr "减去"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:573
+#, kde-format
+msgid "Symmetric Difference"
+msgstr "互斥"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:574
+#, kde-format
+msgid "Find dust in the active layer"
+msgstr "在活动图层中查找灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:575
+#, kde-format
+msgid "Find dust in the merging of all layers"
+msgstr "在所有图层的合并结果中查找灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:577
+#, kde-format
+msgid "Find dust in the merging of layers with specific color labels"
+msgstr "在带有指定颜色标签的图层的合并结果中查找灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:579
+#, kde-format
+msgid ""
+"Includes the active layer in the merging of layers with specific color labels"
+msgstr "在带有指定颜色标签的图层的合并结果中包含活动图层"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:587
+#, kde-format
+msgctxt "The 'action' section label in Remove Dust tool options"
+msgid "Action"
+msgstr "操作"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:592
+#, kde-format
+msgctxt "The 'enclosing method' section label in Remove Dust tool options"
+msgid "Enclosing method"
+msgstr "圈选方式"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:597
+#, kde-format
+msgctxt "The 'dust' section label in Remove Dust tool options"
+msgid "Dust"
+msgstr "灰尘"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:605
+#, kde-format
+msgctxt "The 'selection mode' section label in Remove Dust tool options"
+msgid "Selection mode"
+msgstr "选区模式"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:614
+#, kde-format
+msgctxt "The 'reference' section label in Remove Dust tool options"
+msgid "Reference"
+msgstr "采样图层"
+
+#: plugins/tools/tool_enclose_and_fill/KisToolRemoveDustFactory.h:21
+#, kde-format
+msgid "Remove Dust Tool"
+msgstr "除尘工具"
 
 #: plugins/tools/tool_knife/CutThroughShapeStrategy.cpp:255
 #: plugins/tools/tool_knife/RemoveGutterStrategy.cpp:218

@@ -24,6 +24,8 @@ set(solsticeeffects_SOURCES
     KisColorReferenceFilter.cpp
     KisColorReferenceResources.cpp
     KisColorReferenceConfigWidget.cpp
+    KisRemoveDustFilter.cpp
+    KisRemoveDustConfigWidget.cpp
 )
 
 kis_add_library(solsticeeffects STATIC ${solsticeeffects_SOURCES})

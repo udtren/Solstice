@@ -1656,3 +1656,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - The README's Quick Access highlight uses `quick_access_manager/1_overview.png`;
   `ported_plugin/quick_access_manager.png` was removed. `docs/images/Layer_Comps.png`
   was replaced by the user. The website copies both images.
+
+## 2026-10-21 feature: Remove Dust
+
+- New Remove Dust Tool and Remove Dust filter (requested from CLIP STUDIO
+  PAINT's Remove dust, Fill leftover and Select dust). The detector
+  (`libs/image/KisDustDetector`) is shared; the tool lives in the Enclose and
+  Fill plugin to reuse its enclosing subtools. Contract, source map and
+  manual checks: [Remove Dust](../remove-dust.md); user guide
+  `docs/remove-dust.md`.
+- Tiling: connected-component analysis stays tile-invariant with a window
+  margin of `dustSize + 1` and components that reach the window edge treated
+  as too large; recorded as an invariant in the feature document.
+- Pitfalls added to [Build, format and test pitfalls](pitfalls/build-format-test.md):
+  defaulted smart-pointer parameters, const lambda captures, the filter
+  registry in plugin tests, and per-case test output.

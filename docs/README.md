@@ -41,6 +41,8 @@ non-destructive native filter stacks and reusable templates to the
 
 - [Puppet Warp](puppet-warp.md): posing and reshaping artwork with pins in
   the Transform Tool.
+- [Remove Dust](remove-dust.md): removing or selecting small specks and
+  filling small holes, with a tool or a filter.
 - [Vision ML](vision-ml.md): AI-assisted selection, Smart Fill and
   background removal, run on your computer.
 

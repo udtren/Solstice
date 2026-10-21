@@ -357,6 +357,7 @@ set(kritaimage_LIB_SRCS
    KisBezierTransformMesh.cpp
 
    KisEncloseAndFillPainter.cpp
+   KisDustDetector.cpp
    KisBlockBackgroundFrameGenerationLock.cpp
    KisLockFrameGenerationLock.cpp
 
