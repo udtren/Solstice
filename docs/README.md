@@ -6,9 +6,9 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.4.0](https://github.com/udtren/Solstice/releases/tag/v0.4.0) adds
-non-destructive native filter stacks and reusable templates to the
-[Reference Tool](reference-tool.md).
+[0.5.0](https://github.com/udtren/Solstice/releases/tag/v0.5.0) adds
+[Remove Dust](remove-dust.md): a tool and a filter that remove small specks
+and fill small holes.
 
 ## Getting started
 

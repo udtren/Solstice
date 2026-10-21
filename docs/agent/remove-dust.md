@@ -6,8 +6,8 @@
   specks and fill small holes, inspired by CLIP STUDIO PAINT's Remove dust,
   Fill leftover and Select dust tools. User guide: [Remove Dust](../remove-dust.md).
 - Requested by the user on 2026-10-21 (phase 1: detector core, tests and
-  filter; phase 2: the tool). Both phases were implemented on branch
-  `claude/remove-dust`.
+  filter; phase 2: the tool). Merged in PR #30 and released in
+  [0.5.0](wiki/history/release-0.5.0.md).
 - Verification, 2026-10-21: `libs-image-KisDustDetectorTest` (13 cases)
   and `plugins-filters-solsticeeffects-KisRemoveDustFilterTest` (7 cases)
   pass; the rest of the `solsticeeffects` tests pass. The tool has no
