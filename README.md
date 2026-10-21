@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [In development: 0.5.0](#in-development-050)
+- [What's new in 0.5.0](#whats-new-in-050)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,9 +59,10 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## In development: 0.5.0
+## What's new in 0.5.0
 
-Solstice 0.5.0 adds [Remove Dust](docs/remove-dust.md):
+[Solstice 0.5.0](https://github.com/udtren/Solstice/releases/tag/v0.5.0)
+adds [Remove Dust](docs/remove-dust.md):
 
 - A Remove Dust Tool that removes or selects small specks inside an area
   you enclose, or fills small transparent gaps with the surrounding color
@@ -178,7 +179,7 @@ See the [user guides](docs/README.md) for every Solstice feature.
 > supported hardware and platforms are limited.
 
 Download the unsigned Windows x64 ZIP from
-[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.4.0),
+[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.5.0),
 extract it and start `solstice.exe`.
 
 Source code and newer Windows x64 trial ZIPs are also available from successful

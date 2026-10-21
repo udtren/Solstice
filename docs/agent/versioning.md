@@ -105,13 +105,9 @@ appears in the version strings.
 
 ## History
 
-0.5.0 is being prepared on 2026-10-21: the Remove Dust tool and filter
-(branch `claude/remove-dust`), with an illustrated user guide. The user chose
-0.5.0. Publication and package verification are pending; the Krita version
-is unchanged.
-
 | Version | Date | Reason |
 | --- | --- | --- |
+| `0.5.0` | 2026-10-21 | Remove Dust tool and filter (PR #30), with an illustrated user guide; version chosen by the user. Regular GitHub Release `v0.5.0` at `49697aadce6c` (PR #30, run 39566003093); [package verification](wiki/history/release-0.5.0.md). Krita compatibility version is unchanged. |
 | `0.4.0` | 2026-10-17 | Reference Tool native non-destructive filter stacks and cross-document templates (PRs #22 and #23), with an illustrated overview and Highlight 09. Regular GitHub Release `v0.4.0` at `88386550c1dd` (version PR #24, run 38998728479); [package verification](wiki/history/release-0.4.0.md). Krita compatibility version is unchanged. |
 | `0.3.0` | 2026-10-17 (JST) | User-requested release without the Beta label. Includes PR #5 (GPU Clone Layer offsets and Move Tool X/Y guard), #7 (partial-tile GPU projection clears), #8 (provisional layer thumbnails), and repository documentation maintenance/checks. Released as regular GitHub Release `v0.3.0` at `f947bc31421b` (PR #20, run 38915897544); [package verification](wiki/history/release-0.3.0.md). Krita compatibility version is unchanged. |
 | `0.2.0-beta.8` | 2026-10-16 | Eighth beta (user request): share Asset Library services and separate responsibilities in Quick Access, Grid Edit, Quick Brush Adjustments, gestures, Rest Note, Lazy Tools and Brush Stroke Layer. Existing behavior/settings retained and user-confirmed. Released as GitHub Release `v0.2.0-beta.8` (prerelease, merge commit `4e92a41ee78c`, PR #3, run 38872500400). Feature branches now merge into main through pull requests. |

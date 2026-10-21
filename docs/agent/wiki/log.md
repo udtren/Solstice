@@ -1679,3 +1679,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   version 0.5.0.
 - Bumped only the Solstice version; README marks 0.5.0 as in development until
   the GitHub Release exists ([version procedure](../versioning.md#releasing)).
+
+## 2026-10-21 release: 0.5.0
+
+- Published GitHub Release `v0.5.0` at `49697aadce6c` (run 39566003093) and
+  the website's Remove Dust pages and version 0.5.0. Evidence:
+  [0.5.0 release verification](history/release-0.5.0.md); ledger in
+  [Versioning](../versioning.md#history).
+- Lesson: `solstice.com --version` waits on the Krita-profile import prompt
+  unless the legacy configuration and resource inputs are also isolated.

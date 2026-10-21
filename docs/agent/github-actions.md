@@ -109,7 +109,10 @@ are uploaded even if a later stage fails. Retention is seven days.
    `BUILD-INFO.txt` for the built commit/version. Check required executable,
    GPU, Python/PyQt, QML, translation, G'MIC runtime/data/source and shell
    thumbnail files. Check executable version metadata and, where supported,
-   run `solstice.com --version` using a scratch `SOLSTICE_PROFILE_ROOT`.
+   run `solstice.com --version` with empty scratch folders for
+   `SOLSTICE_PROFILE_ROOT`, `SOLSTICE_LEGACY_CONFIG_DIR` and
+   `SOLSTICE_LEGACY_RESOURCE_DIR`; otherwise a real Krita profile triggers the
+   native import prompt and the command waits.
 5. For a release, follow [Releasing](versioning.md#releasing): tag the built
    commit and publish the verified application/debug ZIPs, checksums, build
    information and dependency lock. Compare uploaded assets with the verified
