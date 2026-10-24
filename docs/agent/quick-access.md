@@ -201,6 +201,23 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   they were still one cell wide (`repairBrushSpans()`): it resizes one such
   brush through the layout engine, which re-places only overlapping items,
   and saves the profile. The implementation now lives in `QuickAccessProfileLoader`.
+- Action and docker items whose alias icon resolves are drawn as an icon and
+  take 1x1 cells (user report 2026-10-24, as the Python
+  `normalize_action_spans()`). Before, only adding them from the Resources
+  dialog gave one cell; adding an icon to an existing 2x1 item in Item
+  Property or the Resources dialog kept 2x1, and Grid Edit could not shrink it
+  because it treats icon items as fixed-size. `QuickAccessItemPresentation`
+  holds the rule: `showsAliasIcon()` uses the palette's `resolveDefaultIcon()`
+  (a missing file is drawn as text and keeps its width; Grid Edit gives
+  exactly these items no resize handle), and `normalizeIconItemSpans()`
+  shrinks such items in every tab in place. Shrinking cannot overlap, so the
+  layout engine is not involved and the freed cell stays empty. It runs after
+  `QuickAccessItemProperties::edit()` stores an alias, in the dock's
+  Resources-dialog `aliasChanged` handler, and in `QuickAccessProfileLoader`
+  for an existing profile, which is saved only when something changed.
+  Removing an icon does not widen the item. Script items are excluded:
+  Grid Edit's `iconPath()` reads only aliases, so a script with an icon stays
+  resizable there and its span is left alone.
 - Grid Edit draws `stroke` brushes with their stroke previews over their
   span and icon brushes with the preset icon, through the dialog's own
   `QuickAccessStrokePreviews`.
@@ -492,3 +509,29 @@ The regression assertions retain two existing Qt details: the original pin/unpin
 flag sequence leaves window type `Window` after unpinning because `Tool` and
 `Popup` share flag bits; preview placement uses the layout's size hint before
 showing, which can differ from the final frame size. Neither behavior was changed.
+
+## Icon item span regression checks (2026-10-24)
+
+`QuickAccessItemPropertiesTest::iconActionTakesOneCell` gives a 2x1 action a
+bundled icon through the property dialog. On Accept that item and the same
+action in another tab become 1x1; a docker whose icon file is missing and a
+script with an icon keep 2x1. Cancel changes nothing.
+`QuickAccessConfigTest::wideIconActionLoadsAsOneCell` loads a saved profile
+with a 2x1 icon action (absolute custom icon) and a 2x1 text action: only the
+icon action becomes 1x1, in place, and the saved profile matches. Both tests
+fail against the previous implementation (span stays 2).
+
+Validation: the docker, `QuickAccessItemPropertiesTest`, `QuickAccessConfigTest`
+and `QuickAccessInteractionTest` were rebuilt from the change. All seven Quick
+Access suites passed offscreen (config 11, item properties 24, interaction 18,
+core 9, Grid Edit 11, key controller 4, Quick Adjust 12 QtTest cases, including
+setup/cleanup). The installed plugin's SHA-256 matched the build output. The
+work was done in a separate worktree while another session had uncommitted
+changes in the main checkout, which `_build` compiles; the changed objects were
+compiled out of tree with `_build`'s own commands (see
+[Build, format and test pitfalls](wiki/pitfalls/build-format-test.md)).
+
+Interactive checks after restarting Solstice: give a 2x1 Action and a 2x1
+Docker item an icon, once in Item Property and once in the Resources dialog.
+Each becomes one cell in the docker, the palette popup and Grid Edit, and stays
+so after a restart. Remove the icon and widen the item again in Grid Edit.

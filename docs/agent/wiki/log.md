@@ -1688,3 +1688,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   [Versioning](../versioning.md#history).
 - Lesson: `solstice.com --version` waits on the Krita-profile import prompt
   unless the legacy configuration and resource inputs are also isolated.
+
+## 2026-10-24 fix: Quick Access icon items take one cell
+
+- Adding an icon to an existing 2x1 Action or Docker item kept it 2x1, and
+  Grid Edit cannot resize icon items. `normalizeIconItemSpans()`
+  (`QuickAccessItemPresentation`) now shrinks them after property and
+  Resources-dialog alias edits and when a profile loads. Contract and tests:
+  [Quick Access](../quick-access.md); user guide `docs/quick-access.md`.
+- Pitfall added to [Build, format and test pitfalls](pitfalls/build-format-test.md):
+  `_build` compiles only the main checkout, so a worktree change was built
+  out of tree from `_build`'s own ninja commands.

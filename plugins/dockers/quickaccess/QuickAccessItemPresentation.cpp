@@ -63,4 +63,38 @@ QString resolveDefaultIcon(const QString &iconName)
         return bundled;
     return QString();
 }
+
+bool showsAliasIcon(const QuickAccess::Document &document, const QuickAccess::Item &item)
+{
+    QJsonObject alias;
+    if (item.type == QuickAccess::ItemType::Action) {
+        alias =
+            aliasFor(document, QStringLiteral("actions"), item.payload.value(QStringLiteral("action_id")).toString());
+    } else if (item.type == QuickAccess::ItemType::DockerToggle) {
+        alias =
+            aliasFor(document, QStringLiteral("dockers"), item.payload.value(QStringLiteral("docker_id")).toString());
+    } else {
+        return false;
+    }
+    return !resolveDefaultIcon(alias.value(QStringLiteral("icon_name")).toString()).isEmpty();
+}
+
+bool normalizeIconItemSpans(QuickAccess::Document *document)
+{
+    // Aliases are shared by every tab, so one icon change can affect several
+    // items. Shrinking in place cannot create overlaps.
+    bool changed = false;
+    for (QuickAccess::Tab &tab : document->tabs) {
+        for (QuickAccess::Grid &grid : tab.grids) {
+            for (QuickAccess::Item &item : grid.items) {
+                if ((item.rowSpan != 1 || item.columnSpan != 1) && showsAliasIcon(*document, item)) {
+                    item.rowSpan = 1;
+                    item.columnSpan = 1;
+                    changed = true;
+                }
+            }
+        }
+    }
+    return changed;
+}
 } // namespace QuickAccessItemPresentation

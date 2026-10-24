@@ -116,6 +116,10 @@ following items as needed.
 
 For Action and Docker items, the same properties can be edited in the
 Resources dialog, which updates the shared alias everywhere it is used.
+Giving an Action or Docker an icon makes every item that uses it one cell
+wide; the cell it no longer covers is left empty. Removing the icon keeps
+the item at one cell; widen it again in Grid Edit. Palettes saved with a wider
+icon item are corrected when they load.
 
 ### Moving items
 

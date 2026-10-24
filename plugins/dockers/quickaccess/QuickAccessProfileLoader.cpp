@@ -53,7 +53,9 @@ void QuickAccessProfileLoader::load(QuickAccess::Document *document,
     QString error;
     if (repository.exists()) {
         if (repository.load(document, &error)) {
-            if (repairBrushSpans(document))
+            // Icon items saved wider than one cell are shrunk here too.
+            const bool repairedBrushes = repairBrushSpans(document);
+            if (normalizeIconItemSpans(document) || repairedBrushes)
                 repository.save(*document, &error);
             if (settings.migrationVersion() < 2) {
                 QuickAccess::LegacyImportResult imported;

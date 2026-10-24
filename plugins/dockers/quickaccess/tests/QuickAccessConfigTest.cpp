@@ -270,6 +270,46 @@ private Q_SLOTS:
         QCOMPARE(saved, loaded);
         QVERIFY(warnings.isEmpty());
     }
+
+    void wideIconActionLoadsAsOneCell()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString icon = dir.filePath("custom.png");
+        QVERIFY(write(icon, "fixture"));
+        const QString path = dir.filePath("default.kqap");
+        Document document = Document::createDefault();
+        Grid &grid = document.tabs[0].grids[0];
+        grid.columns = 4;
+        Item iconAction;
+        iconAction.id = "icon";
+        iconAction.type = ItemType::Action;
+        iconAction.payload = QJsonObject{{"action_id", "undo"}};
+        iconAction.columnSpan = 2;
+        Item textAction = iconAction;
+        textAction.id = "text";
+        textAction.payload = QJsonObject{{"action_id", "redo"}};
+        textAction.column = 2;
+        grid.items = {iconAction, textAction};
+        document.aliases = QJsonObject{{"actions", QJsonObject{{"undo", QJsonObject{{"icon_name", icon}}}}}};
+        // A profile saved while an icon action could keep two cells.
+        QVERIFY(write(path, QJsonDocument(document.toJson()).toJson()));
+        QuickAccessSettingsStore store(configFor(dir));
+        Document loaded;
+        QStringList warnings;
+        QuickAccessProfileLoader::load(&loaded, path, dir.path(), store, [&](const QString &, const QString &message) {
+            warnings << message;
+        });
+        QVERIFY(warnings.isEmpty());
+        const Grid &normalized = loaded.tabs[0].grids[0];
+        QCOMPARE(normalized.items[0].columnSpan, 1);
+        QCOMPARE(normalized.items[0].column, 0);
+        QCOMPARE(normalized.items[1].columnSpan, 2);
+        QCOMPARE(normalized.items[1].column, 2);
+        Document saved;
+        QVERIFY(ProfileRepository(path).load(&saved));
+        QCOMPARE(saved, loaded);
+    }
 };
 QTEST_GUILESS_MAIN(QuickAccessConfigTest)
 #include "QuickAccessConfigTest.moc"

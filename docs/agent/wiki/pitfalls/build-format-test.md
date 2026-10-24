@@ -1,7 +1,8 @@
 ---
 type: pitfall
-updated: 2026-10-21
+updated: 2026-10-24
 sources:
+  - "docs/agent/quick-access.md (\"Icon item span regression checks\", 2026-10-24)"
   - docs/agent/coding-rules.md ("Formatting and diffs")
   - docs/agent/development-workflow.md (build, test, install)
   - docs/agent/gpu-engine.md ("Build, test, and install")
@@ -16,6 +17,24 @@ related:
 The commands themselves are in `development-workflow.md` and in
 `gpu-engine.md` "Build, test, and install". This page collects what went
 wrong anyway.
+
+## Worktrees
+
+- **`_build` compiles the main checkout only.** Its `CMAKE_HOME_DIRECTORY`
+  is `<repository-root>`, so building a git worktree there compiles the main
+  checkout instead, including another session's uncommitted work, and a
+  second configured build tree means a full rebuild. For a change confined to
+  one plugin (Quick Access, 2026-10-24): take each changed object's compile
+  command and the target's link command from `ninja -t commands -s <output>`,
+  replace the plugin's source directory with the worktree's, and write
+  objects, archives and binaries to a scratch folder. Run them from `_build`,
+  which reuses its unchanged objects, and do not run `ninja` there. Check
+  first that the plugin's sources have not changed since `_build` last built
+  them, and regenerate a test's `.moc` with `_install\bin\moc.exe` when you
+  add test slots. Module and large test links use response files that ninja
+  deletes after linking. Rebuild them from the target's `build` statement in
+  `build.ninja` (inputs, `LINK_PATH`, `LINK_LIBRARIES`). Install by copying
+  the DLL into `_install\lib\kritaplugins` and comparing SHA-256 hashes.
 
 ## Formatting
 
