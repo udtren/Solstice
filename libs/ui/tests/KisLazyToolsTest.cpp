@@ -27,6 +27,7 @@
 #include <KoColorSpaceRegistry.h>
 #include "KisDocument.h"
 #include "KisPart.h"
+#include "kis_config.h"
 #include "kis_paint_layer.h"
 #include "kis_paint_device.h"
 #include "kis_default_bounds.h"
@@ -513,6 +514,50 @@ private Q_SLOTS:
         QCOMPARE(doc->localFilePath(), source);
         QCOMPARE(doc->caption(), caption);
         QCOMPARE(doc->isModified(), modified);
+    }
+
+    void exportOptionsKeepSavedFormatOptions()
+    {
+        auto root = KSharedConfig::openConfig()->group(QString());
+        root.deleteEntry("ExportConfiguration-image/png");
+        root.deleteEntry("ExportConfiguration-image/jpeg");
+        Export::Settings settings;
+        settings.pngCompression = 7;
+        settings.pngAlpha = true;
+        settings.jpegQuality = 55;
+
+        // Nothing saved yet: only this dialog's values.
+        auto png = Export::exportOptions("png", settings);
+        QCOMPARE(png->getInt("compression"), 7);
+        QVERIFY(png->getBool("alpha"));
+        QVERIFY(!png->hasProperty("forceSRGB"));
+        QCOMPARE(Export::exportOptions("jpg", settings)->getInt("quality"), 55);
+
+        // Options saved by File > Export or a previous export are kept; this
+        // dialog's own options win.
+        KisPropertiesConfigurationSP savedPng(new KisPropertiesConfiguration);
+        savedPng->setProperty("forceSRGB", true);
+        savedPng->setProperty("saveSRGBProfile", false);
+        savedPng->setProperty("compression", 1);
+        savedPng->setProperty("alpha", false);
+        KisConfig(false).setExportConfiguration("image/png", savedPng);
+        KisPropertiesConfigurationSP savedJpeg(new KisPropertiesConfiguration);
+        savedJpeg->setProperty("progressive", true);
+        savedJpeg->setProperty("quality", 10);
+        KisConfig(false).setExportConfiguration("image/jpeg", savedJpeg);
+
+        png = Export::exportOptions("png", settings);
+        QVERIFY(png->getBool("forceSRGB", false));
+        QVERIFY(!png->getBool("saveSRGBProfile", true));
+        QCOMPARE(png->getInt("compression"), 7);
+        QVERIFY(png->getBool("alpha"));
+        auto jpeg = Export::exportOptions("jpg", settings);
+        QVERIFY(jpeg->getBool("progressive", false));
+        QCOMPARE(jpeg->getInt("quality"), 55);
+        QVERIFY(!jpeg->hasProperty("forceSRGB"));
+
+        root.deleteEntry("ExportConfiguration-image/png");
+        root.deleteEntry("ExportConfiguration-image/jpeg");
     }
 
     void exportNames()

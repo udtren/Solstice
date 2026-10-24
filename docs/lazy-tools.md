@@ -34,7 +34,9 @@ file name or saved state.
 Documents must already have a file name; unsaved documents are skipped and
 listed. PNG and JPEG options and the export folder are remembered between
 uses. The format's own export options dialog can still appear, as for
-File > Export.
+File > Export. Its other options, such as **Force convert to sRGB**, keep the
+values last used for that format, here or in File > Export; Fast Image
+Export's PNG compression, alpha and JPEG quality are applied on top.
 
 ### Name
 
