@@ -42,6 +42,10 @@ struct Result {
 };
 
 using WaitForImage = std::function<bool(KisImageSP)>;
+// The format options for an export: the options last used for this format
+// (as File > Export remembers them), with this dialog's PNG compression and
+// alpha, or JPEG quality, applied on top.
+KRITAUI_EXPORT KisPropertiesConfigurationSP exportOptions(const QString &extension, const Settings &settings);
 // Trims a user-entered name and drops a trailing image extension (.png, .jpg,
 // .jpeg or the export extension), since the name excludes the extension.
 KRITAUI_EXPORT QString normalizedBaseName(const QString &name, const QString &extension);

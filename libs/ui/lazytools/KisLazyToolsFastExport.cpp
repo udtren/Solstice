@@ -7,6 +7,7 @@
 #include "KisDocument.h"
 #include "KisImageBarrierLock.h"
 #include "KisPart.h"
+#include "kis_config.h"
 #include "kis_group_layer.h"
 #include "kis_image.h"
 #include "kis_paint_layer.h"
@@ -23,9 +24,22 @@
 
 namespace
 {
-KisPropertiesConfigurationSP exportOptions(const QString &extension, const KisLazyToolsFastExport::Settings &settings)
+QByteArray exportMimeType(const QString &extension)
 {
+    return extension == QLatin1String("png") ? QByteArray("image/png") : QByteArray("image/jpeg");
+}
+} // namespace
+
+KisPropertiesConfigurationSP KisLazyToolsFastExport::exportOptions(const QString &extension, const Settings &settings)
+{
+    // Start from the format options remembered by File > Export (and by the
+    // previous Fast Image Export), so options this dialog does not show keep
+    // their last values instead of falling back to the defaults.
     KisPropertiesConfigurationSP options(new KisPropertiesConfiguration);
+    const QString saved = KisConfig(true).exportConfigurationXML(QString::fromLatin1(exportMimeType(extension)));
+    if (!saved.isEmpty()) {
+        options->fromXML(saved);
+    }
     if (extension == QLatin1String("png")) {
         options->setProperty("compression", settings.pngCompression);
         options->setProperty("alpha", settings.pngAlpha);
@@ -34,12 +48,6 @@ KisPropertiesConfigurationSP exportOptions(const QString &extension, const KisLa
     }
     return options;
 }
-
-QByteArray exportMimeType(const QString &extension)
-{
-    return extension == QLatin1String("png") ? QByteArray("image/png") : QByteArray("image/jpeg");
-}
-} // namespace
 
 KisLazyToolsFastExport::Settings KisLazyToolsFastExport::Settings::load(KSharedConfigPtr config)
 {

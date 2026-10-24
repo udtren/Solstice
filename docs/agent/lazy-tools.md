@@ -167,6 +167,16 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
   the supplied scope callback. Parentage and `WA_DeleteOnClose` are unchanged;
   callbacks capture the same view manager that the original dialog held.
   Invalid destination/chooser cancellation returns before saving preferences.
+- Format options (fixed 2026-10-24, after 0.5.1): `exportOptions()` starts
+  from the format's remembered configuration,
+  `KisConfig::exportConfigurationXML("image/png" | "image/jpeg")` (the
+  `ExportConfiguration-<mime>` key File > Export uses), and then sets only
+  `compression`/`alpha` or `quality`. Before, it passed a new configuration
+  with just those keys, so options such as `forceSRGB` reset to their
+  defaults in every export dialog. `KisImportExportManager` copies the options
+  dialog's configuration back and saves it under the same key (non-batch
+  only), so a choice made there is reused by the next Fast Image Export and
+  File > Export. Both Export and Export Region use it.
 - Export execution keeps ordered `QPointer<KisDocument>` snapshots, skips null
   and unnamed documents, waits for each named document's image through the
   originating view manager, and calls `exportDocumentSync`. Source folder vs.
@@ -222,6 +232,9 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
     menu. Make an irregular selection, press Export Region with PNG and JPEG
     and compare with File > Export Region; then deselect and confirm the
     warning.
+13. Export a PNG with Fast Image Export, check **Force convert to sRGB** in
+    the PNG options dialog and press OK. Export again: the option must still
+    be checked, and File > Export to PNG must show it checked too.
 
 For a menu-only change, build `kritaui` and `KisMenuMnemonicFilterTest`; install
 `_build/libs/ui/cmake_install.cmake` with `CMAKE_INSTALL_LOCAL_ONLY=1`.
@@ -292,3 +305,10 @@ to the source, an unchanged source document and a failed path;
 no-selection warning and a named export from the dialog. Offscreen QtTest
 passed 20/20. The UI DLL was installed with matching hashes and
 `kritamenu.action` was copied to `_install/share/krita/actions`.
+
+Remembered format options (2026-10-24): `exportOptionsKeepSavedFormatOptions`
+covers PNG and JPEG with and without a saved configuration: saved keys such as
+`forceSRGB`, `saveSRGBProfile` and `progressive` are kept, and the dialog's
+compression, alpha and quality override the saved ones. Offscreen QtTest
+passed 21/21; the UI DLL was installed with matching hashes. The options
+dialog itself is checked manually (check 13).

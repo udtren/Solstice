@@ -1735,3 +1735,20 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: run `update_translations.py` before the release build. It found
   24 untranslated Lazy Tools strings and an indented `.ui` placeholder line;
   `&#10;` does not work as a `.ui` newline because the extractor keeps it.
+
+## 2026-10-24 fix: Fast Image Export keeps format options
+
+- The user found that **Force convert to sRGB** reset to off in every Fast
+  Image Export PNG options dialog. Fast Image Export passed a configuration
+  with only its own keys, and an explicit configuration replaces the
+  remembered one. It now starts from `ExportConfiguration-<mime>` and applies
+  its own values on top ([Lazy Tools](../lazy-tools.md)).
+- Lesson: when calling `exportDocumentSync()` with options, start from
+  `KisConfig::exportConfigurationXML(mime)` unless the export must ignore the
+  user's last choices.
+
+## 2026-10-24 release preparation: 0.5.2
+
+- The user confirmed the format-options fix in the application and asked to
+  release it as 0.5.2 with the website update. Only `PATCH` changes; README
+  marks 0.5.2 as in development until the GitHub Release exists.
