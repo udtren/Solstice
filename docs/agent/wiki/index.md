@@ -207,6 +207,8 @@ Document ownership and lifecycle are defined in
   package integrity, isolated version checks and dependency-lock line endings.
 - [0.5.0 release verification](history/release-0.5.0.md): Remove Dust release,
   package integrity, the legacy-profile prompt in version checks, website publication.
+- [0.5.1 release verification](history/release-0.5.1.md): Lazy Tools and Quick
+  Access release, package integrity, catalog update, website publication.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [In development: 0.5.1](#in-development-051)
+- [What's new in 0.5.1](#whats-new-in-051)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,10 +59,10 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## In development: 0.5.1
+## What's new in 0.5.1
 
-Solstice 0.5.1 extends [Lazy Tools](docs/lazy-tools.md) and fixes Quick
-Access:
+[Solstice 0.5.1](https://github.com/udtren/Solstice/releases/tag/v0.5.1)
+extends [Lazy Tools](docs/lazy-tools.md) and fixes Quick Access:
 
 - Fast Image Export: registered folders to browse from, an optional file
   name, and Export Region for the selected area
