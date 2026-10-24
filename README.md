@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 0.5.0](#whats-new-in-050)
+- [In development: 0.5.1](#in-development-051)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,16 +59,18 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 0.5.0
+## In development: 0.5.1
 
-[Solstice 0.5.0](https://github.com/udtren/Solstice/releases/tag/v0.5.0)
-adds [Remove Dust](docs/remove-dust.md):
+Solstice 0.5.1 extends [Lazy Tools](docs/lazy-tools.md) and fixes Quick
+Access:
 
-- A Remove Dust Tool that removes or selects small specks inside an area
-  you enclose, or fills small transparent gaps with the surrounding color
-- A Remove Dust filter for whole layers, filter masks and filter layers
-- Modes for dust on transparency, dust on a white background and
-  transparent gaps, with Dust size and Tolerance
+- Fast Image Export: registered folders to browse from, an optional file
+  name, and Export Region for the selected area
+- A Rename Layer preset editor in **Settings > Configure Solstice > General >
+  Custom**, replacing the Python plugin's Name List tab
+- An illustrated [Lazy Tools guide](docs/lazy-tools.md)
+- [Quick Access](docs/quick-access.md): actions and dockers with an icon now
+  take one cell, including ones saved as two cells wide
 
 ## Highlights
 

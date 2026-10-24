@@ -1718,3 +1718,10 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   temporary export documents must copy the source's batch mode, accepting a
   `QFileDialog` from a test, and `clang-format-diff.py` needing
   `PYTHONUTF8=1`.
+
+## 2026-10-24 release preparation: 0.5.1
+
+- The user asked to release the Lazy Tools work as 0.5.1 and to include the
+  Quick Access icon-span fix (PR #32, merged first). Only the Solstice
+  version's `PATCH` changes; README marks 0.5.1 as in development until the
+  GitHub Release exists ([version procedure](../versioning.md#releasing)).

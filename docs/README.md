@@ -68,7 +68,7 @@ and fill small holes.
 - [Rest Note](rest-note.md): a work timer with eye-break and full-break
   reminders.
 - [Lazy Tools](lazy-tools.md): layer color labels, preset layer names,
-  saved selections, Fast Image Export and color shortcuts.
+  saved selections, Fast Image Export and color shortcuts. Extended in 0.5.1.
 - [Docker locks](docker-locks.md): locking the size of docked dockers.
 - [Overview live update](overview-live-update.md): the Overview follows the
   canvas while you paint.

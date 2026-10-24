@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.5.0` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.5.1` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -104,6 +104,13 @@ appears in the version strings.
      release.
 
 ## History
+
+0.5.1 is being prepared on 2026-10-24 (user request): Lazy Tools Fast Image
+Export registered folders, export name and Export Region, the Rename Layer
+preset editor and the illustrated guide (branch
+`claude/fast-export-explorer-folders`), with the Quick Access icon-span fix
+(PR #32). `PATCH` because these extend existing features. Publication and
+package verification are pending; the Krita version is unchanged.
 
 | Version | Date | Reason |
 | --- | --- | --- |
