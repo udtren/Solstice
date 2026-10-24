@@ -1725,3 +1725,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   Quick Access icon-span fix (PR #32, merged first). Only the Solstice
   version's `PATCH` changes; README marks 0.5.1 as in development until the
   GitHub Release exists ([version procedure](../versioning.md#releasing)).
+
+## 2026-10-24 release: 0.5.1
+
+- Published GitHub Release `v0.5.1` at `00153a635789` (run 40076396030), and
+  the website's Lazy Tools pages and version 0.5.1. Evidence:
+  [0.5.1 release verification](history/release-0.5.1.md); ledger in
+  [Versioning](../versioning.md#history).
+- Lesson: run `update_translations.py` before the release build. It found
+  24 untranslated Lazy Tools strings and an indented `.ui` placeholder line;
+  `&#10;` does not work as a `.ui` newline because the extractor keeps it.

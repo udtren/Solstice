@@ -6,9 +6,10 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.5.0](https://github.com/udtren/Solstice/releases/tag/v0.5.0) adds
-[Remove Dust](remove-dust.md): a tool and a filter that remove small specks
-and fill small holes.
+[0.5.1](https://github.com/udtren/Solstice/releases/tag/v0.5.1) extends
+[Lazy Tools](lazy-tools.md): Fast Image Export gains registered folders, an
+export name and Export Region, and Rename Layer presets can be edited in
+Settings. It also fixes Quick Access items with icons.
 
 ## Getting started
 

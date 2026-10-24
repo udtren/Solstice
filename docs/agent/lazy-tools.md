@@ -21,6 +21,9 @@ and dialogs are owned by each `KisViewManager`.
   `plugins/dockers/layerdocker/WdgLayerBox.ui`
 - Action metadata: `krita/kritamenu.action`
 - Original Python reference: `<krita-plugin-root>/krita-lazy-tools/lazy_tools/`
+- Released in [0.5.1](wiki/history/release-0.5.1.md) (PR #33): Fast Image
+  Export registered folders, Name, Export Region and icon, and the Rename
+  Layer Presets editor.
 
 ## Build and installation
 
