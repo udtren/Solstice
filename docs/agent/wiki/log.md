@@ -1746,3 +1746,9 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: when calling `exportDocumentSync()` with options, start from
   `KisConfig::exportConfigurationXML(mime)` unless the export must ignore the
   user's last choices.
+
+## 2026-10-24 release preparation: 0.5.2
+
+- The user confirmed the format-options fix in the application and asked to
+  release it as 0.5.2 with the website update. Only `PATCH` changes; README
+  marks 0.5.2 as in development until the GitHub Release exists.
