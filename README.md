@@ -136,8 +136,8 @@ required.
 <p><b><a href="docs/quick-access.md">Quick Access Manager</a></b><br>Brush and action palettes, a color selector, brush adjustments and gestures.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<a href="docs/lazy-tools.md"><img src="docs/images/ported_plugin/lazy_tool.png" alt="Lazy Tools settings with foreground color slots, the Rename Layer dialog with name buttons, and the Selection Masks dialog" width="100%"></a>
-<p><b><a href="docs/lazy-tools.md">Lazy Tools</a></b><br>Quick layer renaming, selection masks and color shortcuts.</p>
+<a href="docs/lazy-tools.md"><img src="docs/images/lazy_tool/cover.png" alt="The Fast Image Export dialog, the General &gt; Custom settings page, the Rename Layer dialog, the Selection Masks dialog and the Layers docker's color label menu" width="100%"></a>
+<p><b><a href="docs/lazy-tools.md">Lazy Tools</a></b><br>Quick layer renaming, selection masks, fast image export and color shortcuts.</p>
 </td>
 </tr>
 <tr>
