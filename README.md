@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [In development: 0.5.2](#in-development-052)
+- [What's new in 0.5.2](#whats-new-in-052)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,9 +59,10 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## In development: 0.5.2
+## What's new in 0.5.2
 
-Solstice 0.5.2 fixes [Fast Image Export](docs/lazy-tools.md#fast-image-export):
+[Solstice 0.5.2](https://github.com/udtren/Solstice/releases/tag/v0.5.2)
+fixes [Fast Image Export](docs/lazy-tools.md#fast-image-export):
 format options it does not show, such as **Force convert to sRGB**, now keep
 their last values instead of resetting in every PNG or JPEG options dialog.
 

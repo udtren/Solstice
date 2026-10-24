@@ -1752,3 +1752,10 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - The user confirmed the format-options fix in the application and asked to
   release it as 0.5.2 with the website update. Only `PATCH` changes; README
   marks 0.5.2 as in development until the GitHub Release exists.
+
+## 2026-10-24 release: 0.5.2
+
+- Published GitHub Release `v0.5.2` at `e352f1c51963` (run 40091292555) and
+  the website's version 0.5.2. Evidence:
+  [0.5.2 release verification](history/release-0.5.2.md); ledger in
+  [Versioning](../versioning.md#history).

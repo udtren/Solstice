@@ -105,14 +105,9 @@ appears in the version strings.
 
 ## History
 
-0.5.2 is being prepared on 2026-10-24 (user request): Fast Image Export keeps
-the format's remembered export options (branch
-`claude/fast-export-remember-options`), a fix to 0.5.1 confirmed by the user
-in the application. Publication and package verification are pending; the
-Krita version is unchanged.
-
 | Version | Date | Reason |
 | --- | --- | --- |
+| `0.5.2` | 2026-10-24 | Fast Image Export keeps the format's remembered export options such as Force convert to sRGB (PR #35), a fix to 0.5.1 confirmed by the user in the application; requested by the user. Regular GitHub Release `v0.5.2` at `e352f1c51963` (PR #35, run 40091292555); [package verification](wiki/history/release-0.5.2.md). Krita compatibility version is unchanged. |
 | `0.5.1` | 2026-10-24 | Lazy Tools Fast Image Export registered folders, export name and Export Region, the Rename Layer preset editor and illustrated guide (PR #33), with the Quick Access icon-span fix (PR #32); requested by the user (`PATCH`: existing features extended). Regular GitHub Release `v0.5.1` at `00153a635789` (PR #33, run 40076396030); [package verification](wiki/history/release-0.5.1.md). Krita compatibility version is unchanged. |
 | `0.5.0` | 2026-10-21 | Remove Dust tool and filter (PR #30), with an illustrated user guide; version chosen by the user. Regular GitHub Release `v0.5.0` at `49697aadce6c` (PR #30, run 39566003093); [package verification](wiki/history/release-0.5.0.md). Krita compatibility version is unchanged. |
 | `0.4.0` | 2026-10-17 | Reference Tool native non-destructive filter stacks and cross-document templates (PRs #22 and #23), with an illustrated overview and Highlight 09. Regular GitHub Release `v0.4.0` at `88386550c1dd` (version PR #24, run 38998728479); [package verification](wiki/history/release-0.4.0.md). Krita compatibility version is unchanged. |

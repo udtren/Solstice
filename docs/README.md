@@ -6,10 +6,13 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.5.1](https://github.com/udtren/Solstice/releases/tag/v0.5.1) extends
-[Lazy Tools](lazy-tools.md): Fast Image Export gains registered folders, an
-export name and Export Region, and Rename Layer presets can be edited in
-Settings. It also fixes Quick Access items with icons.
+[0.5.2](https://github.com/udtren/Solstice/releases/tag/v0.5.2) fixes
+[Fast Image Export](lazy-tools.md#fast-image-export): format options such as
+Force convert to sRGB keep their last values. It builds on
+[0.5.1](https://github.com/udtren/Solstice/releases/tag/v0.5.1), which
+extended [Lazy Tools](lazy-tools.md) with registered export folders, an
+export name, Export Region and a Rename Layer preset editor, and fixed Quick
+Access items with icons.
 
 ## Getting started
 
