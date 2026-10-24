@@ -71,6 +71,27 @@ QList<KisLazyToolsRenamePresets::Preset> KisLazyToolsRenamePresets::load(const Q
     return result;
 }
 
+QString KisLazyToolsRenamePresets::readText(const QString &path, bool *opened)
+{
+    QFile file(path);
+    const bool readable = file.open(QIODevice::ReadOnly | QIODevice::Text);
+    if (opened)
+        *opened = readable;
+    return readable ? QTextStream(&file).readAll() : QString();
+}
+
+bool KisLazyToolsRenamePresets::writeText(const QString &path, const QString &text)
+{
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate))
+        return false;
+    QTextStream stream(&file);
+    stream << text;
+    stream.flush();
+    return stream.status() == QTextStream::Ok;
+}
+
 void KisLazyToolsRenamePresets::append(const QString &path, const QString &name, int label)
 {
     QDir().mkpath(QFileInfo(path).absolutePath());

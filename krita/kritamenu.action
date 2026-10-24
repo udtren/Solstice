@@ -1995,6 +1995,7 @@
       <activationFlags>1</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable>
     </Action>
     <Action name="fast_image_export">
+      <icon>document-export</icon>
       <text>Fast Image Export...</text>
       <toolTip>Export active or open documents with PNG or JPEG options</toolTip>
       <activationFlags>1</activationFlags><shortcut></shortcut><isCheckable>false</isCheckable>

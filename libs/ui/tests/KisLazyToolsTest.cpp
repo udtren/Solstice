@@ -11,13 +11,17 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QFileDialog>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QUrl>
 #include <kconfiggroup.h>
 #include <klocalizedstring.h>
 #include <KoColorSpaceRegistry.h>
@@ -25,6 +29,11 @@
 #include "KisPart.h"
 #include "kis_paint_layer.h"
 #include "kis_paint_device.h"
+#include "kis_default_bounds.h"
+#include "kis_selection.h"
+#include "kis_undo_adapter.h"
+#include "KisImageResolutionProxy.h"
+#include <commands/kis_set_global_selection_command.h>
 #include <testui.h>
 
 namespace
@@ -68,6 +77,16 @@ KisDocument *document(const QString &path)
     image->waitForDone();
     doc->setLocalFilePath(path);
     return doc;
+}
+void selectRect(KisDocument *doc, const QRect &rect)
+{
+    KisImageSP image = doc->image();
+    KisSelectionSP selection =
+        new KisSelection(new KisDefaultBounds(image), toQShared(new KisImageResolutionProxy(image)));
+    selection->pixelSelection()->select(rect);
+    selection->updateProjection();
+    image->undoAdapter()->addCommand(new KisSetGlobalSelectionCommand(image, selection));
+    image->waitForDone();
 }
 } // namespace
 
@@ -114,6 +133,31 @@ private Q_SLOTS:
         const QString nested = dir.filePath("new/config/names.txt");
         Presets::append(nested, QString::fromUtf8("\xe7\xb7\x9a\xe7\x94\xbb"), 0);
         QCOMPARE(Presets::load(nested).first().name, QString::fromUtf8("\xe7\xb7\x9a\xe7\x94\xbb"));
+    }
+
+    void presetTextEditor()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath("nested/config/names.txt");
+        bool opened = true;
+        QCOMPARE(Presets::readText(path, &opened), QString());
+        QVERIFY(!opened);
+        const QString text = QString::fromUtf8("  線画 , blue\n\nPlain\nBad, Teal\n,Red\nLast, gray");
+        QVERIFY(Presets::writeText(path, text));
+        QCOMPARE(Presets::readText(path, &opened), text);
+        QVERIFY(opened);
+        const auto presets = Presets::load(path);
+        QCOMPARE(presets.size(), 4);
+        QCOMPARE(presets[0].name, QString::fromUtf8("線画"));
+        QCOMPARE(presets[0].label, 1);
+        QCOMPARE(presets[2].label, 0);
+        QCOMPARE(presets[3].label, 8);
+        // The editor and the dialog's Save checkbox share one file.
+        Presets::append(path, "Added", 6);
+        QCOMPARE(Presets::readText(path), text + "\nAdded, Red");
+        QVERIFY(Presets::writeText(path, QString()));
+        QVERIFY(Presets::load(path).isEmpty());
+        QVERIFY(!Presets::writeText(dir.path(), "a directory cannot be written"));
     }
 
     void exportSettingsAndPaths()
@@ -258,7 +302,7 @@ private Q_SLOTS:
         QCOMPARE(dialog->parentWidget(), &parent);
         QVERIFY(dialog->testAttribute(Qt::WA_DeleteOnClose));
         const auto combos = dialog->findChildren<QComboBox *>();
-        QCOMPARE(combos.size(), 3);
+        QCOMPARE(combos.size(), 4);
         QCOMPARE(combos[0]->currentData().toString(), QString("png"));
         combos[0]->setCurrentIndex(1);
         combos[1]->setCurrentIndex(all ? 1 : 0);
@@ -328,6 +372,101 @@ private Q_SLOTS:
         QCOMPARE(Export::Settings::load().pngCompression, 6);
     }
 
+    void explorerFolders()
+    {
+        QTemporaryDir dir;
+        auto config = KSharedConfig::openConfig(dir.filePath("test.ini"), KConfig::SimpleConfig);
+        QCOMPARE(Export::explorerFolders(config), QStringList());
+        Export::setExplorerFolders({" C:\\Art\\Root ", "", "C:/Art/Root", "D:/Work"}, config);
+        config->reparseConfiguration();
+        QCOMPARE(config->group(QString()).readEntry("Solstice/FastExportExplorerFolders", QStringList()),
+                 QStringList({"C:/Art/Root", "D:/Work"}));
+        QCOMPARE(Export::explorerFolders(config), QStringList({"C:/Art/Root", "D:/Work"}));
+        // The export dialog saves Settings on Export; that must not touch the list.
+        Export::Settings().save(config);
+        QCOMPARE(Export::explorerFolders(config), QStringList({"C:/Art/Root", "D:/Work"}));
+    }
+
+    void registeredFolderBrowse()
+    {
+        QTemporaryDir dir;
+        const QString missing = dir.filePath("missing");
+        const QString fallback = dir.filePath("fallback");
+        const QString root = dir.filePath("root");
+        QVERIFY(QDir().mkpath(fallback));
+        QVERIFY(QDir().mkpath(root + "/sub"));
+        Export::Settings settings;
+        settings.folder = fallback;
+        settings.save();
+        Export::setExplorerFolders({});
+        QWidget parent;
+        auto documents = [](bool) {
+            return QList<QPointer<KisDocument>>();
+        };
+        auto wait = [](KisImageSP) {
+            return false;
+        };
+        // Browse starts in the chosen registered folder, or the export folder
+        // when there is none; it reports where the chooser opened.
+        auto browse = [&](QDialog *dialog, const QString &selection) {
+            QString start;
+            QTimer::singleShot(0, &parent, [&] {
+                if (auto *chooser = qobject_cast<QFileDialog *>(QApplication::activeModalWidget())) {
+                    start = chooser->directory().absolutePath();
+                    if (selection.isEmpty()) {
+                        chooser->reject();
+                    } else {
+                        chooser->setDirectory(selection);
+                        QMetaObject::invokeMethod(chooser, "accept");
+                    }
+                }
+            });
+            button(dialog, "Browse…")->click();
+            return start;
+        };
+
+        QPointer<QDialog> empty = KisLazyToolsFastExportDialog::create(&parent, documents, wait);
+        QCOMPARE(empty->findChildren<QComboBox *>().size(), 4);
+        QVERIFY(!empty->findChildren<QComboBox *>()[3]->isEnabled());
+        QVERIFY(button(empty, "Browse…")->isEnabled());
+        QVERIFY(!button(empty, "Open in Explorer"));
+        QCOMPARE(browse(empty, {}), fallback);
+        QCOMPARE(empty->findChild<QLineEdit *>()->text(), fallback);
+        QCOMPARE(empty->findChildren<QComboBox *>()[2]->currentData().toInt(), 0);
+        empty->reject();
+        QTRY_VERIFY(empty.isNull());
+
+        Export::setExplorerFolders({missing, root});
+        QPointer<QDialog> dialog = KisLazyToolsFastExportDialog::create(&parent, documents, wait);
+        const auto combos = dialog->findChildren<QComboBox *>();
+        QComboBox *folders = combos[3];
+        auto *folderEdit = dialog->findChild<QLineEdit *>();
+        QVERIFY(folders->isEnabled());
+        QCOMPARE(folders->count(), 2);
+        QCOMPARE(folders->itemData(0).toString(), missing);
+        QCOMPARE(folders->itemText(1), QDir::toNativeSeparators(root));
+        QCOMPARE(browse(dialog, {}), fallback);
+        folders->setCurrentIndex(1);
+        QCOMPARE(browse(dialog, root + "/sub"), root);
+        QCOMPARE(folderEdit->text(), root + "/sub");
+        QCOMPARE(combos[2]->currentData().toInt(), 1);
+
+        // A folder dropped from the file manager becomes the configured export folder.
+        combos[2]->setCurrentIndex(0);
+        QMimeData mime;
+        mime.setUrls({QUrl::fromLocalFile(fallback)});
+        QDragEnterEvent enter(QPoint(2, 2), Qt::CopyAction, &mime, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(folderEdit, &enter);
+        QVERIFY(enter.isAccepted());
+        QDropEvent drop(QPointF(2, 2), Qt::CopyAction, &mime, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(folderEdit, &drop);
+        QCOMPARE(folderEdit->text(), fallback);
+        QCOMPARE(combos[2]->currentData().toInt(), 1);
+        dialog->reject();
+        QTRY_VERIFY(dialog.isNull());
+        Export::setExplorerFolders({});
+    }
+
     void realExport_data()
     {
         QTest::addColumn<QString>("extension");
@@ -374,6 +513,175 @@ private Q_SLOTS:
         QCOMPARE(doc->localFilePath(), source);
         QCOMPARE(doc->caption(), caption);
         QCOMPARE(doc->isModified(), modified);
+    }
+
+    void exportNames()
+    {
+        QCOMPARE(Export::normalizedBaseName("  cover  ", "png"), QString("cover"));
+        QCOMPARE(Export::normalizedBaseName("cover.PNG", "png"), QString("cover"));
+        QCOMPARE(Export::normalizedBaseName("cover.jpeg", "jpg"), QString("cover"));
+        QCOMPARE(Export::normalizedBaseName("cover.v2", "png"), QString("cover.v2"));
+        QCOMPARE(Export::normalizedBaseName(".png", "png"), QString(".png"));
+        QCOMPARE(Export::normalizedBaseName("   ", "png"), QString());
+        QVERIFY(Export::isValidBaseName(QString::fromUtf8("表紙 v2.final")));
+        const QStringList invalidNames =
+            {"a/b", "a\\b", "a:b", "a*", "a?", "a\"b", "<a>", "a|b", ".", "..", "a.", "a ", "a\tb", QString()};
+        for (const QString &invalid : invalidNames) {
+            QVERIFY2(!Export::isValidBaseName(invalid), qPrintable(invalid));
+        }
+        QTemporaryDir dir;
+        const QString source = dir.filePath("paint.v2.kra");
+        QCOMPARE(Export::outputPath(source, "png", {}, "cover"), dir.filePath("cover.png"));
+        QCOMPARE(Export::outputPath(source, "jpg", dir.filePath("out"), "cover.v3"), dir.filePath("out/cover.v3.jpg"));
+    }
+
+    void exportDialogName()
+    {
+        QTemporaryDir dir;
+        const QString source = dir.filePath("original.kra");
+        QScopedPointer<KisDocument> doc(document(source));
+        Export::Settings().save();
+        QWidget parent;
+        bool allDocuments = false;
+        QPointer<QDialog> dialog = KisLazyToolsFastExportDialog::create(
+            &parent,
+            [&](bool all) {
+                allDocuments = all;
+                return QList<QPointer<KisDocument>>({doc.data()});
+            },
+            [](KisImageSP image) {
+                image->waitForDone();
+                return true;
+            });
+        QLineEdit *name = nullptr;
+        for (auto *edit : dialog->findChildren<QLineEdit *>()) {
+            if (edit->placeholderText() == "Same as the document")
+                name = edit;
+        }
+        QVERIFY(name);
+        QVERIFY(dialog->findChild<QLineEdit *>() != name);
+        auto *clear = button(dialog, "Clear");
+        QVERIFY(clear);
+        QVERIFY(!clear->isEnabled());
+        name->setText("cover");
+        QVERIFY(clear->isEnabled());
+        clear->click();
+        QVERIFY(name->text().isEmpty());
+        QVERIFY(!clear->isEnabled());
+
+        // The name applies only to the active document.
+        const auto combos = dialog->findChildren<QComboBox *>();
+        name->setText("cover");
+        combos[1]->setCurrentIndex(1);
+        QVERIFY(!name->isEnabled());
+        QVERIFY(!clear->isEnabled());
+        combos[1]->setCurrentIndex(0);
+        QVERIFY(name->isEnabled());
+        QVERIFY(clear->isEnabled());
+
+        name->setText("bad:name");
+        bool warningSeen = false;
+        QTimer::singleShot(0, &parent, [&] {
+            if (auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
+                warningSeen = true;
+                box->accept();
+            }
+        });
+        button(dialog, "Export")->click();
+        QVERIFY(warningSeen);
+        QVERIFY(!QFileInfo::exists(dir.filePath("bad.png")));
+
+        name->setText(QString::fromUtf8(" 表紙.png "));
+        button(dialog, "Export")->click();
+        QVERIFY(!allDocuments);
+        QTRY_VERIFY(dialog.isNull());
+        QVERIFY(!QImage(dir.filePath(QString::fromUtf8("表紙.png"))).isNull());
+        QVERIFY(!QFileInfo::exists(dir.filePath("original.png")));
+        QCOMPARE(doc->localFilePath(), source);
+    }
+
+    void exportRegion()
+    {
+        QTemporaryDir dir;
+        const QString source = dir.filePath("region.kra");
+        const QString target = dir.filePath("out");
+        QVERIFY(QDir().mkpath(target));
+        QScopedPointer<KisDocument> doc(document(source));
+        doc->setModified(false);
+        auto wait = [](KisImageSP image) {
+            image->waitForDone();
+            return true;
+        };
+        QScopedPointer<KisDocument> unnamed(document({}));
+        selectRect(unnamed.data(), QRect(1, 1, 2, 2));
+        QCOMPARE(Export::exportRegion(unnamed.data(), "png", target, {}, wait), Export::RegionResult::Unnamed);
+        QCOMPARE(Export::exportRegion(nullptr, "png", target, {}, wait), Export::RegionResult::Unnamed);
+        QCOMPARE(Export::exportRegion(doc.data(), "png", target, {}, wait), Export::RegionResult::NoSelection);
+        QVERIFY(QDir(target).isEmpty());
+
+        selectRect(doc.data(), QRect(2, 3, 5, 4));
+        doc->setModified(false);
+        QCOMPARE(Export::exportRegion(doc.data(), "png", target, {}, wait, "part"), Export::RegionResult::Exported);
+        QImage png(QDir(target).filePath("part.png"));
+        QCOMPARE(png.size(), QSize(5, 4));
+        QCOMPARE(png.pixelColor(0, 0).alpha(), 127);
+        QCOMPARE(png.pixelColor(4, 3).alpha(), 127);
+        QCOMPARE(Export::exportRegion(doc.data(), "jpg", {}, {}, wait), Export::RegionResult::Exported);
+        QCOMPARE(QImage(dir.filePath("region.jpg")).size(), QSize(5, 4));
+        QCOMPARE(doc->localFilePath(), source);
+        QVERIFY(!doc->isModified());
+        QCOMPARE(doc->image()->size(), QSize(16, 12));
+        QVERIFY(doc->image()->globalSelection());
+        QCOMPARE(Export::exportRegion(doc.data(), "png", dir.filePath("missing/folder"), {}, wait),
+                 Export::RegionResult::Failed);
+    }
+
+    void exportDialogRegion()
+    {
+        QTemporaryDir dir;
+        QScopedPointer<KisDocument> doc(document(dir.filePath("original.kra")));
+        Export::Settings().save();
+        QWidget parent;
+        QList<bool> scopes;
+        QPointer<QDialog> dialog = KisLazyToolsFastExportDialog::create(
+            &parent,
+            [&](bool all) {
+                scopes << all;
+                return QList<QPointer<KisDocument>>({doc.data()});
+            },
+            [](KisImageSP image) {
+                image->waitForDone();
+                return true;
+            });
+        auto *region = button(dialog, "Export Region");
+        QVERIFY(region);
+        const auto combos = dialog->findChildren<QComboBox *>();
+        combos[1]->setCurrentIndex(1);
+        QVERIFY(!region->isEnabled());
+        combos[1]->setCurrentIndex(0);
+        QVERIFY(region->isEnabled());
+
+        bool warningSeen = false;
+        QTimer::singleShot(0, &parent, [&] {
+            if (auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
+                warningSeen = true;
+                box->accept();
+            }
+        });
+        region->click();
+        QVERIFY(warningSeen);
+        QVERIFY(!dialog.isNull());
+
+        selectRect(doc.data(), QRect(0, 0, 3, 2));
+        for (auto *edit : dialog->findChildren<QLineEdit *>()) {
+            if (edit->placeholderText() == "Same as the document")
+                edit->setText("crop");
+        }
+        region->click();
+        QTRY_VERIFY(dialog.isNull());
+        QCOMPARE(scopes, QList<bool>({false, false}));
+        QCOMPARE(QImage(dir.filePath("crop.png")).size(), QSize(3, 2));
+        QVERIFY(!QFileInfo::exists(dir.filePath("original.png")));
     }
 
     void exportSkippedDocuments()
