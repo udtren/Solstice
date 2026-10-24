@@ -238,6 +238,9 @@ bool QuickAccessItemProperties::edit(QuickAccess::Document &document,
         QJsonObject aliases = document.aliases.value(aliasCategory).toObject();
         aliases.insert(aliasId, alias);
         document.aliases.insert(aliasCategory, aliases);
+        // An item drawn as an icon takes one cell, including when an icon is
+        // added to an item that was wider.
+        normalizeIconItemSpans(&document);
     } else {
         if (textEdit)
             item.payload.insert(item.type == QuickAccess::ItemType::Script ? QStringLiteral("custom_name")

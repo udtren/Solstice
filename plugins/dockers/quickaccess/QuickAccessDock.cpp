@@ -631,6 +631,7 @@ void QuickAccessDock::showResourcesDialog()
                 categoryAliases.insert(id, alias);
                 aliases.insert(category, categoryAliases);
                 m_document.aliases = aliases;
+                normalizeIconItemSpans(&m_document);
                 saveProfile();
                 rebuildUi();
             });

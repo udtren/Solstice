@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-21
+updated: 2026-10-24
 ---
 
 # Agent wiki
@@ -115,6 +115,7 @@ Document ownership and lifecycle are defined in
 ### Pitfalls
 
 - [Build, format and test pitfalls](pitfalls/build-format-test.md):
+  building a worktree out of tree (`_build` compiles the main checkout),
   clang-format include sorting, shells, shader and struct layout mistakes,
   test environment (filter registry in plugin tests, per-case output),
   installation (including plugins after a vtable change), smart-pointer

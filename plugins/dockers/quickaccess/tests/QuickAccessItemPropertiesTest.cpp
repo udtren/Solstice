@@ -12,6 +12,7 @@
 #include <QDialog>
 #include <QFile>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTest>
@@ -174,6 +175,65 @@ private Q_SLOTS:
         QVERIFY(QuickAccessItemProperties::editBrush(grid, "brush", &parent));
         QCOMPARE(grid.items[0].columnSpan, 1);
         QVERIFY(!QuickAccessItemPresentation::showsStrokePreview(grid.items[0]));
+    }
+
+    void iconActionTakesOneCell_data()
+    {
+        QTest::addColumn<bool>("accept");
+        QTest::newRow("cancel") << false;
+        QTest::newRow("accept") << true;
+    }
+    void iconActionTakesOneCell()
+    {
+        QFETCH(bool, accept);
+        Document document = Document::createDefault();
+        document.tabs.append(document.tabs[0]);
+        document.tabs[1].id = "second";
+        const auto wide = [](const QString &id, ItemType type, const QJsonObject &payload, int column) {
+            Item item;
+            item.id = id;
+            item.type = type;
+            item.payload = payload;
+            item.column = column;
+            item.columnSpan = 2;
+            return item;
+        };
+        Grid &grid = document.tabs[0].grids[0];
+        grid.columns = 6;
+        grid.items = {wide("action", ItemType::Action, {{"action_id", "undo"}}, 0),
+                      wide("docker", ItemType::DockerToggle, {{"docker_id", "layers"}}, 2),
+                      wide("script", ItemType::Script, {{"icon_name", "reset.png"}}, 4)};
+        document.tabs[1].grids[0].items = {wide("same-action", ItemType::Action, {{"action_id", "undo"}}, 0)};
+        // A configured icon that does not resolve is not drawn, so the docker keeps its width.
+        document.aliases = QJsonObject{{"dockers", QJsonObject{{"layers", QJsonObject{{"icon_name", "missing.png"}}}}}};
+        QWidget parent;
+        QTimer::singleShot(0, [accept] {
+            auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+            if (!dialog)
+                return;
+            for (auto *edit : dialog->findChildren<QLineEdit *>()) {
+                // The icon field shares its row with a Browse button.
+                if (edit->parentWidget() != dialog && edit->parentWidget()->findChild<QPushButton *>())
+                    edit->setText("reset.png");
+            }
+            if (accept)
+                dialog->accept();
+            else
+                dialog->reject();
+        });
+        QCOMPARE(QuickAccessItemProperties::edit(document, grid, "action", "Undo", &parent), accept);
+        const int expected = accept ? 1 : 2;
+        QCOMPARE(grid.items[0].columnSpan, expected);
+        QCOMPARE(grid.items[0].rowSpan, 1);
+        QCOMPARE(document.tabs[1].grids[0].items[0].columnSpan, expected);
+        QCOMPARE(grid.items[1].columnSpan, 2);
+        QCOMPARE(grid.items[2].columnSpan, 2);
+        QVERIFY(LayoutEngine(grid.columns).validate(grid.items).isValid());
+        if (accept) {
+            Document saved;
+            QVERIFY(Document::fromJson(document.toJson(), &saved));
+            QCOMPARE(saved.tabs[0].grids[0].items[0].columnSpan, 1);
+        }
     }
 
     void iconResolution()
