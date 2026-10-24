@@ -1699,3 +1699,29 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Pitfall added to [Build, format and test pitfalls](pitfalls/build-format-test.md):
   `_build` compiles only the main checkout, so a worktree change was built
   out of tree from `_build`'s own ninja commands.
+
+## 2026-10-24 feature: Lazy Tools export, presets and guide
+
+- Fast Image Export gained registered folders (General > Custom; Browse…
+  starts there, the chosen folder becomes the export folder), an optional
+  export Name with Clear, an Export Region button and the Export icon.
+  General > Custom gained the Rename Layer Presets editor (the Python Name
+  List tab) and now scrolls. Contracts, keys and checks:
+  [Lazy Tools](../lazy-tools.md); user guide `docs/lazy-tools.md`, rewritten
+  with the user's screenshots and a list of plugin features not ported.
+- Decisions (user): registered folders are only a starting point, never an
+  export destination; the Browse button sits beside Registered folder and
+  replaced a first "Open in Explorer" button; the guide and website present
+  Fast Image Export, Rename Layer, color labels, selection masks, then the
+  rest.
+- Pitfalls added to [Build, format and test pitfalls](pitfalls/build-format-test.md):
+  temporary export documents must copy the source's batch mode, accepting a
+  `QFileDialog` from a test, and `clang-format-diff.py` needing
+  `PYTHONUTF8=1`.
+
+## 2026-10-24 release preparation: 0.5.1
+
+- The user asked to release the Lazy Tools work as 0.5.1 and to include the
+  Quick Access icon-span fix (PR #32, merged first). Only the Solstice
+  version's `PATCH` changes; README marks 0.5.1 as in development until the
+  GitHub Release exists ([version procedure](../versioning.md#releasing)).

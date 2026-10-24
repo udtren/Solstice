@@ -8,6 +8,7 @@ sources:
   - docs/agent/gpu-engine.md ("Build, test, and install")
   - experience from the 2026-10 sessions (Quick Access, docker locks, GPU Liquify)
   - docs/agent/remove-dust.md (2026-10-21, KisDustDetector, KisRemoveDustFilterTest, KisToolRemoveDust)
+  - docs/agent/lazy-tools.md (2026-10-24, Fast Image Export Name, Export Region and registered folders, KisLazyToolsTest)
 related:
   - ../concepts/cpu-gpu-bit-parity.md
 ---
@@ -52,6 +53,10 @@ wrong anyway.
 - **Mixed line endings.** Many files are CRLF in the working tree while
   edits arrive as LF. Edit helpers must match either. Run `git diff --check`
   before committing.
+- **`clang-format-diff.py` fails on non-ASCII text on Japanese Windows.**
+  Python reads the diff and the files with the cp932 code page and stops
+  with `UnicodeDecodeError` as soon as a changed file contains `…` or CJK
+  text, so nothing is formatted. Run it with `PYTHONUTF8=1`.
 
 ## Shaders and GPU structs
 
@@ -103,6 +108,17 @@ wrong anyway.
   this is environmental, not a regression.
 - Do not run the `libs-ui-*` suite through ctest or `kis_kra_saver_test`
   on the desktop session: they open blocking dialogs.
+- **A temporary export document must copy the source's batch mode.**
+  `KisImportExportManager` asks about the export configuration (a modal
+  options dialog) whenever the document is not in batch mode and the filter
+  has a configuration widget, even when an explicit configuration is passed.
+  A new `KisDocument` made for Export Region was not in batch mode, so the
+  offscreen test waited on an invisible dialog until QtTest's 300 s timeout.
+  `setFileBatchMode(source->fileBatchMode())` keeps the app's behavior and
+  the test non-interactive.
+- **`QFileDialog::accept()` is protected.** To accept Qt's (non-native)
+  chooser from a test, call `QMetaObject::invokeMethod(chooser, "accept")`
+  after `setDirectory()`; `reject()` is public.
 - **A filter mask finds its filter in `KisFilterRegistry`**, which in a
   plugin test only holds installed plugins. A new filter's mask test fails
   ("Could not retrieve filter") until the plugin is installed; register the

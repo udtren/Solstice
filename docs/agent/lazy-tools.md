@@ -86,12 +86,80 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
   Checked Save still appends before trying to rename. Width/height are saved on
   destruction, including cancellation; minimum size and grid fallback remain
   240x200 and at least one column. The modal caller owns the dialog.
+- General > Custom > Rename Layer Presets (2026-10-24) ports the Python
+  Name List tab. `intRenameGridColumns` (1-12), `intRenameDialogWidth`
+  (240-4000) and `intRenameDialogHeight` (200-4000) edit the existing
+  `Solstice/RenameGridColumns` (3), `RenameDialogWidth` (500) and
+  `RenameDialogHeight` (800) keys on OK. The dialog keeps writing its size on
+  close, so the spin boxes show the last size. `txtRenamePresets` loads the
+  whole file through `KisLazyToolsRenamePresets::readText()` and writes it
+  back with `writeText()` only when the document is modified, so an untouched
+  file keeps its bytes; `writeText` creates the folder and a failure shows a
+  warning. Writing uses the same UTF-8 text mode as `append()`.
+- The Custom tab is wrapped in `customScrollArea` (like Miscellaneous) because
+  the two groups make it taller than the dialog. Its contents get the same
+  transparent-background hack as `scrollAreaWidgetContents`.
 - `KisLazyToolsFastExport::Settings` preserves the four root-group keys
   `Solstice/FastExportFolder`, `Solstice/FastExportPngCompression` (6),
   `Solstice/FastExportPngAlpha` (true), and `Solstice/FastExportJpegQuality` (90).
-  Only these values are saved; format, scope and destination still start at
-  PNG, active document and source folder. The dialog keeps its existing numeric
-  ranges and trims the configured folder before saving.
+  Only these values are saved; format, scope, destination and the Name field
+  still start at PNG, active document, source folder and empty. The dialog
+  keeps its existing numeric ranges and trims the configured folder before
+  saving.
+- `fast_image_export` uses the `document-export` icon, like File > Export
+  (2026-10-24).
+- Export Region (2026-10-24) is an `ActionRole` button next to Export.
+  `KisLazyToolsFastExport::exportRegion()` copies the masking and cropping of
+  `KisMainWindow::slotExportRegion()` (projection under `KisImageBarrierLock`,
+  `applyAlphaU8Mask` with the global selection, transparent default pixel,
+  crop and move to the origin) into a temporary `KisDocument` with the source
+  resolution, color space and title, then exports it through
+  `exportDocumentSync` with the same options, path and name as `run()`.
+  Unlike File > Export Region it does not fall back to the active layer's
+  bounds: without a global selection it returns `NoSelection`. The temporary
+  document takes the source document's batch mode, so the format's options
+  dialog appears exactly when it would for Export (and tests stay
+  non-interactive). The button shares `prepare()` (destination, name check,
+  preference save) with Export, resolves only the active document, and is
+  disabled for "All open documents". The source document's path, modified
+  flag, image and selection are unchanged.
+- The optional Name field (2026-10-24) is created after Export folder, so
+  `findChild<QLineEdit *>()` still returns the folder field. Export passes
+  `normalizedBaseName()` (trimmed, one trailing `.png`/`.jpg`/`.jpeg` or
+  export extension removed) to `run()`/`outputPath()` as `baseName`; empty
+  keeps `completeBaseName()`. `isValidBaseName()` refuses separators,
+  Windows-reserved characters, control characters, `.`/`..` and a trailing
+  dot or space; an invalid name warns and returns before preferences are
+  saved. Reserved device names such as `CON` are not checked; the export then
+  fails and is reported as skipped. The field and Clear are disabled for "All
+  open documents" because one name cannot serve several documents, and the
+  name is ignored there.
+- Registered Explorer folders (2026-10-24) are a separate root-group string
+  list, `Solstice/FastExportExplorerFolders`, read and written only through
+  `KisLazyToolsFastExport::explorerFolders()` / `setExplorerFolders()`. They
+  are deliberately not part of `Settings`: the modeless export dialog saves
+  `Settings` on Export, and must not overwrite a list edited meanwhile in
+  Preferences. Stored paths use `/` separators; normalization trims, drops
+  empty entries and removes duplicates in order (case-insensitive on
+  Windows). General > Custom (`grpFastExportFolders`, `lstFastExportFolders`)
+  shows native separators and writes the list on OK; Restore Defaults does not
+  clear it, like the foreground slots.
+- The export dialog lists the registered folders in a fourth combo box
+  (created after the destination combo, so the first three keep their order).
+  Browse… sits beside it, not beside Export folder (user decision,
+  2026-10-24, replacing a first "Open in Explorer" button). Browse opens
+  `QFileDialog::getExistingDirectory` in the selected registered folder,
+  falling back to the Export folder text when the list is empty or the folder
+  is missing. The registered folder is only the starting point; the chosen
+  folder fills Export folder and selects the "Configured export folder"
+  destination. The "Choose a folder now" destination still starts at the
+  Export folder text. An empty list disables the combo, not Browse. The
+  dialog reads the list when it is created and does not refresh while open.
+- The Export folder field is a `QLineEdit` subclass that accepts a dropped
+  local directory URL (the first directory among the URLs; files are ignored
+  and fall back to the default text drop). A folder drop sets the field and
+  selects the "Configured export folder" destination. Typing does not change
+  the destination.
 - The modeless export-dialog factory resolves documents only on Export through
   the supplied scope callback. Parentage and `WA_DeleteOnClose` are unchanged;
   callbacks capture the same view manager that the original dialog held.
@@ -99,7 +167,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
 - Export execution keeps ordered `QPointer<KisDocument>` snapshots, skips null
   and unnamed documents, waits for each named document's image through the
   originating view manager, and calls `exportDocumentSync`. Source folder vs.
-  selected folder, `completeBaseName()` output naming, PNG compression/alpha,
+  selected folder, `completeBaseName()` default naming, PNG compression/alpha,
   JPEG quality and skipped-document reporting remain unchanged. Do not toggle
   production document batch mode: format-specific options dialogs are existing
   behavior. Tests set batch mode only on temporary test documents.
@@ -132,6 +200,25 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
 8. Trigger Rename Alternative near each screen edge, apply plain and colored
    presets, save a manual preset, and verify the layer name change can be
    undone without affecting child layers.
+9. Register two folders in General > Custom (one with subfolders), press OK,
+   open Fast Image Export, select each and press Browse…: the native chooser
+   must open in it. Pick a subfolder; it must appear in Export folder,
+   Destination must switch to Configured export folder and Export must write
+   there. Remove a folder, rename another on disk, and confirm the list and
+   the fallback to the Export folder.
+10. In General > Custom, scroll to Rename Layer Presets: the file path is
+    shown and the text matches `name_color_list.txt`. Press OK without
+    editing (file unchanged), then add a colored line, change columns and
+    size, press OK and open Rename Alternative. Save a manual preset from the
+    popup and reopen Settings to see it appended.
+11. In Fast Image Export, type a name and export PNG and JPEG for the active
+    document to each destination; the files use the typed name. Clear the
+    field, switch Documents to All open documents (Name and Clear disabled)
+    and confirm each document keeps its own name.
+12. Check the Export icon on Fast Image Export in Keyboard Shortcuts and the
+    menu. Make an irregular selection, press Export Region with PNG and JPEG
+    and compare with File > Export Region; then deselect and confirm the
+    warning.
 
 For a menu-only change, build `kritaui` and `KisMenuMnemonicFilterTest`; install
 `_build/libs/ui/cmake_install.cmake` with `CMAKE_INSTALL_LOCAL_ONLY=1`.
@@ -172,3 +259,33 @@ preferences or documents were used by the tests.
 The coordinator's OS hotkey filter, selection popup and translated strings were
 compared against the pre-refactor implementation and are unchanged. The user
 confirmed the rename/export refactor works correctly on 2026-10-16.
+
+Registered folders (2026-10-24): `explorerFolders` covers the key,
+normalization and independence from `Settings::save`; `registeredFolderBrowse`
+covers the empty state, listed folders, the chooser's start folder (selected,
+missing and none), the chosen folder filling Export folder and switching the
+destination, cancellation, and a synthetic folder drop. It uses Qt's
+non-native chooser (`AA_DontUseNativeDialogs`).
+`kritaui` and the test built without new warnings; offscreen QtTest passed
+15/15 and the UI DLL was installed with matching build/install SHA-256
+hashes. Manual check 9 is still pending.
+
+Rename Layer Presets (2026-10-24): `presetTextEditor` covers a missing file,
+nested folder creation, Unicode and raw text round trips, parsing of the
+written text, sharing the file with `append()`, an empty list and a failed
+write. The preferences page itself is checked manually (check 10). Offscreen
+QtTest passed 16/16; the UI DLL was installed with matching hashes.
+
+Export Name (2026-10-24): `exportNames` covers normalization, rejected names
+and `outputPath` with a base name; `exportDialogName` covers Clear, the
+disabled state for all documents, the invalid-name warning and a real PNG
+export under a Unicode name that leaves the document path unchanged.
+Offscreen QtTest passed 18/18; the UI DLL was installed with matching hashes.
+
+Export Region (2026-10-24): `exportRegion` covers unnamed/null documents, no
+selection, a masked 5x4 PNG crop that keeps partial alpha, a JPEG crop next
+to the source, an unchanged source document and a failed path;
+`exportDialogRegion` covers the disabled state for all documents, the
+no-selection warning and a named export from the dialog. Offscreen QtTest
+passed 20/20. The UI DLL was installed with matching hashes and
+`kritamenu.action` was copied to `_install/share/krita/actions`.

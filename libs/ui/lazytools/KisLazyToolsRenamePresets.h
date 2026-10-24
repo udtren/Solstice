@@ -22,6 +22,10 @@ KRITAUI_EXPORT QString filePath();
 KRITAUI_EXPORT QList<Preset> load(const QString &path, bool *opened = nullptr);
 // Preserves raw existing lines and suppresses exact-line duplicates, as before.
 KRITAUI_EXPORT void append(const QString &path, const QString &name, int label);
+// Whole-file text for the preferences editor, written back unchanged in form,
+// like the Python plugin's Name List tab.
+KRITAUI_EXPORT QString readText(const QString &path, bool *opened = nullptr);
+KRITAUI_EXPORT bool writeText(const QString &path, const QString &text);
 } // namespace KisLazyToolsRenamePresets
 
 #endif
