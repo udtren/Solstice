@@ -304,6 +304,10 @@ bars for H, S, V, R, G and B.
 - Drag a channel bar, use its arrow buttons, or type a value.
 - The hue bar and square use all the docker's spare height.
 - HueSVC follows Solstice's foreground and background colors.
+- HueSVC always picks colors in RGB. It uses the selected layer's color space
+  when that is RGB. For a filter or fill layer, a mask, or a grayscale layer,
+  it uses the image's color space if that is RGB, and 8-bit sRGB otherwise.
+  It updates when you select another layer or convert the image.
 
 ![The HueSVC popup with its brush and layer panel](images/quick_access_manager/5_huesvc_popup.png)
 

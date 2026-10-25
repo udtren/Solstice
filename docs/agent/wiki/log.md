@@ -1759,3 +1759,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the website's version 0.5.2. Evidence:
   [0.5.2 release verification](history/release-0.5.2.md); ledger in
   [Versioning](../versioning.md#history).
+
+## 2026-10-25 fix: HueSVC color space
+
+- The user found HueSVC showing a single lightness bar instead of the hue bar
+  and S/V square until they switched documents. HueSVC set its selector's
+  color space only in `setCanvas()`, from the current node; a filter or fill
+  layer or a mask reports GrayA. It now follows node and image color space
+  changes and falls back to the image's RGB color space or `rgb8`
+  ([Quick Access](../quick-access.md)). The user confirmed the fix in the
+  application.
+- Lesson: [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md).

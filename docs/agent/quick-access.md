@@ -299,6 +299,19 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   SelectorShape`. The `view-choose` header button opens a menu with two
   rendered previews (drawn like `WGSelectorConfigGrid::generateIcon()`); a
   file-local `ShapeNotifier` updates the docker and an open popup together.
+- Selector color space (user report 2026-10-25): `selectorColorSpace()` uses
+  the converter's `nodeColorSpace()` when it is RGBA, else the image color
+  space when that is RGBA, else `rgb8`. `slotUpdateColorSpace()` re-applies
+  it on the canvas's `KisDisplayColorConverter::displayConfigurationChanged`
+  (current node, node color space and profile changes) and the image's
+  `sigColorSpaceChanged`/`sigProfileChanged`, then re-sets the foreground
+  color, because a new color space resets the selector to black. Before, the
+  color space was set only in `setCanvas()` from `nodeColorSpace()`: a canvas
+  activated while a filter or fill layer or a mask was current (their
+  devices are `KisPixelSelection`, whose composition source is GrayA) left
+  `KisVisualColorSelector` with one channel, which draws a single lightness
+  bar, until the next document switch. Do not hand it a non-RGB node color
+  space again; the HSV/RGB rows already work in `QColor` RGB.
 - The hue strip and the square fill all of the docker's spare height; the
   H/S/V/R/G/B rows below keep a fixed height (user request 2026-10-07).
   `KisVisualColorSelector` limits the square to 1.5 times its width by
@@ -535,3 +548,24 @@ Interactive checks after restarting Solstice: give a 2x1 Action and a 2x1
 Docker item an icon, once in Item Property and once in the Resources dialog.
 Each becomes one cell in the docker, the palette popup and Grid Edit, and stays
 so after a restart. Remove the icon and widen the item again in Grid Edit.
+
+## HueSVC color space regression checks (2026-10-25)
+
+No automated test covers this: the Quick Access suites create no document or
+canvas. Validation: the docker and all seven Quick Access test targets built,
+and all seven suites passed offscreen (46.33 seconds). The installed plugin's
+SHA-256 matched the build output.
+
+Interactive checks after restarting Solstice, with HueSVC docked:
+
+1. In an RGB document, select a filter layer, a fill layer, a transparency
+   mask and a filter mask in turn. The hue bar (or ring) and the S/V square
+   stay, and the selected color does not change.
+2. With a filter layer selected, switch to another document and back, then
+   select a paint layer. HueSVC keeps its full layout throughout.
+3. In a grayscale document, HueSVC shows the bar and square in 8-bit sRGB;
+   colors picked there paint as their gray equivalent.
+4. Convert an RGB document to 16-bit RGB or another profile with a paint layer
+   selected; HueSVC keeps working and follows the foreground color.
+5. Open the HueSVC popup with a filter layer selected; it shows the full
+   layout too.

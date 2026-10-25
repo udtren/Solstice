@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-24
+updated: 2026-10-25
 ---
 
 # Agent wiki
@@ -139,6 +139,9 @@ Document ownership and lifecycle are defined in
   thumbnails, Overview and Histogram idle tasks wait until no stroke is open;
   Duplicate Layer's node juggler kept the new layer's thumbnail empty for
   about 4.5 s (now a provisional worker-thread thumbnail).
+- [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md):
+  filter and fill layers and masks report `nodeColorSpace()` as GrayA, which
+  turns `KisVisualColorSelector` into one lightness bar (HueSVC).
 - [Translation extraction on Windows](pitfalls/translation-extraction.md):
   `.ui` `comment=` contexts, CRLF resource names, missing `Archive::Zip`,
   reference fix-up order, `QT_TRANSLATE_NOOP` not extracted.
