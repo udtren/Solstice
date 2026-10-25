@@ -178,7 +178,7 @@ message(STATUS "Krita version: ${KRITA_VERSION_STRING}")
 # folder updates, the resource database and Krita.version() use it.
 set(SOLSTICE_VERSION_MAJOR 0)
 set(SOLSTICE_VERSION_MINOR 5)
-set(SOLSTICE_VERSION_PATCH 2)
+set(SOLSTICE_VERSION_PATCH 3)
 # Pre-release label: "alpha", "beta", "rc.1"; empty for a release.
 set(SOLSTICE_VERSION_LABEL "")
 # Fourth digit of the Windows file version (rebuilds of the same version).

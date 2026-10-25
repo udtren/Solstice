@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 0.5.2](#whats-new-in-052)
+- [In development: 0.5.3](#in-development-053)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,10 +59,15 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 0.5.2
+## In development: 0.5.3
 
-[Solstice 0.5.2](https://github.com/udtren/Solstice/releases/tag/v0.5.2)
-fixes [Fast Image Export](docs/lazy-tools.md#fast-image-export):
+Solstice 0.5.3 fixes the [HueSVC](docs/quick-access.md#huesvc) color
+selector: it no longer shows a single black-to-white bar instead of the hue
+bar and saturation/value square when a filter layer, fill layer or mask is
+current.
+
+It builds on [0.5.2](https://github.com/udtren/Solstice/releases/tag/v0.5.2),
+which fixed [Fast Image Export](docs/lazy-tools.md#fast-image-export):
 format options it does not show, such as **Force convert to sRGB**, now keep
 their last values instead of resetting in every PNG or JPEG options dialog.
 
