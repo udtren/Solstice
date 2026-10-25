@@ -1770,3 +1770,9 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   ([Quick Access](../quick-access.md)). The user confirmed the fix in the
   application.
 - Lesson: [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md).
+
+## 2026-10-25 release preparation: 0.5.3
+
+- The user asked to merge the HueSVC fix (PR #37) and release it as 0.5.3
+  with the website update. Only `PATCH` changes; README marks 0.5.3 as in
+  development until the GitHub Release exists.
