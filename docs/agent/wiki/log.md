@@ -1818,3 +1818,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   [upstream-intake.md](../upstream-intake.md), "Timing". The addendum for
   `hermes/SKILL.md` was handed to the user, since the share is not
   reachable from the cloud session.
+
+## 2026-10-26 intake: KisClipboard rewrite (U-2026W44-01/02) and Linux build
+
+- Adopted the twelve held KisClipboard commits on
+  `claude/clipboard-intake-cross-platform` (the clipboard commits of
+  `claude/wizardly-mendel-g5fwrz`). That branch did not compile:
+  `0a84c23fe5` passes `KisProcessingApplicator::READ_ONLY_ACTION`, which
+  comes from upstream `a46d36546f`. Adopted only the applicator part of
+  `a46d36546f`, placed before `0a84c23fe5` so every commit builds; ledger
+  rows updated in [upstream intake](../upstream-intake.md).
+- First Linux build and test run (Ubuntu 26.04, GCC 15, Qt 6.10). Fixed
+  two GCC-only build errors (`quint64` vs `uint64_t` in `KisGpuContext`,
+  `-Wno-missing-prototypes` on visioncpp C++). `kis_clipboard_test`
+  passes all 37 cases under Xvfb; the full suite shows no failure that
+  `main` does not have too.
+- Not yet verified on Windows: build, `kis_clipboard_test`, copy/paste
+  manual checks.
+- Lessons: [build pitfalls](pitfalls/build-format-test.md), "Linux (GCC)
+  builds" (LP64 types, clang-only flags, install paths, Xvfb, test memory
+  cap, stale `~/.qttest` data).
