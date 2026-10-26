@@ -1807,3 +1807,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: a `setChecked()` on a button whose `toggled()` drives a slot that
   reads "current" state must run after that state is updated, or under a
   `QSignalBlocker`.
+
+## 2026-10-26 decision: staged upstream adoption
+
+- The user asked whether to adopt upstream changes in one batch after each
+  upstream release instead of weekly. Decision: keep the weekly review and
+  adopt by type (now / soak / release), with follow-up detection in the
+  Hermes report. Recorded in
+  [the decision page](decisions/upstream-selective-intake.md) and
+  [upstream-intake.md](../upstream-intake.md), "Timing". The addendum for
+  `hermes/SKILL.md` was handed to the user, since the share is not
+  reachable from the cloud session.

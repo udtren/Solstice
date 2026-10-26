@@ -32,6 +32,26 @@ The upstream snapshot this repository was created from is `krita/6.0`
 common commit with upstream (independent history), so upstream work can only
 arrive as cherry-picks or patches.
 
+## Timing
+
+Upstream is still reviewed every week, but not every approved item is
+adopted the week it is reported (user decision, 2026-10-26; reasons on
+[the decision page](wiki/decisions/upstream-selective-intake.md)). Hermes
+gives each item a `timing`:
+
+| `timing` | Items | Adopt |
+| --- | --- | --- |
+| `now` | Small, self-contained fixes for crashes, data corruption, out-of-bounds access or security issues; every `krita/6.0` commit | The week it is reported. |
+| `soak` | Other bug fixes that exist only on `master` | Held until `soak_until` (14 days after the report) passes with no revert or fix-up upstream, or earlier when backported to `krita/6.0`; at most 28 days, then adopt or reject. |
+| `release` | Features, UI changes, large refactors on `master` | Held until an upstream release contains them, then evaluated together. |
+
+Each report re-checks the `held` rows (backport, follow-ups, soak date) and
+lists upstream follow-ups (reverts, fixes, backports, same bug number) of
+held and recently adopted commits. A revert or fix of an adopted commit is
+reported as its own item to adopt now. The user still decides every item;
+`timing` is a recommendation. Hermes's instructions for this live in
+`hermes/SKILL.md` on the share.
+
 ## Adopting an item
 
 1. Read the item in `reports/<week>.json` and its section in the `.md`
