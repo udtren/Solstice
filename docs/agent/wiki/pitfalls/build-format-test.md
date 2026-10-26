@@ -10,6 +10,8 @@ sources:
   - docs/agent/remove-dust.md (2026-10-21, KisDustDetector, KisRemoveDustFilterTest, KisToolRemoveDust)
   - docs/agent/lazy-tools.md (2026-10-24, Fast Image Export Name, Export Region and registered folders, KisLazyToolsTest)
   - docs/agent/test-control.md (2026-10-26, TestControlCanvasTools syntax check)
+  - first Linux build and test run (2026-10-26, Ubuntu 26.04, GCC 15, Qt 6.10, KF6 6.24, branch claude/clipboard-intake-cross-platform)
+  - Windows run of kis_clipboard_test (2026-10-26, branch claude/clipboard-intake-cross-platform)
 related:
   - ../concepts/cpu-gpu-bit-parity.md
 ---
@@ -119,6 +121,17 @@ wrong anyway.
   this is environmental, not a regression.
 - Do not run the `libs-ui-*` suite through ctest or `kis_kra_saver_test`
   on the desktop session: they open blocking dialogs.
+- **`KRITA_NO_ASSERT_MSG=1` turns assert dialogs into log lines.** Set it
+  before starting a test program run directly; `QT_FORCE_STDERR_LOGGING=1`
+  makes the `SAFE ASSERT` line reach a redirected stderr.
+- **`kis_clipboard_test` collides with other clipboard readers on
+  Windows.** The clipboard service (`cbdhsvc`) and tools such as PowerToys
+  open the clipboard after every change; the test sets it again within
+  milliseconds, so `OleSetClipboard` fails with `0x800401d0`
+  (`CLIPBRD_E_CANT_OPEN`) on random rows. The test then fails or
+  dereferences a null clip and crashes. Rerun a failing row alone
+  (`kis_clipboard_test.exe <function>:<row>`) before treating it as a
+  regression.
 - **A temporary export document must copy the source's batch mode.**
   `KisImportExportManager` asks about the export configuration (a modal
   options dialog) whenever the document is not in batch mode and the filter
@@ -287,6 +300,54 @@ wrong anyway.
   (`KRITA_GPU_PROJECTION=0`), `KisTile::cloneShared()`; the tile GPU hooks
   only act on 8/16-byte pixels. Not yet known whether upstream Krita has it
   (it registers the test as broken).
+
+## Linux (GCC) builds
+
+First full Linux build, 2026-10-26: Ubuntu 26.04 system packages (Qt 6.10,
+KF6 6.24, `-DBUILD_WITH_QT6=ON -DALLOW_UNSTABLE=QT6 -DBUILD_TESTING=ON`),
+GCC 15, Ninja. Windows CI builds with clang, so code that only clang
+accepts reaches `main` unnoticed.
+
+- **`quint64` is not `uint64_t` on Linux.** On LP64 Linux `quint64` is
+  `unsigned long long` and `uint64_t` is `unsigned long`; on Windows both
+  are `unsigned long long`. Passing a `quint64*` to an API that takes
+  `uint64_t*` (Vulkan semaphore values in `KisGpuContext`) compiles on
+  Windows and is an error with GCC. Use `uint64_t` locals at such calls.
+- **Clang-only warning flags break GCC under `-Werror`.**
+  `-Wno-missing-prototypes` is valid for C++ in clang but C-only in GCC,
+  which then warns on every C++ file; with `-Werror` (Vision ML's
+  `visioncpp`) the build stops. Guard such flags with a generator
+  expression on `COMPILE_LANGUAGE`/`CXX_COMPILER_ID`.
+- **The installed tree does not run as is.** Plugins look for their
+  libraries next to themselves (`$ORIGIN`), but `libvisioncpp.so.0` and
+  the QML modules install to `lib/x86_64-linux-gnu`. Start
+  `_install/bin/krita` with `LD_LIBRARY_PATH` and `QML_IMPORT_PATH`
+  pointing there. Without a usable GPU, Vision ML shows a modal "no
+  suitable device" box at every start.
+- **Run tests under Xvfb, not `offscreen`.** With
+  `QT_QPA_PLATFORM=offscreen`, `QClipboard::mimeData()` returns null and
+  `kis_clipboard_test` crashes in `KisClipboard::clipboardDataChanged()`;
+  `xvfb-run` with `QT_QPA_PLATFORM=xcb` runs it.
+- **Cap test memory.** `kis_jpeg_test` grows without bound on its first
+  file (`HPIM0760.JPG`, about 4 GB in 14 s; it reached 54 GB uncapped),
+  on `main` too. An uncapped `ctest -j 12` got the desktop session
+  OOM-killed twice. Run `ctest` inside `systemd-run --user --scope -p
+  MemoryMax=<n>G -p MemorySwapMax=0` and exclude it with
+  `-E kis_jpeg_test`.
+- **A second run of a resource test can fail on the first run's data.**
+  Tests keep their Solstice profile in
+  `~/.qttest/config/qttest/<test>/Solstice` and their cache in
+  `~/.qttest/share/<test>`. `KisBrushModelTest`,
+  `KisBrushStrokePreviewTest` and `kis_linked_pattern_manager_test` import
+  a resource in `initTestCase()` and fail when it already exists. Move
+  those folders away before comparing two runs.
+- **Failing on Linux on `main` (2026-10-26), not caused by a branch:**
+  `appstreamtest`, `KisSolsticePathsTest`, `TestSvgParser*`,
+  `kis_cage_transform_worker_test`, `KisLazyToolsTest`,
+  `kis_shape_layer_test`, `kis_view_signals_test` (crash in teardown),
+  `KisHeifTest`, `KisBrushStrokeLayerTest` (crash), `SvgTextCursorTest`;
+  `KisGpuEngineTest` fails and `KisGpuBrushTest`/`KisGpuStrokeTest` time
+  out without a GPU under Xvfb.
 
 ## Installation
 

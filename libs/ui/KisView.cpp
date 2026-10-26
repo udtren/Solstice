@@ -492,9 +492,9 @@ void KisView::dropEvent(QDropEvent *event)
         QList<KisNodeSP> nodes;
 
         if (forcedCenter) {
-            nodes = KisMimeData::loadNodesFastAndRecenter(*forcedCenter, event->mimeData(), kisimage, kritaShapeController, copyNode);
+            nodes = KisMimeData::loadNodesFastAndRecenter(*forcedCenter, event->mimeData(), KisMimeData::MimeFromDragAndDrop, kisimage, kritaShapeController, copyNode);
         } else {
-            nodes = KisMimeData::loadNodesFast(event->mimeData(), kisimage, kritaShapeController, copyNode);
+            nodes = KisMimeData::loadNodesFast(event->mimeData(), KisMimeData::MimeFromDragAndDrop, kisimage, kritaShapeController, copyNode);
         }
 
         Q_FOREACH (KisNodeSP node, nodes) {
@@ -577,12 +577,13 @@ void KisView::dropEvent(QDropEvent *event)
                 }
             }
 
-            KisPaintDeviceSP clip = KisClipboard::instance()->clipFromBoardContentsWithData(qimage, urls, QRect(), true, -1, false, source);
-            if (clip) {
+            KisImageSP clipImage = KisClipboard::instance()->clipFromBoardContentsWithData(qimage, urls, true, -1, source);
+            if (clipImage) {
                 const auto pos = this->viewConverter()
                                      ->imageToDocument(imgCursorPos)
                                      .toPoint();
 
+                KisPaintDeviceSP clip = new KisPaintDevice(*clipImage->projection());
                 clip->moveTo(pos.x(), pos.y());
 
                 KisImportCatcher::adaptClipToImageColorSpace(clip,
@@ -604,8 +605,10 @@ void KisView::dropEvent(QDropEvent *event)
             }
         } else if (action == KisCanvasDrop::INSERT_AS_REFERENCE_IMAGE) {
 
-            KisPaintDeviceSP clip = KisClipboard::instance()-> clipFromBoardContentsWithData(qimage, urls, QRect(), true);
-            if (clip) {
+            KisImageSP clipImage = KisClipboard::instance()->clipFromBoardContentsWithData(qimage, urls, true);
+            if (clipImage) {
+                KisPaintDeviceSP clip = new KisPaintDevice(*clipImage->projection());
+
                 KisImportCatcher::adaptClipToImageColorSpace(clip,
                                                              this->image());
 

@@ -1853,3 +1853,35 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   (receiver, eaten pen press, keyboard-resynced modifiers); two C++ pitfalls
   added to [build pitfalls](pitfalls/build-format-test.md) (SP/WSP
   conditional, `QObject::property` hiding a helper).
+
+## 2026-10-26 intake: KisClipboard rewrite (U-2026W44-01/02) and Linux build
+
+- Adopted the twelve held KisClipboard commits on
+  `claude/clipboard-intake-cross-platform` (the clipboard commits of
+  `claude/wizardly-mendel-g5fwrz`). That branch did not compile:
+  `0a84c23fe5` passes `KisProcessingApplicator::READ_ONLY_ACTION`, which
+  comes from upstream `a46d36546f`. Adopted only the applicator part of
+  `a46d36546f`, placed before `0a84c23fe5` so every commit builds; ledger
+  rows updated in [upstream intake](../upstream-intake.md).
+- First Linux build and test run (Ubuntu 26.04, GCC 15, Qt 6.10). Fixed
+  two GCC-only build errors (`quint64` vs `uint64_t` in `KisGpuContext`,
+  `-Wno-missing-prototypes` on visioncpp C++). `kis_clipboard_test`
+  passes all 37 cases under Xvfb; the full suite shows no failure that
+  `main` does not have too.
+- Windows (clang, Qt 6.8): full build passes. `kis_clipboard_test`
+  passes every case, but only when failing rows are rerun alone: the
+  clipboard service makes `OleSetClipboard` fail on random rows in a full
+  run. The user checked copy/paste in the app (before the fix below;
+  closing the app after the fix is not rechecked yet).
+- Fixed on Windows: closing Solstice after a copy showed the
+  `!sanityCheckPointer.isValid()` assert (`KisDocument.cpp`) and kept the
+  clipboard locked. The rewrite's `application/zip` path in
+  `KisMimeData::retrieveData()` deleted its temporary document while
+  `serializeToNativeByteArray()` still held the image in `savingImage`;
+  restored the `setCurrentImage(nullptr)` that `main` had. Windows requests
+  that format after every copy and at exit (`OleFlushClipboard`), Linux
+  without a clipboard manager does not, so the Linux run missed it.
+- Lessons: [build pitfalls](pitfalls/build-format-test.md), "Linux (GCC)
+  builds" (LP64 types, clang-only flags, install paths, Xvfb, test memory
+  cap, stale `~/.qttest` data) and "Tests" (assert dialogs, Windows
+  clipboard contention).
