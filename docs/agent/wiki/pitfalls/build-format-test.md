@@ -124,6 +124,16 @@ wrong anyway.
 - **`KRITA_NO_ASSERT_MSG=1` turns assert dialogs into log lines.** Set it
   before starting a test program run directly; `QT_FORCE_STDERR_LOGGING=1`
   makes the `SAFE ASSERT` line reach a redirected stderr.
+- **A test that talks to a server in its own thread must spin the event
+  loop.** `waitForConnected()`/`waitForReadyRead()` block without
+  processing events, so a `QTcpServer` in the same thread cannot accept or
+  answer. It happened to work on Linux; on Windows
+  `TestControlProtocolTest::testHttpEndToEnd` got no response. Wait with
+  `QTest::qWait()` and then `readAll()`.
+- **`ulong` is 32-bit on Windows.** Qt 6 event timestamps are `quint64`;
+  storing one in `ulong` inside a braced initializer is a narrowing error
+  with clang on Windows (and silently fine on LP64 Linux), the mirror of
+  the `quint64`/`uint64_t` problem under "Linux (GCC) builds".
 - **`kis_clipboard_test` collides with other clipboard readers on
   Windows.** The clipboard service (`cbdhsvc`) and tools such as PowerToys
   open the clipboard after every change; the test sets it again within

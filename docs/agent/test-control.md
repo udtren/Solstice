@@ -27,9 +27,13 @@ Verification (2026-10-26, cloud session, no Krita build available):
   initialize, tools/list, two concurrent calls (run in order), a failing
   tool, an unknown tool and an unauthenticated connection behaved as
   specified.
-- Not built in `_build`, not installed, not run in Solstice. No interactive
-  confirmation. The [manual checks](#manual-regression-checklist) are the
-  phase 0 exit criteria.
+- Windows (2026-10-26, clang, Qt 6.8): built in `_build` with the full
+  tree; both tests pass through `ctest` after two test-only fixes (a
+  `quint64` timestamp narrowed to 32-bit `ulong`, and a read loop that
+  starved the same-thread server). Not installed, not run in Solstice.
+- No interactive confirmation. The
+  [manual checks](#manual-regression-checklist) are the phase 0 exit
+  criteria.
 
 ## Source locations
 

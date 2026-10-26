@@ -64,7 +64,9 @@ QByteArray exchange(quint16 port, const QList<QByteArray> &parts)
     QElapsedTimer timer;
     timer.start();
     while (socket.state() == QAbstractSocket::ConnectedState && timer.elapsed() < 5000) {
-        socket.waitForReadyRead(20);
+        // The server runs in this thread: process its events instead of
+        // blocking in waitForReadyRead(), which starves it on Windows.
+        QTest::qWait(20);
         response += socket.readAll();
     }
     response += socket.readAll();

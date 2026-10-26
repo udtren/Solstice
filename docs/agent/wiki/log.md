@@ -1885,3 +1885,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   builds" (LP64 types, clang-only flags, install paths, Xvfb, test memory
   cap, stale `~/.qttest` data) and "Tests" (assert dialogs, Windows
   clipboard contention).
+
+## 2026-10-26 fix: test control on Windows
+
+- First Windows build of `plugins/extensions/testcontrol` (merged with
+  `main` after #40). Two test-only fixes: `TestControlInputInjectorTest`
+  kept Qt 6 `quint64` timestamps in `ulong` (32-bit on Windows, narrowing
+  error), and `TestControlProtocolTest::testHttpEndToEnd` blocked in
+  `waitForReadyRead()` while its server needed the same thread's event
+  loop. Both tests pass through `ctest` (3 repeats). Plugin not installed
+  or run in Solstice; verification status in [Test control](../test-control.md).
+- Lessons: [build pitfalls](pitfalls/build-format-test.md), "Tests"
+  (same-thread server, 32-bit `ulong`).

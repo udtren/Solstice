@@ -20,7 +20,7 @@ struct Recorded {
     Qt::MouseButtons buttons = Qt::NoButton;
     qreal pressure = -1.0;
     Qt::MouseEventSource source = Qt::MouseEventNotSynthesized;
-    ulong timestamp = 0;
+    quint64 timestamp = 0;
     bool toApplication = false;
 };
 
@@ -169,8 +169,8 @@ void TestControlInputInjectorTest::testMouseStroke()
     for (const Recorded &recorded : e) {
         QCOMPARE(recorded.source, Qt::MouseEventNotSynthesized);
     }
-    QCOMPARE(e[1].timestamp - e[0].timestamp, ulong(30));
-    QCOMPARE(e[2].timestamp - e[0].timestamp, ulong(60));
+    QCOMPARE(e[1].timestamp - e[0].timestamp, quint64(30));
+    QCOMPARE(e[2].timestamp - e[0].timestamp, quint64(60));
 }
 
 void TestControlInputInjectorTest::testTabletStroke()
