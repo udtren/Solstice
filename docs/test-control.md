@@ -13,8 +13,8 @@ computer and only with a password (token) you choose.
 
 > **Status: early test version.** The first set of tools is in place for
 > trying out the approach. It does not yet support modifier keys, opening or
-> exporting files, or choosing brush presets, and it has not yet been
-> confirmed in a running Solstice.
+> exporting files, or choosing brush presets. It has been checked in a
+> running Solstice on Linux; Windows has not been checked yet.
 
 ## Starting Solstice with test control
 
@@ -33,6 +33,16 @@ $env:SOLSTICE_TEST_CONTROL_PORT = "8765"
 $env:SOLSTICE_TEST_CONTROL_TOKEN = [guid]::NewGuid().ToString("N")
 $env:SOLSTICE_TEST_CONTROL_TOKEN   # note the token for the MCP client
 & "C:\path\to\Solstice\bin\solstice.exe"
+```
+
+On Linux, in a shell:
+
+```bash
+export SOLSTICE_PROFILE_ROOT="$HOME/solstice-test-profile"
+export SOLSTICE_TEST_CONTROL_PORT=8765
+export SOLSTICE_TEST_CONTROL_TOKEN="$(openssl rand -hex 16)"
+echo "$SOLSTICE_TEST_CONTROL_TOKEN"   # note the token for the MCP client
+/path/to/solstice/bin/krita
 ```
 
 | Setting | Meaning |
@@ -76,6 +86,13 @@ many undo steps there are."
   they can change the result.
 - Modifier keys (Ctrl, Shift, Alt) are not supported yet.
 - Strokes go to the active document's canvas only.
+- While another application has the keyboard focus, strokes do not paint
+  (seen on Linux). Keep Solstice in front during a test.
+- Judge a stroke by the undo history and the layer it changed. The
+  "accepted" values in a stroke's result do not show success: on Linux they
+  are always false for pen strokes.
+- When you end a test, close Solstice and answer the save question, so no
+  unsaved test document is reopened next time.
 
 ## Security
 

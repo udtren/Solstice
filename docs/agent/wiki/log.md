@@ -1897,3 +1897,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   or run in Solstice; verification status in [Test control](../test-control.md).
 - Lessons: [build pitfalls](pitfalls/build-format-test.md), "Tests"
   (same-thread server, 32-bit `ulong`).
+
+## 2026-10-26 fix: test control phase 0 checks on Linux
+
+- Ran the twelve phase 0 manual checks against a running Solstice on Linux
+  (Xvfb, Qt 6.10) through the MCP endpoint; results recorded in
+  [Test control](../test-control.md).
+- Fixed three input defects the checks found: events are now spontaneous
+  (rectangle selection cancelled on release), tablet strokes start with a
+  hover move and a 50 ms settle (the first pen stroke on a new canvas
+  painted a dot), and `wait_idle` needs three idle polls (a selection read
+  was empty in 1 of 25 runs). Unit tests updated; both pass.
+- Still open: strokes do not paint while another application holds focus
+  (step 10); Windows has not been checked interactively.
+- Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md)
+  (spontaneous releases and `sendEvent()`, stylus device switch, settling
+  idle, platform-dependent accepted flags).

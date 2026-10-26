@@ -31,9 +31,15 @@ Verification (2026-10-26, cloud session, no Krita build available):
   tree; both tests pass through `ctest` after two test-only fixes (a
   `quint64` timestamp narrowed to 32-bit `ulong`, and a read loop that
   starved the same-thread server). Not installed, not run in Solstice.
-- No interactive confirmation. The
-  [manual checks](#manual-regression-checklist) are the phase 0 exit
-  criteria.
+- Linux (2026-10-26, Ubuntu 26.04, GCC 15, Qt 6.10, Xvfb without a window
+  manager, `xcb`): full build and install; both tests pass through `ctest`.
+  The [manual checks](#manual-regression-checklist) were run against a
+  running Solstice through the MCP endpoint; results are recorded there.
+  Three input defects they found are fixed (spontaneous events, the hover
+  move before a pen press, `wait_idle` settling). Step 10 stays a known
+  limitation.
+- Windows: no interactive run yet; repeat the manual checks there,
+  especially 6, 8 and 10.
 
 ## Source locations
 
@@ -93,7 +99,7 @@ tested in the cloud session.
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi) |
 | `tool_activate` | `id` (factory ID) | Active tool ID; an unknown ID lists all IDs |
 | `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime` | Events sent, press/release accepted flags, duration, points outside the canvas widget, active tool |
-| `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` reached, waited time |
+| `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, waited time (at least 40 ms) |
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
@@ -122,14 +128,26 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   arrival order, each started from the event loop, because they share one
   canvas. Notifications and client responses get 202. A handler's reply is
   accepted once.
-- **Input.** `TestControlInputInjector` sends events with
-  `QCoreApplication::sendEvent()` to the canvas widget, so
-  `KisInputManager::eventFilter()` (installed on that widget) handles them
-  like device input and passes them to the shortcut matcher and the active
-  tool. Mouse: press, moves, release. Tablet: `TabletEnterProximity` (to the
-  application object, where `ProximityNotifier` listens), `TabletPress`, a
-  `Qt::MouseEventSynthesizedBySystem` mouse press, `TabletMove`s,
-  `TabletRelease`, a synthesized mouse release and `TabletLeaveProximity`.
+- **Input.** `TestControlInputInjector` delivers events to the canvas
+  widget, so `KisInputManager::eventFilter()` (installed on that widget)
+  handles them like device input and passes them to the shortcut matcher and
+  the active tool. Every event is marked spontaneous
+  (`QSpontaneKeyEvent::setSpontaneous()` from the inline
+  `QtTest/qtestspontaneevent.h`; the plugin does not link QtTest) and
+  delivered with `QCoreApplication::notify()`, as QTest does:
+  `KisToolRectangleBase` and `KisToolOutlineBase` cancel the shape on a
+  non-spontaneous release, and `sendEvent()` clears the flag in Qt 6.
+  Mouse: press, moves, release. Tablet: `TabletEnterProximity` (to the
+  application object, where `ProximityNotifier` listens), one hover
+  `TabletMove` (no buttons, no pressure) at the first point, `TabletPress`
+  `HoverSettleMs` (50 ms) later, a `Qt::MouseEventSynthesizedBySystem` mouse
+  press, `TabletMove`s, `TabletRelease`, a synthesized mouse release and
+  `TabletLeaveProximity`. The hover move lets `KoToolProxy::tabletEvent()`
+  switch the canvas to the stylus before the press: the first stylus event
+  on a canvas creates new tool instances (`KoToolManager::switchInputDevice`),
+  which ended a stroke already started, so the first pen stroke on each new
+  canvas painted only a dot. The wait outlasts the input manager's move
+  compression (`tabletEventsDelay`, 10 ms), which a press would discard.
   The synthesized press reproduces the one Windows generates after a pen
   press; the input manager eats exactly one mouse press after each
   `TabletPress` (`EventEater::peckish`), and without it the next mouse stroke
@@ -189,7 +207,44 @@ client, and record the results with the date in this document.
 12. `curl` without the token gets 401; with `-H "Origin: http://example.com"`
     gets 403.
 
+Results, Linux (2026-10-26, Ubuntu 26.04, Qt 6.10, `xcb` on Xvfb without a
+window manager, scratch `SOLSTICE_PROFILE_ROOT`, branch
+`claude/test-control-linux`):
+
+| Step | Result |
+| --- | --- |
+| 1 | Pass: no log line; nothing listens on 8765 (`ss -ltn`). |
+| 2 | Pass: "must have at least 16 characters; not started"; nothing listens. |
+| 3 | Pass: endpoint logged, listens on `127.0.0.1` only; eight tools listed; `"document": null`. |
+| 4 | Pass: 800x600 RGBA; canvas `KisOpenGLCanvas2` 1266x1529. |
+| 5 | Pass: undo 1 "Freehand Brush Stroke", bounds (80,80) 340x240, press accepted; the canvas had no focus. |
+| 6 | Pass after the hover fix: the first pen stroke on the canvas paints along the whole line, width and opacity growing with pressure. Before it, that stroke painted a dot (later pen strokes were fine). `pressAccepted`/`releaseAccepted` are `false` on Linux by design (see limitations). |
+| 7 | Pass: undo 3, bounds extended by the mouse line. |
+| 8 | Pass after the spontaneous fix: "Select Rectangle", bounds (100,100) 200x100, 20000 pixels. Before it, the tool showed the 200x100 drag and cancelled it on release. |
+| 9 | Pass: `deselect` adds "Deselect" and clears it; `edit_undo` restores the 200x100 selection. |
+| 10 | Limitation: with another application's window holding X focus, a synthetic stroke is accepted but paints nothing (undo unchanged). With no application focused, or Solstice focused, strokes paint. Same before and after the fixes. |
+| 11 | Pass: Ctrl+Q during a 4 s real-time stroke closes Solstice (exit 0); the injector reports "The target widget was destroyed during the stroke". With an unsaved change (run on the build before the fixes), the save prompt appears mid-stroke and "No" exits cleanly too. |
+| 12 | Pass: 401 without or with a wrong token, 403 for a foreign Origin or Host, 405 for GET, 200 for a valid ping; the token is not in the log. |
+
+A read right after `wait_idle` once returned an empty selection after "Select
+Rectangle" (1 in 25 runs) when `wait_idle` returned on its first check; with
+the three-poll settle it did not recur in 75 runs.
+
 ## Known limitations and pending work
+
+- Strokes do not paint while another application holds focus (step 10,
+  Linux/X11; unverified on Windows). Not investigated further: real input
+  would activate the window first.
+- `pressAccepted`/`releaseAccepted` report Qt's accepted flag. On Linux
+  without Krita's Qt enter/leave patch, the input manager clears it for every
+  tablet press, move and release so that Qt synthesizes mouse events, so
+  tablet strokes report `false` even when they paint. Judge strokes by the
+  undo stack, bounds and hashes.
+- On Linux, autosaves of untitled documents go to `$HOME`
+  (`krita-<pid>-document_<n>-autosave.kra`), not to `SOLSTICE_PROFILE_ROOT`.
+  A test instance stopped with unsaved documents leaves them there, and the
+  next start reopens them, so the active view is not the one `document_new`
+  made. Quit test instances through the save prompt, or remove those files.
 
 Findings from reading the input code (2026-10-26), to confirm in phase 0:
 
