@@ -1,6 +1,6 @@
 ---
 type: decision
-updated: 2026-10-19
+updated: 2026-10-26
 sources:
   - AGENTS.md ("Branch policy")
   - docs/agent/upstream-intake.md
@@ -47,6 +47,41 @@ still fixes crashes and file-format issues that Solstice shares.
   allowed) is in `AGENTS.md`, "Commit authorship and Contributors".
   The helper on the share does not do this step; the amend command is in
   [upstream-intake.md](../../upstream-intake.md), step 4.
+- Solstice was created from `krita/6.0`, but most candidates come from
+  `master`. A conflict in a file Solstice never changed means a
+  master-only prerequisite, and it can be a commit the user already
+  rejected: in 2026-W44, `630b6a20d4` (KisClipboard rewrite) conflicted in
+  `kis_custom_brush_widget.cpp` because it builds on U-2026W42-10
+  `6d451f2e9d`. Compare the file at the Solstice snapshot, at the upstream
+  parent and in Solstice before calling a conflict mechanical
+  (`raw.githubusercontent.com/KDE/krita/<sha>/<path>` serves any version,
+  `<sha>~1` the parent).
+- A clean or clean-3way dry run says nothing about compiling against
+  Solstice; see step 5 of [upstream-intake.md](../../upstream-intake.md).
+
+## Weekly review, staged adoption (2026-10-26)
+
+**Decision (user).** Keep the weekly review, but adopt by type: urgent,
+self-contained fixes and `krita/6.0` commits the same week; other
+`master`-only fixes after a 14-28 day soak (or once backported to
+`krita/6.0`); features and refactors when an upstream release contains
+them. Procedure: [upstream-intake.md](../../upstream-intake.md), "Timing".
+
+**Why, rather than one batch per upstream release.** Solstice is based on
+`krita/6.0`, while most candidates come from `master`, which is released
+only with the next major version. Waiting for that release would pile up
+months of commits whose prerequisites drift further from the snapshot (in
+2026-W44 the KisClipboard rewrite already depended on a rejected W42
+commit), and it would delay crash fixes. A release is also no guarantee:
+the shape-layer resolution regression adopted in 2026-W44 was still on
+upstream `master`.
+
+**Why, rather than adopting everything weekly.** Mid-series commits can
+depend on later upstream work or receive fix-ups: `e09952bcad` was written
+on top of an unadopted refactor and needed an adaptation. A short soak plus
+automatic follow-up detection (reverts, fixes, backports, same bug number)
+catches those cases without waiting for a release, and fewer intake rounds
+mean fewer Windows builds and manual checks for the user.
 
 ## Rewrite of `main` (2026-10-19)
 
