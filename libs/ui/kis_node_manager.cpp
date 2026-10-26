@@ -1577,7 +1577,7 @@ void KisNodeManager::cutLayersToClipboard()
         it++;
     }
 
-    KisClipboard::instance()->setLayers(nodes, m_d->view->image(), false);
+    KisClipboard::instance()->setLayers(nodes, m_d->view->image(), m_d->view->image()->bounds(), false);
 
     if (canModifyLayers(nodes)) {
         KUndo2MagicString actionName = kundo2_i18n("Cut Nodes");
@@ -1589,10 +1589,10 @@ void KisNodeManager::cutLayersToClipboard()
 void KisNodeManager::copyLayersToClipboard()
 {
     KisNodeList nodes = this->selectedNodes();
-    KisClipboard::instance()->setLayers(nodes, m_d->view->image(), true);
+    KisClipboard::instance()->setLayers(nodes, m_d->view->image(), m_d->view->image()->bounds(), true);
 }
 
-void KisNodeManager::pasteLayersFromClipboard(bool changeOffset, QPointF offset, KisProcessingApplicator *applicator)
+void KisNodeManager::pasteLayersFromClipboard(std::optional<QPoint> preferredClipCenter, KisProcessingApplicator *applicator)
 {
     const QMimeData *data = KisClipboard::instance()->layersMimeData();
     if (!data) return;
@@ -1611,14 +1611,14 @@ void KisNodeManager::pasteLayersFromClipboard(bool changeOffset, QPointF offset,
     KisNodeDummy *aboveThisDummy = parentDummy ? parentDummy->lastChild() : 0;
 
     KisMimeData::insertMimeLayers(data,
+                                  KisMimeData::MimeFromClipboard,
                                   image,
                                   shapeController,
                                   parentDummy,
                                   aboveThisDummy,
                                   copyNode,
                                   nodeInsertionAdapter(),
-                                  changeOffset,
-                                  offset,
+                                  preferredClipCenter,
                                   applicator);
 }
 

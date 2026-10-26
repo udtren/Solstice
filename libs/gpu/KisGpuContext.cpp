@@ -661,13 +661,14 @@ bool KisGpuContext::wait(quint64 value, quint64 timeoutNs) const
     waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
     waitInfo.semaphoreCount = 1;
     waitInfo.pSemaphores = &d->timeline;
-    waitInfo.pValues = &value;
+    const uint64_t waitValue = value;
+    waitInfo.pValues = &waitValue;
     return d->vk.vkWaitSemaphores(d->device, &waitInfo, timeoutNs) == VK_SUCCESS;
 }
 
 quint64 KisGpuContext::completedValue() const
 {
-    quint64 value = 0;
+    uint64_t value = 0;
     d->vk.vkGetSemaphoreCounterValue(d->device, d->timeline, &value);
     return value;
 }
