@@ -47,7 +47,12 @@ private:
     void canvasCapture(const Arguments &arguments, const Reply &reply);
 
     /// Calls @p done(true) once @p condition holds, or done(false) after @p timeoutMs.
-    void pollUntil(std::function<bool()> condition, int timeoutMs, std::function<void(bool, qint64)> done);
+    /// With @p stablePolls > 1 the condition must hold on that many consecutive
+    /// polls, 20 ms apart, so events queued in between are processed too.
+    void pollUntil(std::function<bool()> condition,
+                   int timeoutMs,
+                   std::function<void(bool, qint64)> done,
+                   int stablePolls = 1);
 
     TestControlInputInjector *m_injector;
 };

@@ -22,6 +22,7 @@ struct Recorded {
     Qt::MouseEventSource source = Qt::MouseEventNotSynthesized;
     quint64 timestamp = 0;
     bool toApplication = false;
+    bool spontaneous = false;
 };
 
 class RecordingWidget : public QWidget
@@ -43,7 +44,9 @@ protected:
                            mouse->buttons(),
                            -1.0,
                            mouse->source(),
-                           mouse->timestamp()});
+                           mouse->timestamp(),
+                           false,
+                           event->spontaneous()});
             event->accept();
             return true;
         }
@@ -57,7 +60,9 @@ protected:
                            tablet->buttons(),
                            tablet->pressure(),
                            Qt::MouseEventNotSynthesized,
-                           tablet->timestamp()});
+                           tablet->timestamp(),
+                           false,
+                           event->spontaneous()});
             event->accept();
             return true;
         }
@@ -168,6 +173,8 @@ void TestControlInputInjectorTest::testMouseStroke()
     QCOMPARE(e[3].position, QPointF(30, 20));
     for (const Recorded &recorded : e) {
         QCOMPARE(recorded.source, Qt::MouseEventNotSynthesized);
+        // Tools cancel shapes on non-spontaneous releases.
+        QVERIFY(recorded.spontaneous);
     }
     QCOMPARE(e[1].timestamp - e[0].timestamp, quint64(30));
     QCOMPARE(e[2].timestamp - e[0].timestamp, quint64(60));
@@ -194,28 +201,39 @@ void TestControlInputInjectorTest::testTabletStroke()
                         });
     QTRY_VERIFY(finished);
     QVERIFY(report.error.isEmpty());
-    QCOMPARE(report.eventsSent, 8);
+    QCOMPARE(report.eventsSent, 9);
+    QVERIFY2(report.durationMs >= TestControlInputInjector::HoverSettleMs,
+             qPrintable(QString::number(report.durationMs)));
 
     QCOMPARE(proximity.size(), 2);
     QCOMPARE(proximity[0].type, QEvent::TabletEnterProximity);
     QCOMPARE(proximity[1].type, QEvent::TabletLeaveProximity);
 
     const QVector<Recorded> &e = widget.events;
-    QCOMPARE(e.size(), 6);
-    QCOMPARE(e[0].type, QEvent::TabletPress);
-    QCOMPARE(e[0].pressure, 0.2);
-    QCOMPARE(e[1].type, QEvent::MouseButtonPress);
-    QCOMPARE(e[1].source, Qt::MouseEventSynthesizedBySystem);
-    QCOMPARE(e[2].type, QEvent::TabletMove);
-    QCOMPARE(e[2].pressure, 0.6);
-    QCOMPARE(e[2].buttons, Qt::MouseButtons(Qt::LeftButton));
+    QCOMPARE(e.size(), 7);
+    // The hover move switches Krita to the stylus before the press.
+    QCOMPARE(e[0].type, QEvent::TabletMove);
+    QCOMPARE(e[0].position, QPointF(10, 10));
+    QCOMPARE(e[0].pressure, 0.0);
+    QCOMPARE(e[0].buttons, Qt::MouseButtons(Qt::NoButton));
+    QCOMPARE(e[1].type, QEvent::TabletPress);
+    QCOMPARE(e[1].pressure, 0.2);
+    QCOMPARE(e[1].timestamp - e[0].timestamp, quint64(TestControlInputInjector::HoverSettleMs));
+    QCOMPARE(e[2].type, QEvent::MouseButtonPress);
+    QCOMPARE(e[2].source, Qt::MouseEventSynthesizedBySystem);
     QCOMPARE(e[3].type, QEvent::TabletMove);
-    QCOMPARE(e[3].pressure, 1.0);
-    QCOMPARE(e[4].type, QEvent::TabletRelease);
-    QCOMPARE(e[4].pressure, 0.0);
-    QCOMPARE(e[4].buttons, Qt::MouseButtons(Qt::NoButton));
-    QCOMPARE(e[5].type, QEvent::MouseButtonRelease);
-    QCOMPARE(e[5].source, Qt::MouseEventSynthesizedBySystem);
+    QCOMPARE(e[3].pressure, 0.6);
+    QCOMPARE(e[3].buttons, Qt::MouseButtons(Qt::LeftButton));
+    QCOMPARE(e[4].type, QEvent::TabletMove);
+    QCOMPARE(e[4].pressure, 1.0);
+    QCOMPARE(e[5].type, QEvent::TabletRelease);
+    QCOMPARE(e[5].pressure, 0.0);
+    QCOMPARE(e[5].buttons, Qt::MouseButtons(Qt::NoButton));
+    QCOMPARE(e[6].type, QEvent::MouseButtonRelease);
+    QCOMPARE(e[6].source, Qt::MouseEventSynthesizedBySystem);
+    for (const Recorded &recorded : e) {
+        QVERIFY(recorded.spontaneous);
+    }
 }
 
 void TestControlInputInjectorTest::testRealtimeTiming()

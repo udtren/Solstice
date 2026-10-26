@@ -20,17 +20,23 @@
 class QPointingDevice;
 
 /**
- * Plays one synthetic pointer stroke into a widget with
- * QCoreApplication::sendEvent(), so the widget's event filters (Krita's
- * KisInputManager on the canvas) see it like device input.
+ * Plays one synthetic pointer stroke into a widget, so the widget's event
+ * filters (Krita's KisInputManager on the canvas) see it like device input.
+ * The events are marked spontaneous and delivered through
+ * QCoreApplication::notify(), as QTest does: tools cancel a shape on a
+ * non-spontaneous release, and sendEvent() clears the flag in Qt 6.
  *
  * Mouse: press, moves, release.
- * Tablet: TabletEnterProximity (to the application), TabletPress, a
- * system-synthesized mouse press, TabletMoves, TabletRelease and
- * TabletLeaveProximity. The synthesized press stands for the one Windows
- * generates after a pen press: KisInputManager eats exactly one mouse press
- * after each TabletPress (EventEater::peckish), and without it the next real
- * mouse stroke would lose its press. Leaving proximity restores mouse input.
+ * Tablet: TabletEnterProximity (to the application), one hover TabletMove at
+ * the first point, TabletPress after HoverSettleMs, a system-synthesized
+ * mouse press, TabletMoves, TabletRelease and TabletLeaveProximity. The hover
+ * move lets KoToolProxy switch the canvas to the stylus before the press, as
+ * a real pen's approach does; the first stylus event on a canvas creates new
+ * tool instances, which ends a stroke that has already started. The
+ * synthesized press stands for the one Windows generates after a pen press:
+ * KisInputManager eats exactly one mouse press after each TabletPress
+ * (EventEater::peckish), and without it the next real mouse stroke would lose
+ * its press. Leaving proximity restores mouse input.
  *
  * In real-time mode each point is sent at its time offset; otherwise the
  * events are sent from consecutive event-loop iterations. Positions are in
@@ -65,6 +71,11 @@ public:
 
     using Done = std::function<void(const Report &report)>;
 
+    /// Time between the hover move and the press of a tablet stroke. Longer
+    /// than KisInputManager's move compression (tabletEventsDelay, 10 ms by
+    /// default), which a press would otherwise discard.
+    static constexpr qint64 HoverSettleMs = 50;
+
     explicit TestControlInputInjector(QObject *parent = nullptr);
     ~TestControlInputInjector() override;
 
@@ -87,8 +98,13 @@ private:
         int pointIndex;
         /// Mouse event sent with Qt::MouseEventSynthesizedBySystem.
         bool synthesizedMouse = false;
+        /// Tablet move without buttons or pressure, before the press.
+        bool hover = false;
     };
 
+    /// Time offset of @p step: tablet steps after the hover move are
+    /// shifted by HoverSettleMs.
+    qint64 stepOffsetMs(const Step &step) const;
     void scheduleNext();
     void sendStep(const Step &step);
     void finish(const QString &error);

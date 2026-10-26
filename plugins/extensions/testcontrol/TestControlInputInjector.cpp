@@ -9,8 +9,24 @@
 #include <QMouseEvent>
 #include <QPointingDevice>
 #include <QTabletEvent>
+#include <QtTest/qtestspontaneevent.h>
 
 #include <algorithm>
+
+namespace
+{
+// Tools treat a non-spontaneous release as a cancellation (for example
+// KisToolRectangleBase and KisToolOutlineBase, which cannot tell it from the
+// release sent when the canvas loses focus). Mark the events as coming from
+// the window system, as QTest does; the header is inline only, so the plugin
+// does not link QtTest. Deliver through notify() like QTest:
+// QCoreApplication::sendEvent() clears the spontaneous flag in Qt 6.
+bool sendSpontaneous(QObject *receiver, QEvent *event)
+{
+    QSpontaneKeyEvent::setSpontaneous(event);
+    return QCoreApplication::instance()->notify(receiver, event);
+}
+} // namespace
 
 TestControlInputInjector::TestControlInputInjector(QObject *parent)
     : QObject(parent)
@@ -97,6 +113,7 @@ void TestControlInputInjector::playStroke(QWidget *target,
         m_steps.append({QEvent::MouseButtonRelease, last});
     } else {
         m_steps.append({QEvent::TabletEnterProximity, 0});
+        m_steps.append({QEvent::TabletMove, 0, false, true});
         m_steps.append({QEvent::TabletPress, 0});
         m_steps.append({QEvent::MouseButtonPress, 0, true});
         for (int i = 1; i <= last; ++i) {
@@ -114,6 +131,14 @@ void TestControlInputInjector::playStroke(QWidget *target,
     scheduleNext();
 }
 
+qint64 TestControlInputInjector::stepOffsetMs(const Step &step) const
+{
+    if (m_device != Device::Tablet || step.hover || step.type == QEvent::TabletEnterProximity) {
+        return 0;
+    }
+    return HoverSettleMs;
+}
+
 void TestControlInputInjector::scheduleNext()
 {
     if (m_nextStep >= m_steps.size()) {
@@ -121,11 +146,15 @@ void TestControlInputInjector::scheduleNext()
         return;
     }
 
-    qint64 delay = 0;
+    const Step &step = m_steps[m_nextStep];
+    qint64 due = -1;
     if (m_realtime) {
-        const qint64 due = m_startMs + m_points[m_steps[m_nextStep].pointIndex].timeMs;
-        delay = std::max<qint64>(0, due - m_clock.elapsed());
+        due = m_startMs + stepOffsetMs(step) + m_points[step.pointIndex].timeMs;
+    } else if (m_nextStep > 0 && m_steps[m_nextStep - 1].hover) {
+        // Without real time, only the press after the hover move waits.
+        due = m_startMs + HoverSettleMs;
     }
+    const qint64 delay = due < 0 ? 0 : std::max<qint64>(0, due - m_clock.elapsed());
     m_timer.start(int(delay));
 }
 
@@ -134,12 +163,13 @@ void TestControlInputInjector::sendStep(const Step &step)
     const Point &point = m_points[step.pointIndex];
     const QPointF global = m_target->mapToGlobal(point.position);
     const QPointF scene = m_target->window() ? m_target->window()->mapFromGlobal(global) : point.position;
-    const ulong timestamp = m_timestampBase + ulong(point.timeMs);
+    const ulong timestamp = m_timestampBase + ulong(stepOffsetMs(step) + point.timeMs);
 
     const bool isPress = step.type == QEvent::MouseButtonPress || step.type == QEvent::TabletPress;
     const bool isRelease = step.type == QEvent::MouseButtonRelease || step.type == QEvent::TabletRelease;
     const Qt::MouseButton button = (isPress || isRelease) ? m_button : Qt::NoButton;
-    const Qt::MouseButtons buttons = isRelease ? Qt::MouseButtons(Qt::NoButton) : Qt::MouseButtons(m_button);
+    const Qt::MouseButtons buttons =
+        (isRelease || step.hover) ? Qt::MouseButtons(Qt::NoButton) : Qt::MouseButtons(m_button);
 
     switch (step.type) {
     case QEvent::MouseButtonPress:
@@ -154,7 +184,7 @@ void TestControlInputInjector::sendStep(const Step &step)
                           Qt::NoModifier,
                           step.synthesizedMouse ? Qt::MouseEventSynthesizedBySystem : Qt::MouseEventNotSynthesized);
         event.setTimestamp(timestamp);
-        QCoreApplication::sendEvent(m_target, &event);
+        sendSpontaneous(m_target, &event);
         if (!step.synthesizedMouse) {
             if (isPress) {
                 m_report.pressAccepted = event.isAccepted();
@@ -171,7 +201,7 @@ void TestControlInputInjector::sendStep(const Step &step)
                            m_stylus,
                            point.position,
                            global,
-                           isRelease ? 0.0 : point.pressure,
+                           (isRelease || step.hover) ? 0.0 : point.pressure,
                            float(point.xTilt),
                            float(point.yTilt),
                            0.0f,
@@ -181,7 +211,7 @@ void TestControlInputInjector::sendStep(const Step &step)
                            button,
                            buttons);
         event.setTimestamp(timestamp);
-        QCoreApplication::sendEvent(m_target, &event);
+        sendSpontaneous(m_target, &event);
         if (isPress) {
             m_report.pressAccepted = event.isAccepted();
         } else if (isRelease) {
@@ -206,7 +236,7 @@ void TestControlInputInjector::sendStep(const Step &step)
                            Qt::NoButton,
                            Qt::NoButton);
         event.setTimestamp(timestamp);
-        QCoreApplication::sendEvent(QCoreApplication::instance(), &event);
+        sendSpontaneous(QCoreApplication::instance(), &event);
         break;
     }
     default:

@@ -224,7 +224,9 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
         std::bind(&TestControlCanvasTools::inputStroke, this, _1, _2));
 
     server->addTool("wait_idle",
-                    "Wait until the image has no queued or running strokes.",
+                    "Wait until the image has no queued or running strokes and stays idle for three polls "
+                    "20 ms apart, so follow-up work queued to the GUI thread (such as a new selection mask) "
+                    "has run too.",
                     objectSchema({{"timeoutMs", schemaProperty("integer", "Timeout (default 10000, max 120000).")}}),
                     std::bind(&TestControlCanvasTools::waitIdle, this, _1, _2));
 
@@ -503,7 +505,11 @@ void TestControlCanvasTools::waitIdle(const Arguments &arguments, const Reply &r
                 reply(TestControlMcpServer::ToolResult::failure("The image did not become idle",
                                                                 {{"idle", false}, {"waitedMs", waitedMs}}));
             }
-        });
+        },
+        // An image that reports idle once can still have work queued to the
+        // GUI thread: a selection made on a document without a global
+        // selection was read as empty in about one of 25 runs.
+        3);
 }
 
 void TestControlCanvasTools::queryState(const Arguments &arguments, const Reply &reply)
@@ -652,25 +658,31 @@ void TestControlCanvasTools::canvasCapture(const Arguments &arguments, const Rep
 
 void TestControlCanvasTools::pollUntil(std::function<bool()> condition,
                                        int timeoutMs,
-                                       std::function<void(bool, qint64)> done)
+                                       std::function<void(bool, qint64)> done,
+                                       int stablePolls)
 {
     QElapsedTimer clock;
     clock.start();
-    if (condition()) {
+    int satisfiedPolls = condition() ? 1 : 0;
+    if (satisfiedPolls >= stablePolls) {
         done(true, 0);
         return;
     }
 
     QTimer *timer = new QTimer(this);
     timer->setInterval(20);
-    connect(timer, &QTimer::timeout, this, [timer, clock, condition, timeoutMs, done]() {
-        const bool satisfied = condition();
-        if (!satisfied && clock.elapsed() < timeoutMs) {
-            return;
-        }
-        timer->stop();
-        timer->deleteLater();
-        done(satisfied, clock.elapsed());
-    });
+    connect(timer,
+            &QTimer::timeout,
+            this,
+            [timer, clock, condition, timeoutMs, done, stablePolls, satisfiedPolls]() mutable {
+                satisfiedPolls = condition() ? satisfiedPolls + 1 : 0;
+                const bool satisfied = satisfiedPolls >= stablePolls;
+                if (!satisfied && clock.elapsed() < timeoutMs) {
+                    return;
+                }
+                timer->stop();
+                timer->deleteLater();
+                done(satisfied, clock.elapsed());
+            });
     timer->start();
 }
