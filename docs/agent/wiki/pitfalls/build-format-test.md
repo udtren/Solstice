@@ -1,6 +1,6 @@
 ---
 type: pitfall
-updated: 2026-10-24
+updated: 2026-10-26
 sources:
   - "docs/agent/quick-access.md (\"Icon item span regression checks\", 2026-10-24)"
   - docs/agent/coding-rules.md ("Formatting and diffs")
@@ -9,6 +9,7 @@ sources:
   - experience from the 2026-10 sessions (Quick Access, docker locks, GPU Liquify)
   - docs/agent/remove-dust.md (2026-10-21, KisDustDetector, KisRemoveDustFilterTest, KisToolRemoveDust)
   - docs/agent/lazy-tools.md (2026-10-24, Fast Image Export Name, Export Region and registered folders, KisLazyToolsTest)
+  - docs/agent/test-control.md (2026-10-26, TestControlCanvasTools syntax check)
 related:
   - ../concepts/cpu-gpu-bit-parity.md
 ---
@@ -94,7 +95,17 @@ wrong anyway.
 - **Copied `KisSharedPtr` captures are const in a lambda.** Calling
   `setDirty()` or `invalidateOutlineCache()` on a node or selection captured
   by `[=]` does not compile. Mark `KisCommandUtils::LambdaCommand` lambdas
-  `mutable`, as `KisToolSelectContiguous` does.
+  `mutable`, as `KisToolSelectContiguous` does. The same applies to a
+  copied `KisImageSP` whose non-const methods (`isIdle()`) the lambda calls.
+- **`cond ? viewManager->image() : KisImageSP()` is ambiguous.**
+  `KisViewManager::image()` returns `KisImageWSP`, and `KisImageSP` and
+  `KisImageWSP` convert to each other, so the conditional has no common
+  type. Assign in an `if` instead (`TestControlCanvasTools`).
+- **A free helper named like a `QObject` member is hidden inside member
+  functions.** A namespace-scope `property(type, description)` helper was
+  shadowed by `QObject::property(const char *)` in a `QObject` subclass's
+  methods ("no matching function"). Give helpers names that no `QObject`
+  member has (`schemaProperty()`).
 
 ## Tests
 

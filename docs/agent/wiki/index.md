@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-25
+updated: 2026-10-26
 ---
 
 # Agent wiki
@@ -139,6 +139,10 @@ Document ownership and lifecycle are defined in
   thumbnails, Overview and Histogram idle tasks wait until no stroke is open;
   Duplicate Layer's node juggler kept the new layer's thumbnail empty for
   about 4.5 s (now a provisional worker-thread thumbnail).
+- [Synthetic canvas input](pitfalls/synthetic-canvas-input.md): events
+  reach the input manager only on its current canvas widget; a pen press
+  eats the next mouse press and blocks mouse input until proximity leaves;
+  modifiers are resynced from the physical keyboard.
 - [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md):
   filter and fill layers and masks report `nodeColorSpace()` as GrayA, which
   turns `KisVisualColorSelector` into one lightness bar (HueSVC).

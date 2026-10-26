@@ -32,6 +32,8 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
   and regression contracts; [G'MIC](gmic.md) owns its runtime, bridge and packaging.
 - [Illustration filters](illustration-filters.md) owns the five filters' persisted
   controls, shared CPU primitives, UI lifetime and outstanding verification.
+- [Test control](test-control.md) owns the MCP endpoint, its tools, input
+  injection and the phase 0 checks.
 - [Feature inventory](feature-inventory.md) maps custom source locations.
   It is not a progress tracker.
 - Feature references linked from AGENTS own current behavior, compatibility,
@@ -44,9 +46,9 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 
 ## Proposed plans
 
-- [UI test automation through MCP](ui-automation-plan.md): proposal for a
-  native test control plugin and an MCP bridge that drive real canvas input
-  and check state and pixels; awaiting the user's decisions, not implemented.
+- [UI test automation through MCP](ui-automation-plan.md): user decisions,
+  determinism risks and phases 1-5; phase 0 is implemented and maintained in
+  [Test control](test-control.md).
 
 ## Superseded plans and historical evidence
 

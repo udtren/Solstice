@@ -1832,3 +1832,24 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the input manager and tools, so it cannot test tool behavior; the
   single-instance check in `krita/main.cc` ignores `SOLSTICE_PROFILE_ROOT`,
   so a test launch while Solstice runs hands its arguments to that instance.
+
+## 2026-10-26 feature: test control phase 0
+
+- The user decided the plan's open questions (ship the plugin, MCP inside
+  Solstice, hashes and state in the repository, scenarios next to feature
+  tests, no second instance by operation) and authorized phase 0 only.
+  Recorded in the [plan](../ui-automation-plan.md).
+- Implemented `plugins/extensions/testcontrol/`: an application plugin that
+  serves MCP Streamable HTTP on `127.0.0.1` with a mandatory token when
+  `SOLSTICE_TEST_CONTROL_PORT`/`_TOKEN` are set, eight tools and synthetic
+  mouse/tablet strokes through the canvas input manager. Maintained in
+  [Test control](../test-control.md); user guide `docs/test-control.md`.
+- Verified only in the cloud container: protocol and injector tests against
+  Qt 6.4.2 outside Krita's build, a syntax check of all sources against the
+  repository headers with stubs, and the MCP TypeScript SDK client against a
+  standalone server. Not built in `_build` or run in Solstice; the phase 0
+  manual checks were handed to the user.
+- Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md)
+  (receiver, eaten pen press, keyboard-resynced modifiers); two C++ pitfalls
+  added to [build pitfalls](pitfalls/build-format-test.md) (SP/WSP
+  conditional, `QObject::property` hiding a helper).

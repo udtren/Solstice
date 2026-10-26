@@ -1,12 +1,12 @@
 # UI test automation through MCP - plan
 
-Status (2026-10-26): proposal only. The user asked whether interactive tests
-(painting with a brush, operating selection tools) could be automated through
-a new MCP server driven by an LLM, then asked for this plan. Nothing here is
-implemented, built or authorized for implementation yet; the
-[open decisions](#open-decisions-for-the-user) need the user's answers first.
-When work starts, the maintained reference becomes `docs/agent/ui-automation.md`
-(see [Documentation when implemented](#documentation-when-implemented)).
+Status (2026-10-26): the user answered the plan's open decisions and
+authorized phase 0 only ([decisions](#user-decisions-2026-10-26)). Phase 0
+is implemented as the test control plugin; its maintained reference is
+[Test control](test-control.md), which owns the current protocol, lifecycle,
+verification status and the phase 0 manual checks. Phase 0 is not yet built
+or run in Solstice. Phases 1-5 below are proposals and need the user's
+go-ahead after the phase 0 checks.
 
 ## Goal
 
@@ -27,6 +27,24 @@ Non-goals:
   a test harness with a narrow command set.
 - CI execution in the first phases (see [Phase 5](#phase-5-optional-ci)).
 
+## User decisions (2026-10-26)
+
+| Question | Decision |
+| --- | --- |
+| Distribution | Ship the plugin in release packages; it stays inert unless enabled by environment variables. |
+| MCP server | Inside Solstice (option D below), not an external bridge. |
+| Expectations | Hashes and state in the repository; reference images only where tolerance comparison needs them, kept small. |
+| Scenario files | Next to each feature's tests. |
+| Second running instance | Handled by operation: no other Solstice may run during a test session; no `krita/main.cc` change. |
+| Scope | Phase 0 only. |
+
+Consequences for the design: with MCP in-process, the transport is MCP
+Streamable HTTP on `127.0.0.1` instead of a named pipe to a bridge. Because
+the plugin ships and a loopback TCP port is reachable by every local
+process, a bearer token is mandatory, and Host/Origin checks block browser
+pages (DNS rebinding). Launching Solstice with a scratch profile is a manual
+step described in the [user guide](../test-control.md).
+
 ## Current test assets
 
 | Asset | What it covers | Limit |
@@ -45,127 +63,67 @@ application ([GitHub Actions](github-actions.md)).
 | --- | --- |
 | A. Screen-level control (screenshots plus OS clicks, e.g. computer use in the Claude desktop app, or pywinauto) | Available today without code. Breaks with window layout, theme, scale and timing; no pressure or tilt; results are judged from pixels on screen. Useful for occasional exploratory checks, not for regression gates. |
 | B. libkis scripting (`Node::paintLine()`/`paintPath()` in `libs/libkis/Node.cpp`, `Document::setSelection()`) | Paints through the brush engine but bypasses the input manager, the tool and its options, so tool regressions are not covered. Selection tools cannot be operated. New Python features are also against the project rule in [Codebase map](codebase-map.md). |
-| **C. Native test control plugin plus an external MCP bridge (proposed)** | Synthetic Qt input events enter the canvas through `KisInputManager::eventFilter()` (`libs/ui/input/kis_input_manager.cpp`), so the shortcut matcher, the active tool, stroke scheduling and rendering are all exercised. State and pixels are read from the image directly. |
-| D. MCP server inside Solstice (HTTP/SSE in the plugin) | Fewer processes, but puts a JSON-RPC/MCP implementation and its protocol updates into a native module. Kept as an alternative; see decision 2. |
+| C. Native test control plugin plus an external MCP bridge | Originally proposed; superseded by D (user decision). |
+| **D. Native test control plugin serving MCP itself (chosen)** | Synthetic Qt input events enter the canvas through `KisInputManager::eventFilter()` (`libs/ui/input/kis_input_manager.cpp`), so the shortcut matcher, the active tool, stroke scheduling and rendering are all exercised. State and pixels are read from the image directly. No second process to install. |
 
-## Proposed architecture
+## Architecture
 
 ```text
-LLM client (Claude Code, MCP over stdio)      scenario runner (no LLM)
-            \                                   /
-             v                                 v
-        MCP bridge  (dev-tools/test-control/, outside the application)
-                    |  local socket: QLocalServer (named pipe on Windows),
-                    |  newline-delimited JSON-RPC 2.0
-                    v
-        Solstice process
-          plugins/extensions/testcontrol/  (Krita/ViewPlugin)
-            - inert unless SOLSTICE_TEST_CONTROL is set
-            - command dispatcher on the GUI thread
-            - input injector -> canvas widget -> KisInputManager -> tool
-            - state/pixel queries through KisImage, KisSelectionManager, ...
+LLM client (Claude Code)          scenario runner (phase 2, no LLM)
+            \                        /
+             v                      v
+   MCP Streamable HTTP, http://127.0.0.1:<port>/mcp, bearer token
+             |
+   Solstice process: plugins/extensions/testcontrol/ (Krita/ApplicationPlugin)
+     - inert unless SOLSTICE_TEST_CONTROL_PORT and _TOKEN are set
+     - HTTP endpoint and MCP handling on the GUI thread, calls serialized
+     - input injector -> canvas widget -> KisInputManager -> tool
+     - state/pixel queries through KisImage, KisSelection, undo stack
 ```
 
-### Native plugin
+The phase 0 implementation, tool list, lifecycle, security checks and input
+event sequences are documented in [Test control](test-control.md); that page
+wins where this plan's earlier text differs.
 
-- Location `plugins/extensions/testcontrol/`, following the view-plugin recipe
-  in [Extension points](extension-points.md#view-plugin--menu-command-pluginsextensions-kritaviewplugin).
-  No changes to `libs/ui` are expected for the first phases; add touch points
-  to [the feature inventory](feature-inventory.md) if that changes.
-- Activation: if the environment variable `SOLSTICE_TEST_CONTROL` (the pipe
-  name) is absent, the plugin creates no server and no actions. This mirrors
-  how `KRITA_PAINT_TRACE` is read once (`KisPaintTrace::enabled()`).
-- Lifecycle: `KisActionPlugin` is created per view manager, so one window
-  would otherwise start one server each. A process-wide server object is
-  created by the first plugin instance once a main window exists, never in a
-  plugin constructor before a view manager exists (the `KisActionPlugin.cpp`
-  `m_viewManager` assertion recorded in `AGENTS.md`). It is destroyed on
-  `QCoreApplication::aboutToQuit`. Commands resolve the active window and view
-  at call time and fail cleanly when there is none.
-- Threading: socket I/O and command execution run on the GUI thread. Long
-  waits (`image.wait_idle`) are asynchronous (timer polling), never a nested
-  blocking loop that could reorder input.
-- Access: `QLocalServer::UserAccessOption`, one client at a time. No command
-  evaluates code; file commands accept paths only inside a test root given at
-  launch.
+### Planned additions (phases 1-3)
 
-### Input injection
-
-- Mouse: `QMouseEvent` press/move/release sent to the canvas widget with
-  `QCoreApplication::sendEvent()`, with explicit buttons and modifiers.
-- Tablet: `QTabletEvent` with pressure, tilt and rotation. Qt 6 requires a
-  `QPointingDevice`; the plugin registers its own stylus device. Whether the
-  tool and `KisPaintingInformationBuilder` accept it unchanged is the main
-  [phase 0](#phase-0-feasibility-spike) question.
-- Timing: each point carries a timestamp. The default mode dispatches moves on
-  a timer at those times, so `compressMoveEventCommon()` and stroke scheduling
-  see realistic spacing. A fast mode sends them back to back for logic-only
-  scenarios.
-- Coordinates: commands take image coordinates by default and convert them
-  with the canvas `KisCoordinatesConverter`; widget coordinates are allowed for
-  canvas decorations and handles.
-- Keys: actions are triggered by name through `KisActionManager::actionByName()`.
-  Raw key events are used only for modifier state and tool-local keys, since
-  shortcut dispatch also depends on focus and the active window.
-
-### Command set (protocol version 1, draft)
-
-| Group | Commands |
+| Group | Additions |
 | --- | --- |
-| Session | `session.info` (versions, GPU modes, active window), `session.reset_view` (window geometry, zoom 100 %, rotation 0, no mirror) |
-| Document | `document.new` (size, color model/depth, resolution), `document.open`, `document.export_png`, `document.close` (discard) |
-| Tools | `tool.activate` (factory ID, e.g. `KritaShape/KisToolBrush`, `KisToolSelectRectangular`), `tool.set_brush` (preset name, size, opacity), `tool.set_option` (named options for the tools covered) |
-| Input | `input.stroke` (points `{x, y, pressure, tilt, t}`, device mouse/tablet, button, modifiers), `input.click`, `input.drag`, `input.key` |
-| Actions | `action.trigger` (action name), `edit.undo`, `edit.redo` |
-| Sync | `image.wait_idle` (wraps `KisImage::isIdle()`/`waitForDone()`, with a timeout) |
-| Queries | `query.layers`, `query.selection` (bounds, pixel count, hash), `query.pixels` (rect: hash, optional small PNG), `query.undo` (count, top command text), `query.tool` (active tool ID) |
-| Diagnostics | `capture.canvas` (widget image, for the LLM and failure reports), `log.drain` (warnings and safe-assert messages since the last call) |
-
-Each response carries the result, elapsed time and any warnings logged while
-the command ran.
-
-### MCP bridge and scenario runner
-
-- `dev-tools/test-control/`: a small stdio MCP server that maps MCP tools one
-  to one onto the protocol commands, plus `launch` and `shutdown`. Python
-  matches the existing `dev-tools/docs` tooling; the "no new Python features"
-  rule concerns application features, but the language is decision 2.
-- `launch` starts `<krita-dev-root>\_install\bin\krita.exe` with
-  `SOLSTICE_TEST_CONTROL`, a scratch `SOLSTICE_PROFILE_ROOT` (never the user's
-  profile, see [Settings location](settings-location.md)) and the GPU mode
-  variables (`KRITA_GPU_PROJECTION`, `KRITA_GPU_BRUSH`) when a scenario asks
-  for them. It must refuse to start while another Solstice process is running:
-  the single-instance check in `krita/main.cc` is not keyed by the profile
-  root, so a second launch hands its arguments to the running instance and
-  exits. It never terminates a Solstice process it did not start (rule in
-  `AGENTS.md`).
-- The scenario runner replays scenario files through the same protocol
-  without an LLM and writes a report (pass/fail per step, diffs, captures).
+| Session | `view_reset` (window geometry, zoom 100 %, rotation 0, no mirror) |
+| Document | `document_open`, `document_export_png`, `document_close` (discard), paths restricted to a test root given at launch |
+| Tools | `brush_set` (preset by name, size, opacity), named tool options for covered tools |
+| Input | modifier keys with key events and canvas focus; `input_click`, `input_drag` conveniences |
+| Queries | `query_pixels` (rect hash, optional small PNG), `query_layers` |
+| Diagnostics | `log_drain` (warnings and safe-assert messages since the last call) |
+| Widgets | `ui_click` by object name, for dockers such as Quick Access |
 
 ### Scenarios and expectations
 
-A scenario is a JSON file: setup (document, tool, preset), steps (protocol
-commands) and expectations. Expectations prefer state over pixels:
+A scenario is a JSON file next to the feature's tests (user decision):
+setup (document, tool, preset), steps (tool calls) and expectations. The
+runner (phase 2) replays it through the same endpoint without an LLM and
+writes a report. Expectations prefer state over pixels:
 
 1. State: active tool, undo count and top command, layer list, selection bounds
    and pixel count.
-2. Pixels: a hash of a rectangle for exact (CPU) paths; for GPU paths and
-   filters with known tolerance, a maximum per-channel difference and a
-   mismatch-pixel limit against a reference image
-   ([CPU/GPU parity](wiki/concepts/cpu-gpu-bit-parity.md) says which rule
-   applies).
+2. Pixels: a hash of a rectangle for exact (CPU) paths, stored in the
+   repository; for GPU paths and filters with known tolerance, a maximum
+   per-channel difference and a mismatch-pixel limit against a small
+   reference image ([CPU/GPU parity](wiki/concepts/cpu-gpu-bit-parity.md)
+   says which rule applies).
 
 ## Determinism risks
 
 | Risk | Mitigation |
 | --- | --- |
-| Asynchronous strokes and idle tasks | Every step that changes the image is followed by `image.wait_idle`; idle tasks can lag by seconds after node-juggler strokes ([pitfall](wiki/pitfalls/idle-tasks-wait-for-open-strokes.md)) |
-| View transform and window geometry | `session.reset_view` before each scenario; image coordinates in scenarios |
+| Asynchronous strokes and idle tasks | Every step that changes the image is followed by `wait_idle`; idle tasks can lag by seconds after node-juggler strokes ([pitfall](wiki/pitfalls/idle-tasks-wait-for-open-strokes.md)) |
+| View transform and window geometry | `view_reset` before each scenario (phase 1); image coordinates in scenarios |
 | Smoothing, stabilizer and unsaved preset edits | Scratch profile with fixed settings; presets set by name at scenario start |
 | Brush randomness | Check per-stroke seeding (`KisPerStrokeRandomSource`); scenarios avoid random-dependent assertions until verified |
 | Input profile bindings | Use the default profile in the scratch root; modifiers follow `kritadefault.profile` ([Transform Tool input pitfall](wiki/pitfalls/transform-tool-input.md)) |
+| Real keyboard and pen state | The input manager resyncs modifiers from the real keyboard ([synthetic input pitfall](wiki/pitfalls/synthetic-canvas-input.md)); keep hands off during runs |
 | GPU differences | Separate expectations per GPU mode; tolerance comparison, never inferring GPU composition from the requested mode |
-| Focus-dependent behavior | Phase 0 records which behaviors need real window focus; those scenarios run with the test window raised, or stay manual |
+| Focus-dependent behavior | Phase 0 check 10 records whether strokes need window focus |
 
 ## What stays manual
 
@@ -183,35 +141,31 @@ commands) and expectations. Expectations prefer state over pixels:
 
 ### Phase 0: feasibility spike
 
-- Plugin skeleton, environment gate, process-wide `QLocalServer`, `session.info`.
-- One synthetic mouse stroke and one synthetic tablet stroke with pressure
-  through the brush tool; verify that the stroke is created, pressure reaches
-  the paint information, and undo has one step.
-- One rectangular selection by drag; read its bounds.
-- Record which events or checks need real focus.
-- Exit: a short report in this plan (results, blockers) and the user's go/no-go.
+Implemented 2026-10-26 (not yet built or run in Solstice): plugin skeleton,
+environment gate, MCP endpoint, `session_info`, `document_new`,
+`tool_activate`, mouse and tablet `input_stroke`, `wait_idle`,
+`query_state`, `action_trigger`, `canvas_capture`. Exit: the user runs the
+[phase 0 checks](test-control.md#manual-regression-checklist), the results
+are recorded in the reference, and the user decides on phase 1.
 
-### Phase 1: minimum protocol and bridge
+### Phase 1: minimum protocol
 
-- Commands: document new/export/close, tool activate, brush preset and size,
-  stroke/click/drag, action trigger, undo/redo, wait idle, layer/selection/
-  pixel/undo queries, canvas capture.
-- MCP bridge with `launch`/`shutdown` and scratch profile handling.
+- The planned additions for documents, view reset, brush presets and
+  modifiers; document paths restricted to a test root.
 - Three scenarios: brush stroke then undo; rectangular selection then fill
   inside it; eraser stroke over a painted area.
 
 ### Phase 2: scenario runner and expectations
 
-- Runner, report format, expectation storage (decision 3), tolerance compare.
-- Plugin unit tests for parsing and coordinate conversion (`kis_add_tests`).
+- Runner, report format, expectation storage in the repository, tolerance
+  compare.
 
 ### Phase 3: tool and feature coverage
 
 - Selection tools (rectangle, ellipse, polygon, freehand, contiguous) and
   selection modifiers; Transform Tool including Puppet Warp checklist items
   that are state-checkable (pin count, undo steps, applied pixels); Lazy Tools
-  and Quick Access interactions where widget commands are needed
-  (`ui.click` by object name would be a protocol addition).
+  and Quick Access interactions through `ui_click`.
 - Convert each feature's checklist items that state and pixels can decide; mark
   the rest as manual in the feature document.
 
@@ -226,34 +180,3 @@ commands) and expectations. Expectations prefer state over pixels:
 - Hosted Windows runners have no GPU and CI builds without tests. Running the
   harness there (software OpenGL, CPU paths only) is a separate decision after
   local use proves stable.
-
-## Open decisions for the user
-
-1. **Distribution:** build and ship the plugin in release packages (inert
-   without the environment variable), or build it only in development builds
-   with a CMake option such as `SOLSTICE_BUILD_TEST_CONTROL` (default off in
-   packaging)? Proposed: development builds only.
-2. **Bridge:** external bridge in Python under `dev-tools/test-control/`
-   (proposed), external bridge in another language, or MCP directly inside the
-   plugin (option D)?
-3. **Expectations storage:** hashes and state in the repository with reference
-   PNGs kept small and only where tolerance comparison needs them (proposed),
-   or reference images outside the repository?
-4. **Scenarios in the repository:** keep scenario files next to each feature's
-   tests (proposed), or in one `tests/ui-scenarios/` tree?
-5. **Single-instance handling:** require that no other Solstice runs during a
-   test session (proposed, no source change), or add a test-mode
-   single-instance key in `krita/main.cc`?
-6. **Start:** approve phase 0 only, or phases 0 to 2 together?
-
-## Documentation when implemented
-
-- `docs/agent/ui-automation.md`: maintained reference (protocol, lifecycle,
-  launch rules, scenario format, determinism rules, verification status); this
-  plan then points to it and keeps only history and unresolved scope.
-- `AGENTS.md` technical index entry and [feature inventory](feature-inventory.md)
-  touch points.
-- [Development workflow](development-workflow.md): how to run scenarios before
-  the hand-off, and which manual checks they replace.
-- No user guide under `docs/` while the feature is development-only
-  (decision 1); add one if it ships to users.
