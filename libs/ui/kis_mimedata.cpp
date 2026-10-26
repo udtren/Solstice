@@ -340,6 +340,10 @@ QVariant KisMimeData::retrieveData(const QString &mimetype, QMetaType preferredT
             doc->setCurrentImage(image, false);
 
             result = doc->serializeToNativeByteArray();
+
+            // avoid a sanity check failure caused by the fact that the image outlives
+            // the document (serializeToNativeByteArray() keeps it in savingImage)
+            doc->setCurrentImage(nullptr);
         }
 
         return result;
