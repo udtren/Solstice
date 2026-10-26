@@ -1,6 +1,6 @@
 ---
 type: decision
-updated: 2026-10-19
+updated: 2026-10-26
 sources:
   - AGENTS.md ("Branch policy")
   - docs/agent/upstream-intake.md
@@ -47,6 +47,17 @@ still fixes crashes and file-format issues that Solstice shares.
   allowed) is in `AGENTS.md`, "Commit authorship and Contributors".
   The helper on the share does not do this step; the amend command is in
   [upstream-intake.md](../../upstream-intake.md), step 4.
+- Solstice was created from `krita/6.0`, but most candidates come from
+  `master`. A conflict in a file Solstice never changed means a
+  master-only prerequisite, and it can be a commit the user already
+  rejected: in 2026-W44, `630b6a20d4` (KisClipboard rewrite) conflicted in
+  `kis_custom_brush_widget.cpp` because it builds on U-2026W42-10
+  `6d451f2e9d`. Compare the file at the Solstice snapshot, at the upstream
+  parent and in Solstice before calling a conflict mechanical
+  (`raw.githubusercontent.com/KDE/krita/<sha>/<path>` serves any version,
+  `<sha>~1` the parent).
+- A clean or clean-3way dry run says nothing about compiling against
+  Solstice; see step 5 of [upstream-intake.md](../../upstream-intake.md).
 
 ## Rewrite of `main` (2026-10-19)
 

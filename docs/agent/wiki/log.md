@@ -1776,3 +1776,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - The user asked to merge the HueSVC fix (PR #37) and release it as 0.5.3
   with the website update. Only `PATCH` changes; README marks 0.5.3 as in
   development until the GitHub Release exists.
+
+## 2026-10-26 intake: upstream 2026-W44
+
+- The user accepted the evaluation of the Hermes report 2026-W44 and asked
+  to adopt U-2026W44-03 to -09 (11 upstream commits: palette crashes, PSP
+  palette bounds check, color conversion cache, shape copy-paste, clone-paste
+  of frames, text properties padding, font dropdown autocomplete). Ledger in
+  [upstream-intake.md](../upstream-intake.md); -01, -02 and -11 are held
+  (-01 and -02 for their own PR), the rest rejected.
+- `e09952bcad` needed an adaptation (`reset()` instead of `clear()`); a
+  `krita/6.0` backport carried a `Co-authored-by:` line that was removed.
+  The share was not reachable, so the commits came from the GitHub mirror;
+  the manual procedure is now in step 2 of the intake document.
+- Lessons: master-only prerequisites can be rejected commits, and a clean
+  3-way apply is not proof of compilation
+  ([decision page](decisions/upstream-selective-intake.md)).

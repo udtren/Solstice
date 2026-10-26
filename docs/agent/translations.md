@@ -75,7 +75,7 @@ Implementation notes:
   deflated members), added with `-I` only when the real module is missing.
   `IO::Uncompress::Unzip` cannot read the SeExpr bundle (data descriptors).
 - `xgettext` warns about unterminated strings in
-  `plugins/dockers/textproperties/qml/TextPropertyBase.qml:66,72`; harmless.
+  `plugins/dockers/textproperties/qml/TextPropertyBase.qml:67,73`; harmless.
 - The upstream entry order cannot be reproduced exactly, so the first run
   reordered `po/zh_CN/krita.po` (about 30,000 changed lines, mostly
   movement and reference line numbers). Later runs change only
