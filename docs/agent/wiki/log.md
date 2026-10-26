@@ -1833,8 +1833,20 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `-Wno-missing-prototypes` on visioncpp C++). `kis_clipboard_test`
   passes all 37 cases under Xvfb; the full suite shows no failure that
   `main` does not have too.
-- Not yet verified on Windows: build, `kis_clipboard_test`, copy/paste
-  manual checks.
+- Windows (clang, Qt 6.8): full build passes. `kis_clipboard_test`
+  passes every case, but only when failing rows are rerun alone: the
+  clipboard service makes `OleSetClipboard` fail on random rows in a full
+  run. The user checked copy/paste in the app (before the fix below;
+  closing the app after the fix is not rechecked yet).
+- Fixed on Windows: closing Solstice after a copy showed the
+  `!sanityCheckPointer.isValid()` assert (`KisDocument.cpp`) and kept the
+  clipboard locked. The rewrite's `application/zip` path in
+  `KisMimeData::retrieveData()` deleted its temporary document while
+  `serializeToNativeByteArray()` still held the image in `savingImage`;
+  restored the `setCurrentImage(nullptr)` that `main` had. Windows requests
+  that format after every copy and at exit (`OleFlushClipboard`), Linux
+  without a clipboard manager does not, so the Linux run missed it.
 - Lessons: [build pitfalls](pitfalls/build-format-test.md), "Linux (GCC)
   builds" (LP64 types, clang-only flags, install paths, Xvfb, test memory
-  cap, stale `~/.qttest` data).
+  cap, stale `~/.qttest` data) and "Tests" (assert dialogs, Windows
+  clipboard contention).

@@ -10,6 +10,7 @@ sources:
   - docs/agent/remove-dust.md (2026-10-21, KisDustDetector, KisRemoveDustFilterTest, KisToolRemoveDust)
   - docs/agent/lazy-tools.md (2026-10-24, Fast Image Export Name, Export Region and registered folders, KisLazyToolsTest)
   - first Linux build and test run (2026-10-26, Ubuntu 26.04, GCC 15, Qt 6.10, KF6 6.24, branch claude/clipboard-intake-cross-platform)
+  - Windows run of kis_clipboard_test (2026-10-26, branch claude/clipboard-intake-cross-platform)
 related:
   - ../concepts/cpu-gpu-bit-parity.md
 ---
@@ -109,6 +110,17 @@ wrong anyway.
   this is environmental, not a regression.
 - Do not run the `libs-ui-*` suite through ctest or `kis_kra_saver_test`
   on the desktop session: they open blocking dialogs.
+- **`KRITA_NO_ASSERT_MSG=1` turns assert dialogs into log lines.** Set it
+  before starting a test program run directly; `QT_FORCE_STDERR_LOGGING=1`
+  makes the `SAFE ASSERT` line reach a redirected stderr.
+- **`kis_clipboard_test` collides with other clipboard readers on
+  Windows.** The clipboard service (`cbdhsvc`) and tools such as PowerToys
+  open the clipboard after every change; the test sets it again within
+  milliseconds, so `OleSetClipboard` fails with `0x800401d0`
+  (`CLIPBRD_E_CANT_OPEN`) on random rows. The test then fails or
+  dereferences a null clip and crashes. Rerun a failing row alone
+  (`kis_clipboard_test.exe <function>:<row>`) before treating it as a
+  regression.
 - **A temporary export document must copy the source's batch mode.**
   `KisImportExportManager` asks about the export configuration (a modal
   options dialog) whenever the document is not in batch mode and the filter
