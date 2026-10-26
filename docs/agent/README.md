@@ -42,6 +42,12 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 - [Upstream intake](upstream-intake.md) owns selective patch decisions;
   [Todo](todo.md) holds user-registered work not yet started.
 
+## Proposed plans
+
+- [UI test automation through MCP](ui-automation-plan.md): proposal for a
+  native test control plugin and an MCP bridge that drive real canvas input
+  and check state and pixels; awaiting the user's decisions, not implemented.
+
 ## Superseded plans and historical evidence
 
 | Record | Role / maintained successor |

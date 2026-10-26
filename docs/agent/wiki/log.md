@@ -1818,3 +1818,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   [upstream-intake.md](../upstream-intake.md), "Timing". The addendum for
   `hermes/SKILL.md` was handed to the user, since the share is not
   reachable from the cloud session.
+
+## 2026-10-26 plan: UI test automation through MCP
+
+- The user asked whether interactive tests (brush strokes, selection tools)
+  could be automated by an LLM through a new MCP server, then asked for a
+  plan. Written as [UI test automation plan](../ui-automation-plan.md):
+  a native, environment-gated test control plugin injects Qt input into the
+  canvas and answers state/pixel queries; an external MCP bridge and a
+  scenario runner use the same local protocol. Six decisions await the user.
+- Not built or run (cloud container without Qt).
+- Lessons for the harness: libkis painting (`Node::paintLine()`) bypasses
+  the input manager and tools, so it cannot test tool behavior; the
+  single-instance check in `krita/main.cc` ignores `SOLSTICE_PROFILE_ROOT`,
+  so a test launch while Solstice runs hands its arguments to that instance.
