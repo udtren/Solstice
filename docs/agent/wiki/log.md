@@ -1819,6 +1819,41 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `hermes/SKILL.md` was handed to the user, since the share is not
   reachable from the cloud session.
 
+## 2026-10-26 plan: UI test automation through MCP
+
+- The user asked whether interactive tests (brush strokes, selection tools)
+  could be automated by an LLM through a new MCP server, then asked for a
+  plan. Written as [UI test automation plan](../ui-automation-plan.md):
+  a native, environment-gated test control plugin injects Qt input into the
+  canvas and answers state/pixel queries; an external MCP bridge and a
+  scenario runner use the same local protocol. Six decisions await the user.
+- Not built or run (cloud container without Qt).
+- Lessons for the harness: libkis painting (`Node::paintLine()`) bypasses
+  the input manager and tools, so it cannot test tool behavior; the
+  single-instance check in `krita/main.cc` ignores `SOLSTICE_PROFILE_ROOT`,
+  so a test launch while Solstice runs hands its arguments to that instance.
+
+## 2026-10-26 feature: test control phase 0
+
+- The user decided the plan's open questions (ship the plugin, MCP inside
+  Solstice, hashes and state in the repository, scenarios next to feature
+  tests, no second instance by operation) and authorized phase 0 only.
+  Recorded in the [plan](../ui-automation-plan.md).
+- Implemented `plugins/extensions/testcontrol/`: an application plugin that
+  serves MCP Streamable HTTP on `127.0.0.1` with a mandatory token when
+  `SOLSTICE_TEST_CONTROL_PORT`/`_TOKEN` are set, eight tools and synthetic
+  mouse/tablet strokes through the canvas input manager. Maintained in
+  [Test control](../test-control.md); user guide `docs/test-control.md`.
+- Verified only in the cloud container: protocol and injector tests against
+  Qt 6.4.2 outside Krita's build, a syntax check of all sources against the
+  repository headers with stubs, and the MCP TypeScript SDK client against a
+  standalone server. Not built in `_build` or run in Solstice; the phase 0
+  manual checks were handed to the user.
+- Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md)
+  (receiver, eaten pen press, keyboard-resynced modifiers); two C++ pitfalls
+  added to [build pitfalls](pitfalls/build-format-test.md) (SP/WSP
+  conditional, `QObject::property` hiding a helper).
+
 ## 2026-10-26 intake: KisClipboard rewrite (U-2026W44-01/02) and Linux build
 
 - Adopted the twelve held KisClipboard commits on
@@ -1850,3 +1885,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   builds" (LP64 types, clang-only flags, install paths, Xvfb, test memory
   cap, stale `~/.qttest` data) and "Tests" (assert dialogs, Windows
   clipboard contention).
+
+## 2026-10-26 fix: test control on Windows
+
+- First Windows build of `plugins/extensions/testcontrol` (merged with
+  `main` after #40). Two test-only fixes: `TestControlInputInjectorTest`
+  kept Qt 6 `quint64` timestamps in `ulong` (32-bit on Windows, narrowing
+  error), and `TestControlProtocolTest::testHttpEndToEnd` blocked in
+  `waitForReadyRead()` while its server needed the same thread's event
+  loop. Both tests pass through `ctest` (3 repeats). Plugin not installed
+  or run in Solstice; verification status in [Test control](../test-control.md).
+- Lessons: [build pitfalls](pitfalls/build-format-test.md), "Tests"
+  (same-thread server, 32-bit `ulong`).

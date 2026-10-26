@@ -9,6 +9,7 @@ sources:
   - experience from the 2026-10 sessions (Quick Access, docker locks, GPU Liquify)
   - docs/agent/remove-dust.md (2026-10-21, KisDustDetector, KisRemoveDustFilterTest, KisToolRemoveDust)
   - docs/agent/lazy-tools.md (2026-10-24, Fast Image Export Name, Export Region and registered folders, KisLazyToolsTest)
+  - docs/agent/test-control.md (2026-10-26, TestControlCanvasTools syntax check)
   - first Linux build and test run (2026-10-26, Ubuntu 26.04, GCC 15, Qt 6.10, KF6 6.24, branch claude/clipboard-intake-cross-platform)
   - Windows run of kis_clipboard_test (2026-10-26, branch claude/clipboard-intake-cross-platform)
 related:
@@ -96,7 +97,17 @@ wrong anyway.
 - **Copied `KisSharedPtr` captures are const in a lambda.** Calling
   `setDirty()` or `invalidateOutlineCache()` on a node or selection captured
   by `[=]` does not compile. Mark `KisCommandUtils::LambdaCommand` lambdas
-  `mutable`, as `KisToolSelectContiguous` does.
+  `mutable`, as `KisToolSelectContiguous` does. The same applies to a
+  copied `KisImageSP` whose non-const methods (`isIdle()`) the lambda calls.
+- **`cond ? viewManager->image() : KisImageSP()` is ambiguous.**
+  `KisViewManager::image()` returns `KisImageWSP`, and `KisImageSP` and
+  `KisImageWSP` convert to each other, so the conditional has no common
+  type. Assign in an `if` instead (`TestControlCanvasTools`).
+- **A free helper named like a `QObject` member is hidden inside member
+  functions.** A namespace-scope `property(type, description)` helper was
+  shadowed by `QObject::property(const char *)` in a `QObject` subclass's
+  methods ("no matching function"). Give helpers names that no `QObject`
+  member has (`schemaProperty()`).
 
 ## Tests
 
@@ -113,6 +124,16 @@ wrong anyway.
 - **`KRITA_NO_ASSERT_MSG=1` turns assert dialogs into log lines.** Set it
   before starting a test program run directly; `QT_FORCE_STDERR_LOGGING=1`
   makes the `SAFE ASSERT` line reach a redirected stderr.
+- **A test that talks to a server in its own thread must spin the event
+  loop.** `waitForConnected()`/`waitForReadyRead()` block without
+  processing events, so a `QTcpServer` in the same thread cannot accept or
+  answer. It happened to work on Linux; on Windows
+  `TestControlProtocolTest::testHttpEndToEnd` got no response. Wait with
+  `QTest::qWait()` and then `readAll()`.
+- **`ulong` is 32-bit on Windows.** Qt 6 event timestamps are `quint64`;
+  storing one in `ulong` inside a braced initializer is a narrowing error
+  with clang on Windows (and silently fine on LP64 Linux), the mirror of
+  the `quint64`/`uint64_t` problem under "Linux (GCC) builds".
 - **`kis_clipboard_test` collides with other clipboard readers on
   Windows.** The clipboard service (`cbdhsvc`) and tools such as PowerToys
   open the clipboard after every change; the test sets it again within

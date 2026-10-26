@@ -184,6 +184,7 @@ maintained references, plans and historical records.
 - Photoshop brush import: [maintenance reference](docs/agent/abr-import.md).
 - Welcome page News: [development notes](docs/agent/welcome-news.md).
 - Popup Palette and On-Canvas Brush Editor removal: [rationale](docs/agent/popup-palette-removal.md).
+- Test control (MCP): [development notes](docs/agent/test-control.md); later phases in the [UI test automation plan](docs/agent/ui-automation-plan.md).
 
 Before changing a listed feature, read its complete agent document. When a new
 custom feature is added, create its `docs/agent/<feature>.md` technical document,

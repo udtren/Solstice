@@ -25,6 +25,9 @@ Access items with icons.
   Simplified Chinese translation. Added in **0.2.0-beta.7**.
 - [Explorer thumbnails](windows-shell-thumbnails.md): previews of `.kra`
   and `.krz` files in Windows Explorer.
+- [Test control](test-control.md): letting an MCP client such as Claude
+  Code draw on the canvas and read back the result, for testing. Early test
+  version.
 
 ## Painting and brushes
 
