@@ -108,6 +108,9 @@ PaletteDockerDock::PaletteDockerDock( )
     connect(m_model, SIGNAL(sigPaletteModified()), SLOT(slotUpdateLblPaletteName()));
     connect(m_ui->cmbNameList, SIGNAL(sigColorSelected(const KoColor&)), SLOT(slotNameListSelection(const KoColor&)));
     connect(m_ui->bnLock, SIGNAL(toggled(bool)), SLOT(slotLockPalette(bool)));
+    // Connected once: slotSetColorSet() runs on every palette switch.
+    connect(m_ui->bnUndo, SIGNAL(clicked()), this, SLOT(undo()));
+    connect(m_ui->bnRedo, SIGNAL(clicked()), this, SLOT(redo()));
 
     m_viewContextMenu.addAction(m_actModify.data());
     m_viewContextMenu.addAction(m_actRemove.data());
@@ -312,9 +315,9 @@ void PaletteDockerDock::slotSetColorSet(KoColorSetSP colorSet)
                 });
         connect(colorSet->undoStack(), SIGNAL(redoTextChanged(QString)), this, SLOT(setRedoToolTip(QString)));
 
-        connect(m_ui->bnUndo, SIGNAL(clicked()), this, SLOT(undo()));
-        connect(m_ui->bnRedo, SIGNAL(clicked()), this, SLOT(redo()));
-
+        // m_currentColorSet is still the previous palette here, so toggled()
+        // must not reach slotLockPalette(); the call below updates the UI.
+        QSignalBlocker lockBlocker(m_ui->bnLock);
         m_ui->bnLock->setChecked(colorSet->isLocked());
     }
 

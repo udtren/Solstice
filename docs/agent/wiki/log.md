@@ -1792,3 +1792,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lessons: master-only prerequisites can be rejected commits, and a clean
   3-way apply is not proof of compilation
   ([decision page](decisions/upstream-selective-intake.md)).
+
+## 2026-10-26 fix: follow-ups to the 2026-W44 intake
+
+- A review of the adopted upstream code found two older palette docker bugs
+  and one regression from U-2026W44-06; the user asked to fix them
+  (rows after "Small behavior fixes" in the
+  [feature inventory](../feature-inventory.md)). Undo/redo button
+  connections no longer pile up on palette switches; a palette switch no
+  longer writes the lock state to the previous palette; a vector layer
+  passes resolution changes to its shapes again.
+- Not built or run in this session (cloud container without Qt); the
+  manual checks were handed to the user.
+- Lesson: a `setChecked()` on a button whose `toggled()` drives a slot that
+  reads "current" state must run after that state is updated, or under a
+  `QSignalBlocker`.

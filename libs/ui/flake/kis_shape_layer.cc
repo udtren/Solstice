@@ -106,6 +106,9 @@ public:
         if (!qFuzzyCompare(m_xRes, xRes) || !qFuzzyCompare(m_yRes, yRes)) {
             m_xRes = xRes;
             m_yRes = yRes;
+            Q_FOREACH (KoShape *shape, shapes()) {
+                shape->setResolution(xRes, yRes);
+            }
             return true;
         }
         return false;
