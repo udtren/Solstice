@@ -5,6 +5,7 @@
 
 #include "TestControlInputInjector.h"
 #include "TestControlSpontaneous.h"
+#include "TestControlTiming.h"
 
 #include <QCoreApplication>
 #include <QMouseEvent>
@@ -219,6 +220,13 @@ void TestControlInputInjector::sendStep(const Step &step)
     const Qt::MouseButton button = (isPress || isRelease) ? m_button : Qt::NoButton;
     const Qt::MouseButtons buttons =
         (isRelease || step.hover) ? Qt::MouseButtons(Qt::NoButton) : Qt::MouseButtons(m_button);
+    if (!step.synthesizedMouse) {
+        if (isPress && m_report.pressedAtMs < 0) {
+            m_report.pressedAtMs = TestControlTiming::clockMs();
+        } else if (isRelease) {
+            m_report.releasedAtMs = TestControlTiming::clockMs();
+        }
+    }
 
     switch (step.type) {
     case QEvent::ShortcutOverride:

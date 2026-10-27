@@ -11,6 +11,7 @@
 #include <QWidget>
 
 #include "TestControlInputInjector.h"
+#include "TestControlTiming.h"
 
 namespace
 {
@@ -205,6 +206,8 @@ void TestControlInputInjectorTest::testMouseStroke()
     QCOMPARE(report.eventsSent, 6);
     QVERIFY(report.pressAccepted);
     QVERIFY(report.releaseAccepted);
+    QVERIFY(report.pressedAtMs > 0);
+    QVERIFY(report.releasedAtMs >= report.pressedAtMs);
 
     QCOMPARE(widget.events.size(), 6);
     // The pointer enters the canvas and moves to the first point before the
@@ -489,6 +492,13 @@ void TestControlInputInjectorTest::testRealtimeTiming()
     QTRY_VERIFY(finished);
     QVERIFY(report.error.isEmpty());
     QVERIFY2(report.durationMs >= 60, qPrintable(QString::number(report.durationMs)));
+    // The press and release times use TestControlTiming's clock: the release
+    // follows the last point (60 ms) and ReleaseSettleMs; QTimer may fire a
+    // little early.
+    QVERIFY(report.pressedAtMs > 0);
+    const double held = report.releasedAtMs - report.pressedAtMs;
+    QVERIFY2(held >= 0.9 * (60 + TestControlInputInjector::ReleaseSettleMs), qPrintable(QString::number(held)));
+    QVERIFY(report.releasedAtMs <= TestControlTiming::clockMs());
 }
 
 void TestControlInputInjectorTest::testRejectsInvalidStrokes()
