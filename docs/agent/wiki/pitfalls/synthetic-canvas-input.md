@@ -120,6 +120,18 @@ reads as active and empty (0x0 bounds) for 70-220 ms; a short job runs at
 about 60-100 ms and another about 430 ms after the stroke, and a read during
 either finds the image busy. Three polls 20 ms apart missed it in about 1 of
 25 runs on Linux and in 13 of 15 on Windows. Test control's `wait_idle`
-therefore needs 600 ms of idle polls while the current selection
+therefore needs 600 ms of idle time while the current selection
 `hasShapeSelection()` (75 of 75 reads correct on Windows), and keeps three
 polls otherwise.
+
+## Count settle time with a clock, not in polls
+
+A poll timer runs late when the GUI thread is busy. Every view with an active
+selection repaints its canvas every 150 ms for the marching ants, background
+tabs included, since they are covered rather than hidden. With 36 such
+documents under Xvfb's software OpenGL, 20 ms polls came 170-300 ms apart, so
+a settle of 31 polls took 3-6 s and passed the 10 s timeout with about 75
+documents, while the image itself never went busy. Measure the settle time
+with `QElapsedTimer`, and add a margin of the longest poll gap seen, because
+the timers being waited for are delayed by the same load (test control: 600 ms
+plus twice that gap; 40 of 40 reads correct at a 296 ms gap).

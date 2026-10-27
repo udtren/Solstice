@@ -112,7 +112,7 @@ tested in the cloud session.
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi) |
 | `tool_activate` | `id` (factory ID) | Active tool ID; an unknown ID lists all IDs |
 | `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime` | Events sent, press/release accepted flags, duration, points outside the canvas widget, active tool |
-| `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, or on 31 polls (600 ms) while the current selection has a shape selection; waited time (at least 40 ms, or 600 ms) |
+| `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, and, while the current selection has a shape selection, for 600 ms plus twice the longest poll gap, measured with a clock; waited time (at least 40 ms, or about 640 ms), longest gap between polls (`maxPollGapMs`) |
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
@@ -307,9 +307,32 @@ measured in one session that adds a document per round:
 
 A second `wait_idle` right after the first, with nothing new queued, takes
 as long, and `wait_idle` after a brush stroke (no selection) stays at 40 ms.
-So with a vector selection active, something keeps making the image briefly
-busy, more often with more documents open, and each busy poll restarts the
-31-poll count. Not investigated.
+The explanation first assumed here (the image going busy and restarting the
+31-poll count) was wrong; see the investigation below.
+
+The slowdown, investigated 2026-10-27 with temporary instrumentation of
+`wait_idle` (polls, busy polls, gaps between polls):
+
+- The image never went busy (0 busy polls in every call). The 20 ms polls
+  were stretched: the longest gap grew from 20 ms (20 documents without
+  selections) to 60 ms (one selection), 172 ms (16 selections in 36
+  documents) and about 300 ms. Documents without selections added no load.
+- Stack samples of the GUI thread (gdb, 25 samples) were all in
+  `QWidgetRepaintManager::paintAndFlush`, mostly `KisOpenGLCanvas2::paintGL`
+  and framebuffer blits (software OpenGL under Xvfb).
+- `KisSelectionDecoration` runs a 150 ms "marching ants" timer in every view
+  with an active selection and repaints the canvas on each tick. Background
+  documents in the tabbed document area are covered, not hidden
+  (`isVisible()` stays true), so they keep repainting. A temporary check that
+  skipped the tick when `visibleRegion()` was empty brought 36 documents with
+  selections from 5.4 s to 0.9 s (longest gap 73 ms); not kept (a change to
+  core behavior, for the user to decide).
+- Fix in test control: the 600 ms are measured with a clock instead of 31
+  polls, plus twice the longest poll gap (the selection's own timers run on
+  the same slowed event loop). Worst case, core unchanged and documents with
+  selections accumulating: 40 of 40 reads correct; `wait_idle` after the
+  selection 683 ms with 5 documents (gap 41 ms), 1006 ms with 25 (179 ms),
+  1246 ms with 40 (296 ms). The whole checklist passes again.
 
 Step 10 on Linux, investigated 2026-10-27 with `DEBUG_MATCHER` traces of
 `KisShortcutMatcher` (a temporary local build): the failing strokes reached
@@ -334,12 +357,13 @@ prompt during the stroke (202 events sent, "No" exits 0).
   an undo step and changes no pixels.
 - `wait_idle` waits 600 ms of idle polls whenever the current selection is
   a vector selection, also for strokes that do not touch it.
-- With a vector selection active, `wait_idle` slows down as documents
-  accumulate: about 0.6 s with a few open, 1.2 s with 12, and past its 10 s
-  default timeout with about 75 (Linux, 2026-10-27; see the re-run results).
-  There is no tool to close documents yet (phase 1), so long scenarios that
-  call `document_new` repeatedly should reuse a document, or pass a larger
-  `timeoutMs`.
+- Every open document with a selection repaints its canvas every 150 ms
+  (marching ants), also in background tabs, which slows the GUI thread as
+  documents accumulate, and with software OpenGL a lot. `wait_idle` now
+  measures its settle time with a clock (about 1.2 s with 40 such documents
+  instead of over 10 s), but every call still slows down. There is no tool to
+  close documents yet (phase 1); long scenarios should reuse a document. The
+  core cause is in `KisSelectionDecoration`, not in test control.
 - `pressAccepted`/`releaseAccepted` report Qt's accepted flag. On Linux
   without Krita's Qt enter/leave patch, the input manager clears it for every
   tablet press, move and release so that Qt synthesizes mouse events, so

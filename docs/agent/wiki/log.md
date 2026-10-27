@@ -1952,3 +1952,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   spontaneous `Enter` before each stroke. Step 10 passes on Linux and the
   rest of the checklist passes again; Windows not re-run.
 - Lesson added to [synthetic canvas input](pitfalls/synthetic-canvas-input.md).
+
+## 2026-10-27 fix: test control wait_idle slowdown
+
+- Investigated the `wait_idle` slowdown with many open documents: the image
+  never went busy; the 20 ms polls were stretched by GUI-thread load. Stack
+  samples showed constant canvas repaints, from the marching-ants timer that
+  every view with a selection runs, also in covered background tabs.
+- `wait_idle` now measures its 600 ms vector-selection settle with a clock
+  plus twice the longest poll gap, and reports `maxPollGapMs`. 40 of 40 reads
+  correct while documents with selections accumulated; 1.2 s with 40 instead
+  of over 10 s with about 75.
+- Not changed: `KisSelectionDecoration` keeps animating covered views
+  (skipping them cut 5.4 s to 0.9 s in a temporary test); left for the user
+  to decide because it changes core behavior.
+- Lesson: [synthetic canvas input](pitfalls/synthetic-canvas-input.md),
+  "Count settle time with a clock, not in polls".
