@@ -1932,3 +1932,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   profile exists, or the first start stops at the native import question.
 - Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md)
   ("A vector selection renders its pixels later").
+
+## 2026-10-27 check: test control re-run on Linux
+
+- Re-ran the phase 0 checks on Linux with the Windows `wait_idle` fix
+  (`b8d202ba6b`): same results as on 2026-10-26 (step 10 still fails on
+  Linux only); 75 of 75 back-to-back selection reads correct. Recorded in
+  [Test control](../test-control.md).
+- New: with a vector selection active, `wait_idle` slows as documents
+  accumulate (0.6 s with a few, 1.2 s with 12, past the 10 s timeout with
+  about 75). Cause not investigated; listed as a limitation.

@@ -45,6 +45,10 @@ Verification (2026-10-26, cloud session, no Krita build available):
   that `wait_idle` returned before a vector selection had its pixels;
   fixed (600 ms settle while the current selection is a vector selection).
   Step 10 works on Windows.
+- Linux re-run (2026-10-27, same setup as 2026-10-26, branch
+  `claude/test-control-linux` at `a83b58884c`): both tests pass through
+  `ctest` (three runs); the manual checks give the same results as on
+  2026-10-26, now with the 600 ms settle; results recorded there.
 
 ## Source locations
 
@@ -263,6 +267,43 @@ selections (2 of 15 in a second series); the selection was always right
 `wait_idle` then takes 0.6-1.1 s while such a selection exists and still
 about 40 ms without one.
 
+Results, Linux re-run (2026-10-27, Ubuntu 26.04, Qt 6.10, `xcb` on Xvfb
+without a window manager, fresh scratch `SOLSTICE_PROFILE_ROOT` and `HOME`,
+branch `claude/test-control-linux` at `a83b58884c`):
+
+| Step | Result |
+| --- | --- |
+| 1-2 | Pass, as on 2026-10-26. |
+| 3 | Pass: endpoint logged, listens on `127.0.0.1` only; `"document": null`. |
+| 4 | Pass: 800x600 RGBA; canvas `KisOpenGLCanvas2` 1266x1529. |
+| 5 | Pass: undo 1 "Freehand Brush Stroke", bounds (80,80) 340x240. |
+| 6 | Pass: the first pen stroke on the canvas paints the whole line (bounds to x 718); accepted flags `false` as expected on Linux. |
+| 7 | Pass: undo 3. |
+| 8 | Pass: "Select Rectangle", bounds (100,100) 200x100, 20000 pixels, read right after `wait_idle`. |
+| 9 | Pass: `deselect` clears it; `edit_undo` restores it. |
+| 10 | Limitation unchanged: with xclock holding X focus, the stroke is accepted but paints nothing (undo 0). |
+| 11 | Pass: Ctrl+Q 1.5 s into a 4 s real-time stroke (no unsaved change) closes Solstice with exit 0; the injector reports "The target widget was destroyed during the stroke" after 72 events. No crash. |
+| 12 | Pass: 401 without the token, 403 for a foreign Origin, 200 for a valid ping; the token is not in the log. |
+
+Back-to-back reads (new document, brush stroke, rectangle selection,
+`wait_idle`, `query_state`): 75 of 75 correct, no empty and no busy reads.
+`wait_idle` after the selection grows with the number of open documents, as
+measured in one session that adds a document per round:
+
+| Open documents | `wait_idle` after the selection |
+| --- | --- |
+| 1-4 | 600-617 ms |
+| 5-7 | 721-775 ms |
+| 8-11 | 886-958 ms |
+| 12 | 1180-1254 ms |
+| up to 75 | median 6.1 s, maximum 10.5 s (past the 10 s default timeout) |
+
+A second `wait_idle` right after the first, with nothing new queued, takes
+as long, and `wait_idle` after a brush stroke (no selection) stays at 40 ms.
+So with a vector selection active, something keeps making the image briefly
+busy, more often with more documents open, and each busy poll restarts the
+31-poll count. Not investigated.
+
 ## Known limitations and pending work
 
 - Strokes do not paint while another application holds focus on
@@ -273,6 +314,12 @@ about 40 ms without one.
   an undo step and changes no pixels.
 - `wait_idle` waits 600 ms of idle polls whenever the current selection is
   a vector selection, also for strokes that do not touch it.
+- With a vector selection active, `wait_idle` slows down as documents
+  accumulate: about 0.6 s with a few open, 1.2 s with 12, and past its 10 s
+  default timeout with about 75 (Linux, 2026-10-27; see the re-run results).
+  There is no tool to close documents yet (phase 1), so long scenarios that
+  call `document_new` repeatedly should reuse a document, or pass a larger
+  `timeoutMs`.
 - `pressAccepted`/`releaseAccepted` report Qt's accepted flag. On Linux
   without Krita's Qt enter/leave patch, the input manager clears it for every
   tablet press, move and release so that Qt synthesizes mouse events, so
