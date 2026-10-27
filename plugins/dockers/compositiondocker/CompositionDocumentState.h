@@ -13,6 +13,8 @@ class CompositionDocumentState : public QObject
 {
     Q_OBJECT
 public:
+    /// The state of @p document, created on first use and bound to @p image;
+    /// null without a document (a view manager between views has none).
     static CompositionDocumentState *get(KisDocument *document, KisImageSP image);
     KisLayerCompositionSP snapshot() const
     {

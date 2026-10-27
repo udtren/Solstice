@@ -1897,3 +1897,239 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   or run in Solstice; verification status in [Test control](../test-control.md).
 - Lessons: [build pitfalls](pitfalls/build-format-test.md), "Tests"
   (same-thread server, 32-bit `ulong`).
+
+## 2026-10-26 fix: test control phase 0 checks on Linux
+
+- Ran the twelve phase 0 manual checks against a running Solstice on Linux
+  (Xvfb, Qt 6.10) through the MCP endpoint; results recorded in
+  [Test control](../test-control.md).
+- Fixed three input defects the checks found: events are now spontaneous
+  (rectangle selection cancelled on release), tablet strokes start with a
+  hover move and a 50 ms settle (the first pen stroke on a new canvas
+  painted a dot), and `wait_idle` needs three idle polls (a selection read
+  was empty in 1 of 25 runs). Unit tests updated; both pass.
+- Still open: strokes do not paint while another application holds focus
+  (step 10); Windows has not been checked interactively.
+- Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md)
+  (spontaneous releases and `sendEvent()`, stylus device switch, settling
+  idle, platform-dependent accepted flags).
+
+## 2026-10-27 fix: test control phase 0 checks on Windows
+
+- Ran the twelve phase 0 manual checks against a running Solstice on
+  Windows 11 (Qt 6.8, `_install`, scratch profile) through the MCP endpoint;
+  results recorded in [Test control](../test-control.md). All pass; step 10
+  (strokes while another window has focus) works on Windows, unlike Linux.
+- Fixed `wait_idle`: the selection tools default to vector selections, whose
+  pixels Krita renders from update compressors that `KisImage::isIdle()` does
+  not report. A read right after the three-poll settle was empty or busy in
+  most back-to-back runs (1 of 25 correct). `wait_idle` now needs 600 ms of
+  idle polls while the current selection has a shape selection: 75 of 75
+  correct. The first guess (the projection compressor alone, 400 ms) left a
+  late job at about 430 ms that made 1 of 50 reads busy.
+- A scratch profile root on Windows needs the `ready` marker in
+  `config/SOLSTICE_PROFILE` (and `klanguageoverridesrc`) when a Krita
+  profile exists, or the first start stops at the native import question.
+- Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md)
+  ("A vector selection renders its pixels later").
+
+## 2026-10-27 check: test control re-run on Linux
+
+- Re-ran the phase 0 checks on Linux with the Windows `wait_idle` fix
+  (`b8d202ba6b`): same results as on 2026-10-26 (step 10 still fails on
+  Linux only); 75 of 75 back-to-back selection reads correct. Recorded in
+  [Test control](../test-control.md).
+- New: with a vector selection active, `wait_idle` slows as documents
+  accumulate (0.6 s with a few, 1.2 s with 12, past the 10 s timeout with
+  about 75). Cause not investigated; listed as a limitation.
+
+## 2026-10-27 fix: test control step 10 on Linux
+
+- Investigated why synthetic strokes did not paint on Linux while another
+  window had focus: matcher traces (`DEBUG_MATCHER`, local only) showed the
+  press starting no action because the canvas had received a `Leave` when a
+  window covered the pointer; focus was incidental. The injector now sends a
+  spontaneous `Enter` before each stroke. Step 10 passes on Linux and the
+  rest of the checklist passes again; Windows not re-run.
+- Lesson added to [synthetic canvas input](pitfalls/synthetic-canvas-input.md).
+
+## 2026-10-27 fix: test control wait_idle slowdown
+
+- Investigated the `wait_idle` slowdown with many open documents: the image
+  never went busy; the 20 ms polls were stretched by GUI-thread load. Stack
+  samples showed constant canvas repaints, from the marching-ants timer that
+  every view with a selection runs, also in covered background tabs.
+- `wait_idle` now measures its 600 ms vector-selection settle with a clock
+  plus twice the longest poll gap, and reports `maxPollGapMs`. 40 of 40 reads
+  correct while documents with selections accumulated; 1.2 s with 40 instead
+  of over 10 s with about 75.
+- Not changed: `KisSelectionDecoration` keeps animating covered views
+  (skipping them cut 5.4 s to 0.9 s in a temporary test); left for the user
+  to decide because it changes core behavior.
+- Lesson: [synthetic canvas input](pitfalls/synthetic-canvas-input.md),
+  "Count settle time with a clock, not in polls".
+
+## 2026-10-27 decision: test control phase 1
+
+- Phase 0 recorded as done in the [UI test automation plan](../ui-automation-plan.md)
+  (checks pass on Windows and Linux); the user authorized phase 1, whose
+  planned scope is listed there.
+
+## 2026-10-27 feature: test control phase 1
+
+- Added eight tools: `document_open` and `document_export_png` (confined to
+  `SOLSTICE_TEST_CONTROL_ROOT`), `document_close`, `view_reset`,
+  `brush_set`, `input_click`, `input_drag`, `query_pixels`; and `modifiers`
+  on the input tools (key events plus canvas focus). Shared helpers moved to
+  `TestControlSupport`, path checks to `TestControlPaths` (unit tested).
+- Defined scenario format version 1 and added three scenarios next to the
+  covered features' tests (brush stroke and undo, rectangular selection and
+  fill, eraser stroke); they pass on Linux in four runs each, and a copy with
+  wrong expectations fails where expected. Recorded in
+  [Test control](../test-control.md); plan status in the
+  [UI test automation plan](../ui-automation-plan.md). Windows not checked.
+- Lesson: modifier key events carry the state before the key
+  ([synthetic canvas input](pitfalls/synthetic-canvas-input.md)).
+
+## 2026-10-27 feature: test control phase 2
+
+- The user said to keep going after phase 1; recorded as the phase 2
+  go-ahead in the [UI test automation plan](../ui-automation-plan.md).
+- Added the scenario runner `dev-tools/test-control/run_scenarios.py`
+  (Python standard library; replays scenarios, JSON report, `--launch`,
+  `--record`, `--strict`), per-platform recorded values and reference images
+  next to scenarios, and reference comparison with tolerance in
+  `query_pixels` (`TestControlImageCompare`). Unit tests for both; a fourth
+  scenario (`pressure-stroke`) uses a recorded reference and hash.
+- Verified on Linux: record, three strict runs, a failing negative copy, and
+  a `--launch` run that started and quit Solstice cleanly. Windows not
+  checked. Details in [Test control](../test-control.md).
+
+## 2026-10-27 feature: test control phase 3 (selection and Transform Tool)
+
+- The user authorized phase 3 starting with the selection tools, selection
+  modifiers and the state-checkable Transform Tool / Puppet Warp items;
+  recorded in the [UI test automation plan](../ui-automation-plan.md).
+- Added `input_key`, `ui_query`, `ui_click`, `ui_set`, `docker_show`, a
+  double click, a hover move before mouse presses, a restart in
+  `tool_activate`, and `uiLanguages` in `session_info`; the runner sets an
+  English UI for `--launch` (`--language`). Object names for the Puppet Warp
+  click-action combo and order buttons.
+- Eleven scenarios: five for selections, six for the Transform Tool and
+  Puppet Warp; the covered checklist items are listed in
+  [Puppet Warp](../puppet-warp.md#manual-regression-checklist). All 15
+  scenarios pass on Linux with `--launch --strict`; a wrong expectation in
+  each new scenario fails on that step. Windows not checked.
+- Lessons: [clicks need a hover move, and a key sent with XSendEvent can
+  stay held](pitfalls/synthetic-canvas-input.md); [the transform holds the
+  image busy, the center grabs the pivot, mode and lock carry
+  over](pitfalls/transform-tool-input.md). Details in
+  [Test control](../test-control.md).
+
+## 2026-10-27 feature: test control phase 3 (Lazy Tools and Quick Access)
+
+- The user authorized the rest of phase 3; recorded in the
+  [UI test automation plan](../ui-automation-plan.md).
+- Added `query_layers`, `layer_activate` and `ui_close`; widget selectors
+  by tool tip, class and window title; `async` for modal dialogs; combo
+  `activated` in `ui_set`; more brush and document state.
+- Eight scenarios: Lazy Tools color labels, saved selections, foreground
+  slots, Rename Alternative, Fast Image Export; Quick Access brush item,
+  Quick Brush Adjustments, HueSVC. Covered checks are listed in
+  [Lazy Tools](../lazy-tools.md#manual-checks) and
+  [Quick Access](../quick-access.md#automated-scenarios-2026-10-27). All 23
+  scenarios pass on Linux with `--launch --strict`; a wrong expectation in
+  each new one fails on that step. Windows not checked.
+- The rename scenario found a `KisNodeModel` crash (queued updates after the
+  document closed); fixed in `setDummiesFacade()`
+  ([pitfall](pitfalls/compressed-updates-outlive-their-model.md),
+  [feature inventory](../feature-inventory.md)).
+- Lessons: [modal dialogs and combo `activated`](pitfalls/synthetic-canvas-input.md).
+
+## 2026-10-27 fix: KisLazyToolsTest on Linux
+
+- `explorerFolders` gave the folder list a Windows path with backslashes,
+  which only Windows normalizes, so the case failed on Linux. The input now
+  uses native separators, plus a non-Windows check that backslashes stay
+  and case matters ([Lazy Tools](../lazy-tools.md)). The code was right.
+- `git clang-format` re-sorted the include block next to the new include
+  again ([build pitfalls](pitfalls/build-format-test.md)); restored.
+
+## 2026-10-27 feature: test control phase 4 (paint trace series)
+
+- The user said "go phase 4"; recorded in the
+  [UI test automation plan](../ui-automation-plan.md).
+- Added `dev-tools/test-control/paint_trace_series.py` (with tests): the
+  paint trace protocol's 16 strokes as identical synthetic tablet strokes in
+  fresh processes per mode, checked and aggregated like the hand baseline.
+  `brush_set` gained `paintMode`, `session_info` `gpuEngine`.
+- First synthetic series on Linux (nine processes, all accepted), recorded
+  as a separate series in the
+  [run sheet](../paint-trace-baseline-runs.md#synthetic-series-linux-2026-10-27-test-control).
+- Lessons: on Xvfb the canvas draws with software OpenGL, so the time after
+  the last upload is the same in every mode and dominates the absolute
+  numbers; compare modes by the part before the upload. The shared-buffer
+  canvas path needs a hardware-GL display, so Xvfb never exercises it.
+  Identical input shrank the process ranges to about 1 ms at 64 px.
+  Vision ML's startup warning appears in every fresh scratch process on a
+  machine where it cannot initialize; a multi-process tool needs someone
+  (or a helper) to close it each time.
+- The regression run after the series found `puppet-show-mesh` failing at
+  random: a release right after the last move dropped the compressed move
+  ([pitfall](pitfalls/synthetic-canvas-input.md)). The injector now waits
+  50 ms before releasing a stroke with moves; the core behavior is recorded
+  in [Test control](../test-control.md#known-limitations-and-pending-work)
+  for the user to decide.
+
+## 2026-10-27 fix and correction: releases, compressed moves, Transform Apply
+
+- The user asked to fix `KisInputManager` so a release delivers the move
+  its compression holds. Done (`Private::flushCompressedMove()` before mouse
+  and tablet releases); verified on Linux with back-to-back free transform
+  drags (at least 29 of 30 short per device without it, 30 of 30 exact with
+  it) and the new scenario `transform-quick-release`
+  ([feature inventory](../feature-inventory.md)).
+- Correction of the previous entry: the random `puppet-show-mesh` failures
+  were not the release. A gdb trace showed every move reaching the Puppet
+  strategy; the cause is the Transform Tool's 40 ms recalculation compressor
+  with Apply right after the drag ([Test control](../test-control.md#known-limitations-and-pending-work),
+  [Puppet Warp](../puppet-warp.md)). Not fixed; the injector's pause before
+  the release keeps the scenarios stable.
+- Found while checking: a crash when Puppet pins placed with the mouse are
+  dragged with the pen (separate tool instances, stale pin index), and a
+  Layer Comps crash on a null document after fast document switching. Not
+  fixed.
+- Lesson: [one step short has more than one cause](pitfalls/synthetic-canvas-input.md).
+
+## 2026-10-27 fix: Transform Tool Apply flushes the pending recalculation
+
+- The user asked to fix the stale Apply found while checking the release
+  fix. `KisToolTransform::endStroke()` now runs the strategy's pending
+  recalculation first (`flushPendingRecalculation()`; Warp, Cage, Puppet,
+  Mesh). Verified on Linux with Puppet Warp drags released at once (60 of 60
+  and 30 of 30 correct per device, against 5 of 60 and 4 of 30 wrong before)
+  and the new scenario `puppet-quick-apply` (9 of 10 runs failed without
+  the fix, 10 of 10 pass); all 25 scenarios pass twice
+  ([Puppet Warp](../puppet-warp.md#interaction-invariants),
+  [feature inventory](../feature-inventory.md)).
+- Test control gained `keyAfterRelease` so a key can follow the release in
+  the same call; an HTTP round trip in between hid the race
+  ([pitfall](pitfalls/synthetic-canvas-input.md)).
+- `kis_cage_transform_worker_test` fails its two unity cases on Linux (image
+  comparison); it does not load the tool plugin and its code is unchanged
+  since the initial snapshot.
+
+## 2026-10-27 fix: Puppet stale pin index and Layer Comps null document
+
+- Puppet Warp: after pins placed with the mouse were dragged with the pen,
+  the next transform's first mouse press came without a hover and used the
+  old pin index; `beginPrimaryAction()` now decides again for the press
+  position. Traced with gdb, verified with a mixed-device diagnostic and the
+  new scenario `puppet-mixed-devices` (a build without the guard crashed in
+  it) ([Puppet Warp](../puppet-warp.md#interaction-invariants),
+  [pitfall](pitfalls/transform-tool-input.md)).
+- Layer Comps: a delayed refresh reached `CompositionDocumentState::get()`
+  with a null document; guarded in `updateModel()`, `setCanvas()` and
+  `get()`. Not reproduced again, so verified only by the backtrace, the
+  workflow test and the scenario suite ([Layer Comps](../layer-comps.md)).
+- All 26 scenarios pass twice on Linux; Windows not checked.

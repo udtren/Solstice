@@ -569,3 +569,26 @@ Interactive checks after restarting Solstice, with HueSVC docked:
    selected; HueSVC keeps working and follows the foreground color.
 5. Open the HueSVC popup with a filter layer selected; it shows the full
    layout too.
+
+## Automated scenarios (2026-10-27)
+
+[Test control](test-control.md) scenarios in
+`plugins/dockers/quickaccess/tests/scenarios/` drive the real dockers in a
+running Solstice (run with `dev-tools/test-control/run_scenarios.py`, in a
+scratch profile: they add a brush item to its Quick Access profile):
+
+- `quick-access-brush-item`: Add Current Brush, then clicking the item
+  selects the preset again.
+- `quick-adjust-controls`: Quick Brush Adjustments' size, opacity, flow and
+  blending mode reach the brush; reload restores the saved preset; the
+  eraser and preserve alpha buttons toggle; layer opacity and blending mode
+  are undoable layer changes.
+- `huesvc-values`: the H, S, V and R, G, B rows set the foreground color.
+
+They find widgets by tool tip, or by class and index inside the docker
+(`KisSliderSpinBox` 0-2 are opacity, flow and layer opacity; `QComboBox` 0-1
+the brush and layer blending modes; `QSpinBox` 0-5 the H, S, V, R, G, B
+rows). Reordering those controls breaks the scenarios, not the feature.
+Hold keys, temporary brushes, gestures, Ctrl-drag, Grid Edit, popups,
+settings and restarts remain covered by the focused tests and the
+interactive checks above.

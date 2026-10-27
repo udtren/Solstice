@@ -1,11 +1,23 @@
 ---
 type: pitfall
-updated: 2026-10-26
+updated: 2026-10-27
 sources:
   - libs/ui/input/kis_input_manager.cpp (KisInputManager::eventFilter, eventFilterImpl, TabletPress/TabletRelease cases)
   - libs/ui/input/kis_input_manager_p.cpp (EventEater::eventFilter, ProximityNotifier::eventFilter, CanvasSwitcher::addCanvas, allowMouseEvents, fixShortcutMatcherModifiersState)
   - libs/ui/input/kis_extended_modifiers_mapper.cpp (queryStandardModifiers)
+  - libs/ui/tool/kis_tool_rectangle_base.cpp (endPrimaryAction), libs/ui/tool/KisToolOutlineBase.cpp
+  - libs/flake/KoToolProxy.cpp (tabletEvent), libs/flake/KoToolManager.cpp (Private::switchInputDevice)
+  - QtTest/qtestmouse.h, QtTest/qtestspontaneevent.h (Qt 6.10)
+  - Linux run of the phase 0 checks, 2026-10-26
+  - Windows run of the phase 0 checks, 2026-10-27
+  - libs/image/kis_selection.cc, KisSelectionUpdateCompressor.cpp, kis_selection_mask.cpp (update compressors)
+  - libs/ui/tool/kis_selection_tool_config_widget_helper.cpp (default selection mode)
   - plugins/extensions/testcontrol/TestControlInputInjector.cpp
+  - libs/ui/tool/kis_tool_polyline_base.cpp (mouseMoveEvent, m_closeSnappingActivated)
+  - Linux phase 3 scenario runs, 2026-10-27 (xdotool, Xvfb)
+  - plugins/dockers/layerdocker/LayerBox.cpp (QComboBox::activated connections)
+  - libs/ui/KisSolsticeLazyTools.cpp (showRenameDialog, exec())
+  - libs/ui/input/kis_input_manager.cpp (compressMoveEventCommon, MouseButtonRelease)
   - docs/agent/test-control.md
 related:
   - transform-tool-input.md
@@ -15,9 +27,10 @@ related:
 # Synthetic canvas input
 
 Found by reading the input manager while writing the
-[test control](../../test-control.md) input injector (2026-10-26). These
-are code-reading conclusions; the phase 0 checks in that document confirm
-them in a running Solstice.
+[test control](../../test-control.md) input injector (2026-10-26), and by
+running its phase 0 checks on Linux the same day and on Windows on
+2026-10-27 (the sections from "A Leave suppresses" to "Count settle
+time"), and by the phase 3 scenario runs on Linux (the last two).
 
 ## Only the current receiver is filtered
 
@@ -51,9 +64,161 @@ synthetic Ctrl-click without focus therefore runs as a plain click, and a key
 the tester holds changes a synthetic stroke. Synthetic modifiers need key
 press/release events through the matcher while the canvas has focus.
 
-## Accepted flags differ by event type
+Two details found when implementing them (2026-10-27): send
+`ShortcutOverride` and then `KeyPress` for each modifier, as Qt does (Krita
+handles keys in `ShortcutOverride`), and build a modifier key's own event
+with the state *before* it. `QKeyEvent::modifiers()` toggles the flag of the
+key itself, because platforms report the earlier state, so a Ctrl `KeyPress`
+built with `ControlModifier` reads as no modifier. Taking focus needs
+`activateWindow()` plus `setFocus()`, then a wait until `hasFocus()`: on
+Linux/X11 without a window manager it works at once; on Windows the system
+may refuse to bring another application's window forward.
+
+## Accepted flags differ by event type and platform
 
 For mouse presses the input manager sets the event's accepted flag to the
-matcher's result; for tablet presses and releases it always accepts. A
-synthetic tablet press that reports "accepted" proves only that the input
-manager saw it; check the undo stack or pixels for the stroke itself.
+matcher's result. Tablet presses and releases are accepted on Windows, but
+on Linux without Krita's Qt enter/leave patch every tablet press, move and
+release is set unaccepted on purpose (so Qt synthesizes mouse events). The
+flag says nothing about the stroke; check the undo stack or pixels.
+
+## Releases must be spontaneous, and sendEvent() clears the flag
+
+`KisToolRectangleBase::endPrimaryAction()` (rectangle and ellipse tools) and
+`KisToolOutlineBase` end the shape only when the release is
+`spontaneous()`; otherwise they cancel it, because a non-spontaneous release
+is what the canvas sends when it loses focus. Events from
+`QCoreApplication::sendEvent()` are never spontaneous: in Qt 6 it resets the
+flag even when the event had it. The drag shows its size overlay and then
+vanishes. Mark the event with `QSpontaneKeyEvent::setSpontaneous()` (inline
+in `QtTest/qtestspontaneevent.h`) and deliver it with
+`QCoreApplication::instance()->notify()`, as `QTest::mouseEvent()` does.
+
+## The first stylus event on a canvas switches tool instances
+
+`KoToolProxy::tabletEvent()` calls `KoToolManager::Private::switchInputDevice()`
+for every tablet event. The first time a stylus appears on a canvas, that
+creates new tool instances for it and calls `switchTool()`, which ends a
+stroke already begun: a pen stroke that starts with `TabletPress` paints a
+dot on a new canvas and works afterwards (switching back to the mouse never
+happens). A real pen hovers first. Send a hover `TabletMove` (no buttons, no
+pressure) and wait longer than the move compression (`tabletEventsDelay`,
+10 ms by default) before the press; a press discards a compressed move.
+
+## A Leave suppresses every action until the next Enter
+
+`KisShortcutMatcher::actionsSuppressed()` is true while `cursorEntered` is
+false, and then `prepareReadyShortcuts()` offers no shortcut: a press
+reaches `buttonPressed()` and starts nothing, while the event still counts
+as accepted. The canvas gets a `Leave` whenever another window appears over
+the pointer, and only a later `Enter` (pointer movement, or the synthetic
+one `CanvasSwitcher` sends on `FocusIn`) clears it. Synthetic strokes looked
+focus-dependent on Linux for this reason (2026-10-27): they failed only when
+Solstice had lost focus and another window covered the pointer. Start every
+synthetic stroke with an `Enter`, as a real pointer reaching the canvas does.
+
+## Idle once is not settled
+
+`KisImage::isIdle()` can be true while follow-up work is still queued to the
+GUI thread. Require idle on several polls with event-loop passes in between
+(test control: three polls 20 ms apart).
+
+## A vector selection renders its pixels later
+
+The selection tools default to vector mode (`SHAPE_PROTECTION` in
+`KisSelectionToolConfigWidgetHelper`). A vector selection's pixels are not
+written by the tool's stroke: `KisSelection` renders its shape selection
+into the pixel selection from `KisSelectionUpdateCompressor` (100 ms,
+postponed by every change), and the selection mask's own update compressor
+follows. Neither timer makes `KisImage::isIdle()` false. After a rectangle
+selection, "Select Rectangle" is on the undo stack at once, but the selection
+reads as active and empty (0x0 bounds) for 70-220 ms; a short job runs at
+about 60-100 ms and another about 430 ms after the stroke, and a read during
+either finds the image busy. Three polls 20 ms apart missed it in about 1 of
+25 runs on Linux and in 13 of 15 on Windows. Test control's `wait_idle`
+therefore needs 600 ms of idle time while the current selection
+`hasShapeSelection()` (75 of 75 reads correct on Windows), and keeps three
+polls otherwise.
+
+## Count settle time with a clock, not in polls
+
+A poll timer runs late when the GUI thread is busy. Every view with an active
+selection repaints its canvas every 150 ms for the marching ants, background
+tabs included, since they are covered rather than hidden. With 36 such
+documents under Xvfb's software OpenGL, 20 ms polls came 170-300 ms apart, so
+a settle of 31 polls took 3-6 s and passed the 10 s timeout with about 75
+documents, while the image itself never went busy. Measure the settle time
+with `QElapsedTimer`, and add a margin of the longest poll gap seen, because
+the timers being waited for are delayed by the same load (test control: 600 ms
+plus twice that gap; 40 of 40 reads correct at a 296 ms gap).
+
+## Clicks need a hover move first
+
+A real pointer always moves over the canvas before it clicks, and some tools
+depend on it. `KisToolPolylineBase` (polygonal selection, polyline) decides
+in `mouseMoveEvent()` whether the pointer is close enough to the first point
+to close the shape (`m_closeSnappingActivated`); a press without a preceding
+move at that spot adds a point instead. Send a button-less move at the press
+position before each press (test control: 50 ms before, for mouse and pen).
+A test widget only receives such moves with `setMouseTracking(true)`.
+
+## A key sent to a window can stay held
+
+On Linux, `xdotool key --window <id> Return` (used to dismiss a dialog at
+startup) delivers the key with `XSendEvent`. Afterwards Solstice treated
+Return as still pressed and received auto-repeated Return presses, so every
+polygonal selection finished after its first click (Return ends the shape),
+while the other tools looked fine (2026-10-27). Dismiss dialogs on a test
+display with a mouse click, keep `xset r off`, and suspect a stuck key when
+a tool finishes or cancels on its own.
+
+## A modal dialog blocks a serialized call queue
+
+Test control runs one tool call at a time. An action or button that opens a
+modal dialog (`QDialog::exec()`, `QMessageBox::warning()`) runs the dialog's
+event loop inside that call, so the call never replies and every later call
+waits behind it: nothing can close the dialog. Trigger such actions after
+replying (test control: `async` on `action_trigger` and `ui_click`); the
+dialog's nested event loop then serves the next calls. Rename Alternative and
+Fast Image Export's warnings work this way.
+
+## setCurrentIndex() is not a user's choice
+
+A user picking a combo box item makes Qt emit `activated` (also for the item
+already shown), while `setCurrentIndex()` emits only `currentIndexChanged`,
+and nothing when the index does not change. The Layers docker's color label
+and label visibility combos are connected to `activated`, so setting their
+index did nothing. Emit `activated` and `textActivated` after setting a
+combo box when imitating a choice (test control's `ui_set` does).
+
+## A result one step short has more than one cause
+
+Two separate mechanisms end a synthetic drag short, and they look alike
+(the result is a whole number of drag steps off):
+
+- **The input manager holds a move.** For tools that do not ask for
+  high-resolution input (the `KisTool` default; freehand tools do ask),
+  `KisInputManager` keeps the latest move in a 10 ms compressor
+  (`tabletEventsDelay`). A release used not to deliver it, so a release
+  right after fast movement ended the action short; `KisInputManager` now
+  delivers it first. It only shows when moves come faster than 10 ms: on a
+  test display with software OpenGL each move's repaint already took longer,
+  and nothing was held until the moves were sent back to back in a small
+  window.
+- **The tool applies late.** The Transform Tool's Warp, Cage, Puppet and
+  Mesh strategies send the drag's position to the stroke from a 40 ms
+  compressor, and Apply within 40 ms of the last move applied the previous
+  position. This caused the random Puppet Warp failures; a pause before the
+  release hid it. `endStroke()` now flushes the strategy first. To test such
+  a race, put the trigger in the same call as the action (test control's
+  `keyAfterRelease`), make the timing uneven (a last move 5 ms after the one
+  before), and repeat the pass: with Apply as a separate tool call, a
+  scenario caught the bug in 1 of 20 runs; with Return in the same call,
+  uneven timing and five passes, in 9 of 10.
+
+Before blaming the input path, trace where the moves arrive: a gdb `dprintf`
+on the strategy's `continuePrimaryAction(KoPointerEvent *)` and
+`endPrimaryAction(KoPointerEvent *)` printing `event->point` needs no
+rebuild, and showed every move and the release at the final position while
+the result was still short. A debugger also slows the run enough to hide a
+timer race, so count failures with and without it.

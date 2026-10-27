@@ -79,7 +79,11 @@ target normally triggers that automatically. Building a low library (e.g.
   test function name.
 - Add tests for parsing, persistence, serialization, legacy import, and pure
   layout logic. Interactive behavior (focus, shortcuts, tablet input, canvas
-  rendering) still requires manual checks.
+  rendering) still requires manual checks, except where a test control
+  scenario covers it: `python dev-tools\test-control\run_scenarios.py --all
+  --launch <krita-dev-root>\_install\bin\solstice.exe` replays every
+  `*/tests/scenarios/*.json` against a scratch instance
+  ([Test control](test-control.md#scenario-runner)).
 
 ## Install
 
