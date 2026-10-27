@@ -9,11 +9,13 @@
 #include <QBuffer>
 #include <QCryptographicHash>
 #include <QElapsedTimer>
+
 #include <QImage>
 #include <QJsonArray>
 #include <QPixmap>
 #include <QSysInfo>
 #include <QTimer>
+#include <memory>
 
 #include <KisDocument.h>
 #include <KisMainWindow.h>
@@ -51,9 +53,12 @@ constexpr qint64 MaxHashedBytes = qint64(512) * 1024 * 1024;
 // image does not report as busy (KisSelectionUpdateCompressor, 100 ms, then
 // the selection mask's update compressor): the pixels arrived up to 220 ms
 // and a last short job ran about 430 ms after the stroke on Windows, so it
-// needs 600 ms.
+// needs 600 ms of idle time. The time is measured with a clock, not counted
+// in polls: a busy GUI thread stretches the 20 ms polls (to about 300 ms with
+// 36 documents that have selections), and those timers run late by about one
+// such gap each, so the wait adds twice the longest gap seen.
 constexpr int IdlePolls = 3;
-constexpr int ShapeSelectionIdlePolls = 31;
+constexpr qint64 ShapeSelectionSettleMs = 600;
 
 KisMainWindow *currentWindow()
 {
@@ -235,7 +240,8 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                     "Wait until the image has no queued or running strokes and stays idle for three polls "
                     "20 ms apart, so follow-up work queued to the GUI thread (such as a new selection mask) "
                     "has run too. While the current selection is a vector selection, it must stay idle for "
-                    "600 ms, until the selection's pixels are rendered.",
+                    "600 ms plus twice the longest gap between polls, until the selection's pixels are "
+                    "rendered. The result reports that gap (maxPollGapMs).",
                     objectSchema({{"timeoutMs", schemaProperty("integer", "Timeout (default 10000, max 120000).")}}),
                     std::bind(&TestControlCanvasTools::waitIdle, this, _1, _2));
 
@@ -502,31 +508,54 @@ void TestControlCanvasTools::waitIdle(const Arguments &arguments, const Reply &r
     }
 
     const int timeoutMs = qBound(0, arguments.value("timeoutMs").toInt(10000), 120000);
-    int idlePolls = 0;
+    struct IdleState {
+        QElapsedTimer clock;
+        qint64 lastPollMs = -1;
+        qint64 maxGapMs = 0;
+        qint64 idleSinceMs = -1;
+        int idlePolls = 0;
+    };
+    auto state = std::make_shared<IdleState>();
+    state->clock.start();
     pollUntil(
-        [image, idlePolls]() mutable {
+        [image, state]() mutable {
+            const qint64 now = state->clock.elapsed();
+            if (state->lastPollMs >= 0) {
+                state->maxGapMs = std::max(state->maxGapMs, now - state->lastPollMs);
+            }
+            state->lastPollMs = now;
             if (!image->isIdle()) {
-                idlePolls = 0;
+                state->idlePolls = 0;
+                state->idleSinceMs = -1;
                 return false;
             }
-            ++idlePolls;
+            if (state->idleSinceMs < 0) {
+                state->idleSinceMs = now;
+            }
+            ++state->idlePolls;
+            if (state->idlePolls < IdlePolls) {
+                return false;
+            }
             KisViewManager *viewManager = currentViewManager();
             const KisSelectionSP selection = viewManager ? viewManager->selection() : KisSelectionSP();
-            const bool shapeSelection = selection && selection->hasShapeSelection();
-            return idlePolls >= (shapeSelection ? ShapeSelectionIdlePolls : IdlePolls);
+            if (!selection || !selection->hasShapeSelection()) {
+                return true;
+            }
+            return now - state->idleSinceMs >= ShapeSelectionSettleMs + 2 * state->maxGapMs;
         },
         timeoutMs,
-        [reply](bool idle, qint64 waitedMs) {
+        [reply, state](bool idle, qint64 waitedMs) {
+            const QJsonObject result{{"idle", idle}, {"waitedMs", waitedMs}, {"maxPollGapMs", state->maxGapMs}};
             if (idle) {
-                reply(TestControlMcpServer::ToolResult::success({{"idle", true}, {"waitedMs", waitedMs}}));
+                reply(TestControlMcpServer::ToolResult::success(result));
             } else {
-                reply(TestControlMcpServer::ToolResult::failure("The image did not become idle",
-                                                                {{"idle", false}, {"waitedMs", waitedMs}}));
+                reply(TestControlMcpServer::ToolResult::failure("The image did not become idle", result));
             }
         },
-        // The condition counts its own consecutive idle polls (see IdlePolls).
-        // A vector selection read right after three polls was empty in 13 of
-        // 15 runs on Windows and in about one of 25 on Linux.
+        // The condition tracks its own idle polls and time (see IdlePolls and
+        // ShapeSelectionSettleMs). A vector selection read right after three
+        // polls was empty in 13 of 15 runs on Windows and in about one of 25
+        // on Linux.
         1);
 }
 
