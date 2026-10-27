@@ -1,12 +1,13 @@
 # UI test automation through MCP - plan
 
-Status (2026-10-26): the user answered the plan's open decisions and
-authorized phase 0 only ([decisions](#user-decisions-2026-10-26)). Phase 0
-is implemented as the test control plugin; its maintained reference is
-[Test control](test-control.md), which owns the current protocol, lifecycle,
-verification status and the phase 0 manual checks. Phase 0 is not yet built
-or run in Solstice. Phases 1-5 below are proposals and need the user's
-go-ahead after the phase 0 checks.
+Status (2026-10-27): phase 0 is done. The test control plugin was built and
+its twelve manual checks were run against a live Solstice on Windows and on
+Linux; the results, the input fixes they led to and the remaining limits are
+in [Test control](test-control.md), which owns the current protocol,
+lifecycle and verification status. The user authorized phase 1 on
+2026-10-27 ([decisions](#user-decisions-2026-10-26)); it is in progress on
+branch `claude/test-control-phase1`. Phases 2-5 remain proposals that need
+the user's go-ahead.
 
 ## Goal
 
@@ -36,7 +37,7 @@ Non-goals:
 | Expectations | Hashes and state in the repository; reference images only where tolerance comparison needs them, kept small. |
 | Scenario files | Next to each feature's tests. |
 | Second running instance | Handled by operation: no other Solstice may run during a test session; no `krita/main.cc` change. |
-| Scope | Phase 0 only. |
+| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks. |
 
 Consequences for the design: with MCP in-process, the transport is MCP
 Streamable HTTP on `127.0.0.1` instead of a named pipe to a bridge. Because
@@ -123,7 +124,7 @@ writes a report. Expectations prefer state over pixels:
 | Input profile bindings | Use the default profile in the scratch root; modifiers follow `kritadefault.profile` ([Transform Tool input pitfall](wiki/pitfalls/transform-tool-input.md)) |
 | Real keyboard and pen state | The input manager resyncs modifiers from the real keyboard ([synthetic input pitfall](wiki/pitfalls/synthetic-canvas-input.md)); keep hands off during runs |
 | GPU differences | Separate expectations per GPU mode; tolerance comparison, never inferring GPU composition from the requested mode |
-| Focus-dependent behavior | Phase 0 check 10 records whether strokes need window focus |
+| Focus-dependent behavior | Phase 0 check 10: strokes paint without window focus on Windows and Linux; on Linux only after each stroke began with an `Enter` (a covered pointer had suppressed all actions) |
 
 ## What stays manual
 
@@ -141,19 +142,46 @@ writes a report. Expectations prefer state over pixels:
 
 ### Phase 0: feasibility spike
 
-Implemented 2026-10-26 (not yet built or run in Solstice): plugin skeleton,
-environment gate, MCP endpoint, `session_info`, `document_new`,
-`tool_activate`, mouse and tablet `input_stroke`, `wait_idle`,
-`query_state`, `action_trigger`, `canvas_capture`. Exit: the user runs the
-[phase 0 checks](test-control.md#manual-regression-checklist), the results
-are recorded in the reference, and the user decides on phase 1.
+Implemented 2026-10-26: plugin skeleton, environment gate, MCP endpoint,
+`session_info`, `document_new`, `tool_activate`, mouse and tablet
+`input_stroke`, `wait_idle`, `query_state`, `action_trigger`,
+`canvas_capture`.
+
+Done 2026-10-27. The [phase 0 checks](test-control.md#manual-regression-checklist)
+pass on Windows and Linux. Running them found and fixed: non-spontaneous
+releases cancelling shape tools, the first pen stroke on a canvas lost to the
+stylus device switch, `wait_idle` returning before vector selections had
+their pixels (and its settle time stretching under GUI load), and strokes
+ignored after a `Leave`. A Solstice core fix came out of it too: covered
+views no longer repaint for the selection outline animation (branch
+`claude/selection-ants-covered-views`). The user decided on phase 1 the
+same day.
 
 ### Phase 1: minimum protocol
+
+Authorized 2026-10-27; in progress on `claude/test-control-phase1`.
 
 - The planned additions for documents, view reset, brush presets and
   modifiers; document paths restricted to a test root.
 - Three scenarios: brush stroke then undo; rectangular selection then fill
   inside it; eraser stroke over a painted area.
+
+Planned scope (2026-10-27; details and verification will be in [Test control](test-control.md)):
+
+| Tool | Purpose |
+| --- | --- |
+| `document_close` | Close the active document, or all, discarding changes; also keeps long sessions from slowing down |
+| `document_open`, `document_export_png` | Files only inside the test root given by `SOLSTICE_TEST_CONTROL_ROOT` |
+| `view_reset` | Window size, zoom 100 %, no rotation or mirror, image centered |
+| `brush_set` | Paintop preset by name, size, opacity, eraser mode |
+| `input_click`, `input_drag`; `modifiers` on input tools | Conveniences; Shift, Ctrl and Alt as key events with canvas focus |
+| `query_pixels` | Hash, non-transparent count and average color of a rectangle of the active layer or the projection |
+
+Scenario files (format version 1) state their steps and expectations as
+tool calls and compare state, preferring values a step saves and a later step
+compares (before/after hashes) over absolute hashes, which can differ between
+platforms. They are replayed by hand or by an LLM through MCP until the phase 2
+runner exists. `query_layers`, `log_drain` and `ui_click` stay in phases 2-3.
 
 ### Phase 2: scenario runner and expectations
 

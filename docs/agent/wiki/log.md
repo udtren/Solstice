@@ -1968,3 +1968,9 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   to decide because it changes core behavior.
 - Lesson: [synthetic canvas input](pitfalls/synthetic-canvas-input.md),
   "Count settle time with a clock, not in polls".
+
+## 2026-10-27 decision: test control phase 1
+
+- Phase 0 recorded as done in the [UI test automation plan](../ui-automation-plan.md)
+  (checks pass on Windows and Linux); the user authorized phase 1, whose
+  planned scope is listed there.
