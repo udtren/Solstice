@@ -12,8 +12,9 @@
 
 /**
  * The MCP tools that set up a test: opening, exporting and closing documents
- * (files only inside the test root), resetting the view, and choosing the
- * brush preset, size, opacity, eraser mode and foreground color.
+ * (files only inside the test root), resetting the view, choosing the brush
+ * preset, size, opacity, eraser mode and foreground color, and reading the
+ * layer tree and choosing the active and selected layers.
  *
  * Like TestControlCanvasTools, every handler resolves the current window and
  * view when it runs and fails with a message when there is none.
@@ -37,6 +38,8 @@ private:
     void documentClose(const Arguments &arguments, const Reply &reply);
     void viewReset(const Arguments &arguments, const Reply &reply);
     void brushSet(const Arguments &arguments, const Reply &reply);
+    void queryLayers(const Arguments &arguments, const Reply &reply);
+    void layerActivate(const Arguments &arguments, const Reply &reply);
 
     QString m_testRoot;
 };

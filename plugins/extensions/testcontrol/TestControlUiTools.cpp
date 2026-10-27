@@ -35,15 +35,21 @@ QString plainText(QString text)
     return text.remove(QLatin1Char('&'));
 }
 
-/// Visible widgets in the visible top-level windows, optionally inside the
-/// widget named @p within.
-QList<QWidget *> visibleWidgets(const QString &within, QString *error)
+/// Visible widgets in the visible top-level windows (only the one titled
+/// "window", if given), optionally inside the widget named "within".
+QList<QWidget *> visibleWidgets(const QJsonObject &arguments, QString *error)
 {
+    const QString window = arguments.value("window").toString();
+    const QString within = arguments.value("within").toString();
     QList<QWidget *> roots;
     for (QWidget *topLevel : QApplication::topLevelWidgets()) {
-        if (topLevel->isVisible()) {
+        if (topLevel->isVisible() && (window.isEmpty() || plainText(topLevel->windowTitle()) == window)) {
             roots << topLevel;
         }
+    }
+    if (roots.isEmpty()) {
+        *error = "No visible window titled " + window;
+        return {};
     }
     if (!within.isEmpty()) {
         QList<QWidget *> containers;
@@ -108,21 +114,27 @@ QJsonObject describe(QWidget *widget)
     if (!widget->toolTip().isEmpty()) {
         result.insert("toolTip", widget->toolTip());
     }
+    if (widget->isWindow()) {
+        result.insert("windowTitle", plainText(widget->windowTitle()));
+    }
     return result;
 }
 
-/// The one visible widget of type T named @p objectName (and with button
-/// text @p text, if given), or the @p index-th of several.
+/// The one visible widget of type T that matches every given selector
+/// (objectName, button text, toolTip, className), or the "index"-th of
+/// several, in the order ui_query lists them.
 template<class T>
 T *findOne(const QJsonObject &arguments, QString *error)
 {
     const QString objectName = arguments.value("objectName").toString();
     const QString text = arguments.value("text").toString();
-    if (objectName.isEmpty() && text.isEmpty()) {
-        *error = "Give objectName or text";
+    const QString toolTip = arguments.value("toolTip").toString();
+    const QByteArray className = arguments.value("className").toString().toLatin1();
+    if (objectName.isEmpty() && text.isEmpty() && toolTip.isEmpty() && className.isEmpty()) {
+        *error = "Give objectName, text, toolTip or className";
         return nullptr;
     }
-    const QList<QWidget *> widgets = visibleWidgets(arguments.value("within").toString(), error);
+    const QList<QWidget *> widgets = visibleWidgets(arguments, error);
     if (!error->isEmpty()) {
         return nullptr;
     }
@@ -130,7 +142,9 @@ T *findOne(const QJsonObject &arguments, QString *error)
     QList<T *> matches;
     for (QWidget *widget : widgets) {
         T *candidate = qobject_cast<T *>(widget);
-        if (!candidate || (!objectName.isEmpty() && widget->objectName() != objectName)) {
+        if (!candidate || (!objectName.isEmpty() && widget->objectName() != objectName)
+            || (!toolTip.isEmpty() && widget->toolTip() != toolTip)
+            || (!className.isEmpty() && !widget->inherits(className.constData()))) {
             continue;
         }
         if (!text.isEmpty()) {
@@ -144,10 +158,14 @@ T *findOne(const QJsonObject &arguments, QString *error)
 
     const int index = arguments.value("index").toInt(-1);
     if (matches.isEmpty()) {
-        *error = QStringLiteral("No visible %1 matches objectName \"%2\"%3")
-                     .arg(QString::fromLatin1(T::staticMetaObject.className()),
-                          objectName,
-                          text.isEmpty() ? QString() : " and text \"" + text + "\"");
+        QStringList selectors;
+        for (const char *key : {"objectName", "text", "toolTip", "className", "window", "within"}) {
+            if (arguments.contains(key)) {
+                selectors << QStringLiteral("%1 \"%2\"").arg(key, arguments.value(key).toString());
+            }
+        }
+        *error = QStringLiteral("No visible, matching %1: %2")
+                     .arg(QString::fromLatin1(T::staticMetaObject.className()), selectors.join(", "));
         return nullptr;
     }
     if (index >= 0) {
@@ -209,49 +227,73 @@ void TestControlUiTools::registerTools(TestControlMcpServer *server)
 
     const QJsonObject withinProperty =
         schemaProperty("string", "Search only inside the visible widget with this object name.");
-    const QJsonObject indexProperty = schemaProperty("integer", "Which of several matching widgets (from 0).");
+    const QJsonObject windowProperty =
+        schemaProperty("string", "Search only in the visible window with this title, e.g. a dialog.");
+    const QJsonObject indexProperty =
+        schemaProperty("integer", "Which of several matching widgets (from 0, in ui_query order).");
+    const QJsonObject toolTipProperty = schemaProperty("string", "Exact tool tip, for buttons without text.");
+    const QJsonObject classNameProperty =
+        schemaProperty("string", "Class the widget is or inherits, e.g. QLineEdit or QSpinBox.");
 
     server->addTool(
         "ui_query",
         "List visible widgets with their object name, class, enabled state and value (button text "
-        "and checked state, combo items and current index, spin box value, label text).",
+        "and checked state, combo items and current index, spin box value, label text, tool tip, "
+        "window title).",
         objectSchema({
             {"nameFilter", schemaProperty("string", "Only object names containing this text.")},
             {"within", withinProperty},
+            {"window", windowProperty},
             {"includeUnnamed", schemaProperty("boolean", "Also list widgets without an object name (default false).")},
         }),
         std::bind(&TestControlUiTools::uiQuery, this, _1, _2));
 
     server->addTool(
         "ui_click",
-        "Click a visible, enabled button found by object name and/or its text, or a standard "
-        "button (Apply, Reset, Ok, ...) of the QDialogButtonBox named objectName. Returns the "
+        "Click a visible, enabled button found by object name, text, tool tip and/or class, or a "
+        "standard button (Apply, Reset, Ok, ...) of the QDialogButtonBox found that way. Returns the "
         "button's state afterwards.",
         objectSchema({
             {"objectName", schemaProperty("string", "Object name of the button or button box.")},
             {"text", schemaProperty("string", "Button text without the & mnemonic.")},
+            {"toolTip", toolTipProperty},
+            {"className", classNameProperty},
             {"standardButton",
              enumProperty(
                  {"Ok", "Cancel", "Apply", "Reset", "Close", "Yes", "No", "Save", "Discard", "RestoreDefaults"},
-                 "Standard button of the QDialogButtonBox named objectName.")},
+                 "Standard button of the QDialogButtonBox found by the other selectors.")},
             {"within", withinProperty},
+            {"window", windowProperty},
             {"index", indexProperty},
+            {"async",
+             schemaProperty("boolean",
+                            "Click after replying, for a button that opens a modal dialog (default false).")},
         }),
         std::bind(&TestControlUiTools::uiClick, this, _1, _2));
 
     server->addTool("ui_set",
-                    "Set a visible, enabled widget found by object name: a combo box (index number or item "
-                    "text), a spin box (number), a check box or checkable button (true/false) or a line edit "
-                    "(text). Spin boxes and line edits then report editing as finished. Returns the new state.",
+                    "Set a visible, enabled widget found by object name, tool tip and/or class: a combo box "
+                    "(index number or item text; also emits activated, as a user's choice does), a spin box "
+                    "(number), a check box or checkable button (true/false) or a line edit (text). Spin boxes "
+                    "and line edits then report editing as finished. Returns the new state.",
                     objectSchema(
                         {
                             {"objectName", schemaProperty("string", "Object name of the widget.")},
+                            {"toolTip", toolTipProperty},
+                            {"className", classNameProperty},
                             {"value", QJsonObject{{"description", "New value."}}},
                             {"within", withinProperty},
+                            {"window", windowProperty},
                             {"index", indexProperty},
                         },
-                        {"objectName", "value"}),
+                        {"value"}),
                     std::bind(&TestControlUiTools::uiSet, this, _1, _2));
+
+    server->addTool("ui_close",
+                    "Close the visible windows with this title, such as a modeless dialog or popup, as its "
+                    "close button does. Returns how many were closed.",
+                    objectSchema({{"window", schemaProperty("string", "Window title.")}}, {"window"}),
+                    std::bind(&TestControlUiTools::uiClose, this, _1, _2));
 
     server->addTool("docker_show",
                     "Show or hide a docker of the current window by its ID, e.g. sharedtooldocker (Tool "
@@ -299,10 +341,34 @@ void TestControlUiTools::dockerShow(const Arguments &arguments, const Reply &rep
     });
 }
 
+void TestControlUiTools::uiClose(const Arguments &arguments, const Reply &reply)
+{
+    const QString title = arguments.value("window").toString();
+    QList<QPointer<QWidget>> windows;
+    for (QWidget *topLevel : QApplication::topLevelWidgets()) {
+        if (topLevel->isVisible() && plainText(topLevel->windowTitle()) == title) {
+            windows << topLevel;
+        }
+    }
+    if (windows.isEmpty()) {
+        reply(TestControlMcpServer::ToolResult::failure("No visible window titled " + title));
+        return;
+    }
+    int closed = 0;
+    for (const QPointer<QWidget> &window : windows) {
+        if (window && window->close()) {
+            closed++;
+        }
+    }
+    QTimer::singleShot(0, this, [reply, closed]() {
+        reply(TestControlMcpServer::ToolResult::success({{"closed", closed}}));
+    });
+}
+
 void TestControlUiTools::uiQuery(const Arguments &arguments, const Reply &reply)
 {
     QString error;
-    const QList<QWidget *> widgets = visibleWidgets(arguments.value("within").toString(), &error);
+    const QList<QWidget *> widgets = visibleWidgets(arguments, &error);
     if (!error.isEmpty()) {
         reply(TestControlMcpServer::ToolResult::failure(error));
         return;
@@ -350,6 +416,19 @@ void TestControlUiTools::uiClick(const Arguments &arguments, const Reply &reply)
         return;
     }
 
+    if (arguments.value("async").toBool(false)) {
+        // As action_trigger's async: a modal dialog's event loop must not
+        // run inside this call.
+        reply(TestControlMcpServer::ToolResult::success({{"widget", describe(button)}, {"async", true}}));
+        QPointer<QAbstractButton> guard(button);
+        QTimer::singleShot(0, this, [guard]() {
+            if (guard && guard->isEnabled()) {
+                guard->click();
+            }
+        });
+        return;
+    }
+
     button->click();
     replyLater(this, button, reply);
 }
@@ -375,6 +454,10 @@ void TestControlUiTools::uiSet(const Arguments &arguments, const Reply &reply)
             return;
         }
         combo->setCurrentIndex(index);
+        // As when the user picks an item: some widgets act only on activated,
+        // which is emitted even when the index does not change.
+        Q_EMIT combo->activated(index);
+        Q_EMIT combo->textActivated(combo->itemText(index));
     } else if (auto *spin = qobject_cast<QSpinBox *>(widget)) {
         if (!value.isDouble()) {
             reply(TestControlMcpServer::ToolResult::failure("A spin box needs a number"));

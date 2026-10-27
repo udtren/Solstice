@@ -7,10 +7,12 @@
 
 #include <QCryptographicHash>
 #include <QElapsedTimer>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QTimer>
 #include <QWidget>
 
+#include <KisDocument.h>
 #include <KisMainWindow.h>
 #include <KisPart.h>
 #include <KisViewManager.h>
@@ -69,12 +71,16 @@ QJsonValue documentInfo(KisViewManager *viewManager)
         return QJsonValue::Null;
     }
     const KoColorSpace *colorSpace = image->colorSpace();
+    KisDocument *document = viewManager->document();
     return QJsonObject{
         {"width", image->width()},
         {"height", image->height()},
         {"colorModel", colorSpace->colorModelId().id()},
         {"colorDepth", colorSpace->colorDepthId().id()},
         {"profile", colorSpace->profile() ? colorSpace->profile()->name() : QString()},
+        // The file name only, so results do not depend on where the test root is.
+        {"fileName", document ? QFileInfo(document->path()).fileName() : QString()},
+        {"modified", document && document->isModified()},
     };
 }
 

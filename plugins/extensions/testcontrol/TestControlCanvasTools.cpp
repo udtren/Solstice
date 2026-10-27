@@ -228,8 +228,15 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                     std::bind(&TestControlCanvasTools::queryState, this, _1, _2));
 
     server->addTool("action_trigger",
-                    "Trigger a main window action by name, e.g. edit_undo, edit_redo, deselect, select_all.",
-                    objectSchema({{"name", schemaProperty("string", "Action name.")}}, {"name"}),
+                    "Trigger a main window action by name, e.g. edit_undo, edit_redo, deselect, select_all. "
+                    "With async, reply first and trigger afterwards: an action that opens a modal dialog "
+                    "would otherwise block every later call; operate the dialog with the ui tools.",
+                    objectSchema({{"name", schemaProperty("string", "Action name.")},
+                                  {"async",
+                                   schemaProperty("boolean",
+                                                  "Trigger after replying, for actions that open a modal "
+                                                  "dialog (default false).")}},
+                                 {"name"}),
                     std::bind(&TestControlCanvasTools::actionTrigger, this, _1, _2));
 
     server->addTool("input_key",
@@ -1058,9 +1065,21 @@ void TestControlCanvasTools::actionTrigger(const Arguments &arguments, const Rep
         return;
     }
 
+    QPointer<QAction> guard(action);
+    if (arguments.value("async").toBool(false)) {
+        // The trigger runs from the event loop after the reply is sent, so a
+        // modal dialog's own event loop keeps serving later calls.
+        reply(TestControlMcpServer::ToolResult::success({{"triggered", name}, {"async", true}}));
+        QTimer::singleShot(0, this, [guard]() {
+            if (guard && guard->isEnabled()) {
+                guard->trigger();
+            }
+        });
+        return;
+    }
+
     action->trigger();
 
-    QPointer<QAction> guard(action);
     QTimer::singleShot(0, this, [reply, guard, name]() {
         QJsonObject result{{"triggered", name}};
         if (guard && guard->isCheckable()) {
