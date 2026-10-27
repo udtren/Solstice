@@ -2100,3 +2100,21 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   Layer Comps crash on a null document after fast document switching. Not
   fixed.
 - Lesson: [one step short has more than one cause](pitfalls/synthetic-canvas-input.md).
+
+## 2026-10-27 fix: Transform Tool Apply flushes the pending recalculation
+
+- The user asked to fix the stale Apply found while checking the release
+  fix. `KisToolTransform::endStroke()` now runs the strategy's pending
+  recalculation first (`flushPendingRecalculation()`; Warp, Cage, Puppet,
+  Mesh). Verified on Linux with Puppet Warp drags released at once (60 of 60
+  and 30 of 30 correct per device, against 5 of 60 and 4 of 30 wrong before)
+  and the new scenario `puppet-quick-apply` (9 of 10 runs failed without
+  the fix, 10 of 10 pass); all 25 scenarios pass twice
+  ([Puppet Warp](../puppet-warp.md#interaction-invariants),
+  [feature inventory](../feature-inventory.md)).
+- Test control gained `keyAfterRelease` so a key can follow the release in
+  the same call; an HTTP round trip in between hid the race
+  ([pitfall](pitfalls/synthetic-canvas-input.md)).
+- `kis_cage_transform_worker_test` fails its two unity cases on Linux (image
+  comparison); it does not load the tool plugin and its code is unchanged
+  since the initial snapshot.

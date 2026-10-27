@@ -323,6 +323,12 @@ Add Puppet-specific multi-layer regression coverage before changing this path.
 
 ## Interaction invariants
 
+- Apply uses the latest pin positions: the strategy delivers its arguments
+  to the transform stroke through `recalculateSignalCompressor` (40 ms), so
+  `KisToolTransform::endStroke()` first calls
+  `flushPendingRecalculation()` (2026-10-27; before, Apply within 40 ms of a
+  drag applied the previous position). Keep that call when changing how
+  strategies deliver arguments.
 - Place pins in Draw mode, then lock before manipulation.
 - Drag centers to move pins.
 - Hit-test the locked pin annulus for `ROTATE_PIN`; accumulate the incremental
@@ -454,15 +460,10 @@ rigid points unrotated (tore the joint).
 7. Opaque backgrounds mask the entire rectangle.
 8. Full-resolution mask construction is synchronous, although cached.
 9. Rotation rings can become visually crowded.
-10. Apply (button or Return) within 40 ms of the last pin drag applies the
-    pin's previous position: the strategy sends its arguments to the stroke
-    from `recalculateSignalCompressor` (40 ms), and
-    `KisToolTransform::endStroke()` sends the current arguments only for the
-    overlay preview style. Found by test control (2026-10-27); not fixed.
-11. Pins placed with the mouse and dragged with the pen live in separate
+10. Pins placed with the mouse and dragged with the pen live in separate
     tool instances (one set per input device), and the next mouse press then
     crashed in `beginPrimaryAction()` on a stale pin index (2026-10-27); not
-    fixed. Details for both in
+    fixed. Details in
     [Test control](test-control.md#known-limitations-and-pending-work).
 
 ## Recommended improvement path
@@ -579,6 +580,7 @@ pixels can decide them:
 | Ctrl+Alt-click removes exactly one pin; "Click pin: Delete pin" deletes with a plain click | `puppet-pin-delete` (the result equals placing only the other pins) |
 | Rotate a pin, then unlock: Apply leaves the artwork unchanged | `puppet-unlock-identity` |
 | Show mesh does not change output | `puppet-show-mesh` |
+| Apply right after a drag uses the final pin position (interaction invariant) | `puppet-quick-apply` |
 | Reset restores source and state | `puppet-reset` (source; the state is not read back) |
 
 The rest stays manual. The transform keeps the image busy until Apply, so

@@ -127,7 +127,7 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
 | Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
 | Paint trace series (developer tool, phase 4) | `dev-tools/test-control/paint_trace_series.py`, `test_paint_trace_series.py`; summaries by `build-tools/paint-trace/summarize.py` |
-| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (7); `libs/ui/tests/scenarios/lazy-*.json` (4); `plugins/dockers/layerdocker/tests/scenarios/` (1); `plugins/dockers/quickaccess/tests/scenarios/` (3) |
+| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (8); `libs/ui/tests/scenarios/lazy-*.json` (4); `plugins/dockers/layerdocker/tests/scenarios/` (1); `plugins/dockers/quickaccess/tests/scenarios/` (3) |
 | Object names for the Puppet Warp options (no behavior change) | `plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp` |
 | Hook in an upstream file | `plugins/extensions/CMakeLists.txt` (`add_subdirectory(testcontrol)` only when `BUILD_WITH_QT6`) |
 
@@ -177,10 +177,10 @@ tested in the cloud session.
 | `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables, and `gpuEngine`: the device, driver and failed state once the GPU engine has started (null before, or without it) |
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi). Every `document` result has size, color model, depth and profile, the file name (`fileName`, without the folder, empty for an unsaved document) and `modified` |
 | `tool_activate` | `id` (factory ID) | Active tool ID and `restarted`; a tool that is already active is switched away (to the rectangle selection, or from it to the brush) and back, so it starts fresh; an unknown ID lists all IDs |
-| `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `releaseDelayMs` (0-1000, default 50), `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, points outside the canvas widget, modifiers, active tool |
+| `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `releaseDelayMs` (0-1000, default 50), `keyAfterRelease` (one key in `QKeySequence` portable text, sent with canvas focus right after the release), `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, points outside the canvas widget, modifiers, active tool |
 | `input_click` | `x`, `y`, `device`, `coordinates`, `button`, `pressure`, `modifiers`, `doubleClick` (mouse only) | As `input_stroke`; one press and release, or with `doubleClick` press, release, `MouseButtonDblClick`, release |
 | `input_key` | `key` (`QKeySequence` portable text: `Return`, `Escape`, `Delete`, `Ctrl+Z`), `modifiers` | `ShortcutOverride`, `KeyPress` and `KeyRelease` to the canvas widget after it got focus, wrapped in the modifier keys' presses and releases |
-| `input_drag` | `from`, `to` (`x`, `y`), `steps` (default 20), `durationMs` (default 200), `device`, `coordinates`, `button`, `pressure`, `realtime`, `releaseDelayMs`, `modifiers` | As `input_stroke`; a straight line in equal steps |
+| `input_drag` | `from`, `to` (`x`, `y`), `steps` (default 20), `durationMs` (default 200), `device`, `coordinates`, `button`, `pressure`, `realtime`, `releaseDelayMs`, `keyAfterRelease`, `modifiers` | As `input_stroke`; a straight line in equal steps |
 | `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, and, while the current selection has a shape selection, for 600 ms plus twice the longest poll gap, measured with a clock; waited time (at least 40 ms, or about 640 ms), longest gap between polls (`maxPollGapMs`) |
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name`, `async` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...). With `async`, replies first and triggers from the event loop afterwards, for actions that open a modal dialog (Rename Alternative) |
@@ -239,13 +239,11 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   first point, the press `HoverSettleMs` later, moves, and the release
   `ReleaseSettleMs` (50 ms, `releaseDelayMs`) after the last move; a double
   click adds `MouseButtonDblClick` and a second release. The pause is how a
-  hand lets go, and the Transform Tool needs it: in Warp, Cage, Puppet and
-  Mesh mode the drag's last position reaches the transform stroke from a
-  40 ms compressor, so Apply right after the release applied a position one
-  or two moves old (see the limitations). Tablet strokes wait the same
-  before `TabletRelease`; clicks without moves do not wait. With
-  `releaseDelayMs` 0 the release follows the last move at once, as a quick
-  hand's does. The hover move is
+  hand lets go. Tablet strokes wait the same before `TabletRelease`; clicks
+  without moves do not wait. With `releaseDelayMs` 0 the release follows the
+  last move at once, as a quick hand's does, and `keyAfterRelease` presses a
+  key (for example Return) right after the release in the same call, so
+  Apply can follow a drag within a millisecond. The hover move is
   what a real pointer sends before a click; the polygonal selection tool
   snaps to its first point and decides about closing the shape from the
   hover position. Tablet: `TabletEnterProximity` (to the
@@ -547,6 +545,7 @@ LLM; an LLM or a person can also replay one step by step through the endpoint.
 | `plugins/tools/tool_transform2/tests/scenarios/puppet-reset.json` | After a pin drag, the Reset button restores the source; Apply leaves the original hash |
 | `plugins/tools/tool_transform2/tests/scenarios/puppet-show-mesh.json` | The same pin drag gives the same hash with Show mesh on, off and on again |
 | `plugins/tools/tool_transform2/tests/scenarios/transform-quick-release.json` | A free transform drag of 50 moves sent back to back, released at once, ends exactly 100 px right and 50 px down, with the mouse and (after a pen click switches the canvas to the pen's tool instances) with the pen; it checks that `KisInputManager` delivers the move its compression holds before a release. The rectangle is drawn in the default window and the drags run in a 640x480 one, where repaints are short enough for moves to arrive within the 10 ms compression. On a build without the fix it failed 10 of 10 runs |
+| `plugins/tools/tool_transform2/tests/scenarios/puppet-quick-apply.json` | A Puppet Warp pin drag with a pause before the release and Apply clicked afterwards sets the reference pixels; then five times the same drag whose last move comes 5 ms after the one before, released at once and applied with Return in the same call (`keyAfterRelease`), must give the same pixels. It checks that Apply flushes the strategy's 40 ms recalculation; without that fix about one quick pass in three applied the previous position, and the scenario failed 9 of 10 runs |
 | `plugins/tools/tool_transform2/tests/scenarios/puppet-pin-delete.json` | Deleting the right of three pins with Ctrl+Alt-click, and with a plain click while "Click pin" is "Delete pin", each give the same result as placing only the two other pins |
 
 | `plugins/dockers/layerdocker/tests/scenarios/color-label-controls.json` | Lazy Tools label control: labels the active layer only, then a group without its child, then two selected layers; the visibility control toggles every layer with that label, inside groups too, each time it is chosen |
@@ -685,21 +684,21 @@ warning, close it in every process (the runner cannot).
   fix, and exactly on target in 30 of 30 with it, mouse and pen alike;
   `transform-quick-release` keeps it covered. Touch end has the same pattern
   and is unchanged: test control cannot send touch events.
-- The Transform Tool applies a stale drag position (found 2026-10-27, Krita
-  behavior, not fixed): in Warp, Cage, Puppet and Mesh mode the strategy's
-  `recalculateSignalCompressor` (40 ms) sends the new arguments to the
-  transform stroke, and `KisToolTransform::endStroke()` adds the current
-  arguments only for the overlay preview style. Apply within 40 ms of the
-  last move therefore applies the position before it. This, not the release,
-  made `puppet-show-mesh` fail at random (2 of 8 runs, the pin 5 or 10 px
-  short): a gdb trace showed all 20 moves and the release reaching the
-  strategy at the final position, with no move held at the release, and the
-  input manager fix did not change the rate (5 of 60 with an immediate
-  release, mouse and pen). The injector's 50 ms pause before the release
-  hides it in scenarios; a person rarely applies within 40 ms of a drag, but
-  a delayed timer under load widens the window. Flushing the strategy's
-  recalculation before `endStroke()` would fix it, a change to the Transform
-  Tool for the user to decide.
+- The Transform Tool applied a stale drag position (found and fixed
+  2026-10-27, Krita behavior): in Warp, Cage, Puppet and Mesh mode the
+  strategy's `recalculateSignalCompressor` (40 ms) sends the new arguments to
+  the transform stroke, and `KisToolTransform::endStroke()` added the current
+  arguments only for the overlay preview style, so Apply within 40 ms of the
+  last move applied the position before it. This, not the release, made
+  `puppet-show-mesh` fail at random (2 of 8 runs, the pin 5 or 10 px short):
+  a gdb trace showed all 20 moves and the release reaching the strategy at
+  the final position. `endStroke()` now calls the strategy's
+  `flushPendingRecalculation()` first (Warp, which also serves Cage and
+  Puppet, and Mesh run a recalculation their compressor still owes). Puppet
+  drags released at once: before, 5 of 60 (realtime) and 4 of 30 per device
+  (back to back) applied an older position; after, 60 of 60 and 30 of 30
+  for mouse and pen, all with identical pixels. `puppet-quick-apply` covers
+  it (9 of 10 runs failed without the fix, 10 of 10 pass with it).
 - Two crashes found while checking that (2026-10-27, not fixed). Puppet
   pins placed with the mouse and then dragged with the pen: the pen's first
   event switches the canvas to other tool instances

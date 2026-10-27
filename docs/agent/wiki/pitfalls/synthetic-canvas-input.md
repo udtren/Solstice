@@ -209,7 +209,12 @@ Two separate mechanisms end a synthetic drag short, and they look alike
   Mesh strategies send the drag's position to the stroke from a 40 ms
   compressor, and Apply within 40 ms of the last move applied the previous
   position. This caused the random Puppet Warp failures; a pause before the
-  release hid it.
+  release hid it. `endStroke()` now flushes the strategy first. To test such
+  a race, put the trigger in the same call as the action (test control's
+  `keyAfterRelease`), make the timing uneven (a last move 5 ms after the one
+  before), and repeat the pass: with Apply as a separate tool call, a
+  scenario caught the bug in 1 of 20 runs; with Return in the same call,
+  uneven timing and five passes, in 9 of 10.
 
 Before blaming the input path, trace where the moves arrive: a gdb `dprintf`
 on the strategy's `continuePrimaryAction(KoPointerEvent *)` and
