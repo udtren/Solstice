@@ -157,6 +157,13 @@ void TestControlInputInjector::playStroke(QWidget *target,
             m_steps.append({QEvent::KeyRelease, last, false, false, it->second});
         }
     }
+    if (last > 0) {
+        bool released = false;
+        for (Step &step : m_steps) {
+            released = released || step.type == QEvent::MouseButtonRelease || step.type == QEvent::TabletRelease;
+            step.afterMoves = released;
+        }
+    }
 
     m_startMs = m_clock.elapsed();
     // Event timestamps are milliseconds on a monotonic clock; keep them
@@ -171,7 +178,7 @@ qint64 TestControlInputInjector::stepOffsetMs(const Step &step) const
         || step.type == QEvent::ShortcutOverride || step.type == QEvent::KeyPress) {
         return 0;
     }
-    return HoverSettleMs;
+    return step.afterMoves ? HoverSettleMs + ReleaseSettleMs : HoverSettleMs;
 }
 
 void TestControlInputInjector::scheduleNext()

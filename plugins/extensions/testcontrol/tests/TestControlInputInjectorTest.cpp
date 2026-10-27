@@ -234,6 +234,8 @@ void TestControlInputInjectorTest::testMouseStroke()
     }
     QCOMPARE(e[1].timestamp - e[0].timestamp, quint64(30));
     QCOMPARE(e[2].timestamp - e[0].timestamp, quint64(60));
+    // The release waits, so the move compression delivers the last move first.
+    QCOMPARE(e[3].timestamp - e[2].timestamp, quint64(TestControlInputInjector::ReleaseSettleMs));
 }
 
 void TestControlInputInjectorTest::testTabletStroke()
@@ -287,6 +289,7 @@ void TestControlInputInjectorTest::testTabletStroke()
     QCOMPARE(e[4].pressure, 1.0);
     QCOMPARE(e[5].type, QEvent::TabletRelease);
     QCOMPARE(e[5].pressure, 0.0);
+    QCOMPARE(e[5].timestamp - e[4].timestamp, quint64(TestControlInputInjector::ReleaseSettleMs));
     QCOMPARE(e[5].buttons, Qt::MouseButtons(Qt::NoButton));
     QCOMPARE(e[6].type, QEvent::MouseButtonRelease);
     QCOMPARE(e[6].source, Qt::MouseEventSynthesizedBySystem);

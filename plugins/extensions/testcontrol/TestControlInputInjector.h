@@ -35,8 +35,8 @@ class QPointingDevice;
  * KeyRelease events end the stroke. KisInputManager keeps such modifiers only
  * while the canvas has keyboard focus; otherwise it reads the real keyboard.
  * Mouse: a move without buttons to the first point, then, HoverSettleMs
- * later, press, moves, release (for a double click: press, release, double
- * click, release). The move is what a real mouse does before it presses;
+ * later, press, moves, and ReleaseSettleMs after the last move the release
+ * (for a double click: press, release, double click, release). The move is what a real mouse does before it presses;
  * tools such as the polygon selection close their shape only when the
  * pointer hovered over the first point before the click.
  * Tablet: TabletEnterProximity (to the application), one hover TabletMove at
@@ -95,6 +95,12 @@ public:
     /// KisInputManager's move compression (tabletEventsDelay, 10 ms by
     /// default), which a press would otherwise discard.
     static constexpr qint64 HoverSettleMs = 50;
+    /// Time between the last move and the release of a stroke with moves.
+    /// The move compression can still hold the last move when the release
+    /// arrives, and the release does not deliver it: tools that do not ask
+    /// for high-resolution input (the Transform Tool) then stop one move
+    /// short. A pause before the release, as a hand makes, lets it through.
+    static constexpr qint64 ReleaseSettleMs = 50;
 
     explicit TestControlInputInjector(QObject *parent = nullptr);
     ~TestControlInputInjector() override;
@@ -122,10 +128,13 @@ private:
         bool hover = false;
         /// The modifier key of a key event step.
         Qt::Key key = Qt::Key(0);
+        /// From the release on, in a stroke with moves: after ReleaseSettleMs.
+        bool afterMoves = false;
     };
 
     /// Time offset of @p step: steps after the hover move are shifted by
-    /// HoverSettleMs.
+    /// HoverSettleMs, the release and what follows it in a stroke with moves
+    /// by ReleaseSettleMs more.
     qint64 stepOffsetMs(const Step &step) const;
     void scheduleNext();
     void sendStep(const Step &step);
