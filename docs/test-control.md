@@ -14,8 +14,8 @@ computer and only with a password (token) you choose.
 > **Status: early test version.** The tools for drawing, selecting,
 > measuring results, opening and saving test images and choosing brushes are
 > in place and have been checked in a running Solstice on Linux; the second
-> set (from opening files to modifier keys) has not been checked on Windows
-> yet. Scenarios are run step by step until an automatic runner exists.
+> set (from opening files to modifier keys) and the scenario runner have not
+> been checked on Windows yet.
 
 ## Starting Solstice with test control
 
@@ -105,8 +105,31 @@ Without the setting, those two tools refuse to run.
 
 A scenario is a file that lists tool calls and the results to expect, kept
 next to the tests of the feature it covers, for example
-`libs/ui/tests/scenarios/rect-select-fill.json`. For now an AI assistant or a
-person runs it step by step; an automatic runner is planned.
+`libs/ui/tests/scenarios/rect-select-fill.json`.
+
+### Running scenarios
+
+The scenario runner replays every scenario and reports what passed. It needs
+Python 3 and nothing else. With Solstice already started as above, in the same
+PowerShell window:
+
+```powershell
+python dev-tools\test-control\run_scenarios.py --all --report report.json
+```
+
+Or let the runner start a separate test copy of Solstice and close it again
+(close your own Solstice first):
+
+```powershell
+python dev-tools\test-control\run_scenarios.py --all --launch "C:\path\to\Solstice\bin\solstice.exe"
+```
+
+Each scenario is listed as passed or failed, with the step and the reason for
+a failure; `report.json` holds the details. Some scenarios also compare with
+results recorded on a particular system (for example `linux-cpu`). On a
+system with nothing recorded yet, those steps show as "unrecorded" and do not
+fail. To record them for your system, run once with `--record` and keep the
+files it writes next to the scenario.
 
 ## Limitations
 

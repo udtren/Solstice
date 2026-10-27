@@ -10,12 +10,13 @@ idle, and read state and pixel hashes. The user guide is
 [Test control](../test-control.md); the plan, user decisions and later phases
 are in [UI test automation plan](ui-automation-plan.md).
 
-Scope: phase 0 of the plan (feasibility, done 2026-10-27) and phase 1
-(minimum protocol, in progress on `claude/test-control-phase1`): sixteen
+Scope: phase 0 of the plan (feasibility, done 2026-10-27), phase 1
+(minimum protocol) and phase 2 (runner, recorded expectations, tolerance
+comparison), both on `claude/test-control-phase1`: sixteen
 tools, documents in the current window, RGBA documents created by
 `document_new` or opened from the test root, modifier keys with canvas
-focus, and [scenario files](#scenarios-format-version-1) replayed through
-the tools. No scenario runner yet (phase 2).
+focus, [scenario files](#scenarios-format-version-1) and the
+[scenario runner](#scenario-runner).
 
 Verification (2026-10-26, cloud session, no Krita build available):
 
@@ -66,6 +67,16 @@ Verification (2026-10-26, cloud session, no Krita build available):
   pass in four runs each, and a copy with two wrong expectations fails on
   exactly those steps. The phase 0 checklist still passes. Windows not yet
   checked.
+- Phase 2 (2026-10-27, Linux, same setup and branch, full tree rebuilt and
+  installed): `TestControlImageCompareTest` (8 cases) and the runner's tests
+  (7) pass through `ctest`. The runner ran all four scenarios against a
+  running Solstice: `pressure-stroke` reported `unrecorded`, then `--record`
+  stored its hash and a 680x80 reference, and three `--all --strict` runs
+  passed; a copy drawn with a 60 px brush failed on the reference
+  (`matches` false) and the recorded hash. `--launch` started Solstice,
+  passed all four strictly and quit it, leaving no process, temporary
+  directory or autosave. Windows not yet checked; nothing is recorded for
+  `windows-*` keys.
 
 ## Source locations
 
@@ -80,13 +91,15 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Helpers shared by the tool classes, `pollUntil` | `TestControlSupport.{h,cpp}` |
 | Test root path checks (QtCore only) | `TestControlPaths.{h,cpp}` |
 | Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp` |
-| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`; `libs/ui/tests/scenarios/rect-select-fill.json` |
+| Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
+| Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
+| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json` |
 | Hook in an upstream file | `plugins/extensions/CMakeLists.txt` (`add_subdirectory(testcontrol)` only when `BUILD_WITH_QT6`) |
 
 ## Build, test, and install
 
 ```bat
-cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritatestcontrol TestControlProtocolTest TestControlInputInjectorTest TestControlPathsTest -j 2"
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritatestcontrol TestControlProtocolTest TestControlInputInjectorTest TestControlPathsTest TestControlImageCompareTest -j 2"
 cmd.exe /d /s /c "call <krita-dev-root>\env.bat && ctest --test-dir <krita-dev-root>\_build -R TestControl --output-on-failure"
 cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\extensions\testcontrol\cmake_install.cmake"
 ```
@@ -136,7 +149,7 @@ tested in the cloud session.
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
-| `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG |
+| `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize`, `fullResolutionPng` (at most 2048x2048), `reference` (base64 PNG), `maxChannelDiff`, `maxMismatchPixels` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG; with a reference, `reference` (`matches`, `maxChannelDiff`, `mismatchPixels`, `tolerance`) |
 | `document_open` | `path` (relative to the test root) | Opens without dialogs (`KisMainWindow::BatchMode`); document and canvas once its view is active |
 | `document_export_png` | `path` (relative, `.png`) | Exports the active document's image without dialogs, replacing a file; size in bytes |
 | `document_close` | `all` | Closes the active document or every document without asking; documents closed and left |
@@ -399,8 +412,8 @@ prompt during the stroke (202 events sent, "No" exits 0).
 
 A scenario is a JSON file next to the covered feature's tests (user
 decision): the steps are tool calls, each with optional expectations and
-saved values. Until the phase 2 runner exists, an LLM or a person replays it
-through the endpoint.
+saved values. The [scenario runner](#scenario-runner) replays them without an
+LLM; an LLM or a person can also replay one step by step through the endpoint.
 
 ```json
 {
@@ -420,11 +433,19 @@ through the endpoint.
 ```
 
 - `call` and `args`: a tool and its arguments. A step fails if the tool
-  returns an error.
-- `expect`: dotted paths into the tool's structured result. A plain value
-  must be equal; an object with `equals`, `notEquals`, `min` and/or `max`
-  compares accordingly. A string starting with `$` names a saved value.
-- `save`: stores result values under names for later steps.
+  returns an error, unless it has `"expectError": true`. In `args`, a string
+  `"$name"` is replaced by a saved value and `"@path"` by the base64 content
+  of that file (relative to the scenario).
+- `expect`: dotted paths into the tool's structured result (list items by
+  index). A plain value must be equal; an object with `equals`, `notEquals`,
+  `min` and/or `max` compares accordingly. A string starting with `$` names a
+  saved value. `{"recorded": "<key>"}` compares with the value recorded for
+  this platform (below).
+- `save`: stores result values under names for later steps; a missing value
+  fails the step.
+- `"reference": "@ref:<name>"` in `query_pixels` arguments compares the
+  rectangle with the reference image recorded for this platform, within
+  `maxChannelDiff` and `maxMismatchPixels`; expect `reference.matches`.
 - Prefer state (undo, bounds, counts) and values saved earlier in the same run
   (a hash before and after) over absolute hashes, which can differ between
   platforms and builds. Every step that changes the image is followed by
@@ -435,6 +456,57 @@ through the endpoint.
 | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json` | A Basic-5 mouse stroke paints black pixels within the expected bounds; undo restores the empty layer's hash; redo restores the painted hash |
 | `libs/ui/tests/scenarios/rect-select-fill.json` | A mouse-drawn 200x100 selection (vector) is exact; Fill with Foreground Color fills exactly those 20000 pixels red; deselect |
 | `plugins/paintops/defaultpaintops/brush/tests/scenarios/eraser-stroke.json` | On a layer filled blue, a 40 px eraser-mode stroke leaves no pixel under its center line and none touched far from it; undo restores the filled hash |
+| `plugins/paintops/defaultpaintops/brush/tests/scenarios/pressure-stroke.json` | A pen stroke with pressure rising from 0.1 to 1.0 stays thin at its start and wide at its end, and matches its recorded reference image (tolerance 8 per channel, 200 pixels) and exact hash (`pressure-stroke.expected.json`, `pressure-stroke.refs/linux-cpu/`) |
+
+### Recorded values and reference images
+
+Expectations that only hold on one platform and engine are recorded next to
+the scenario, per platform key `<os>-<cpu|gpu>` (`linux-cpu`, `windows-gpu`;
+`gpu` when `KRITA_GPU_PROJECTION` or `KRITA_GPU_BRUSH` is set in Solstice's
+environment, as `session_info` reports):
+
+- `<name>.expected.json` (format `solstice-test-control-expected`, version 1):
+  `values.<key>.<platform key>`, for `{"recorded": "<key>"}` expectations;
+- `<name>.refs/<platform key>/<reference>.png`: 8-bit sRGB images at the
+  rectangle's size, for `"@ref:<reference>"` arguments, compared in the plugin
+  (`TestControlImageCompare`: largest channel difference per pixel, fully
+  transparent pixels equal whatever their color).
+
+`run_scenarios.py --record` writes both for the current platform key; review
+them like code. A run on a key with nothing recorded passes the step as
+`unrecorded`, or fails it with `--strict`.
+
+## Scenario runner
+
+`dev-tools/test-control/run_scenarios.py` (Python 3.8+, standard library only;
+a developer tool, not an application feature) replays scenarios against the
+endpoint and writes a report:
+
+```bat
+rem Solstice already running with test control (port and token from the environment)
+python dev-tools\test-control\run_scenarios.py --all --report report.json
+rem or let the runner start and quit a scratch instance
+python dev-tools\test-control\run_scenarios.py --all --strict --launch <krita-dev-root>\_install\bin\solstice.exe
+```
+
+| Option | Effect |
+| --- | --- |
+| `SCENARIO ...`, `--all` | Files to run; `--all` finds every `*/tests/scenarios/*.json` outside `_build`; `--list` only lists them |
+| `--port`, `--token` | Endpoint; default `SOLSTICE_TEST_CONTROL_PORT` (8765) and `SOLSTICE_TEST_CONTROL_TOKEN` |
+| `--launch EXE` | Starts that executable with a temporary profile, test root, port and token, waits for `session_info` (`--launch-timeout`, 180 s), and at the end closes every document, triggers `file_quit` and removes the temporary directory |
+| `--record` | Stores recorded values and references for the current platform key instead of comparing them |
+| `--strict` | Unrecorded values and references fail |
+| `--fail-fast` | Stops a scenario at its first failing step (a tool error always stops it) |
+| `--report FILE` | JSON report (format `solstice-test-control-report`, version 1): Solstice and platform, platform key, per scenario and step the status (`pass`, `unrecorded`, `fail`, `error`), problems and durations, totals |
+
+Every scenario starts and ends with `document_close` (all). Exit status: 0
+when every scenario passed (`unrecorded` counts as passed unless `--strict`),
+1 when one failed, 2 for a usage, scenario-file or connection error. The
+runner's tests (`dev-tools/test-control/test_run_scenarios.py`, ctest
+`plugins-extensions-testcontrol-RunScenariosTest`) use a fake endpoint.
+
+`--launch` cannot dismiss dialogs: on a machine without a usable GPU, Vision
+ML's "no suitable device" box blocks the start until someone closes it.
 
 ## Known limitations and pending work
 
@@ -477,5 +549,6 @@ Findings from reading the input code (2026-10-26), to confirm in phase 0:
   canvas can interfere with a running test.
 - Real tablet drivers, pressure curves as felt, latency and visual judgement
   remain manual (plan, [What stays manual](ui-automation-plan.md#what-stays-manual)).
-- Not implemented: the scenario runner and tolerance comparison (phase 2),
-  `query_layers`, `log_drain` and `ui_click` (phases 2-3).
+- Not implemented: `query_layers`, `log_drain` and `ui_click` (phase 3).
+- The platform key cannot tell GPU settings made in Solstice's preferences
+  from the CPU path; it only sees the `KRITA_GPU_*` environment variables.

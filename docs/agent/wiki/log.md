@@ -1990,3 +1990,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   [UI test automation plan](../ui-automation-plan.md). Windows not checked.
 - Lesson: modifier key events carry the state before the key
   ([synthetic canvas input](pitfalls/synthetic-canvas-input.md)).
+
+## 2026-10-27 feature: test control phase 2
+
+- The user said to keep going after phase 1; recorded as the phase 2
+  go-ahead in the [UI test automation plan](../ui-automation-plan.md).
+- Added the scenario runner `dev-tools/test-control/run_scenarios.py`
+  (Python standard library; replays scenarios, JSON report, `--launch`,
+  `--record`, `--strict`), per-platform recorded values and reference images
+  next to scenarios, and reference comparison with tolerance in
+  `query_pixels` (`TestControlImageCompare`). Unit tests for both; a fourth
+  scenario (`pressure-stroke`) uses a recorded reference and hash.
+- Verified on Linux: record, three strict runs, a failing negative copy, and
+  a `--launch` run that started and quit Solstice cleanly. Windows not
+  checked. Details in [Test control](../test-control.md).

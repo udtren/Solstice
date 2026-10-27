@@ -4,10 +4,10 @@ Status (2026-10-27): phase 0 is done. The test control plugin was built and
 its twelve manual checks were run against a live Solstice on Windows and on
 Linux; the results, the input fixes they led to and the remaining limits are
 in [Test control](test-control.md), which owns the current protocol,
-lifecycle and verification status. The user authorized phase 1 on
-2026-10-27 ([decisions](#user-decisions-2026-10-26)); it is implemented on
+lifecycle and verification status. The user authorized phases 1 and 2 on
+2026-10-27 ([decisions](#user-decisions-2026-10-26)); both are implemented on
 branch `claude/test-control-phase1` and checked on Linux, with the Windows
-check pending. Phases 2-5 remain proposals that need the user's go-ahead.
+check pending. Phases 3-5 remain proposals that need the user's go-ahead.
 
 ## Goal
 
@@ -37,7 +37,7 @@ Non-goals:
 | Expectations | Hashes and state in the repository; reference images only where tolerance comparison needs them, kept small. |
 | Scenario files | Next to each feature's tests. |
 | Second running instance | Handled by operation: no other Solstice may run during a test session; no `krita/main.cc` change. |
-| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks. |
+| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks; after phase 1 the user said to keep going ("I will test on windows later so keep going"), taken as the go-ahead for phase 2. |
 
 Consequences for the design: with MCP in-process, the transport is MCP
 Streamable HTTP on `127.0.0.1` instead of a named pipe to a bridge. Because
@@ -189,6 +189,24 @@ runner exists. `query_layers`, `log_drain` and `ui_click` stay in phases 2-3.
 
 - Runner, report format, expectation storage in the repository, tolerance
   compare.
+
+Authorized 2026-10-27 (see [decisions](#user-decisions-2026-10-26)) and
+implemented the same day on `claude/test-control-phase1`; checked on Linux,
+Windows pending. Details in [Test control](test-control.md#scenario-runner):
+
+| Part | As implemented |
+| --- | --- |
+| Runner | `dev-tools/test-control/run_scenarios.py`, Python 3 standard library only: replays `*/tests/scenarios/*.json` against a running Solstice or one it launches with a scratch profile, closes documents between scenarios |
+| Report | JSON (`solstice-test-control-report`, version 1) and a console summary; exit status 0, 1 (failure) or 2 (usage, file or connection) |
+| Expectation storage | `<scenario>.expected.json` (recorded values) and `<scenario>.refs/<platform key>/*.png` (reference images) next to the scenario, written by `--record`, keyed by `<os>-<cpu|gpu>` |
+| Tolerance compare | In the plugin (`query_pixels` with a reference): largest channel difference and a mismatch-pixel limit, against an 8-bit sRGB reference |
+
+The runner is Python, unlike Solstice's features: it is a developer tool
+outside the application (as the scripts under `build-tools/` and
+`dev-tools/translations/`), it needs nothing but a Python 3 interpreter on
+Windows and Linux, and it talks to the plugin only through the endpoint.
+The project rule against new Python features concerns the application
+([Codebase map](codebase-map.md)). The user can still ask for a native runner.
 
 ### Phase 3: tool and feature coverage
 
