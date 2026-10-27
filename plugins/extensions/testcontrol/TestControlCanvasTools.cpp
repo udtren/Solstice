@@ -43,6 +43,7 @@
 #include <kis_selection.h>
 #include <kundo2stack.h>
 
+#include "TestControlImageCompare.h"
 #include "TestControlInputInjector.h"
 #include "TestControlSupport.h"
 
@@ -54,6 +55,7 @@ constexpr int MaxStrokePoints = 10000;
 constexpr int DefaultPointSpacingMs = 10;
 constexpr qint64 MaxStrokeDurationMs = 120000;
 constexpr qint64 MaxQueriedPixels = qint64(4096) * 4096;
+constexpr int MaxFullResolutionPng = 2048;
 // wait_idle polls every 20 ms. Three idle polls let work queued to the GUI
 // thread run. A vector (shape) selection renders its pixels from timers the
 // image does not report as busy (KisSelectionUpdateCompressor, 100 ms, then
@@ -238,6 +240,17 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
             {"source", enumProperty({"layer", "projection"}, "Active layer or the whole image (default layer).")},
             {"includePng", schemaProperty("boolean", "Attach a PNG of the rectangle (default false).")},
             {"maxPngSize", schemaProperty("integer", "Longest side of that PNG (default 256, max 1024).")},
+            {"fullResolutionPng",
+             schemaProperty("boolean",
+                            "Attach the PNG at the rectangle's own size, not scaled (rectangle at most "
+                            "2048x2048); for recording reference images.")},
+            {"reference",
+             schemaProperty("string",
+                            "Base64 PNG of the same size as the rectangle to compare with (8-bit sRGB, "
+                            "straight alpha); the result gets a reference object.")},
+            {"maxChannelDiff",
+             schemaProperty("integer", "Largest allowed channel difference against the reference (default 0).")},
+            {"maxMismatchPixels", schemaProperty("integer", "Pixels allowed above maxChannelDiff (default 0).")},
         }),
         std::bind(&TestControlCanvasTools::queryPixels, this, _1, _2));
 
@@ -721,11 +734,39 @@ void TestControlCanvasTools::queryPixels(const Arguments &arguments, const Reply
                       QColor(qRound(red / visible), qRound(green / visible), qRound(blue / visible)).name());
     }
 
+    if (arguments.contains("reference")) {
+        const QImage reference =
+            QImage::fromData(QByteArray::fromBase64(arguments.value("reference").toString().toLatin1()), "PNG");
+        TestControlImageCompare::Tolerance tolerance;
+        tolerance.maxChannelDiff = qBound(0, arguments.value("maxChannelDiff").toInt(0), 255);
+        tolerance.maxMismatchPixels = qMax<qint64>(0, qint64(arguments.value("maxMismatchPixels").toDouble(0)));
+        const TestControlImageCompare::Result comparison = TestControlImageCompare::compare(argb, reference, tolerance);
+        if (!comparison.error.isEmpty()) {
+            reply(TestControlMcpServer::ToolResult::failure("Reference comparison: " + comparison.error, result));
+            return;
+        }
+        result.insert("reference",
+                      QJsonObject{
+                          {"matches", comparison.matches},
+                          {"maxChannelDiff", comparison.maxChannelDiff},
+                          {"mismatchPixels", comparison.mismatchPixels},
+                          {"tolerance",
+                           QJsonObject{{"maxChannelDiff", tolerance.maxChannelDiff},
+                                       {"maxMismatchPixels", tolerance.maxMismatchPixels}}},
+                      });
+    }
+
     TestControlMcpServer::ToolResult toolResult = TestControlMcpServer::ToolResult::success(result);
-    if (arguments.value("includePng").toBool(false)) {
+    const bool fullResolution = arguments.value("fullResolutionPng").toBool(false);
+    if (fullResolution && (rect.width() > MaxFullResolutionPng || rect.height() > MaxFullResolutionPng)) {
+        reply(TestControlMcpServer::ToolResult::failure(
+            QStringLiteral("fullResolutionPng needs a rectangle of at most %1x%1").arg(MaxFullResolutionPng)));
+        return;
+    }
+    if (arguments.value("includePng").toBool(false) || fullResolution) {
         const int maxSize = qBound(16, arguments.value("maxPngSize").toInt(256), 1024);
         QImage scaled = argb;
-        if (scaled.width() > maxSize || scaled.height() > maxSize) {
+        if (!fullResolution && (scaled.width() > maxSize || scaled.height() > maxSize)) {
             scaled = scaled.scaled(maxSize, maxSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         }
         QByteArray png;

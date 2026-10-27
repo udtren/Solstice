@@ -5,6 +5,7 @@ set(kritatestcontrol_SOURCES
     TestControlInputInjector.cpp
     TestControlCanvasTools.cpp
     TestControlDocumentTools.cpp
+    TestControlImageCompare.cpp
     TestControlPaths.cpp
     TestControlSupport.cpp
 )
