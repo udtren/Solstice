@@ -558,6 +558,30 @@ Restart after installing. Format modified C++ and run `git diff --check`.
 - Reset restores source and state.
 - Saved state restores positions, rotations, visibility, and expansion.
 
+Covered by [test control](test-control.md) scenarios in
+`plugins/tools/tool_transform2/tests/scenarios/` (run with
+`dev-tools/test-control/run_scenarios.py`), as far as state and applied
+pixels can decide them:
+
+| Checklist item | Scenario |
+| --- | --- |
+| Mode switching; Draw/lock placement; center drag is local and untouched pins anchor their areas | `puppet-pin-drag` |
+| Ctrl+Alt-click removes exactly one pin; "Click pin: Delete pin" deletes with a plain click | `puppet-pin-delete` (the result equals placing only the other pins) |
+| Rotate a pin, then unlock: Apply leaves the artwork unchanged | `puppet-unlock-identity` |
+| Show mesh does not change output | `puppet-show-mesh` |
+| Reset restores source and state | `puppet-reset` (source; the state is not read back) |
+
+The rest stays manual. The transform keeps the image busy until Apply, so
+previews cannot be read, and the undo of a click deletion inside the
+transform, order buttons, rubber band, mesh fill and expansion, multiple
+layers and groups, masks and saved state have no scenario yet. The
+scenarios address the options by object name: `freeTransformButton`,
+`puppetButton`, `lockUnlockPointsButton`, `puppetShowMeshCheckBox`,
+`puppetClickActionCombo` and `puppetOrderToFrontButton`,
+`puppetOrderForwardButton`, `puppetOrderBackwardButton`,
+`puppetOrderToBackButton` (the last five set in
+`KisToolTransformConfigWidget`'s constructor). Keep these names.
+
 ## Required invariants
 
 - Keep the enum appended after existing modes unless migrating the file format.

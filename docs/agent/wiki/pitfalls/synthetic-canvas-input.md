@@ -13,6 +13,8 @@ sources:
   - libs/image/kis_selection.cc, KisSelectionUpdateCompressor.cpp, kis_selection_mask.cpp (update compressors)
   - libs/ui/tool/kis_selection_tool_config_widget_helper.cpp (default selection mode)
   - plugins/extensions/testcontrol/TestControlInputInjector.cpp
+  - libs/ui/tool/kis_tool_polyline_base.cpp (mouseMoveEvent, m_closeSnappingActivated)
+  - Linux phase 3 scenario runs, 2026-10-27 (xdotool, Xvfb)
   - docs/agent/test-control.md
 related:
   - transform-tool-input.md
@@ -24,7 +26,8 @@ related:
 Found by reading the input manager while writing the
 [test control](../../test-control.md) input injector (2026-10-26), and by
 running its phase 0 checks on Linux the same day and on Windows on
-2026-10-27 (the last four sections).
+2026-10-27 (the sections from "A Leave suppresses" to "Count settle
+time"), and by the phase 3 scenario runs on Linux (the last two).
 
 ## Only the current receiver is filtered
 
@@ -145,3 +148,23 @@ documents, while the image itself never went busy. Measure the settle time
 with `QElapsedTimer`, and add a margin of the longest poll gap seen, because
 the timers being waited for are delayed by the same load (test control: 600 ms
 plus twice that gap; 40 of 40 reads correct at a 296 ms gap).
+
+## Clicks need a hover move first
+
+A real pointer always moves over the canvas before it clicks, and some tools
+depend on it. `KisToolPolylineBase` (polygonal selection, polyline) decides
+in `mouseMoveEvent()` whether the pointer is close enough to the first point
+to close the shape (`m_closeSnappingActivated`); a press without a preceding
+move at that spot adds a point instead. Send a button-less move at the press
+position before each press (test control: 50 ms before, for mouse and pen).
+A test widget only receives such moves with `setMouseTracking(true)`.
+
+## A key sent to a window can stay held
+
+On Linux, `xdotool key --window <id> Return` (used to dismiss a dialog at
+startup) delivers the key with `XSendEvent`. Afterwards Solstice treated
+Return as still pressed and received auto-repeated Return presses, so every
+polygonal selection finished after its first click (Return ends the shape),
+while the other tools looked fine (2026-10-27). Dismiss dialogs on a test
+display with a mouse click, keep `xset r off`, and suspect a stuck key when
+a tool finishes or cancels on its own.

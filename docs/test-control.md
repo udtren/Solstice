@@ -89,9 +89,14 @@ many undo steps there are."
 | `document_close` | Closes the current document or all of them without saving |
 | `view_reset` | Sets the window size, 100 % zoom, no rotation or mirroring, and centers the image |
 | `brush_set` | Chooses a brush preset by name and sets size, opacity, eraser mode and the foreground color |
+| `input_key` | Presses a key on the canvas, for example Return to apply a transform |
+| `ui_query`, `ui_click`, `ui_set` | Lists the buttons, boxes and fields of the window and dockers, clicks a button, or sets a value, for example in Tool Options |
+| `docker_show` | Shows or hides a docker, for example Tool Options |
 
-Input tools accept modifier keys (Shift, Ctrl, Alt). For that, test control
-brings Solstice to the front and gives the canvas the keyboard focus.
+Input tools accept modifier keys (Shift, Ctrl, Alt), and `input_click` can
+double-click. For keys, test control brings Solstice to the front and gives
+the canvas the keyboard focus. Selecting a tool that is already selected
+starts it afresh, for example for a new transform.
 
 ### Test folder
 
@@ -105,7 +110,9 @@ Without the setting, those two tools refuse to run.
 
 A scenario is a file that lists tool calls and the results to expect, kept
 next to the tests of the feature it covers, for example
-`libs/ui/tests/scenarios/rect-select-fill.json`.
+`libs/ui/tests/scenarios/rect-select-fill.json`. Scenarios cover the brush,
+the selection tools with their modifier keys, and the Transform Tool with
+Puppet Warp.
 
 ### Running scenarios
 
@@ -131,6 +138,12 @@ system with nothing recorded yet, those steps show as "unrecorded" and do not
 fail. To record them for your system, run once with `--record` and keep the
 files it writes next to the scenario.
 
+Scenarios expect Solstice's English texts, such as the names in the undo
+history. The test copy started with `--launch` therefore uses English
+whatever your system language; `--language system` keeps your language. If
+you run scenarios against your own Solstice in another language, the runner
+warns you, and steps that check texts fail.
+
 ## Limitations
 
 - The pen is simulated inside Solstice. It does not test your tablet driver
@@ -150,6 +163,11 @@ files it writes next to the scenario.
   are always false for pen strokes.
 - When you end a test, close Solstice and answer the save question, so no
   unsaved test document is reopened next time.
+- While a transform is in progress, the image cannot be measured; scenarios
+  check the result after Apply. Whether the preview matches the result is
+  still a manual check.
+- The Transform Tool remembers its mode and the Puppet Warp lock between
+  transforms, so scenarios set them explicitly.
 
 ## Security
 

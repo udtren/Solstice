@@ -2004,3 +2004,24 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Verified on Linux: record, three strict runs, a failing negative copy, and
   a `--launch` run that started and quit Solstice cleanly. Windows not
   checked. Details in [Test control](../test-control.md).
+
+## 2026-10-27 feature: test control phase 3 (selection and Transform Tool)
+
+- The user authorized phase 3 starting with the selection tools, selection
+  modifiers and the state-checkable Transform Tool / Puppet Warp items;
+  recorded in the [UI test automation plan](../ui-automation-plan.md).
+- Added `input_key`, `ui_query`, `ui_click`, `ui_set`, `docker_show`, a
+  double click, a hover move before mouse presses, a restart in
+  `tool_activate`, and `uiLanguages` in `session_info`; the runner sets an
+  English UI for `--launch` (`--language`). Object names for the Puppet Warp
+  click-action combo and order buttons.
+- Eleven scenarios: five for selections, six for the Transform Tool and
+  Puppet Warp; the covered checklist items are listed in
+  [Puppet Warp](../puppet-warp.md#manual-regression-checklist). All 15
+  scenarios pass on Linux with `--launch --strict`; a wrong expectation in
+  each new scenario fails on that step. Windows not checked.
+- Lessons: [clicks need a hover move, and a key sent with XSendEvent can
+  stay held](pitfalls/synthetic-canvas-input.md); [the transform holds the
+  image busy, the center grabs the pivot, mode and lock carry
+  over](pitfalls/transform-tool-input.md). Details in
+  [Test control](../test-control.md).

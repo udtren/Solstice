@@ -7,7 +7,11 @@ in [Test control](test-control.md), which owns the current protocol,
 lifecycle and verification status. The user authorized phases 1 and 2 on
 2026-10-27 ([decisions](#user-decisions-2026-10-26)); both are implemented on
 branch `claude/test-control-phase1` and checked on Linux, with the Windows
-check pending. Phases 3-5 remain proposals that need the user's go-ahead.
+check pending. The user authorized phase 3 for the selection tools and the
+Transform Tool / Puppet Warp items the same day; that part is implemented on
+`claude/test-control-phase3` and checked on Linux, Windows pending. Lazy
+Tools and Quick Access (the rest of phase 3) and phases 4-5 remain proposals
+that need the user's go-ahead.
 
 ## Goal
 
@@ -37,7 +41,7 @@ Non-goals:
 | Expectations | Hashes and state in the repository; reference images only where tolerance comparison needs them, kept small. |
 | Scenario files | Next to each feature's tests. |
 | Second running instance | Handled by operation: no other Solstice may run during a test session; no `krita/main.cc` change. |
-| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks; after phase 1 the user said to keep going ("I will test on windows later so keep going"), taken as the go-ahead for phase 2. |
+| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks; after phase 1 the user said to keep going ("I will test on windows later so keep going"), taken as the go-ahead for phase 2. Phase 3, first part: "Go ahead with phase 3: start with the selection tools (ellipse, polygon, freehand, contiguous) and selection modifiers, then the state-checkable Transform Tool / Puppet Warp checklist items." |
 
 Consequences for the design: with MCP in-process, the transport is MCP
 Streamable HTTP on `127.0.0.1` instead of a named pipe to a bridge. Because
@@ -216,6 +220,27 @@ The project rule against new Python features concerns the application
   and Quick Access interactions through `ui_click`.
 - Convert each feature's checklist items that state and pixels can decide; mark
   the rest as manual in the feature document.
+
+Selection tools, selection modifiers and the Transform Tool / Puppet Warp
+items: authorized 2026-10-27 ([decisions](#user-decisions-2026-10-26)) and
+implemented the same day on `claude/test-control-phase3`; checked on Linux,
+Windows pending. Details in [Test control](test-control.md):
+
+| Part | As implemented |
+| --- | --- |
+| Selection scenarios | `plugins/tools/selectiontools/tests/scenarios/`: ellipse, polygon (closed on the first point, finished by a double click), freehand outline, contiguous, and the five modifier operations (Shift add, Alt subtract, Shift+Alt intersect, Ctrl+Alt symmetric difference, Ctrl replace) |
+| Transform scenarios | `plugins/tools/tool_transform2/tests/scenarios/`: free move with Apply, undo and Return; Puppet Warp pin drag with anchoring, ring rotation then unlock (identity), Reset, Show mesh (no effect on output), pin deletion by Ctrl+Alt-click and by "Click pin: Delete pin" |
+| New tools | `input_key`; `ui_query`, `ui_click`, `ui_set` and `docker_show` (widgets by object name, as planned for `ui_click`); `doubleClick` on `input_click` |
+| Changed tools | Mouse strokes start with a hover move; `tool_activate` restarts an already active tool; `session_info` reports the UI languages |
+| Runner | `--language` (English by default for `--launch`, since scenario texts are English) |
+| Solstice change | Object names for the Puppet Warp click-action combo and the four order buttons, so tests can address them; no behavior change |
+
+Left for later: Lazy Tools and Quick Access (need the user's go-ahead), and
+the Puppet Warp checklist items that a running transform's busy image keeps
+from being read or that need more setup (preview against applied output,
+undo of a pin deletion inside the transform, order buttons, rubber band,
+mesh fill and expansion, multiple layers and groups), listed in
+[Puppet Warp](puppet-warp.md#manual-regression-checklist).
 
 ### Phase 4: paint trace automation
 

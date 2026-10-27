@@ -12,11 +12,12 @@ are in [UI test automation plan](ui-automation-plan.md).
 
 Scope: phase 0 of the plan (feasibility, done 2026-10-27), phase 1
 (minimum protocol) and phase 2 (runner, recorded expectations, tolerance
-comparison), both on `claude/test-control-phase1`: sixteen
-tools, documents in the current window, RGBA documents created by
-`document_new` or opened from the test root, modifier keys with canvas
-focus, [scenario files](#scenarios-format-version-1) and the
-[scenario runner](#scenario-runner).
+comparison), both on `claude/test-control-phase1`, and phase 3 (selection
+and Transform Tool coverage, on `claude/test-control-phase3`): 21 tools,
+documents in the current window, RGBA documents created by `document_new` or
+opened from the test root, modifier and other keys with canvas focus, widgets
+operated by object name, [scenario files](#scenarios-format-version-1) and
+the [scenario runner](#scenario-runner).
 
 Verification (2026-10-26, cloud session, no Krita build available):
 
@@ -77,6 +78,17 @@ Verification (2026-10-26, cloud session, no Krita build available):
   passed all four strictly and quit it, leaving no process, temporary
   directory or autosave. Windows not yet checked; nothing is recorded for
   `windows-*` keys.
+- Phase 3 (2026-10-27, Linux, same setup, branch `claude/test-control-phase3`,
+  test control and `tool_transform2` rebuilt and installed): the injector
+  test (9 cases, with the hover move and double click) and the other test
+  control tests pass through `ctest`. The eleven new
+  [scenarios](#scenarios-format-version-1) pass against a running Solstice,
+  and each was changed to expect a wrong value once to see it fail on that
+  step. `--all --strict --launch` passed all 15 scenarios twice in a row,
+  with `LANG=ja_JP.UTF-8` and with `--language system` (this machine has no
+  Japanese locale, so the UI stayed English); a profile with a Japanese
+  language override failed `brush-stroke-undo` on the undo text, as
+  expected. Windows not yet checked.
 
 ## Source locations
 
@@ -85,15 +97,17 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Plugin entry, environment gate | `plugins/extensions/testcontrol/TestControlPlugin.{h,cpp}`, `kritatestcontrol.json` |
 | HTTP endpoint (QtNetwork only) | `TestControlHttpServer.{h,cpp}` |
 | JSON-RPC/MCP handling, call queue (QtCore only) | `TestControlMcpServer.{h,cpp}` |
-| Synthetic pointer strokes and modifier keys (QtWidgets only) | `TestControlInputInjector.{h,cpp}` |
-| Canvas tools: session, documents from scratch, tools, input, waits, queries | `TestControlCanvasTools.{h,cpp}` |
+| Synthetic pointer strokes and modifier keys (QtWidgets only) | `TestControlInputInjector.{h,cpp}`, `TestControlSpontaneous.h` (spontaneous delivery, shared with key input) |
+| Canvas tools: session, documents from scratch, tools, input, keys, waits, queries | `TestControlCanvasTools.{h,cpp}` |
+| Widget tools: query, click, set by object name; dockers | `TestControlUiTools.{h,cpp}` |
 | Document tools: open, export, close, view reset, brush | `TestControlDocumentTools.{h,cpp}` |
 | Helpers shared by the tool classes, `pollUntil` | `TestControlSupport.{h,cpp}` |
 | Test root path checks (QtCore only) | `TestControlPaths.{h,cpp}` |
 | Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp` |
 | Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
 | Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
-| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json` |
+| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (6) |
+| Object names for the Puppet Warp options (no behavior change) | `plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp` |
 | Hook in an upstream file | `plugins/extensions/CMakeLists.txt` (`add_subdirectory(testcontrol)` only when `BUILD_WITH_QT6`) |
 
 ## Build, test, and install
@@ -135,15 +149,16 @@ tested in the cloud session.
   keyed by the profile root, so the second launch hands its arguments to the
   running instance and exits (operational rule, user decision 2026-10-26).
 
-### Tools (phases 0 and 1)
+### Tools (phases 0-3)
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
-| `session_info` | none | Solstice/Krita/Qt versions, platform, window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables |
+| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables |
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi) |
-| `tool_activate` | `id` (factory ID) | Active tool ID; an unknown ID lists all IDs |
+| `tool_activate` | `id` (factory ID) | Active tool ID and `restarted`; a tool that is already active is switched away (to the rectangle selection, or from it to the brush) and back, so it starts fresh; an unknown ID lists all IDs |
 | `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, points outside the canvas widget, modifiers, active tool |
-| `input_click` | `x`, `y`, `device`, `coordinates`, `button`, `pressure`, `modifiers` | As `input_stroke`; one press and release |
+| `input_click` | `x`, `y`, `device`, `coordinates`, `button`, `pressure`, `modifiers`, `doubleClick` (mouse only) | As `input_stroke`; one press and release, or with `doubleClick` press, release, `MouseButtonDblClick`, release |
+| `input_key` | `key` (`QKeySequence` portable text: `Return`, `Escape`, `Delete`, `Ctrl+Z`), `modifiers` | `ShortcutOverride`, `KeyPress` and `KeyRelease` to the canvas widget after it got focus, wrapped in the modifier keys' presses and releases |
 | `input_drag` | `from`, `to` (`x`, `y`), `steps` (default 20), `durationMs` (default 200), `device`, `coordinates`, `button`, `pressure`, `realtime`, `modifiers` | As `input_stroke`; a straight line in equal steps |
 | `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, and, while the current selection has a shape selection, for 600 ms plus twice the longest poll gap, measured with a clock; waited time (at least 40 ms, or about 640 ms), longest gap between polls (`maxPollGapMs`) |
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
@@ -155,6 +170,10 @@ tested in the cloud session.
 | `document_close` | `all` | Closes the active document or every document without asking; documents closed and left |
 | `view_reset` | `width`, `height` (window, default 1280x900) | Normal window of that size, zoom 100 %, no rotation or mirroring, image centered; zoom, rotation, image rectangle in the canvas |
 | `brush_set` | `preset` (name), `size` (1-1000), `opacity` (0-1), `eraser`, `color` (`#RRGGBB`) | Current preset, size, opacity, eraser mode and foreground color; an unknown preset lists up to 200 names |
+| `ui_query` | `nameFilter`, `within` (object name of a container), `includeUnnamed` | Visible widgets with object name, class, enabled state and value (button text and checked state, combo items and index, spin box value, label text, tool tip) |
+| `ui_click` | `objectName` and/or `text`, or `objectName` of a `QDialogButtonBox` with `standardButton` (`Apply`, `Reset`, `Ok`, ...); `within`, `index` | Clicks a visible, enabled button with `QAbstractButton::click()`; its state afterwards |
+| `ui_set` | `objectName`, `value`, `within`, `index` | Combo box (index or item text), spin box (number, then `editingFinished`), check box or checkable button (bool), line edit (text, then `editingFinished`); the new state |
+| `docker_show` | `id` (docker object name, e.g. `sharedtooldocker`), `visible` | Shows or hides the docker; an unknown ID lists the IDs |
 
 Tool failures are MCP tool results with `isError: true` and an `error`
 field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
@@ -192,7 +211,12 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   Every stroke starts with an `Enter` at the first point, as when a real
   pointer reaches the canvas: after a `Leave` (for example when another
   window appeared over the pointer) `KisShortcutMatcher` suppresses all
-  actions until the next `Enter`. Mouse: press, moves, release. Tablet: `TabletEnterProximity` (to the
+  actions until the next `Enter`. Mouse: a hover move (no buttons) at the
+  first point, the press `HoverSettleMs` later, moves, release; a double
+  click adds `MouseButtonDblClick` and a second release. The hover move is
+  what a real pointer sends before a click; the polygonal selection tool
+  snaps to its first point and decides about closing the shape from the
+  hover position. Tablet: `TabletEnterProximity` (to the
   application object, where `ProximityNotifier` listens), one hover
   `TabletMove` (no buttons, no pressure) at the first point, `TabletPress`
   `HoverSettleMs` (50 ms) later, a `Qt::MouseEventSynthesizedBySystem` mouse
@@ -218,6 +242,17 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   Without focus, `KisInputManager` reads the real keyboard instead
   (`fixShortcutMatcherModifiersState()`), so the call fails if the canvas
   cannot get focus.
+- **Keys.** `input_key` uses the same focus step as modifiers and sends the
+  key's `ShortcutOverride`, `KeyPress` and `KeyRelease` to the canvas widget,
+  so canvas shortcuts and tools (Return applies a transform, Escape cancels
+  it) see it as from the keyboard. Window-level shortcuts that the canvas
+  does not override go through `action_trigger` instead.
+- **Widgets.** `TestControlUiTools` searches the visible top-level widgets
+  (main window, floating dockers, popups), optionally inside the widget named
+  `within`, and drives them with their own setters and `click()`, so they
+  emit their usual signals. This tests what a widget does, not the mouse
+  handling inside it. Widgets without an object name cannot be addressed;
+  scenarios name buttons by object name where it exists, or by text.
 - **Documents.** `document_close` follows libkis `Document::close()`: clear
   the modified flag, `closePath(false)`, close and delete the document's
   views, then `KisPart::removeDocument()`. `document_open` uses
@@ -457,6 +492,22 @@ LLM; an LLM or a person can also replay one step by step through the endpoint.
 | `libs/ui/tests/scenarios/rect-select-fill.json` | A mouse-drawn 200x100 selection (vector) is exact; Fill with Foreground Color fills exactly those 20000 pixels red; deselect |
 | `plugins/paintops/defaultpaintops/brush/tests/scenarios/eraser-stroke.json` | On a layer filled blue, a 40 px eraser-mode stroke leaves no pixel under its center line and none touched far from it; undo restores the filled hash |
 | `plugins/paintops/defaultpaintops/brush/tests/scenarios/pressure-stroke.json` | A pen stroke with pressure rising from 0.1 to 1.0 stays thin at its start and wide at its end, and matches its recorded reference image (tolerance 8 per channel, 200 pixels) and exact hash (`pressure-stroke.expected.json`, `pressure-stroke.refs/linux-cpu/`) |
+| `plugins/tools/selectiontools/tests/scenarios/ellipse-select.json` | A 200x100 drag with the elliptical selection tool gives bounds of exactly 200x100 and 15600-16100 selected pixels (the inscribed ellipse, about 15708); undo removes it |
+| `plugins/tools/selectiontools/tests/scenarios/polygon-select.json` | Polygonal selection: a square closed by clicking its first point again selects 40000 pixels; a triangle finished with a double click selects 19800-20400 |
+| `plugins/tools/selectiontools/tests/scenarios/outline-select.json` | A freehand (outline) path around a 200x200 square selects exactly 40000 pixels |
+| `plugins/tools/selectiontools/tests/scenarios/contiguous-select.json` | On a layer with one filled 200x100 rectangle, a contiguous selection click inside selects its 20000 pixels and a click outside selects the other 460000 |
+| `plugins/tools/selectiontools/tests/scenarios/selection-modifiers.json` | With A (100,100) 200x100 selected, B (200,150) 200x100 drawn with Shift adds (35000 pixels), Alt subtracts (15000), Shift+Alt intersects (5000), Ctrl+Alt takes the symmetric difference (30000) and Ctrl replaces (20000, bounds of B); undo returns to A each time |
+| `plugins/tools/tool_transform2/tests/scenarios/transform-move.json` | A free transform drag inside the content (off the pivot) and Apply add one "Transform" step and move the bounds by the drag; undo restores the original hash; after `tool_activate` restarts the tool, a second drag applied with Return moves it again |
+| `plugins/tools/tool_transform2/tests/scenarios/puppet-pin-drag.json` | Puppet Warp on a bar: Free then Puppet mode (so the lock state is known), three pins in Draw mode, Lock Points; dragging the right pin up bends the bar's right end, while the area at the untouched left pin keeps its hash |
+| `plugins/tools/tool_transform2/tests/scenarios/puppet-unlock-identity.json` | Rotating a locked pin by its ring deforms the bar; Unlock Points resets positions and rotations, and Apply leaves the original hash |
+| `plugins/tools/tool_transform2/tests/scenarios/puppet-reset.json` | After a pin drag, the Reset button restores the source; Apply leaves the original hash |
+| `plugins/tools/tool_transform2/tests/scenarios/puppet-show-mesh.json` | The same pin drag gives the same hash with Show mesh on, off and on again |
+| `plugins/tools/tool_transform2/tests/scenarios/puppet-pin-delete.json` | Deleting the right of three pins with Ctrl+Alt-click, and with a plain click while "Click pin" is "Delete pin", each give the same result as placing only the two other pins |
+
+Scenario texts (undo command names, button and combo texts) are English.
+`--launch` sets the scratch profile's UI language to English; against a
+Solstice running in another language, compare by object name and state, or
+expect the text checks to fail.
 
 ### Recorded values and reference images
 
@@ -497,7 +548,8 @@ python dev-tools\test-control\run_scenarios.py --all --strict --launch <krita-de
 | `--record` | Stores recorded values and references for the current platform key instead of comparing them |
 | `--strict` | Unrecorded values and references fail |
 | `--fail-fast` | Stops a scenario at its first failing step (a tool error always stops it) |
-| `--report FILE` | JSON report (format `solstice-test-control-report`, version 1): Solstice and platform, platform key, per scenario and step the status (`pass`, `unrecorded`, `fail`, `error`), problems and durations, totals |
+| `--language CODE` | With `--launch`, the UI language of the scratch profile (`klanguageoverridesrc`, as Settings > Switch Application Language writes it; default `en_US`); `system` writes nothing. The runner warns when `session_info` reports a UI language that is not English |
+| `--report FILE` | JSON report (format `solstice-test-control-report`, version 1): Solstice and platform, UI languages, platform key, per scenario and step the status (`pass`, `unrecorded`, `fail`, `error`), problems and durations, totals |
 
 Every scenario starts and ends with `document_close` (all). Exit status: 0
 when every scenario passed (`unrecorded` counts as passed unless `--strict`),
@@ -507,8 +559,31 @@ runner's tests (`dev-tools/test-control/test_run_scenarios.py`, ctest
 
 `--launch` cannot dismiss dialogs: on a machine without a usable GPU, Vision
 ML's "no suitable device" box blocks the start until someone closes it.
+Close it with a mouse click, not a synthesized key: on Linux, `xdotool key
+--window` (`XSendEvent`) left Return reported as held, and Solstice then saw
+auto-repeated Return presses that ended every polygonal selection after its
+first click ([pitfall](wiki/pitfalls/synthetic-canvas-input.md)).
+
+The `LANGUAGE` environment variable does not choose Solstice's UI language;
+the language override file does, otherwise the system locale.
 
 ## Known limitations and pending work
+
+- Transform Tool: the transform runs as a stroke that keeps the image busy
+  until Apply, Return or a tool switch, so `query_state` and `query_pixels`
+  fail with "busy" between the tool's activation and Apply. Read what is
+  needed before activating it, and judge previews only by `canvas_capture`.
+  Preview against applied output therefore stays manual.
+- Transform Tool: a press at the exact center of the content grabs the pivot
+  instead of moving the content; scenarios start drags off-center.
+- Transform Tool: the mode and Puppet Warp's lock state carry over to the
+  next transform. Scenarios that need unlocked Draw mode switch to Free and
+  back to Puppet (which resets it) and check the lock button's text.
+- Not covered by scenarios yet (see the Puppet Warp
+  [checklist](puppet-warp.md#manual-regression-checklist)): undo and redo of
+  a pin deletion inside the running transform, order buttons, rubber band
+  selection of pins, mesh fill and expansion, multi-layer and group
+  processing, transform masks, saved state.
 
 - An active selection limits where strokes paint. A scenario that selects
   and then paints elsewhere must `deselect` first; otherwise the stroke adds
@@ -549,6 +624,6 @@ Findings from reading the input code (2026-10-26), to confirm in phase 0:
   canvas can interfere with a running test.
 - Real tablet drivers, pressure curves as felt, latency and visual judgement
   remain manual (plan, [What stays manual](ui-automation-plan.md#what-stays-manual)).
-- Not implemented: `query_layers`, `log_drain` and `ui_click` (phase 3).
+- Not implemented: `query_layers` and `log_drain`.
 - The platform key cannot tell GPU settings made in Solstice's preferences
   from the CPU path; it only sees the `KRITA_GPU_*` environment variables.
