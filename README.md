@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [In development: 0.5.3](#in-development-053)
+- [In development: 0.6.0](#in-development-060)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,29 +59,33 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## In development: 0.5.3
+## In development: 0.6.0
 
-Solstice 0.5.3 fixes the [HueSVC](docs/quick-access.md#huesvc) color
-selector: it no longer shows a single black-to-white bar instead of the hue
-bar and saturation/value square when a filter layer, fill layer or mask is
-current. It also adds [duplicating a selection](docs/move-tool.md) on the
-same layer with Ctrl-drag in the Move Tool.
+Solstice 0.6.0 adds [Clipping Mask](docs/clipping-mask.md): clip a layer to
+the layer or group directly below it without a group, and bake it in with
+Merge Down. It also adds [duplicating a selection](docs/move-tool.md) on the
+same layer with Ctrl-drag in the Move Tool. Other changes:
+
+- [HueSVC](docs/quick-access.md#huesvc) shows its hue bar and
+  saturation/value square again when a filter layer, fill layer or mask is
+  current, instead of a single black-to-white bar.
+- Copy and paste adopt the upstream Krita clipboard rewrite: pasting
+  non-transparent pixels, Paste at Cursor, copies from animated layers and
+  clips outside the image. A clipboard crash, and an error dialog when
+  closing Solstice after a copy, are fixed.
+- Fixes from upstream Krita for palettes, copying shapes between documents
+  and vector layers, and pasting timeline frames.
+- Fixes for a crash when a document closes right after a layer change, for
+  Transform Tool Apply right after a drag, and for Puppet Warp and Layer
+  Comps. A document in a background tab no longer redraws its selection
+  outline.
+- [Test control](docs/test-control.md): an optional, local-only interface
+  that lets test scripts and AI assistants operate Solstice for testing.
 
 It builds on [0.5.2](https://github.com/udtren/Solstice/releases/tag/v0.5.2),
 which fixed [Fast Image Export](docs/lazy-tools.md#fast-image-export):
 format options it does not show, such as **Force convert to sRGB**, now keep
 their last values instead of resetting in every PNG or JPEG options dialog.
-
-It builds on [0.5.1](https://github.com/udtren/Solstice/releases/tag/v0.5.1),
-which extended [Lazy Tools](docs/lazy-tools.md) and fixed Quick Access:
-
-- Fast Image Export: registered folders to browse from, an optional file
-  name, and Export Region for the selected area
-- A Rename Layer preset editor in **Settings > Configure Solstice > General >
-  Custom**, replacing the Python plugin's Name List tab
-- An illustrated [Lazy Tools guide](docs/lazy-tools.md)
-- [Quick Access](docs/quick-access.md): actions and dockers with an icon now
-  take one cell, including ones saved as two cells wide
 
 ## Highlights
 
