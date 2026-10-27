@@ -23,4 +23,6 @@ find_package(Python3 COMPONENTS Interpreter QUIET)
 if (Python3_Interpreter_FOUND)
     add_test(NAME plugins-extensions-testcontrol-RunScenariosTest
              COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/dev-tools/test-control/test_run_scenarios.py)
+    add_test(NAME plugins-extensions-testcontrol-PaintTraceSeriesTest
+             COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/dev-tools/test-control/test_paint_trace_series.py)
 endif()

@@ -63,6 +63,9 @@ QJsonObject brushInfo(KisViewManager *viewManager)
         {"flow", provider->flow()},
         {"compositeOp", provider->currentCompositeOp()},
         {"eraser", provider->eraserMode()},
+        {"paintMode",
+         preset && preset->settings() ? QJsonValue(preset->settings()->paintIncremental() ? "buildup" : "wash")
+                                      : QJsonValue()},
         {"preserveAlpha", provider->globalAlphaLock()},
         {"color", color.name(QColor::HexRgb)},
         // Channels as numbers, for expectations with a tolerance: a color set
@@ -168,6 +171,10 @@ void TestControlDocumentTools::registerTools(TestControlMcpServer *server)
                         {"opacity", schemaProperty("number", "Opacity 0-1.")},
                         {"eraser", schemaProperty("boolean", "Eraser mode.")},
                         {"color", schemaProperty("string", "Foreground color as #RRGGBB.")},
+                        {"paintMode",
+                         enumProperty({"buildup", "wash"},
+                                      "Painting mode of the current preset (Build-up or Wash), as an unsaved "
+                                      "preset change.")},
                     }),
                     std::bind(&TestControlDocumentTools::brushSet, this, _1, _2));
 
@@ -475,6 +482,20 @@ void TestControlDocumentTools::brushSet(const Arguments &arguments, const Reply 
             return;
         }
         provider->setFGColor(KoColor(color, viewManager->image()->colorSpace()));
+    }
+    if (arguments.contains("paintMode")) {
+        const QString mode = arguments.value("paintMode").toString();
+        const KisPaintOpPresetSP preset = provider->currentPreset();
+        if (mode != QLatin1String("buildup") && mode != QLatin1String("wash")) {
+            reply(TestControlMcpServer::ToolResult::failure("paintMode must be buildup or wash"));
+            return;
+        }
+        if (!preset || !preset->settings()) {
+            reply(TestControlMcpServer::ToolResult::failure("No current preset"));
+            return;
+        }
+        // The Painting Mode option's property (KisPaintingModeOptionData): 1 Build-up, 2 Wash.
+        preset->settings()->setProperty("PaintOpAction", mode == QLatin1String("buildup") ? 1 : 2);
     }
 
     // The paintop box applies a preset through queued updates; report after them.

@@ -363,7 +363,7 @@ def platform_key_for(session):
 class Launched:
     """A Solstice started by the runner with a scratch profile and test root."""
 
-    def __init__(self, executable, port, language):
+    def __init__(self, executable, port, language, extra_environment=None):
         self.directory = Path(tempfile.mkdtemp(prefix="solstice-scenarios-"))
         (self.directory / "profile" / "config").mkdir(parents=True)
         (self.directory / "root").mkdir()
@@ -381,6 +381,9 @@ class Launched:
             "SOLSTICE_TEST_CONTROL_TOKEN": self.token,
             "SOLSTICE_TEST_CONTROL_ROOT": str(self.directory / "root"),
         })
+        # For this process only, e.g. KRITA_PAINT_TRACE and the KRITA_GPU_*
+        # switches that paint_trace_series.py sets per run.
+        environment.update(extra_environment or {})
         self.log = open(self.directory / "solstice.log", "wb")
         self.process = subprocess.Popen([executable, "--nosplash"], env=environment,
                                         stdout=self.log, stderr=subprocess.STDOUT)

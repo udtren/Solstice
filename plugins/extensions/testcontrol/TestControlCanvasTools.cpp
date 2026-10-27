@@ -46,6 +46,11 @@
 #include <klocalizedstring.h>
 #include <kundo2stack.h>
 
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include <KisGpuContext.h>
+#include <gpu/KisGpuTileBackend.h>
+#endif
+
 #include "TestControlImageCompare.h"
 #include "TestControlInputInjector.h"
 #include "TestControlSpontaneous.h"
@@ -81,6 +86,25 @@ QJsonObject environmentInfo()
         }
     }
     return result;
+}
+
+/// The GPU engine's device once it has started (with the first RGBA float
+/// document), or null. The KRITA_GPU_* variables only request it.
+QJsonValue gpuEngineInfo()
+{
+#ifdef HAVE_KRITA_GPU_ENGINE
+    KisGpuTileBackend *backend = KisGpuTileBackend::existingInstance();
+    if (backend) {
+        const KisGpuDeviceInfo &device = backend->context().deviceInfo();
+        return QJsonObject{
+            {"device", device.name},
+            {"driver", device.driverName},
+            {"driverInfo", device.driverInfo},
+            {"failed", backend->hasFailed()},
+        };
+    }
+#endif
+    return QJsonValue::Null;
 }
 } // namespace
 
@@ -302,6 +326,7 @@ void TestControlCanvasTools::sessionInfo(const Arguments &, const Reply &reply)
         {"document", documentInfo(viewManager)},
         {"canvas", canvasInfo(viewManager)},
         {"environment", environmentInfo()},
+        {"gpuEngine", gpuEngineInfo()},
     }));
 }
 
