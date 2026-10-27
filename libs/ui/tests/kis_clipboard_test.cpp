@@ -18,6 +18,7 @@
 #include "kis_clipboard.h"
 #include <kis_clone_layer.h>
 #include "kis_default_bounds.h"
+#include "kis_mimedata.h"
 #include "kis_paint_device.h"
 #include <kis_pixel_selection.h>
 #include <kis_transparency_mask.h>
@@ -571,6 +572,12 @@ void KisClipboardTest::testCopyLayerWithMask()
     } else if (testMode == "two-masks") {
         KisImageSP loadedImage = KisClipboard::instance()->clipImageFromKritaLayers(nullptr);
         QVERIFY(!loadedImage);
+
+        // Solstice: with nothing to rasterize, the image formats are empty.
+        // Windows requests them after a copy and at exit; they used to crash.
+        KisMimeData mimeData(nodes, srcImage, srcImage->bounds());
+        QVERIFY(!mimeData.imageData().isValid());
+        QVERIFY(mimeData.data("application/zip").isEmpty());
     }
 }
 

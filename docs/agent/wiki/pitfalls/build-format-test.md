@@ -13,6 +13,7 @@ sources:
   - docs/agent/test-control.md (2026-10-26, TestControlCanvasTools syntax check)
   - first Linux build and test run (2026-10-26, Ubuntu 26.04, GCC 15, Qt 6.10, KF6 6.24, branch claude/clipboard-intake-cross-platform)
   - Windows run of kis_clipboard_test (2026-10-26, branch claude/clipboard-intake-cross-platform)
+  - Windows full test run of main (2026-10-27, 24d3dde29f) and the KisMimeData exit crash fix
 related:
   - ../concepts/cpu-gpu-bit-parity.md
 ---
@@ -169,7 +170,16 @@ wrong anyway.
   (`CLIPBRD_E_CANT_OPEN`) on random rows. The test then fails or
   dereferences a null clip and crashes. Rerun a failing row alone
   (`kis_clipboard_test.exe <function>:<row>`) before treating it as a
-  regression.
+  regression. A crash *after* all rows pass is different: at exit
+  `OleFlushClipboard` asks the last `KisMimeData` for every format, so a
+  format that cannot be built for the copied nodes must return an empty
+  `QVariant` (fixed 2026-10-27 for copies of masks only).
+- **`QFile::link()` makes a shortcut on Windows, not a symbolic link.** It
+  writes a `.lnk` file under the given name, which `canonicalFilePath()`
+  does not follow, so a test that expects a link out of a folder to be
+  rejected sees an ordinary file inside it
+  (`TestControlPathsTest::testSymbolicLinkOutOfRoot`). Check
+  `QFileInfo::isSymLink()` after creating the link and skip otherwise.
 - **A temporary export document must copy the source's batch mode.**
   `KisImportExportManager` asks about the export configuration (a modal
   options dialog) whenever the document is not in batch mode and the filter
@@ -204,6 +214,24 @@ wrong anyway.
     `QFileInfo("")` as the current directory (`autoDetectStorageType()` in
     `KisResourceStorage.cpp`). `TestResourceStorage` now expects the
     designed result, an invalid memory storage.
+- **Full suite on Windows (2026-10-27, `main` at `24d3dde29f`)**, all 399
+  tests with `ctest -j 8 --timeout 900` and `KRITA_NO_ASSERT_MSG=1` (no
+  dialogs; the `libs-ui` tests included): 14 failed.
+  - Known failures, also failing on Linux on 2026-10-26: `TestSvgParser`,
+    `TestSvgParserCloned`, `TestSvgParserRoundTrip`,
+    `kis_cage_transform_worker_test`, `kis_tiff_test`,
+    `kis_shape_layer_test` (`testMergeDown`, `testScaleAndMergeDown`: the
+    merged red area differs from the reference in alpha, 150 against 255),
+    `kis_view_signals_test` (crash).
+  - Passed when run alone: `KisSafeDocumentLoaderTest`,
+    `KisQmicIntegrationTest`, `KisBrushStrokeLayerTest`,
+    `kis_shape_selection_test`, and `KisGpuStrokeTest` (the 900 s timeout
+    in parallel). Do not run test reruns while installing: a rerun that
+    overlapped `cmake --install` failed without output.
+  - `TestControlPathsTest::testSymbolicLinkOutOfRoot`: see the `QFile::link()`
+    bullet above.
+  - `kis_clipboard_test`: all rows passed, then a crash at exit; fixed (see
+    the clipboard bullet above).
 - **Known failing tests (2026-10-08)**, from `ctest -j 12 -E
   "libs-ui|kis_kra_saver_test|KisGpuSaveTest"` (291 tests): 5 failed, down
   from 13 on 2026-10-07. Remaining, not investigated further:

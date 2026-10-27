@@ -2223,3 +2223,28 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   property off must record that in `KisNodePropertyListCommand`'s new list,
   or `mergeWith()` asserts on the next merged command;
   `QTest::failOnWarning("SAFE ASSERT")` turns such asserts into test failures.
+
+## 2026-10-27 fix: Windows test run of main and the clipboard exit crash
+
+- Merged today's branches into `main` (PRs #42-#45: test control phases
+  1-4, covered-view selection animation, duplicate selection in the same
+  layer, Clipping Mask) and built and tested `main` (`24d3dde29f`) on
+  Windows: full build clean, 14 of 399 tests failed, none caused by the
+  merges. The list and how each was judged are in
+  [build pitfalls](pitfalls/build-format-test.md), "Full suite on Windows".
+- Fixed: `kis_clipboard_test` passed every row and then crashed at exit.
+  The `multi-mask` row leaves two masks on the clipboard;
+  `clipImageFromKritaLayers()` gives no image for them by design, and
+  `KisMimeData::retrieveData()` dereferenced that null image for
+  `application/x-qt-image` (and would have saved a null image for
+  `application/zip`) when `OleFlushClipboard` asked for every format at
+  exit. Both formats now return an empty `QVariant`. The new check in
+  `testCopyLayerWithMask` crashed without the fix and passes with it; the
+  test program now exits 0 (3 runs, 37 of 37 rows). Came with the
+  U-2026W44-01 `KisClipboard` rewrite; touch point in
+  [feature inventory](../feature-inventory.md). Not checked in the app.
+- Found, not fixed: `TestControlPathsTest::testSymbolicLinkOutOfRoot`
+  fails on Windows because `QFile::link()` writes a `.lnk` shortcut; left
+  for the remaining test control work.
+- Lessons: [build pitfalls](pitfalls/build-format-test.md), "Tests"
+  (clipboard formats at exit, `QFile::link()` on Windows).

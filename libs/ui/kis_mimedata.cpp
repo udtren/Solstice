@@ -306,6 +306,11 @@ QVariant KisMimeData::retrieveData(const QString &mimetype, QMetaType preferredT
     if (mimetype == "application/x-qt-image") {
         KisImageSP image = clipImageFromKritaLayers(nullptr);
 
+        // Solstice: nothing to rasterize, e.g. only masks were copied. Windows
+        // requests this format after a copy and at exit (OleFlushClipboard).
+        if (!image)
+            return QVariant();
+
         const KisDisplayConfig displayConfig = this->displayConfigForMimePastes();
         QImage result = image->projection()->convertToQImage(displayConfig.profile,
                                                              image->bounds(),
@@ -335,8 +340,12 @@ QVariant KisMimeData::retrieveData(const QString &mimetype, QMetaType preferredT
         QByteArray result;
 
         {
-            std::unique_ptr<KisDocument> doc(KisPart::instance()->createTemporaryDocument());
             KisImageSP image = clipImageFromKritaLayers(nullptr);
+            // Solstice: nothing to save, see "application/x-qt-image" above
+            if (!image)
+                return QVariant();
+
+            std::unique_ptr<KisDocument> doc(KisPart::instance()->createTemporaryDocument());
             doc->setCurrentImage(image, false);
 
             result = doc->serializeToNativeByteArray();
