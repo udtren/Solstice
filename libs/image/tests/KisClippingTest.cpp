@@ -14,12 +14,15 @@
 #include "KisClipStackLayer.h"
 #include "kis_group_layer.h"
 #include "kis_image.h"
+#include "kis_layer_properties_icons.h"
 #include "kis_paint_device.h"
 #include "kis_paint_layer.h"
 #include "kis_pixel_selection.h"
 #include "kis_projection_leaf.h"
 #include "kis_selection.h"
 #include "kis_transparency_mask.h"
+#include <kis_meta_data_merge_strategy_registry.h>
+#include <kis_undo_stores.h>
 
 namespace
 {
@@ -30,9 +33,9 @@ const KoColorSpace *rgb8()
     return KoColorSpaceRegistry::instance()->rgb8();
 }
 
-KisImageSP createImage()
+KisImageSP createImage(KisUndoStore *undoStore = nullptr)
 {
-    return new KisImage(0, imageRect.width(), imageRect.height(), rgb8(), "clipping test");
+    return new KisImage(undoStore, imageRect.width(), imageRect.height(), rgb8(), "clipping test");
 }
 
 KisPaintLayerSP addLayer(KisImageSP image,
@@ -94,9 +97,9 @@ struct ClipScene {
     KisPaintLayerSP clip2;
     KisPaintLayerSP top;
 
-    ClipScene()
+    ClipScene(KisUndoStore *undoStore = nullptr)
     {
-        image = createImage();
+        image = createImage(undoStore);
         KisNodeSP root = image->root();
         background = addLayer(image, root, "background", imageRect, QColor(200, 200, 200));
         base = addLayer(image, root, "dress", QRect(20, 20, 60, 60), QColor(255, 0, 0), COMPOSITE_MULT, 200);
@@ -149,6 +152,11 @@ private Q_SLOTS:
     void testGroupAsBase();
     void testBaseMaskClipsRun();
     void testNestedRunInGroup();
+    void testPropertyExcludesInheritAlpha();
+    void testPropertyChangeRefreshesRun();
+    void testMergeDownBakesIntoBase();
+    void testMergeDownOfClippedLayers();
+    void testImageCopyKeepsClipping();
 };
 
 void KisClippingTest::testLeafTree()
@@ -361,6 +369,142 @@ void KisClippingTest::testNestedRunInGroup()
     expectedClip->disableAlphaChannel(true);
 
     QCOMPARE(refreshAndRead(image), refreshAndRead(expected));
+}
+
+namespace
+{
+void mergeDown(KisImageSP image, KisLayerSP layer)
+{
+    image->mergeDown(layer, KisMetaData::MergeStrategyRegistry::instance()->get("Drop"));
+    image->waitForDone();
+}
+
+KisLayerSP findLayer(KisImageSP image, const QString &name)
+{
+    for (KisNodeSP node = image->root()->firstChild(); node; node = node->nextSibling()) {
+        if (node->name() == name) {
+            return qobject_cast<KisLayer *>(node.data());
+        }
+    }
+    return KisLayerSP();
+}
+} // namespace
+
+void KisClippingTest::testPropertyExcludesInheritAlpha()
+{
+    KisSurrogateUndoStore *undoStore = new KisSurrogateUndoStore();
+    ClipScene scene(undoStore);
+    scene.clip1->setClipped(false);
+    scene.clip1->disableAlphaChannel(true);
+
+    // switching clipping on switches inherit alpha off, and undo restores it
+    KisLayerPropertiesIcons::setNodePropertyAutoUndo(scene.clip1, KisLayerPropertiesIcons::clipping, true, scene.image);
+    scene.image->waitForDone();
+    QVERIFY(scene.clip1->isClipped());
+    QVERIFY(!scene.clip1->alphaChannelDisabled());
+    undoStore->undo();
+    scene.image->waitForDone();
+    QVERIFY(!scene.clip1->isClipped());
+    QVERIFY(scene.clip1->alphaChannelDisabled());
+
+    // and the other way round
+    scene.clip1->disableAlphaChannel(false);
+    scene.clip1->setClipped(true);
+    KisLayerPropertiesIcons::setNodePropertyAutoUndo(scene.clip1,
+                                                     KisLayerPropertiesIcons::inheritAlpha,
+                                                     true,
+                                                     scene.image);
+    scene.image->waitForDone();
+    QVERIFY(!scene.clip1->isClipped());
+    QVERIFY(scene.clip1->alphaChannelDisabled());
+    undoStore->undo();
+    scene.image->waitForDone();
+    QVERIFY(scene.clip1->isClipped());
+    QVERIFY(!scene.clip1->alphaChannelDisabled());
+}
+
+void KisClippingTest::testPropertyChangeRefreshesRun()
+{
+    // clip is clipped to middle; clipping middle moves clip onto the base,
+    // which changes pixels outside middle's own bounds
+    KisSurrogateUndoStore *undoStore = new KisSurrogateUndoStore();
+    KisImageSP image = createImage(undoStore);
+    KisNodeSP root = image->root();
+    addLayer(image, root, "background", imageRect, QColor(200, 200, 200));
+    addLayer(image, root, "base", QRect(0, 0, 100, 100), QColor(255, 0, 0));
+    KisPaintLayerSP middle = addLayer(image, root, "middle", QRect(40, 40, 20, 20), QColor(0, 255, 0));
+    KisPaintLayerSP clip = addLayer(image, root, "clip", QRect(0, 0, 128, 128), QColor(0, 0, 255));
+    clip->setClipped(true);
+    refreshAndRead(image);
+
+    KisLayerPropertiesIcons::setNodePropertyAutoUndo(middle, KisLayerPropertiesIcons::clipping, true, image);
+    const QByteArray updated = read(image);
+    QCOMPARE(updated, refreshAndRead(image));
+
+    undoStore->undo();
+    const QByteArray restored = read(image);
+    QCOMPARE(restored, refreshAndRead(image));
+    QVERIFY(restored != updated);
+}
+
+void KisClippingTest::testMergeDownBakesIntoBase()
+{
+    ClipScene scene;
+    const QByteArray before = refreshAndRead(scene.image);
+
+    mergeDown(scene.image, scene.clip1);
+
+    KisLayerSP merged = findLayer(scene.image, "dress");
+    QVERIFY(merged);
+    QVERIFY(!findLayer(scene.image, "clip1"));
+    QVERIFY(!merged->isClipped());
+    QCOMPARE(merged->compositeOpId(), QString(COMPOSITE_MULT));
+    QCOMPARE(merged->opacity(), quint8(200));
+
+    // clip2 now clips to the merged layer and nothing looks different
+    KisLayerSP clip2 = findLayer(scene.image, "clip2");
+    QVERIFY(clip2 && clip2->isClipped());
+    QCOMPARE(clip2->projectionLeaf()->parent(), merged->clipStackLayer()->projectionLeaf());
+    QCOMPARE(read(scene.image), before);
+    QCOMPARE(refreshAndRead(scene.image), before);
+}
+
+void KisClippingTest::testMergeDownOfClippedLayers()
+{
+    ClipScene scene;
+    scene.clip2->setCompositeOpId(COMPOSITE_OVER);
+    scene.clip2->setOpacity(OPACITY_OPAQUE_U8);
+    const QByteArray before = refreshAndRead(scene.image);
+
+    // two clipped layers with the same blend options merge into one
+    // clipped layer that looks the same
+    mergeDown(scene.image, scene.clip2);
+
+    KisLayerSP merged = findLayer(scene.image, "clip1");
+    QVERIFY(merged);
+    QVERIFY(!findLayer(scene.image, "clip2"));
+    QVERIFY(merged->isClipped());
+    QCOMPARE(merged->projectionLeaf()->parent(), scene.base->clipStackLayer()->projectionLeaf());
+    QCOMPARE(refreshAndRead(scene.image), before);
+}
+
+void KisClippingTest::testImageCopyKeepsClipping()
+{
+    // Saving copies the image. The copy's bases must not take a strong
+    // reference to the image under construction: releasing it deleted the
+    // copy (crash on saving a .kra with clipping, 2026-10-27).
+    ClipScene scene;
+    const QByteArray before = refreshAndRead(scene.image);
+
+    KisImageSP copy = scene.image->clone(true);
+    QVERIFY(copy);
+    KisLayerSP clip1 = findLayer(copy, "clip1");
+    KisLayerSP base = findLayer(copy, "dress");
+    QVERIFY(clip1 && base);
+    QVERIFY(clip1->isClipped());
+    QVERIFY(!base->isClipped());
+    QCOMPARE(clip1->projectionLeaf()->parent(), base->clipStackLayer()->projectionLeaf());
+    QCOMPARE(refreshAndRead(copy), before);
 }
 
 SIMPLE_TEST_MAIN(KisClippingTest)

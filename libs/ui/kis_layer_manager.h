@@ -82,6 +82,8 @@ private Q_SLOTS:
     void convertLayerToFileLayer(KisNodeSP source);
 
     KisLayerSP addPaintLayer(KisNodeSP activeNode);
+    /// Solstice: a paint layer clipped to the layer it is added above
+    KisLayerSP addClippingLayer(KisNodeSP activeNode);
     KisNodeSP addGroupLayer(KisNodeSP activeNode);
 
     KisNodeSP addCloneLayer(KisNodeList nodes);

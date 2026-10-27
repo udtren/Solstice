@@ -37,11 +37,11 @@ public:
     KisPaintDeviceSP paintDevice() const override;
 
     /**
-     * Converts and clears the device when the image's color space differs.
+     * Converts and clears the device when \p colorSpace, the image's, differs.
      * The stack is outside the node graph, so the image's color space
      * conversion does not visit it. Call it only in an exclusive context.
      */
-    void syncColorSpace();
+    void syncColorSpace(const KoColorSpace *colorSpace);
 
 private:
     struct Private;

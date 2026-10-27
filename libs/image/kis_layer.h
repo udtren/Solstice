@@ -146,6 +146,12 @@ public:
      */
     KisLayerSP clipStackLayer() const;
 
+    /**
+     * Solstice: the bounds of this layer, the base below it and the clipped
+     * layers next to it; the area to refresh when its clipping changes
+     */
+    QRect clipRunBounds() const;
+
     KisPaintDeviceList getLodCapableDevices() const override;
 
     /**

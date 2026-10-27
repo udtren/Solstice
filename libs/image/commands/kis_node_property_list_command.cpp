@@ -54,6 +54,20 @@ QSet<QString> changedProperties(const KisBaseNode::PropertyList &before,
     return changedIds;
 }
 
+/**
+ * Solstice: changing clipping or inherit alpha moves the clipped layers
+ * next to the node onto another base, so their bounds change too
+ */
+QRect clippingUpdateRect(KisNodeSP node, const QSet<QString> &changed)
+{
+    if (!changed.contains(KisLayerPropertiesIcons::clipping.id())
+        && !changed.contains(KisLayerPropertiesIcons::inheritAlpha.id())) {
+        return QRect();
+    }
+
+    KisLayer *layer = qobject_cast<KisLayer *>(node.data());
+    return layer ? layer->clipRunBounds() : QRect();
+}
 }
 
 
@@ -75,11 +89,13 @@ void KisNodePropertyListCommand::redo()
     const QSet<QString> changed = changedProperties(propsBefore, m_newPropertyList);
     if (changed.isEmpty()) return;
 
-    const QRect oldExtent = m_node->projectionPlane()->tightUserVisibleBounds();
+    const QRect oldExtent = m_node->projectionPlane()->tightUserVisibleBounds() | clippingUpdateRect(m_node, changed);
     m_node->setSectionModelProperties(m_newPropertyList);
 
     if (!propsWithNoUpdates().contains(changed)) {
-        doUpdate(propsBefore, m_node->sectionModelProperties(), oldExtent | m_node->projectionPlane()->tightUserVisibleBounds());
+        doUpdate(propsBefore,
+                 m_node->sectionModelProperties(),
+                 oldExtent | m_node->projectionPlane()->tightUserVisibleBounds() | clippingUpdateRect(m_node, changed));
     }
 }
 
@@ -89,11 +105,13 @@ void KisNodePropertyListCommand::undo()
     const QSet<QString> changed = changedProperties(propsBefore, m_oldPropertyList);
     if (changed.isEmpty()) return;
 
-    const QRect oldExtent = m_node->projectionPlane()->tightUserVisibleBounds();
+    const QRect oldExtent = m_node->projectionPlane()->tightUserVisibleBounds() | clippingUpdateRect(m_node, changed);
     m_node->setSectionModelProperties(m_oldPropertyList);
 
     if (!propsWithNoUpdates().contains(changed)) {
-        doUpdate(propsBefore, m_node->sectionModelProperties(), oldExtent | m_node->projectionPlane()->tightUserVisibleBounds());
+        doUpdate(propsBefore,
+                 m_node->sectionModelProperties(),
+                 oldExtent | m_node->projectionPlane()->tightUserVisibleBounds() | clippingUpdateRect(m_node, changed));
     }
 }
 

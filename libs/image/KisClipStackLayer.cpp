@@ -24,9 +24,12 @@ KisClipStackLayer::KisClipStackLayer(KisLayer *base)
 {
     m_d->base = base;
 
-    KisImageSP image = this->image().toStrongRef();
-    const KoColorSpace *colorSpace = image ? image->colorSpace() : base->colorSpace();
-    m_d->paintDevice = new KisPaintDevice(this, colorSpace, new KisDefaultBounds(this->image()));
+    // No strong reference to the image: a stack can be created while its
+    // image is still being constructed (the copy made for saving), and
+    // releasing the only reference would delete that image.
+    KisImageWSP image = this->image();
+    const KoColorSpace *colorSpace = image.isValid() ? image.data()->colorSpace() : base->colorSpace();
+    m_d->paintDevice = new KisPaintDevice(this, colorSpace, new KisDefaultBounds(image));
     m_d->paintDevice->setProjectionDevice(true);
 }
 
@@ -63,13 +66,12 @@ KisPaintDeviceSP KisClipStackLayer::paintDevice() const
     return KisPaintDeviceSP();
 }
 
-void KisClipStackLayer::syncColorSpace()
+void KisClipStackLayer::syncColorSpace(const KoColorSpace *colorSpace)
 {
-    KisImageSP image = this->image().toStrongRef();
-    if (!image || *m_d->paintDevice->colorSpace() == *image->colorSpace()) {
+    if (!colorSpace || *m_d->paintDevice->colorSpace() == *colorSpace) {
         return;
     }
 
     m_d->paintDevice->clear();
-    m_d->paintDevice->convertTo(image->colorSpace());
+    m_d->paintDevice->convertTo(colorSpace);
 }

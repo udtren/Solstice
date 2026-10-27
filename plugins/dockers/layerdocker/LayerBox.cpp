@@ -1281,11 +1281,13 @@ void LayerBox::updateLayerOpMenu(const QModelIndex &index, QMenu &menu) {
         QMenu *groupMenu = menu.addMenu(i18nc("A group of layers", "&Group"));
         addActionToMenu(groupMenu, "create_quick_group");
         addActionToMenu(groupMenu, "create_quick_clipping_group");
+        addActionToMenu(groupMenu, "new_clipping_layer");
         addActionToMenu(groupMenu, "quick_ungroup");
         QMenu *locksMenu = menu.addMenu(i18n("&Toggle Locks && Visibility"));
         addActionToMenu(locksMenu, "toggle_layer_visibility");
         addActionToMenu(locksMenu, "toggle_layer_lock");
         addActionToMenu(locksMenu, "toggle_layer_inherit_alpha");
+        addActionToMenu(locksMenu, "toggle_layer_clipping");
         addActionToMenu(locksMenu, "toggle_layer_alpha_lock");
 
         if (singleNode) {

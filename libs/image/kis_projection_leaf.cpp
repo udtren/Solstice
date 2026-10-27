@@ -487,6 +487,11 @@ QString KisProjectionLeaf::compositeOpId() const
     return m_d->node->compositeOpId();
 }
 
+bool KisProjectionLeaf::isClipStackMember() const
+{
+    return (bool)Private::clipStackOfMember(m_d->node);
+}
+
 QBitArray KisProjectionLeaf::channelFlags() const
 {
     QBitArray channelFlags;

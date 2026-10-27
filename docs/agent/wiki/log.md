@@ -1911,3 +1911,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: a projection leaf may belong to a node that is not in the graph,
   but `isRoot()` must then not rely on `node->parent()`, and overrides
   queried from the stack must read the base node, not the base leaf.
+
+## 2026-10-27 ingest: Clipping Mask property, Merge Down, .kra, docker
+
+- Clipping became an undoable layer property, exclusive with inherit alpha;
+  Merge Down bakes a clipped layer into its base; `.kra` stores
+  `clipped="1"`; the Layers docker shows it in the inherit alpha slot
+  (Alt+click) with a row bar; two actions. Details and test results:
+  [Clipping Mask plan](../clipping-mask-plan.md); user guide
+  [Clipping Mask](../../clipping-mask.md). The user tested it, saving
+  included, and reported it OK.
+- Lesson: [no strong image reference during a copy](pitfalls/strong-image-ref-during-copy.md)
+  (the save crash). Also: `KisAsynchronouslyMergeableCommandInterface` is
+  not exported, so tests outside `kritaimage` cannot construct
+  `KisNodePropertyListCommand`; use `setNodePropertyAutoUndo()` with a
+  `KisSurrogateUndoStore` (`kritacommand`).

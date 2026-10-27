@@ -89,7 +89,6 @@ kis_add_tests(
     kis_fill_interval_map_test.cpp
     kis_scanline_fill_test.cpp
     KisDustDetectorTest.cpp
-    KisClippingTest.cpp
     kis_psd_layer_style_test.cpp
     kis_layer_style_projection_plane_test.cpp
     kis_lod_capable_layer_offset_test.cpp
@@ -164,6 +163,12 @@ include_directories(${QUAZIP_INCLUDE_DIRS})
 kis_add_test(
     kis_liquify_transform_worker_test.cpp
     LINK_LIBRARIES kritaimage kritatestsdk ${QUAZIP_LIBRARIES}
+    )
+
+# Clipping Mask (Solstice): KisSurrogateUndoStore is in kritacommand
+kis_add_test(
+    KisClippingTest.cpp
+    LINK_LIBRARIES kritaimage kritacommand kritatestsdk
     )
 
 krita_add_broken_unit_tests(

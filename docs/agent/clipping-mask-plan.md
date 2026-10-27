@@ -452,11 +452,90 @@ Known limitations of the spike, to resolve in later phases:
 - The image's color space conversion does not visit the stack.
   `syncColorSpace()` runs on `setImage()` only.
 
+## Phase 3: property, Merge Down, `.kra` and docker (2026-10-27)
+
+User decision (2026-10-27): `.kra` stores clipping as a plain layer
+attribute, `clipped="1"`, and writes it only on clipped layers. Stock Krita
+ignores it and shows those layers unclipped.
+
+- **Property and undo.** `KisLayerPropertiesIcons::clipping` (`"clipping"`) is
+  part of `KisLayer::sectionModelProperties()`. `setSectionModelProperties()`
+  keeps clipping and inherit alpha exclusive: the one being switched on
+  wins, so undo restores the other. `KisNodePropertyListCommand` adds
+  `KisLayer::clipRunBounds()` (the layer, the base below it and the adjacent
+  clipped layers) to its refresh rect whenever clipping or inherit alpha
+  changes, because a clipped layer above can move to another base.
+- **Structure changes** need no extra code. Adding, removing and moving
+  layers (`KisImageLayerAddCommand`, `KisImageLayerRemoveCommand`,
+  `KisImageLayerMoveCommand`, the node juggler) already refresh the
+  parent over the image bounds.
+- **Merge Down** (`kis_layer.cc`):
+  - A clipped layer merged onto its base (`bakesIntoClipBase()`) becomes a
+    paint layer with the base's name, blend mode, opacity and inherit
+    alpha. Its pixels are painted exactly as the stack renders them, so
+    the result looks the same. Clipped layers above it stay clipped and
+    clip to the result.
+  - Otherwise the merged layer takes `prevLayer->isClipped()`.
+    `canMergeAndKeepBlendOptions()` also requires equal clipping. When the
+    blend options differ, the members of a stack are painted with their own
+    blend options (`applyForMerge()`), not with the stack's overrides.
+- **`.kra`**: `CLIPPED` in `kis_kra_tags.h`, written by
+  `KisSaveXmlVisitor::saveLayer()` and read by `kis_kra_loader.cpp` and
+  `KisSaveXmlVisitor::loadLayerAttributes()`.
+- **Layers docker** (`NodeDelegate.cpp`):
+  - Clipping takes inherit alpha's slot while it is on, with the
+    `clipping-enabled` icon (an orange hook arrow over a base line,
+    `krita/pics/svg/{dark,light}_clipping-enabled.svg`).
+  - Alt+click on the slot toggles clipping; a plain click on the clipping
+    icon turns clipping off.
+  - A 2 px orange bar beside the thumbnail marks a clipped row. There is no
+    indent yet.
+- **Actions** (`krita/krita.action`, no default shortcut):
+  `toggle_layer_clipping` (`KisNodeManager::toggleClipping()`, in the
+  docker's Toggle Locks & Visibility menu) and `new_clipping_layer`
+  (`KisNodeManager::createClippingLayer()` →
+  `KisLayerManager::addClippingLayer()`, in the Group menu).
+- User guide: [Clipping Mask](../clipping-mask.md).
+
+Results (2026-10-27, Windows, `_build`):
+
+- `KisClippingTest` passes all 14 cases. Beyond the spike's 11, they check
+  that the property excludes inherit alpha (both directions, with undo), that
+  a clipping change refreshes the run outside the toggled layer's own
+  bounds, that Merge Down onto the base keeps the image pixel-identical
+  (the base's name and blend options survive, and the next clipped layer
+  moves to the result), and that two clipped layers merge into one clipped
+  layer. The test now has its own `kis_add_test()` entry, because
+  `KisSurrogateUndoStore` is in `kritacommand`.
+- `KisClippingKraTest` (new, `plugins/impex/libkra/tests`) passes: the
+  `clipped` attribute round-trips through `.kra`, and the loaded image
+  renders identically.
+- `KisGpuProjectionTest::testClipStackMatchesCpu` (new) passes. An RGBA F32
+  clip stack composited on the GPU matches the CPU within 2e-5, and the GPU
+  path was used.
+- The 13 other `libs/image` tests listed under the spike results, and
+  `KisGpuProjectionTest` as a whole, still pass.
+- Not run: `libs/ui` tests and `kis_kra_saver_test`. On this desktop they
+  open blocking dialogs.
+
+- Crash fix (2026-10-27): saving a `.kra` with a clipped layer crashed in
+  `~KisImage`, because the clip stack took a strong reference to an image
+  whose copy constructor was still running. It now reads the color space
+  through the weak pointer; see the
+  [pitfall](wiki/pitfalls/strong-image-ref-during-copy.md).
+  `testImageCopyKeepsClipping` covers the copy.
+- User check (2026-10-27): after the fix the user tested Clipping Mask in
+  the installed build, including saving, and reported it OK. Which of the
+  manual checks that covered is not recorded.
+
+Not done in this phase: PSD import/export, Merge Selected / Flatten with
+clipped layers, the indent of clipped rows, the `zh_CN` catalog entries for
+the new strings, `libkis`, and an interactive check in Solstice.
+
 ## Open questions
 
-- .kra: a plain attribute (Krita shows the layers unclipped) or A-compat
-  (saved as inherit-alpha groups)? Attribute name? What happens if upstream
-  later defines its own attribute?
+- .kra: decided, a plain attribute `clipped` (2026-10-27). Open: what
+  happens if upstream later defines its own attribute?
 - Shortcut and action names: `Ctrl+Alt+G` is Photoshop's clipping binding,
   but Krita already uses it for `quick_ungroup` (`krita/krita.action`).
   Leave the new action unbound, or take another key? Confirm the
