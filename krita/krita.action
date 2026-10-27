@@ -2815,6 +2815,30 @@
       <isCheckable>false</isCheckable>
       <statusTip/>
     </Action>
+    <Action name="toggle_layer_clipping">
+      <icon>clipping-enabled</icon>
+      <text>Toggle Clipping Mask</text>
+      <whatsThis/>
+      <toolTip>Clip the layer to the layer directly below it</toolTip>
+      <iconText>Toggle Clipping Mask</iconText>
+      <activationFlags>1000</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut/>
+      <isCheckable>false</isCheckable>
+      <statusTip/>
+    </Action>
+    <Action name="new_clipping_layer">
+      <icon>clipping-enabled</icon>
+      <text>New Clipping Layer</text>
+      <whatsThis/>
+      <toolTip>Add a paint layer clipped to the active layer</toolTip>
+      <iconText>New Clipping Layer</iconText>
+      <activationFlags>1000</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut/>
+      <isCheckable>false</isCheckable>
+      <statusTip/>
+    </Action>
     <Action name="add_new_paint_layer">
       <icon>paintLayer</icon>
       <text>Add &amp;Paint Layer</text>

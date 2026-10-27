@@ -46,6 +46,8 @@ Access items with icons.
 
 ## Editing
 
+- [Clipping Mask](clipping-mask.md): clip a layer to the layer below it
+  without a group. In development.
 - [Puppet Warp](puppet-warp.md): posing and reshaping artwork with pins in
   the Transform Tool.
 - [Move Tool](move-tool.md): duplicating a selection on the same layer with

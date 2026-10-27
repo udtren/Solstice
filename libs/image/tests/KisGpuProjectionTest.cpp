@@ -59,6 +59,7 @@ private Q_SLOTS:
     void cleanup();
 
     void testFullRefreshMatchesCpu();
+    void testClipStackMatchesCpu();
     void testBlendModesMatchCpu_data();
     void testBlendModesMatchCpu();
     void testExtendedBlendBoundaries_data();
@@ -468,6 +469,41 @@ void KisGpuProjectionTest::testFullRefreshMatchesCpu()
 
     QVector<KisPaintLayerSP> layers;
     KisImageSP image = createTestImage(false, &layers);
+
+    const std::vector<float> expected = render(image, false);
+    const quint64 before = KisGpuMergeBatch::gpuCompositeCount();
+    const std::vector<float> actual = render(image, true);
+    QVERIFY2(KisGpuMergeBatch::gpuCompositeCount() > before, "the GPU path was not used");
+
+    QPoint where;
+    const float difference = maxDifference(expected, actual, &where, image->width());
+    QVERIFY2(difference <= 2e-5f,
+             qPrintable(QStringLiteral("max difference %1 at (%2, %3): %4")
+                            .arg(difference)
+                            .arg(where.x())
+                            .arg(where.y())
+                            .arg(pixelReport(expected, actual, where, image->width()))));
+}
+
+void KisGpuProjectionTest::testClipStackMatchesCpu()
+{
+    REQUIRE_GPU();
+
+    // Solstice: Clipping Mask. The base and its clipped layers composite
+    // into the base's clip stack, which composites onto the root.
+    KisImageSP image = new KisImage(0, 256, 192, rgbaFloat(), "clip stack");
+    auto addLayer = [&image](const QString &name, const QRect &rect, quint32 seed, const QString &op, quint8 opacity) {
+        KisPaintLayerSP layer = new KisPaintLayer(image, name, opacity, rgbaFloat());
+        fillRandom(layer->paintDevice(), rect, seed);
+        layer->setCompositeOpId(op);
+        image->addNode(layer, image->root(), image->root()->lastChild());
+        return layer;
+    };
+    addLayer("background", image->bounds(), 1, COMPOSITE_OVER, OPACITY_OPAQUE_U8);
+    addLayer("base", QRect(20, 10, 150, 120), 2, COMPOSITE_MULT, 200);
+    addLayer("clip1", QRect(70, 0, 180, 150), 3, COMPOSITE_OVER, OPACITY_OPAQUE_U8)->setClipped(true);
+    addLayer("clip2", QRect(0, 60, 256, 50), 4, COMPOSITE_SCREEN, 128)->setClipped(true);
+    addLayer("top", QRect(150, 100, 60, 60), 5, COMPOSITE_OVER, OPACITY_OPAQUE_U8);
 
     const std::vector<float> expected = render(image, false);
     const quint64 before = KisGpuMergeBatch::gpuCompositeCount();

@@ -165,6 +165,12 @@ kis_add_test(
     LINK_LIBRARIES kritaimage kritatestsdk ${QUAZIP_LIBRARIES}
     )
 
+# Clipping Mask (Solstice): KisSurrogateUndoStore is in kritacommand
+kis_add_test(
+    KisClippingTest.cpp
+    LINK_LIBRARIES kritaimage kritacommand kritatestsdk
+    )
+
 krita_add_broken_unit_tests(
     kis_perspective_transform_worker_test.cpp
     LINK_LIBRARIES kritaimage kritatestsdk

@@ -426,6 +426,12 @@ void KisNodeManager::setup(KisKActionCollection * actionCollection, KisActionMan
     action = actionManager->createAction("toggle_layer_inherit_alpha");
     connect(action, SIGNAL(triggered()), this, SLOT(toggleInheritAlpha()));
 
+    action = actionManager->createAction("toggle_layer_clipping");
+    connect(action, SIGNAL(triggered()), this, SLOT(toggleClipping()));
+
+    action = actionManager->createAction("new_clipping_layer");
+    connect(action, SIGNAL(triggered()), this, SLOT(createClippingLayer()));
+
     action = actionManager->createAction("toggle_layer_alpha_lock");
     connect(action, SIGNAL(triggered()), this, SLOT(toggleAlphaLock()));
 
@@ -1544,6 +1550,44 @@ void KisNodeManager::toggleInheritAlpha()
             KisLayerPropertiesIcons::setNodePropertyAutoUndo(node, KisLayerPropertiesIcons::inheritAlpha, !isAlphaDisabled, m_d->view->image());
         }
     }
+}
+
+void KisNodeManager::toggleClipping()
+{
+    KisNodeList nodes = this->selectedNodes();
+    KisNodeSP active = activeNode();
+    if (nodes.isEmpty() || !active)
+        return;
+
+    auto layer = qobject_cast<KisLayer *>(active.data());
+    if (!layer) {
+        return;
+    }
+
+    const bool isClipped = layer->isClipped();
+    for (auto &node : nodes) {
+        auto layer = qobject_cast<KisLayer *>(node.data());
+        if (layer) {
+            KisLayerPropertiesIcons::setNodePropertyAutoUndo(node,
+                                                             KisLayerPropertiesIcons::clipping,
+                                                             !isClipped,
+                                                             m_d->view->image());
+        }
+    }
+}
+
+void KisNodeManager::createClippingLayer()
+{
+    if (!m_d->view->blockUntilOperationsFinished(m_d->view->image())) {
+        return;
+    }
+
+    KisNodeSP activeNode = this->activeNode();
+    if (!activeNode) {
+        activeNode = m_d->view->image()->root();
+    }
+
+    m_d->layerManager.addClippingLayer(activeNode);
 }
 
 void KisNodeManager::colorOverlayMaskProperties(KisNodeSP node)

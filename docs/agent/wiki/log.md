@@ -2182,3 +2182,44 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lessons: [build pitfalls](pitfalls/build-format-test.md), "Worktrees"
   (`_build` and `_install` changing under an out-of-tree build, launching
   the commands).
+
+## 2026-10-27 ingest: Clipping Mask spike
+
+- Investigation of the forum requests for Clipping Mask and for duplicating
+  a selection on the same layer; the user chose option A for both. Plans:
+  [Clipping Mask](../clipping-mask-plan.md),
+  [duplicate selection](../duplicate-selection-in-layer-plan.md).
+- Clipping spike in `libs/image`: a `KisClipStackLayer` outside the node
+  graph replaces a clip base and its run in the projection leaf tree, so
+  the walkers and `KisAsyncMerger` composite it like a group. Pixel-identical
+  to an inherit-alpha group in `KisClippingTest`; GPU, LoD and UI unverified.
+- Lesson: a projection leaf may belong to a node that is not in the graph,
+  but `isRoot()` must then not rely on `node->parent()`, and overrides
+  queried from the stack must read the base node, not the base leaf.
+
+## 2026-10-27 ingest: Clipping Mask property, Merge Down, .kra, docker
+
+- Clipping became an undoable layer property, exclusive with inherit alpha;
+  Merge Down bakes a clipped layer into its base; `.kra` stores
+  `clipped="1"`; the Layers docker shows it in the inherit alpha slot
+  (Alt+click) with a row bar; two actions. Details and test results:
+  [Clipping Mask plan](../clipping-mask-plan.md); user guide
+  [Clipping Mask](../../clipping-mask.md). The user tested it, saving
+  included, and reported it OK.
+- Lesson: [no strong image reference during a copy](pitfalls/strong-image-ref-during-copy.md)
+  (the save crash). Also: `KisAsynchronouslyMergeableCommandInterface` is
+  not exported, so tests outside `kritaimage` cannot construct
+  `KisNodePropertyListCommand`; use `setNodePropertyAutoUndo()` with a
+  `KisSurrogateUndoStore` (`kritacommand`).
+
+## 2026-10-27 ingest: Clipping Mask PSD, Merge Selected, assert fix
+
+- PSD import/export of clipping, Merge Selected/Flatten with clip stacks,
+  `zh_CN` strings, the README New Features card (#04, before Puppet Warp)
+  and the guide image. Row indents were added and removed again at the
+  user's request. Details: [Clipping Mask plan](../clipping-mask-plan.md).
+- Lessons: the PSD test loads the *installed* PSD plugins, so install them
+  before trusting a round-trip result. A property that switches another
+  property off must record that in `KisNodePropertyListCommand`'s new list,
+  or `mergeWith()` asserts on the next merged command;
+  `QTest::failOnWarning("SAFE ASSERT")` turns such asserts into test failures.

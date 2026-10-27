@@ -49,6 +49,12 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 - [UI test automation through MCP](ui-automation-plan.md): user decisions,
   determinism risks and phases 1-5; phase 0 is implemented and maintained in
   [Test control](test-control.md).
+- [Clipping Mask](clipping-mask-plan.md): investigation, options and
+  comparison for Photoshop-style clipping next to inherit alpha; option A
+  approved, rendering spike in progress.
+- [Duplicate selection in the same layer](duplicate-selection-in-layer-plan.md):
+  investigation, options and comparison for Ctrl-drag duplication with the
+  Move Tool; option A approved, not started.
 
 ## Superseded plans and historical evidence
 

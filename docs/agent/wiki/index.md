@@ -120,6 +120,9 @@ Document ownership and lifecycle are defined in
   test environment (filter registry in plugin tests, per-case output),
   installation (including plugins after a vtable change), smart-pointer
   default arguments and lambda captures.
+- [No strong image reference during a copy](pitfalls/strong-image-ref-during-copy.md):
+  `toStrongRef()` in code reached from `setImage()` deletes an image whose
+  copy constructor is still running (crash on saving clipped layers).
 - [Weak pointers as ordered map keys](pitfalls/weak-pointer-map-keys.md):
   a `KisWeakSharedPtr` key turns into `nullptr` when its object dies and
   corrupts the map (missing layer docker thumbnails).

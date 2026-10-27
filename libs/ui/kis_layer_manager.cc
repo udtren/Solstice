@@ -691,6 +691,23 @@ KisLayerSP KisLayerManager::addPaintLayer(KisNodeSP activeNode)
     return layer;
 }
 
+KisLayerSP KisLayerManager::addClippingLayer(KisNodeSP activeNode)
+{
+    KisImageWSP image = m_view->image();
+    KisLayerSP layer = new KisPaintLayer(image.data(),
+                                         image->nextLayerName(i18n("Paint Layer")),
+                                         OPACITY_OPAQUE_U8,
+                                         image->colorSpace());
+
+    KisConfig cfg(true);
+    layer->setPinnedToTimeline(cfg.autoPinLayersToTimeline());
+    layer->setClipped(true);
+
+    addLayerCommon(activeNode, layer, false, 0);
+
+    return layer;
+}
+
 KisNodeSP KisLayerManager::addBrushStrokeLayer(KisNodeSP activeNode)
 {
     KisImageWSP image = m_view->image();

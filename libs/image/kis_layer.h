@@ -132,6 +132,29 @@ public:
     bool alphaChannelDisabled() const;
 
     /**
+     * Solstice: a clipped layer is shown only where its base, the nearest
+     * non-clipped layer below it in the same parent, has pixels (Clipping
+     * Mask, see docs/agent/clipping-mask-plan.md).
+     */
+    bool isClipped() const;
+    void setClipped(bool value);
+
+    /**
+     * Solstice: the internal layer that composites this layer as a clip base
+     * with the clipped layers above it. It is not part of the node graph;
+     * only the projection leaf tree uses it. Created on first use.
+     */
+    KisLayerSP clipStackLayer() const;
+
+    /**
+     * Solstice: the bounds of this layer, the base below it and the clipped
+     * layers next to it; the area to refresh when its clipping changes
+     */
+    QRect clipRunBounds() const;
+
+    KisPaintDeviceList getLodCapableDevices() const override;
+
+    /**
      * set the channelflags for this layer to the specified bit array.
      * The bit array must have exactly the same number of channels as
      * the colorspace this layer is in, or be empty, in which case all

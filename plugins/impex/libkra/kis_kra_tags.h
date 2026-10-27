@@ -37,6 +37,8 @@ const QString ANIMATION_METADATA_PATH = "/animation/";
 const QString ADJUSTMENT_LAYER = "adjustmentlayer";
 const QString CHANNEL_FLAGS = "channelflags";
 const QString CHANNEL_LOCK_FLAGS = "channellockflags";
+// Solstice: Clipping Mask (KisLayer::isClipped()); stock Krita ignores it
+const QString CLIPPED = "clipped";
 const QString CLONE_FROM = "clonefrom";
 const QString CLONE_FROM_UUID = "clonefromuuid";
 const QString CLONE_LAYER = "clonelayer";

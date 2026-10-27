@@ -241,6 +241,7 @@ set(kritaimage_LIB_SRCS
    kis_crop_saved_extra_data.cpp
    kis_timed_signal_threshold.cpp
    kis_layer.cc
+   KisClipStackLayer.cpp
    kis_indirect_painting_support.cpp
    kis_abstract_projection_plane.cpp
    kis_layer_projection_plane.cpp

@@ -234,6 +234,9 @@ public Q_SLOTS:
     void toggleVisibility();
     void toggleAlphaLock();
     void toggleInheritAlpha();
+    /// Solstice: Clipping Mask
+    void toggleClipping();
+    void createClippingLayer();
 
     /** Open a dialog to change layer's fast color overlay mask properties. */
     void colorOverlayMaskProperties(KisNodeSP node);
