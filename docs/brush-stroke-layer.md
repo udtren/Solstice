@@ -28,6 +28,10 @@ Stroke Layer**. It appears below Paint Layer in the menu.
   or wholly outside the selection: a stroke the selection's edge cuts in
   two cannot be remembered, and the layer stops matching its strokes (see
   below).
+- Duplicating a selection with **Ctrl-drag** in the Move tool
+  ([Move Tool](move-tool.md)) copies the strokes inside the selection with
+  the pixels; the originals stay. The same rule applies: a stroke the
+  selection's edge cuts cannot be copied.
 
 ## Enlarging
 

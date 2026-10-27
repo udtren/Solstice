@@ -303,6 +303,42 @@ SelectionCoverage selectionCoverage(const KisRecordedBrushStrokeSP &stroke,
     }
     return outside ? SelectionCoverage::Outside : (inside ? SelectionCoverage::Inside : SelectionCoverage::Crossing);
 }
+
+/// Sorts @p recorded into the strokes outside @p mask and those inside it;
+/// false (with a warning naming @p action) if a stroke crosses its edge
+bool splitBySelection(const KisBrushStrokeLayer *layer,
+                      const QVector<KisRecordedBrushStrokeSP> &recorded,
+                      KisPaintDeviceSP device,
+                      KisPaintDeviceSP mask,
+                      const QString &action,
+                      QVector<KisRecordedBrushStrokeSP> *outside,
+                      QVector<KisRecordedBrushStrokeSP> *inside)
+{
+    const QPoint deviceOffset(device->x(), device->y());
+    const QRect maskBounds = mask->exactBounds();
+    for (const KisRecordedBrushStrokeSP &stroke : recorded) {
+        switch (selectionCoverage(stroke, deviceOffset, mask, maskBounds, device->colorSpace())) {
+        case SelectionCoverage::Outside:
+            *outside << stroke;
+            break;
+        case SelectionCoverage::Inside:
+            *inside << stroke;
+            break;
+        case SelectionCoverage::Crossing: {
+            const QString message =
+                QStringLiteral(
+                    "Brush stroke layer \"%1\": a recorded stroke crosses the edge of the %2 selection; "
+                    "its record no longer matches the pixels")
+                    .arg(layer->name())
+                    .arg(action);
+            warnKrita << message;
+            KisUsageLogger::log(message);
+            return false;
+        }
+        }
+    }
+    return true;
+}
 } // namespace
 
 bool KisBrushStrokeLayer::strokesMatchPixels(const QVector<KisRecordedBrushStrokeSP> &strokes,
@@ -322,37 +358,36 @@ KUndo2Command *KisBrushStrokeLayer::createSelectionMoveCommand(KisPaintDeviceSP 
     if (recorded.isEmpty() || !device || !mask || offset.isNull() || device->keyframeChannel()) {
         return nullptr;
     }
-    const QPoint deviceOffset(device->x(), device->y());
-    const QRect maskBounds = mask->exactBounds();
-
     QVector<KisRecordedBrushStrokeSP> staying;
     QVector<KisRecordedBrushStrokeSP> moving;
-    for (const KisRecordedBrushStrokeSP &stroke : recorded) {
-        switch (selectionCoverage(stroke, deviceOffset, mask, maskBounds, device->colorSpace())) {
-        case SelectionCoverage::Outside:
-            staying << stroke;
-            break;
-        case SelectionCoverage::Inside:
-            moving << stroke;
-            break;
-        case SelectionCoverage::Crossing: {
-            const QString message =
-                QStringLiteral(
-                    "Brush stroke layer \"%1\": a recorded stroke crosses the edge of the moved selection; "
-                    "its record no longer matches the pixels")
-                    .arg(name());
-            warnKrita << message;
-            KisUsageLogger::log(message);
-            return nullptr;
-        }
-        }
-    }
-    if (moving.isEmpty()) {
+    if (!splitBySelection(this, recorded, device, mask, QStringLiteral("moved"), &staying, &moving)
+        || moving.isEmpty()) {
         return nullptr;
     }
     // the moved pixels are pasted over the rest
+    const QPoint deviceOffset(device->x(), device->y());
     const QVector<KisRecordedBrushStrokeSP> after =
         staying + transformedStrokes(moving, deviceOffset, QTransform::fromTranslate(offset.x(), offset.y()));
+    return new SetStrokesCommand(this, recorded, after, false);
+}
+
+KUndo2Command *KisBrushStrokeLayer::createSelectionDuplicateCommand(KisPaintDeviceSP mask, const QPoint &offset)
+{
+    const QVector<KisRecordedBrushStrokeSP> recorded = strokes();
+    KisPaintDeviceSP device = paintDevice();
+    if (recorded.isEmpty() || !device || !mask || offset.isNull() || device->keyframeChannel()) {
+        return nullptr;
+    }
+    QVector<KisRecordedBrushStrokeSP> outside;
+    QVector<KisRecordedBrushStrokeSP> copied;
+    if (!splitBySelection(this, recorded, device, mask, QStringLiteral("duplicated"), &outside, &copied)
+        || copied.isEmpty()) {
+        return nullptr;
+    }
+    // the originals stay; the copy is pasted over everything
+    const QPoint deviceOffset(device->x(), device->y());
+    const QVector<KisRecordedBrushStrokeSP> after =
+        recorded + transformedStrokes(copied, deviceOffset, QTransform::fromTranslate(offset.x(), offset.y()));
     return new SetStrokesCommand(this, recorded, after, false);
 }
 

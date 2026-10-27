@@ -28,11 +28,15 @@
 MoveSelectionStrokeStrategy::MoveSelectionStrokeStrategy(KisPaintLayerSP paintLayer,
                                                          KisSelectionSP selection,
                                                          KisUpdatesFacade *updatesFacade,
-                                                         KisStrokeUndoFacade *undoFacade)
-    : KisStrokeStrategyUndoCommandBased(kundo2_i18n("Move Selection"), false, undoFacade),
+                                                         KisStrokeUndoFacade *undoFacade,
+                                                         bool duplicate)
+    : KisStrokeStrategyUndoCommandBased(duplicate ? kundo2_i18n("Duplicate Selection") : kundo2_i18n("Move Selection"),
+                                        false,
+                                        undoFacade),
       m_paintLayer(paintLayer),
       m_selection(selection),
-      m_updatesFacade(updatesFacade)
+      m_updatesFacade(updatesFacade),
+      m_duplicate(duplicate)
 {
     /**
      * Selection might have some update projection jobs pending, so we should ensure
@@ -48,7 +52,8 @@ MoveSelectionStrokeStrategy::MoveSelectionStrokeStrategy(const MoveSelectionStro
       KisStrokeStrategyUndoCommandBased(rhs),
       m_paintLayer(rhs.m_paintLayer),
       m_selection(rhs.m_selection),
-      m_updatesFacade(rhs.m_updatesFacade)
+      m_updatesFacade(rhs.m_updatesFacade),
+      m_duplicate(rhs.m_duplicate)
 {
 }
 
@@ -73,11 +78,14 @@ void MoveSelectionStrokeStrategy::initStrokeCallback()
     gc.bitBlt(copyRect.topLeft(), paintDevice, copyRect);
     gc.end();
 
-    KisTransaction cutTransaction(name(), paintDevice);
-    paintDevice->clearSelection(m_selection);
-    runAndSaveCommand(KUndo2CommandSP(cutTransaction.endAndTake()),
-                      KisStrokeJobData::SEQUENTIAL,
-                      KisStrokeJobData::NORMAL);
+    // Solstice: a duplicate leaves the selected pixels where they are
+    if (!m_duplicate) {
+        KisTransaction cutTransaction(name(), paintDevice);
+        paintDevice->clearSelection(m_selection);
+        runAndSaveCommand(KUndo2CommandSP(cutTransaction.endAndTake()),
+                          KisStrokeJobData::SEQUENTIAL,
+                          KisStrokeJobData::NORMAL);
+    }
 
     KisIndirectPaintingSupport *indirect =
         static_cast<KisIndirectPaintingSupport*>(m_paintLayer.data());
@@ -120,14 +128,17 @@ void MoveSelectionStrokeStrategy::finishStrokeCallback()
     indirect->setTemporaryTarget(0);
 
     // Solstice: the recorded strokes inside the selection move with the
-    // pixels; the selection has moved already, so look where it was. Only
-    // the full resolution stroke moves them: the level of detail preview
-    // (Instant Preview) runs this too, with its scaled offset
+    // pixels, or are copied with them by a duplicate; the selection has
+    // moved already, so look where it was. Only the full resolution stroke
+    // changes them: the level of detail preview (Instant Preview) runs this
+    // too, with its scaled offset
     KisBrushStrokeLayer *strokeLayer = dynamic_cast<KisBrushStrokeLayer *>(m_paintLayer.data());
     if (strokeLayer && !m_paintLayer->paintDevice()->defaultBounds()->currentLevelOfDetail()) {
         KisPaintDeviceSP mask = new KisPaintDevice(*m_selection->projection());
         mask->moveTo(mask->offset() - m_finalOffset);
-        if (KUndo2Command *recordCommand = strokeLayer->createSelectionMoveCommand(mask, m_finalOffset)) {
+        KUndo2Command *recordCommand = m_duplicate ? strokeLayer->createSelectionDuplicateCommand(mask, m_finalOffset)
+                                                   : strokeLayer->createSelectionMoveCommand(mask, m_finalOffset);
+        if (recordCommand) {
             runAndSaveCommand(toQShared(recordCommand), KisStrokeJobData::SEQUENTIAL, KisStrokeJobData::NORMAL);
         }
     }

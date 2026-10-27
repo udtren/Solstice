@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-26
+updated: 2026-10-27
 ---
 
 # Agent wiki
@@ -185,6 +185,11 @@ Document ownership and lifecycle are defined in
 - [ABR import development](history/abr-import-development.md): original
   investigation, interim conversion rules and dated results; the feature
   reference owns current support, compatibility and remaining verification.
+
+- [Duplicate selection plan](history/duplicate-selection-in-layer-plan.md):
+  forum findings, the three options and the open questions before option A
+  (Move Tool Ctrl-drag) was implemented; the feature reference owns the
+  current contract.
 
 - [Brush Stroke Layer development](history/brush-stroke-layer-development.md):
   complete original plan, investigations, measurements and dated verification;

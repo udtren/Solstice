@@ -54,6 +54,7 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 
 | Record | Role / maintained successor |
 | --- | --- |
+| [Duplicate selection plan](wiki/history/duplicate-selection-in-layer-plan.md) | Forum findings, options A-C and open questions before implementation; [Duplicate selection](duplicate-selection-in-layer.md) owns the implemented Move Tool contract |
 | [GitHub Actions development](wiki/history/github-actions-development.md) | Dated build failures, dependency changes and package checks; [GitHub Actions operations](github-actions.md) owns current procedures |
 | [GPU engine development](wiki/history/gpu-engine-development.md) | Full mixed architecture/plan snapshot; [GPU maintenance](gpu-engine.md) owns the current contract |
 | [GPU work-order development](wiki/history/gpu-work-priorities-development.md) | Original priority rationale and dated progress; [GPU priorities](gpu-work-priorities.md) owns remaining work and deferrals |
