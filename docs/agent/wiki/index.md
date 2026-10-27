@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-26
+updated: 2026-10-27
 ---
 
 # Agent wiki
@@ -129,6 +129,9 @@ Document ownership and lifecycle are defined in
 - [Python bindings declare their own return types](pitfalls/sip-return-types.md):
   a `.sip` file that says `void` gives Python `None` for a C++ `bool`
   (`Node.save()`); `.sip` edits do not trigger a rebuild.
+- [Compressed updates can outlive their model](pitfalls/compressed-updates-outlive-their-model.md):
+  a signal compressor fires after its source is gone; `KisNodeModel`
+  crashed when a document closed within 100 ms of two layer changes.
 - [Iterating a Qt 6 container is a write](pitfalls/qt6-detach-on-iteration.md):
   a non-const `begin()`/`rbegin()` detaches even a never-allocated list;
   a GUI-thread loop over `KisImage`'s filter stack lost a worker's filter
@@ -145,7 +148,8 @@ Document ownership and lifecycle are defined in
 - [Synthetic canvas input](pitfalls/synthetic-canvas-input.md): events
   reach the input manager only on its current canvas widget; a pen press
   eats the next mouse press and blocks mouse input until proximity leaves;
-  modifiers are resynced from the physical keyboard.
+  modifiers are resynced from the physical keyboard; modal dialogs block a
+  serialized call queue; some combo boxes act only on `activated`.
 - [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md):
   filter and fill layers and masks report `nodeColorSpace()` as GrayA, which
   turns `KisVisualColorSelector` into one lightness bar (HueSVC).
@@ -188,6 +192,11 @@ Document ownership and lifecycle are defined in
 - [ABR import development](history/abr-import-development.md): original
   investigation, interim conversion rules and dated results; the feature
   reference owns current support, compatibility and remaining verification.
+
+- [Duplicate selection plan](history/duplicate-selection-in-layer-plan.md):
+  forum findings, the three options and the open questions before option A
+  (Move Tool Ctrl-drag) was implemented; the feature reference owns the
+  current contract.
 
 - [Brush Stroke Layer development](history/brush-stroke-layer-development.md):
   complete original plan, investigations, measurements and dated verification;

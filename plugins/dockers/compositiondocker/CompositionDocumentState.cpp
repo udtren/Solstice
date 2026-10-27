@@ -18,6 +18,8 @@ CompositionDocumentState::CompositionDocumentState(KisDocument *document)
 }
 CompositionDocumentState *CompositionDocumentState::get(KisDocument *document, KisImageSP image)
 {
+    if (!document)
+        return nullptr;
     auto *state = document->findChild<CompositionDocumentState *>(QString(), Qt::FindDirectChildrenOnly);
     if (!state)
         state = new CompositionDocumentState(document);

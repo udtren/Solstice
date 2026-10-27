@@ -139,6 +139,16 @@ public:
      */
     KUndo2Command *createSelectionMoveCommand(KisPaintDeviceSP mask, const QPoint &offset);
 
+    /**
+     * The record after the Move Tool duplicated the pixels inside @p mask
+     * (the selection where it was before the drag) and placed the copy
+     * @p offset away: the strokes that lie inside the selection stay, and
+     * copies of them, moved by @p offset, come last, as the copy is pasted
+     * over everything. nullptr if nothing is copied or a stroke crosses the
+     * selection's edge (the copy holds only part of it).
+     */
+    KUndo2Command *createSelectionDuplicateCommand(KisPaintDeviceSP mask, const QPoint &offset);
+
     /// Whether drawing @p strokes again gives the pixels of @p original;
     /// otherwise @p difference describes how they differ
     static bool strokesMatchPixels(const QVector<KisRecordedBrushStrokeSP> &strokes,

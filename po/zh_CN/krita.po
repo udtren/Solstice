@@ -27466,7 +27466,7 @@ msgctxt "floating message"
 msgid "\"%1\" matches its recorded brush strokes again."
 msgstr "“%1”再次与其记录的笔画一致。"
 
-#: libs/ui/brushstrokelayer/KisBrushStrokeLayerTransform.cpp:451
+#: libs/ui/brushstrokelayer/KisBrushStrokeLayerTransform.cpp:486
 #, kde-format
 msgctxt "floating message"
 msgid ""
@@ -27475,7 +27475,7 @@ msgid ""
 msgstr ""
 "“%1”已重新绘制，但其中约 %2% 的部分与记录的笔画不再一致：该部分已按像素缩放。"
 
-#: libs/ui/brushstrokelayer/KisBrushStrokeLayerTransform.cpp:459
+#: libs/ui/brushstrokelayer/KisBrushStrokeLayerTransform.cpp:494
 msgctxt "(qtundo-format)"
 msgid "Redraw Brush Strokes"
 msgstr "重新绘制笔画"
@@ -66996,19 +66996,19 @@ msgstr ""
 msgid "Measure Tool"
 msgstr "测量工具"
 
-#: plugins/tools/basictools/kis_tool_move.cc:292
+#: plugins/tools/basictools/kis_tool_move.cc:303
 #, kde-format
 msgctxt "floating message in move tool"
 msgid "X: %1 px, Y: %2 px"
 msgstr "X：%1 像素，Y：%2 像素"
 
-#: plugins/tools/basictools/kis_tool_move.cc:347
+#: plugins/tools/basictools/kis_tool_move.cc:358
 #, kde-format
 msgctxt "floating message in move tool"
 msgid "Selected area has no pixels"
 msgstr "所选区域不含像素"
 
-#: plugins/tools/basictools/kis_tool_move.h:183
+#: plugins/tools/basictools/kis_tool_move.h:186
 #, kde-format
 msgid "Move Tool"
 msgstr "移动工具"
@@ -67095,7 +67095,12 @@ msgstr "绘制矩形"
 msgid "Rectangle Tool"
 msgstr "矩形工具：可圆角"
 
-#: plugins/tools/basictools/strokes/move_selection_stroke_strategy.cpp:32
+#: plugins/tools/basictools/strokes/move_selection_stroke_strategy.cpp:33
+msgctxt "(qtundo-format)"
+msgid "Duplicate Selection"
+msgstr "复制选区"
+
+#: plugins/tools/basictools/strokes/move_selection_stroke_strategy.cpp:33
 msgctxt "(qtundo-format)"
 msgid "Move Selection"
 msgstr "移动选区"

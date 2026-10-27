@@ -79,6 +79,7 @@ void CompositionWorkflowTest::testDocumentState()
     image->addComposition(compB);
     a->setVisible(true);
     image->unlock();
+    QCOMPARE(CompositionDocumentState::get(nullptr, image), static_cast<CompositionDocumentState *>(nullptr));
     auto *state = CompositionDocumentState::get(doc.data(), image);
     QCOMPARE(state, CompositionDocumentState::get(doc.data(), image));
     state->apply(compA);
