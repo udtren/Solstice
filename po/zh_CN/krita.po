@@ -11313,7 +11313,7 @@ msgstr "新建剪贴图层"
 #, kde-format
 msgctxt "action"
 msgid "Add a paint layer clipped to the active layer"
-msgstr "添加剪贴到活动图层的绘画图层"
+msgstr "添加剪贴到活动图层的颜料图层"
 
 #. i18n: context: text @ Action (add_new_paint_layer), Actions (Layers), ActionCollection (Krita)
 #: krita/krita.action:2844
