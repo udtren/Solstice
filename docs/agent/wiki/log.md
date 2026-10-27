@@ -1897,3 +1897,21 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   or run in Solstice; verification status in [Test control](../test-control.md).
 - Lessons: [build pitfalls](pitfalls/build-format-test.md), "Tests"
   (same-thread server, 32-bit `ulong`).
+
+## 2026-10-27 fix: selection outline animation in covered views
+
+- `KisSelectionDecoration::antsAttackEvent()` now skips views whose
+  `visibleRegion()` is empty. Background tabs of the tabbed document area
+  are covered, not hidden, so every document with a selection repainted its
+  canvas every 150 ms. Found while investigating the test control
+  `wait_idle` slowdown (branch `claude/test-control-linux`).
+- Verified on Linux (Xvfb, software OpenGL) with this commit on top of the
+  test control branch (local build only): with 40 documents that have
+  selections, the longest GUI poll gap stayed at 73 ms instead of 296 ms,
+  `wait_idle` after a selection at 751 ms instead of 1246 ms, and after a
+  brush stroke at 40 ms instead of 552 ms. The visible view animates; a
+  covered view resumes when brought to the front (`windows_next`, about 710
+  changed pixels per 0.3 s, none for a document without a selection); in
+  subwindow mode two tiled views animate at once. Selection and decoration
+  tests (8) pass. Windows not checked.
+- Touch point recorded in [feature inventory](../feature-inventory.md).
