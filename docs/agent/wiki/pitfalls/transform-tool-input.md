@@ -73,3 +73,14 @@ Found while writing the Transform Tool scenarios for
 - Activating the tool while it is active does nothing, so a second
   transform after Apply needs a switch to another tool and back (test
   control's `tool_activate` does that).
+
+## A press can come without a hover
+
+Strategies set their mode and the handle under the cursor on hover
+(`setTransformFunction()`) and act on it at the press. A press without a
+hover move happens: the first mouse event after the canvas switched from
+the pen goes to switching tool instances, not to the strategy. If the
+transform changed since the last hover (a new one started, pins removed),
+the remembered handle index can be out of range. Validate it at the press
+and decide again for the press position (`KisWarpTransformStrategy` does
+since 2026-10-27, after a crash found by test control).

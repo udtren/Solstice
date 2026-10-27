@@ -127,7 +127,7 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
 | Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
 | Paint trace series (developer tool, phase 4) | `dev-tools/test-control/paint_trace_series.py`, `test_paint_trace_series.py`; summaries by `build-tools/paint-trace/summarize.py` |
-| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (8); `libs/ui/tests/scenarios/lazy-*.json` (4); `plugins/dockers/layerdocker/tests/scenarios/` (1); `plugins/dockers/quickaccess/tests/scenarios/` (3) |
+| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (9); `libs/ui/tests/scenarios/lazy-*.json` (4); `plugins/dockers/layerdocker/tests/scenarios/` (1); `plugins/dockers/quickaccess/tests/scenarios/` (3) |
 | Object names for the Puppet Warp options (no behavior change) | `plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp` |
 | Hook in an upstream file | `plugins/extensions/CMakeLists.txt` (`add_subdirectory(testcontrol)` only when `BUILD_WITH_QT6`) |
 
@@ -546,6 +546,7 @@ LLM; an LLM or a person can also replay one step by step through the endpoint.
 | `plugins/tools/tool_transform2/tests/scenarios/puppet-show-mesh.json` | The same pin drag gives the same hash with Show mesh on, off and on again |
 | `plugins/tools/tool_transform2/tests/scenarios/transform-quick-release.json` | A free transform drag of 50 moves sent back to back, released at once, ends exactly 100 px right and 50 px down, with the mouse and (after a pen click switches the canvas to the pen's tool instances) with the pen; it checks that `KisInputManager` delivers the move its compression holds before a release. The rectangle is drawn in the default window and the drags run in a 640x480 one, where repaints are short enough for moves to arrive within the 10 ms compression. On a build without the fix it failed 10 of 10 runs |
 | `plugins/tools/tool_transform2/tests/scenarios/puppet-quick-apply.json` | A Puppet Warp pin drag with a pause before the release and Apply clicked afterwards sets the reference pixels; then five times the same drag whose last move comes 5 ms after the one before, released at once and applied with Return in the same call (`keyAfterRelease`), must give the same pixels. It checks that Apply flushes the strategy's 40 ms recalculation; without that fix about one quick pass in three applied the previous position, and the scenario failed 9 of 10 runs |
+| `plugins/tools/tool_transform2/tests/scenarios/puppet-mixed-devices.json` | Puppet pins placed with mouse clicks and dragged with the pen, in two transforms: the second transform's first mouse click used to crash on a stale pin index, and its result must equal a mouse-only reference (the first mixed transform deforms differently because the canvas switches to the pen's tool instances; not checked) |
 | `plugins/tools/tool_transform2/tests/scenarios/puppet-pin-delete.json` | Deleting the right of three pins with Ctrl+Alt-click, and with a plain click while "Click pin" is "Delete pin", each give the same result as placing only the two other pins |
 
 | `plugins/dockers/layerdocker/tests/scenarios/color-label-controls.json` | Lazy Tools label control: labels the active layer only, then a group without its child, then two selected layers; the visibility control toggles every layer with that label, inside groups too, each time it is chosen |
@@ -699,17 +700,28 @@ warning, close it in every process (the runner cannot).
   (back to back) applied an older position; after, 60 of 60 and 30 of 30
   for mouse and pen, all with identical pixels. `puppet-quick-apply` covers
   it (9 of 10 runs failed without the fix, 10 of 10 pass with it).
-- Two crashes found while checking that (2026-10-27, not fixed). Puppet
-  pins placed with the mouse and then dragged with the pen: the pen's first
-  event switches the canvas to other tool instances
-  (`KoToolManager::switchInputDevice`), the pen drags in a separate
-  transform, and the next mouse press crashed in
-  `KisWarpTransformStrategy::beginPrimaryAction()` on a stale
-  `pointIndexUnderCursor` (`OVER_POINT` mode, line 787 indexing
-  `transfPoints()`). And Layer Comps: `CompositionDockerDock::updateModel()`,
-  run from the state's 100 ms refresh timer, passed a null document to
-  `CompositionDocumentState::get()` after test control closed and created
-  documents in quick succession (a null `findChild()` receiver).
+- Two crashes found while checking that, both fixed 2026-10-27.
+  Puppet pins placed with the mouse and then dragged with the pen: the pen's
+  first event switches the canvas to other tool instances
+  (`KoToolManager::switchInputDevice`), the mouse strategy kept `OVER_POINT`
+  and pin index 2 from placing the third pin, the next transform started
+  with no pins, and its first mouse press came without a hover move (the
+  move that switched back to the mouse does not reach the strategy), so
+  `KisWarpTransformStrategy::beginPrimaryAction()` indexed an empty
+  `transfPoints()`. A gdb trace showed exactly that; the strategy now
+  decides the mode again for the press position when the mode names a pin
+  the points do not have. Before: a crash on the second mixed pass, every
+  time; after: 6 of 6 diagnostic passes and `puppet-mixed-devices` (5 of 5;
+  a build without the guard crashed in it). Layer Comps:
+  `CompositionDockerDock::updateModel()`, run from the state's 100 ms
+  refresh, passed a null document to `CompositionDocumentState::get()` (a
+  null `findChild()` receiver) while the docker still had a canvas whose
+  view manager had no document. Not reproduced again (130 rounds of a layer
+  change followed by a close, at once or 70-110 ms later, and six runs of
+  the original sequence), so the fix follows the backtrace: `updateModel()` returns
+  without a document, `setCanvas()` binds a state only with one, and
+  `get()` returns null for a null document (checked in
+  `CompositionWorkflowTest`).
 - Lazy Tools and Quick Access scenarios change the profile they run in: the
   Quick Access profile gains a brush item, `name_color_list.txt` a `tc-ink`
   preset, `kritarc` the export and rename dialog settings, the test root the

@@ -2118,3 +2118,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - `kis_cage_transform_worker_test` fails its two unity cases on Linux (image
   comparison); it does not load the tool plugin and its code is unchanged
   since the initial snapshot.
+
+## 2026-10-27 fix: Puppet stale pin index and Layer Comps null document
+
+- Puppet Warp: after pins placed with the mouse were dragged with the pen,
+  the next transform's first mouse press came without a hover and used the
+  old pin index; `beginPrimaryAction()` now decides again for the press
+  position. Traced with gdb, verified with a mixed-device diagnostic and the
+  new scenario `puppet-mixed-devices` (a build without the guard crashed in
+  it) ([Puppet Warp](../puppet-warp.md#interaction-invariants),
+  [pitfall](pitfalls/transform-tool-input.md)).
+- Layer Comps: a delayed refresh reached `CompositionDocumentState::get()`
+  with a null document; guarded in `updateModel()`, `setCanvas()` and
+  `get()`. Not reproduced again, so verified only by the backtrace, the
+  workflow test and the scenario suite ([Layer Comps](../layer-comps.md)).
+- All 26 scenarios pass twice on Linux; Windows not checked.
