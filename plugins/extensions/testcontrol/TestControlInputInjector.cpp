@@ -153,6 +153,11 @@ void TestControlInputInjector::playStroke(QWidget *target,
         m_steps.append({QEvent::MouseButtonRelease, last, true});
         m_steps.append({QEvent::TabletLeaveProximity, last});
     }
+    if (options.keyAfterRelease != Qt::Key(0)) {
+        m_steps.append({QEvent::ShortcutOverride, last, false, false, options.keyAfterRelease});
+        m_steps.append({QEvent::KeyPress, last, false, false, options.keyAfterRelease});
+        m_steps.append({QEvent::KeyRelease, last, false, false, options.keyAfterRelease});
+    }
     for (auto it = std::rbegin(ModifierKeys); it != std::rend(ModifierKeys); ++it) {
         if (m_modifiers.testFlag(it->first)) {
             m_steps.append({QEvent::KeyRelease, last, false, false, it->second});

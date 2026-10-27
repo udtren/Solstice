@@ -175,6 +175,7 @@ private Q_SLOTS:
     void testModifiers();
     void testDoubleClick();
     void testImmediateRelease();
+    void testKeyAfterRelease();
     void testRealtimeTiming();
     void testRejectsInvalidStrokes();
     void testTargetDestroyed();
@@ -263,6 +264,38 @@ void TestControlInputInjectorTest::testImmediateRelease()
     QCOMPARE(widget.events.size(), 6);
     QCOMPARE(widget.events[5].type, QEvent::MouseButtonRelease);
     QCOMPARE(widget.events[5].timestamp, widget.events[4].timestamp);
+}
+
+void TestControlInputInjectorTest::testKeyAfterRelease()
+{
+    RecordingWidget widget;
+    widget.resize(100, 100);
+    TestControlInputInjector injector;
+    TestControlInputInjector::Options withKey = options(false);
+    withKey.releaseSettleMs = 0;
+    withKey.keyAfterRelease = Qt::Key_Return;
+
+    bool finished = false;
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        threePoints(),
+                        withKey,
+                        [&](const TestControlInputInjector::Report &) {
+                            finished = true;
+                        });
+    QTRY_VERIFY(finished);
+
+    // Enter, hover, press, two moves, release, then the key in the same call.
+    QCOMPARE(widget.events.size(), 9);
+    QCOMPARE(widget.events[5].type, QEvent::MouseButtonRelease);
+    const QEvent::Type keyTypes[] = {QEvent::ShortcutOverride, QEvent::KeyPress, QEvent::KeyRelease};
+    for (int i = 0; i < 3; ++i) {
+        QCOMPARE(widget.events[6 + i].type, keyTypes[i]);
+        QCOMPARE(widget.events[6 + i].key, int(Qt::Key_Return));
+        QCOMPARE(widget.events[6 + i].modifiers, Qt::KeyboardModifiers(Qt::NoModifier));
+        QVERIFY(widget.events[6 + i].spontaneous);
+    }
 }
 
 void TestControlInputInjectorTest::testTabletStroke()

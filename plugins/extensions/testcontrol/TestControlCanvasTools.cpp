@@ -194,6 +194,10 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                  schemaProperty("number",
                                 "Pause between the last move and the release in real time (0-1000, default "
                                 "50). 0 releases at once.")},
+                {"keyAfterRelease",
+                 schemaProperty("string",
+                                "A key (QKeySequence portable text, e.g. Return) pressed right after the "
+                                "release in the same call; gives the canvas keyboard focus first.")},
                 {"modifiers", modifiersSchema},
             },
             {"points"}),
@@ -238,6 +242,10 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                  schemaProperty("number",
                                 "Pause between the last move and the release in real time (0-1000, default "
                                 "50). 0 releases at once.")},
+                {"keyAfterRelease",
+                 schemaProperty("string",
+                                "A key (QKeySequence portable text, e.g. Return) pressed right after the "
+                                "release in the same call; gives the canvas keyboard focus first.")},
                 {"modifiers", modifiersSchema},
             },
             {"from", "to"}),
@@ -470,6 +478,16 @@ bool TestControlCanvasTools::parseStrokeOptions(const Arguments &arguments, Stro
         *error = "releaseDelayMs must be between 0 and 1000";
         return false;
     }
+    if (arguments.contains("keyAfterRelease")) {
+        const QString keyName = arguments.value("keyAfterRelease").toString();
+        const QKeySequence sequence(keyName, QKeySequence::PortableText);
+        if (sequence.count() != 1 || sequence[0].key() == Qt::Key_unknown
+            || sequence[0].keyboardModifiers() != Qt::NoModifier) {
+            *error = "keyAfterRelease must be one key without modifiers: " + keyName;
+            return false;
+        }
+        options->keyAfterRelease = sequence[0].key();
+    }
 
     if (deviceName == QLatin1String("mouse")) {
         options->device = TestControlInputInjector::Device::Mouse;
@@ -679,6 +697,7 @@ void TestControlCanvasTools::playPoints(const QVector<SourcePoint> &sourcePoints
         injectorOptions.realtime = options.realtime;
         injectorOptions.doubleClick = options.doubleClick;
         injectorOptions.releaseSettleMs = options.releaseDelayMs;
+        injectorOptions.keyAfterRelease = options.keyAfterRelease;
         m_injector->playStroke(target,
                                options.device,
                                options.button,
@@ -702,13 +721,14 @@ void TestControlCanvasTools::playPoints(const QVector<SourcePoint> &sourcePoints
                                });
     };
 
-    if (options.modifiers == Qt::NoModifier) {
+    if (options.modifiers == Qt::NoModifier && options.keyAfterRelease == Qt::Key(0)) {
         play();
         return;
     }
 
     // KisInputManager keeps synthetic modifiers only while the canvas has
-    // keyboard focus; without it, it reads the real keyboard instead.
+    // keyboard focus; without it, it reads the real keyboard instead. Keys
+    // need the focus too.
     withCanvasFocus(widget, reply, play);
 }
 

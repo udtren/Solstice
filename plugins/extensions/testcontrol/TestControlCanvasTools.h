@@ -58,6 +58,7 @@ private:
         bool realtime = true;
         bool doubleClick = false;
         qint64 releaseDelayMs = TestControlInputInjector::ReleaseSettleMs;
+        Qt::Key keyAfterRelease = Qt::Key(0);
     };
     /// A point as given by a tool call, before conversion to widget pixels.
     struct SourcePoint {
