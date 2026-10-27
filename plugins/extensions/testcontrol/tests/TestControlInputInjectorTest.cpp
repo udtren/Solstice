@@ -174,6 +174,7 @@ private Q_SLOTS:
     void testTabletStroke();
     void testModifiers();
     void testDoubleClick();
+    void testImmediateRelease();
     void testRealtimeTiming();
     void testRejectsInvalidStrokes();
     void testTargetDestroyed();
@@ -236,6 +237,32 @@ void TestControlInputInjectorTest::testMouseStroke()
     QCOMPARE(e[2].timestamp - e[0].timestamp, quint64(60));
     // The release waits, so the move compression delivers the last move first.
     QCOMPARE(e[3].timestamp - e[2].timestamp, quint64(TestControlInputInjector::ReleaseSettleMs));
+}
+
+void TestControlInputInjectorTest::testImmediateRelease()
+{
+    RecordingWidget widget;
+    widget.resize(100, 100);
+    TestControlInputInjector injector;
+    TestControlInputInjector::Options immediate = options(false);
+    immediate.releaseSettleMs = 0;
+
+    bool finished = false;
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        threePoints(),
+                        immediate,
+                        [&](const TestControlInputInjector::Report &) {
+                            finished = true;
+                        });
+    QTRY_VERIFY(finished);
+
+    // Enter, hover, press, two moves, release: the release carries the last
+    // move's time, as a quick real release does.
+    QCOMPARE(widget.events.size(), 6);
+    QCOMPARE(widget.events[5].type, QEvent::MouseButtonRelease);
+    QCOMPARE(widget.events[5].timestamp, widget.events[4].timestamp);
 }
 
 void TestControlInputInjectorTest::testTabletStroke()

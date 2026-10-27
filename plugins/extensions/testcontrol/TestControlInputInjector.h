@@ -63,6 +63,20 @@ public:
         Tablet
     };
 
+    /// Time between the hover move and the press. Longer than
+    /// KisInputManager's move compression (tabletEventsDelay, 10 ms by
+    /// default), which a press would otherwise discard.
+    static constexpr qint64 HoverSettleMs = 50;
+    /// Default time between the last move and the release of a stroke with
+    /// moves, as a hand pauses before letting go. The Transform Tool's Warp,
+    /// Cage, Puppet and Mesh modes send a drag's last position to the
+    /// transform stroke from a 40 ms compressor, and Apply right after the
+    /// release ended the stroke one or two moves behind; scenarios that
+    /// apply right after a drag rely on this pause. A delay of 0 releases at
+    /// the last move's time, which tests that KisInputManager delivers the
+    /// move its compression still holds before the release.
+    static constexpr qint64 ReleaseSettleMs = 50;
+
     struct Point {
         QPointF position;
         qreal pressure = 1.0;
@@ -87,20 +101,11 @@ public:
         bool realtime = true;
         /// A one-point mouse click becomes a double click.
         bool doubleClick = false;
+        /// Pause between the last move and the release (real time only).
+        qint64 releaseSettleMs = ReleaseSettleMs;
     };
 
     using Done = std::function<void(const Report &report)>;
-
-    /// Time between the hover move and the press. Longer than
-    /// KisInputManager's move compression (tabletEventsDelay, 10 ms by
-    /// default), which a press would otherwise discard.
-    static constexpr qint64 HoverSettleMs = 50;
-    /// Time between the last move and the release of a stroke with moves.
-    /// The move compression can still hold the last move when the release
-    /// arrives, and the release does not deliver it: tools that do not ask
-    /// for high-resolution input (the Transform Tool) then stop one move
-    /// short. A pause before the release, as a hand makes, lets it through.
-    static constexpr qint64 ReleaseSettleMs = 50;
 
     explicit TestControlInputInjector(QObject *parent = nullptr);
     ~TestControlInputInjector() override;
@@ -154,6 +159,7 @@ private:
     QVector<Step> m_steps;
     int m_nextStep = 0;
     bool m_realtime = true;
+    qint64 m_releaseSettleMs = ReleaseSettleMs;
     bool m_busy = false;
     qint64 m_startMs = 0;
     ulong m_timestampBase = 0;

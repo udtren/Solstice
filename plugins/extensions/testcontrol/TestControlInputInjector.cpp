@@ -112,6 +112,7 @@ void TestControlInputInjector::playStroke(QWidget *target,
     m_heldModifiers = Qt::NoModifier;
     m_points = points;
     m_realtime = options.realtime;
+    m_releaseSettleMs = options.releaseSettleMs;
     m_done = std::move(done);
     m_report = Report();
     m_nextStep = 0;
@@ -178,7 +179,7 @@ qint64 TestControlInputInjector::stepOffsetMs(const Step &step) const
         || step.type == QEvent::ShortcutOverride || step.type == QEvent::KeyPress) {
         return 0;
     }
-    return step.afterMoves ? HoverSettleMs + ReleaseSettleMs : HoverSettleMs;
+    return step.afterMoves ? HoverSettleMs + m_releaseSettleMs : HoverSettleMs;
 }
 
 void TestControlInputInjector::scheduleNext()

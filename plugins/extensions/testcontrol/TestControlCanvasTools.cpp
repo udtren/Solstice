@@ -190,6 +190,10 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                  schemaProperty("boolean",
                                 "Send each point at its time offset (default true); false sends them back "
                                 "to back.")},
+                {"releaseDelayMs",
+                 schemaProperty("number",
+                                "Pause between the last move and the release in real time (0-1000, default "
+                                "50). 0 releases at once.")},
                 {"modifiers", modifiersSchema},
             },
             {"points"}),
@@ -230,6 +234,10 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                 {"button", enumProperty({"left", "right", "middle"}, "Button (default left).")},
                 {"pressure", schemaProperty("number", "Constant pressure 0-1 (tablet only, default 1).")},
                 {"realtime", schemaProperty("boolean", "Send each point at its time offset (default true).")},
+                {"releaseDelayMs",
+                 schemaProperty("number",
+                                "Pause between the last move and the release in real time (0-1000, default "
+                                "50). 0 releases at once.")},
                 {"modifiers", modifiersSchema},
             },
             {"from", "to"}),
@@ -456,6 +464,12 @@ bool TestControlCanvasTools::parseStrokeOptions(const Arguments &arguments, Stro
     const QString coordinates = arguments.value("coordinates").toString("image");
     const QString buttonName = arguments.value("button").toString("left");
     options->realtime = arguments.value("realtime").toBool(true);
+    options->releaseDelayMs =
+        qint64(arguments.value("releaseDelayMs").toDouble(TestControlInputInjector::ReleaseSettleMs));
+    if (options->releaseDelayMs < 0 || options->releaseDelayMs > 1000) {
+        *error = "releaseDelayMs must be between 0 and 1000";
+        return false;
+    }
 
     if (deviceName == QLatin1String("mouse")) {
         options->device = TestControlInputInjector::Device::Mouse;
@@ -664,6 +678,7 @@ void TestControlCanvasTools::playPoints(const QVector<SourcePoint> &sourcePoints
         injectorOptions.modifiers = options.modifiers;
         injectorOptions.realtime = options.realtime;
         injectorOptions.doubleClick = options.doubleClick;
+        injectorOptions.releaseSettleMs = options.releaseDelayMs;
         m_injector->playStroke(target,
                                options.device,
                                options.button,

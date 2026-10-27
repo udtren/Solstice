@@ -57,6 +57,7 @@ private:
         bool imageCoordinates = true;
         bool realtime = true;
         bool doubleClick = false;
+        qint64 releaseDelayMs = TestControlInputInjector::ReleaseSettleMs;
     };
     /// A point as given by a tool call, before conversion to widget pixels.
     struct SourcePoint {
