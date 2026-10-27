@@ -323,6 +323,18 @@ Add Puppet-specific multi-layer regression coverage before changing this path.
 
 ## Interaction invariants
 
+- Apply uses the latest pin positions: the strategy delivers its arguments
+  to the transform stroke through `recalculateSignalCompressor` (40 ms), so
+  `KisToolTransform::endStroke()` first calls
+  `flushPendingRecalculation()` (2026-10-27; before, Apply within 40 ms of a
+  drag applied the previous position). Keep that call when changing how
+  strategies deliver arguments.
+- A press may come without a hover move, as the first mouse event after the
+  canvas switched from the pen. If the mode names a pin that the current
+  points do not have (a new transform started since the hover),
+  `beginPrimaryAction()` decides the mode again for the press position
+  (2026-10-27; before, it indexed `transfPoints()` with the stale
+  `pointIndexUnderCursor` and crashed).
 - Place pins in Draw mode, then lock before manipulation.
 - Drag centers to move pins.
 - Hit-test the locked pin annulus for `ROTATE_PIN`; accumulate the incremental
@@ -454,6 +466,12 @@ rigid points unrotated (tore the joint).
 7. Opaque backgrounds mask the entire rectangle.
 8. Full-resolution mask construction is synchronous, although cached.
 9. Rotation rings can become visually crowded.
+10. The first pen drag on a canvas switches it to the pen's tool instances
+    (`KoToolManager` keeps one set per input device), so pins placed with the
+    mouse and then dragged with the pen in that first transform deform
+    differently from a mouse-only drag (595x317 instead of 603x205 in the
+    `puppet-mixed-devices` bar). Later transforms agree. Unchanged upstream
+    behavior.
 
 ## Recommended improvement path
 
@@ -557,6 +575,32 @@ Restart after installing. Format modified C++ and run `git diff --check`.
 - Apply matches preview on single layers, multiple layers, and groups.
 - Reset restores source and state.
 - Saved state restores positions, rotations, visibility, and expansion.
+
+Covered by [test control](test-control.md) scenarios in
+`plugins/tools/tool_transform2/tests/scenarios/` (run with
+`dev-tools/test-control/run_scenarios.py`), as far as state and applied
+pixels can decide them:
+
+| Checklist item | Scenario |
+| --- | --- |
+| Mode switching; Draw/lock placement; center drag is local and untouched pins anchor their areas | `puppet-pin-drag` |
+| Ctrl+Alt-click removes exactly one pin; "Click pin: Delete pin" deletes with a plain click | `puppet-pin-delete` (the result equals placing only the other pins) |
+| Rotate a pin, then unlock: Apply leaves the artwork unchanged | `puppet-unlock-identity` |
+| Show mesh does not change output | `puppet-show-mesh` |
+| Apply right after a drag uses the final pin position (interaction invariant) | `puppet-quick-apply` |
+| Mouse-placed pins dragged with the pen, then a new transform with the mouse: no crash, same result as the mouse alone | `puppet-mixed-devices` |
+| Reset restores source and state | `puppet-reset` (source; the state is not read back) |
+
+The rest stays manual. The transform keeps the image busy until Apply, so
+previews cannot be read, and the undo of a click deletion inside the
+transform, order buttons, rubber band, mesh fill and expansion, multiple
+layers and groups, masks and saved state have no scenario yet. The
+scenarios address the options by object name: `freeTransformButton`,
+`puppetButton`, `lockUnlockPointsButton`, `puppetShowMeshCheckBox`,
+`puppetClickActionCombo` and `puppetOrderToFrontButton`,
+`puppetOrderForwardButton`, `puppetOrderBackwardButton`,
+`puppetOrderToBackButton` (the last five set in
+`KisToolTransformConfigWidget`'s constructor). Keep these names.
 
 ## Required invariants
 

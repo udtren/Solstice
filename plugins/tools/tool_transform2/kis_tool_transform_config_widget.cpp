@@ -364,6 +364,7 @@ KisToolTransformConfigWidget::KisToolTransformConfigWidget(TransformTransactionP
         pinLayout->setContentsMargins(0, 0, 0, 0);
         pinLayout->addWidget(new QLabel(i18nc("@label:listbox Puppet Warp", "Click pin:"), m_puppetPinOptions));
         m_puppetClickActionCombo = new QComboBox(m_puppetPinOptions);
+        m_puppetClickActionCombo->setObjectName("puppetClickActionCombo");
         m_puppetClickActionCombo->addItem(i18nc("@item:inlistbox Puppet Warp click action", "Select pin"));
         m_puppetClickActionCombo->addItem(i18nc("@item:inlistbox Puppet Warp click action", "Delete pin"));
         m_puppetClickActionCombo->setToolTip(i18n(
@@ -373,19 +374,31 @@ KisToolTransformConfigWidget::KisToolTransformConfigWidget(TransformTransactionP
         pinLayout->addSpacing(8);
         pinLayout->addWidget(new QLabel(i18nc("@label Puppet Warp pin stacking order", "Order:"), m_puppetPinOptions));
         const struct {
+            const char *objectName;
             const char *text;
             QString toolTip;
             int change;
         } orderButtons[] = {
-            {"\u2191\u2191",
+            {"puppetOrderToFrontButton",
+             "\u2191\u2191",
              i18n("Bring the selected pins' parts to the front"),
              ToolTransformArgs::PuppetOrderToFront},
-            {"\u2191", i18n("Bring the selected pins' parts forward"), ToolTransformArgs::PuppetOrderForward},
-            {"\u2193", i18n("Send the selected pins' parts backward"), ToolTransformArgs::PuppetOrderBackward},
-            {"\u2193\u2193", i18n("Send the selected pins' parts to the back"), ToolTransformArgs::PuppetOrderToBack},
+            {"puppetOrderForwardButton",
+             "\u2191",
+             i18n("Bring the selected pins' parts forward"),
+             ToolTransformArgs::PuppetOrderForward},
+            {"puppetOrderBackwardButton",
+             "\u2193",
+             i18n("Send the selected pins' parts backward"),
+             ToolTransformArgs::PuppetOrderBackward},
+            {"puppetOrderToBackButton",
+             "\u2193\u2193",
+             i18n("Send the selected pins' parts to the back"),
+             ToolTransformArgs::PuppetOrderToBack},
         };
         for (const auto &button : orderButtons) {
             QToolButton *toolButton = new QToolButton(m_puppetPinOptions);
+            toolButton->setObjectName(button.objectName);
             toolButton->setText(QString::fromUtf8(button.text));
             toolButton->setToolTip(button.toolTip);
             const int change = button.change;

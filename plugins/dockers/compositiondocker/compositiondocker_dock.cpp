@@ -180,7 +180,9 @@ void CompositionDockerDock::setCanvas(KoCanvasBase * canvas)
             }
         }
         m_state = CompositionDocumentState::get(m_canvas->viewManager()->document(), m_canvas->image());
-        connect(m_state, &CompositionDocumentState::changed, this, &CompositionDockerDock::updateModel);
+        if (m_state) {
+            connect(m_state, &CompositionDocumentState::changed, this, &CompositionDockerDock::updateModel);
+        }
         updateModel();
     }
 }
@@ -277,7 +279,13 @@ void CompositionDockerDock::updateModel()
 {
     if (!m_canvas || !m_state)
         return;
-    CompositionDocumentState::get(m_canvas->viewManager()->document(), m_canvas->image());
+    // While views switch or close, the view manager can have no document
+    // although this docker still has the old canvas (a delayed refresh can
+    // arrive then); the next setCanvas() follows.
+    KisDocument *document = m_canvas->viewManager() ? m_canvas->viewManager()->document() : nullptr;
+    if (!document)
+        return;
+    CompositionDocumentState::get(document, m_canvas->image());
     const auto selected = selectedCompositions();
     auto current = m_model->compositionFromIndex(compositionView->currentIndex());
     m_model->setState(m_canvas->image(), m_state->snapshot(), m_state->active());

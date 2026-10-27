@@ -237,6 +237,28 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
     the PNG options dialog and press OK. Export again: the option must still
     be checked, and File > Export to PNG must show it checked too.
 
+Automated through [test control](test-control.md) scenarios (2026-10-27,
+Linux), as far as state decides them; run them with
+`dev-tools/test-control/run_scenarios.py` in a scratch profile:
+
+| Check | Scenario | Covered |
+| --- | --- | --- |
+| 1 | `plugins/dockers/layerdocker/tests/scenarios/color-label-controls.json` | Labels go to the selected nodes only (a group, not its child; two selected layers); each choice of a visibility color toggles every matching layer, inside groups too |
+| 2 | `libs/ui/tests/scenarios/lazy-selection-masks.json` | Save, undo/redo, restore from the popup |
+| 4, 11, 12 (part) | `libs/ui/tests/scenarios/lazy-fast-export.json` | Active document, same-folder destination, typed name, PNG and JPEG, Export Region against the selected area, the invalid-name and no-selection warnings, unchanged file name and modified state |
+| 5 (part) | `libs/ui/tests/scenarios/lazy-foreground-slots.json` | The nine actions with the default colors |
+| 8 (part) | `libs/ui/tests/scenarios/lazy-rename-layer.json` | Manual name and color, Save, a saved preset applied to another layer, undo of the rename |
+
+Still manual: shortcuts and restarts (3), all-documents scope, configured and
+chosen folders, and unnamed documents (4), slots changed in Preferences (5),
+the hotkey (6), menus (7), screen edges and child layers (8), registered
+folders (9), the Preferences page (10), the Name field with all documents
+(11), the icon (12) and the format options dialog (13). Observed while
+writing the scenarios, unchanged: the color label set by Rename Alternative
+is not part of the undo step (undo restores only the name), restoring a
+saved selection adds an undo step without a name, and creating a mask makes
+`Selection_Mask_Group` the active node.
+
 For a menu-only change, build `kritaui` and `KisMenuMnemonicFilterTest`; install
 `_build/libs/ui/cmake_install.cmake` with `CMAKE_INSTALL_LOCAL_ONLY=1`.
 Run only `libs-ui-KisMenuMnemonicFilterTest` (not the whole UI suite). This Qt
@@ -283,6 +305,11 @@ covers the empty state, listed folders, the chooser's start folder (selected,
 missing and none), the chosen folder filling Export folder and switching the
 destination, cancellation, and a synthetic folder drop. It uses Qt's
 non-native chooser (`AA_DontUseNativeDialogs`).
+`explorerFolders` builds its backslash input with `QDir::toNativeSeparators()`
+(2026-10-27): a backslash is a separator only on Windows, and on Linux it is
+part of a file name, so the Windows-only input made the case fail there. On
+other systems it also checks that such names stay as they are and that
+duplicates are compared case-sensitively. 21/21 cases pass on Linux.
 `kritaui` and the test built without new warnings; offscreen QtTest passed
 15/15 and the UI DLL was installed with matching build/install SHA-256
 hashes. Manual check 9 is still pending.

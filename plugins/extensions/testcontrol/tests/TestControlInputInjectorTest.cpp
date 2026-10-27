@@ -4,6 +4,7 @@
  */
 
 #include <QApplication>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QTabletEvent>
 #include <QTest>
@@ -22,18 +23,51 @@ struct Recorded {
     Qt::MouseEventSource source = Qt::MouseEventNotSynthesized;
     quint64 timestamp = 0;
     bool toApplication = false;
+    bool spontaneous = false;
+    int key = 0;
+    Qt::KeyboardModifiers modifiers;
 };
 
 class RecordingWidget : public QWidget
 {
 public:
+    RecordingWidget()
+    {
+        // As Krita's canvas widgets: QApplication drops button-less moves
+        // for widgets without mouse tracking.
+        setMouseTracking(true);
+    }
+
     QVector<Recorded> events;
 
 protected:
     bool event(QEvent *event) override
     {
         switch (event->type()) {
+        case QEvent::ShortcutOverride:
+        case QEvent::KeyPress:
+        case QEvent::KeyRelease: {
+            auto *keyEvent = static_cast<QKeyEvent *>(event);
+            Recorded recorded;
+            recorded.type = event->type();
+            recorded.key = keyEvent->key();
+            recorded.modifiers = keyEvent->modifiers();
+            recorded.spontaneous = event->spontaneous();
+            events.append(recorded);
+            event->accept();
+            return true;
+        }
+        case QEvent::Enter: {
+            auto *enter = static_cast<QEnterEvent *>(event);
+            Recorded recorded;
+            recorded.type = event->type();
+            recorded.position = enter->position();
+            recorded.spontaneous = event->spontaneous();
+            events.append(recorded);
+            return QWidget::event(event);
+        }
         case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonDblClick:
         case QEvent::MouseMove:
         case QEvent::MouseButtonRelease: {
             auto *mouse = static_cast<QMouseEvent *>(event);
@@ -43,7 +77,11 @@ protected:
                            mouse->buttons(),
                            -1.0,
                            mouse->source(),
-                           mouse->timestamp()});
+                           mouse->timestamp(),
+                           false,
+                           event->spontaneous(),
+                           0,
+                           mouse->modifiers()});
             event->accept();
             return true;
         }
@@ -57,7 +95,11 @@ protected:
                            tablet->buttons(),
                            tablet->pressure(),
                            Qt::MouseEventNotSynthesized,
-                           tablet->timestamp()});
+                           tablet->timestamp(),
+                           false,
+                           event->spontaneous(),
+                           0,
+                           tablet->modifiers()});
             event->accept();
             return true;
         }
@@ -98,6 +140,14 @@ private:
     QVector<Recorded> *m_events;
 };
 
+TestControlInputInjector::Options options(bool realtime, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    TestControlInputInjector::Options result;
+    result.realtime = realtime;
+    result.modifiers = modifiers;
+    return result;
+}
+
 QVector<TestControlInputInjector::Point> threePoints()
 {
     TestControlInputInjector::Point a;
@@ -122,6 +172,10 @@ class TestControlInputInjectorTest : public QObject
 private Q_SLOTS:
     void testMouseStroke();
     void testTabletStroke();
+    void testModifiers();
+    void testDoubleClick();
+    void testImmediateRelease();
+    void testKeyAfterRelease();
     void testRealtimeTiming();
     void testRejectsInvalidStrokes();
     void testTargetDestroyed();
@@ -139,7 +193,7 @@ void TestControlInputInjectorTest::testMouseStroke()
                         TestControlInputInjector::Device::Mouse,
                         Qt::LeftButton,
                         threePoints(),
-                        false,
+                        options(false),
                         [&](const TestControlInputInjector::Report &r) {
                             report = r;
                             finished = true;
@@ -148,12 +202,21 @@ void TestControlInputInjectorTest::testMouseStroke()
     QTRY_VERIFY(finished);
 
     QVERIFY(report.error.isEmpty());
-    QCOMPARE(report.eventsSent, 4);
+    QCOMPARE(report.eventsSent, 6);
     QVERIFY(report.pressAccepted);
     QVERIFY(report.releaseAccepted);
 
-    const QVector<Recorded> &e = widget.events;
-    QCOMPARE(e.size(), 4);
+    QCOMPARE(widget.events.size(), 6);
+    // The pointer enters the canvas and moves to the first point before the
+    // press, as a real mouse does.
+    QCOMPARE(widget.events[0].type, QEvent::Enter);
+    QCOMPARE(widget.events[0].position, QPointF(10, 10));
+    QVERIFY(widget.events[0].spontaneous);
+    QCOMPARE(widget.events[1].type, QEvent::MouseMove);
+    QCOMPARE(widget.events[1].position, QPointF(10, 10));
+    QCOMPARE(widget.events[1].buttons, Qt::MouseButtons(Qt::NoButton));
+    QCOMPARE(widget.events[2].timestamp - widget.events[1].timestamp, quint64(TestControlInputInjector::HoverSettleMs));
+    const QVector<Recorded> e = widget.events.mid(2);
     QCOMPARE(e[0].type, QEvent::MouseButtonPress);
     QCOMPARE(e[0].button, Qt::LeftButton);
     QCOMPARE(e[0].buttons, Qt::MouseButtons(Qt::LeftButton));
@@ -168,9 +231,71 @@ void TestControlInputInjectorTest::testMouseStroke()
     QCOMPARE(e[3].position, QPointF(30, 20));
     for (const Recorded &recorded : e) {
         QCOMPARE(recorded.source, Qt::MouseEventNotSynthesized);
+        // Tools cancel shapes on non-spontaneous releases.
+        QVERIFY(recorded.spontaneous);
     }
     QCOMPARE(e[1].timestamp - e[0].timestamp, quint64(30));
     QCOMPARE(e[2].timestamp - e[0].timestamp, quint64(60));
+    // The release waits, so the move compression delivers the last move first.
+    QCOMPARE(e[3].timestamp - e[2].timestamp, quint64(TestControlInputInjector::ReleaseSettleMs));
+}
+
+void TestControlInputInjectorTest::testImmediateRelease()
+{
+    RecordingWidget widget;
+    widget.resize(100, 100);
+    TestControlInputInjector injector;
+    TestControlInputInjector::Options immediate = options(false);
+    immediate.releaseSettleMs = 0;
+
+    bool finished = false;
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        threePoints(),
+                        immediate,
+                        [&](const TestControlInputInjector::Report &) {
+                            finished = true;
+                        });
+    QTRY_VERIFY(finished);
+
+    // Enter, hover, press, two moves, release: the release carries the last
+    // move's time, as a quick real release does.
+    QCOMPARE(widget.events.size(), 6);
+    QCOMPARE(widget.events[5].type, QEvent::MouseButtonRelease);
+    QCOMPARE(widget.events[5].timestamp, widget.events[4].timestamp);
+}
+
+void TestControlInputInjectorTest::testKeyAfterRelease()
+{
+    RecordingWidget widget;
+    widget.resize(100, 100);
+    TestControlInputInjector injector;
+    TestControlInputInjector::Options withKey = options(false);
+    withKey.releaseSettleMs = 0;
+    withKey.keyAfterRelease = Qt::Key_Return;
+
+    bool finished = false;
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        threePoints(),
+                        withKey,
+                        [&](const TestControlInputInjector::Report &) {
+                            finished = true;
+                        });
+    QTRY_VERIFY(finished);
+
+    // Enter, hover, press, two moves, release, then the key in the same call.
+    QCOMPARE(widget.events.size(), 9);
+    QCOMPARE(widget.events[5].type, QEvent::MouseButtonRelease);
+    const QEvent::Type keyTypes[] = {QEvent::ShortcutOverride, QEvent::KeyPress, QEvent::KeyRelease};
+    for (int i = 0; i < 3; ++i) {
+        QCOMPARE(widget.events[6 + i].type, keyTypes[i]);
+        QCOMPARE(widget.events[6 + i].key, int(Qt::Key_Return));
+        QCOMPARE(widget.events[6 + i].modifiers, Qt::KeyboardModifiers(Qt::NoModifier));
+        QVERIFY(widget.events[6 + i].spontaneous);
+    }
 }
 
 void TestControlInputInjectorTest::testTabletStroke()
@@ -187,35 +312,162 @@ void TestControlInputInjectorTest::testTabletStroke()
                         TestControlInputInjector::Device::Tablet,
                         Qt::LeftButton,
                         threePoints(),
-                        false,
+                        options(false),
                         [&](const TestControlInputInjector::Report &r) {
                             report = r;
                             finished = true;
                         });
     QTRY_VERIFY(finished);
     QVERIFY(report.error.isEmpty());
-    QCOMPARE(report.eventsSent, 8);
+    QCOMPARE(report.eventsSent, 10);
+    QVERIFY2(report.durationMs >= TestControlInputInjector::HoverSettleMs,
+             qPrintable(QString::number(report.durationMs)));
 
     QCOMPARE(proximity.size(), 2);
     QCOMPARE(proximity[0].type, QEvent::TabletEnterProximity);
     QCOMPARE(proximity[1].type, QEvent::TabletLeaveProximity);
 
+    QCOMPARE(widget.events.size(), 8);
+    QCOMPARE(widget.events[0].type, QEvent::Enter);
+    QVERIFY(widget.events[0].spontaneous);
+    const QVector<Recorded> e = widget.events.mid(1);
+    QCOMPARE(e.size(), 7);
+    // The hover move switches Krita to the stylus before the press.
+    QCOMPARE(e[0].type, QEvent::TabletMove);
+    QCOMPARE(e[0].position, QPointF(10, 10));
+    QCOMPARE(e[0].pressure, 0.0);
+    QCOMPARE(e[0].buttons, Qt::MouseButtons(Qt::NoButton));
+    QCOMPARE(e[1].type, QEvent::TabletPress);
+    QCOMPARE(e[1].pressure, 0.2);
+    QCOMPARE(e[1].timestamp - e[0].timestamp, quint64(TestControlInputInjector::HoverSettleMs));
+    QCOMPARE(e[2].type, QEvent::MouseButtonPress);
+    QCOMPARE(e[2].source, Qt::MouseEventSynthesizedBySystem);
+    QCOMPARE(e[3].type, QEvent::TabletMove);
+    QCOMPARE(e[3].pressure, 0.6);
+    QCOMPARE(e[3].buttons, Qt::MouseButtons(Qt::LeftButton));
+    QCOMPARE(e[4].type, QEvent::TabletMove);
+    QCOMPARE(e[4].pressure, 1.0);
+    QCOMPARE(e[5].type, QEvent::TabletRelease);
+    QCOMPARE(e[5].pressure, 0.0);
+    QCOMPARE(e[5].timestamp - e[4].timestamp, quint64(TestControlInputInjector::ReleaseSettleMs));
+    QCOMPARE(e[5].buttons, Qt::MouseButtons(Qt::NoButton));
+    QCOMPARE(e[6].type, QEvent::MouseButtonRelease);
+    QCOMPARE(e[6].source, Qt::MouseEventSynthesizedBySystem);
+    for (const Recorded &recorded : e) {
+        QVERIFY(recorded.spontaneous);
+    }
+}
+
+void TestControlInputInjectorTest::testModifiers()
+{
+    RecordingWidget widget;
+    widget.resize(100, 100);
+    TestControlInputInjector injector;
+
+    bool finished = false;
+    TestControlInputInjector::Report report;
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        threePoints(),
+                        options(false, Qt::ShiftModifier | Qt::ControlModifier),
+                        [&](const TestControlInputInjector::Report &r) {
+                            report = r;
+                            finished = true;
+                        });
+    QTRY_VERIFY(finished);
+    QVERIFY(report.error.isEmpty());
+
+    const Qt::KeyboardModifiers both = Qt::ShiftModifier | Qt::ControlModifier;
+    const QVector<Recorded> &e = widget.events;
+    // Enter, Ctrl and Shift (ShortcutOverride + KeyPress each), hover move,
+    // press, two moves, release, Shift and Ctrl KeyRelease.
+    QCOMPARE(e.size(), 12);
+    QCOMPARE(report.eventsSent, 12);
+    QCOMPARE(e[0].type, QEvent::Enter);
+    QCOMPARE(e[1].type, QEvent::ShortcutOverride);
+    QCOMPARE(e[1].key, int(Qt::Key_Control));
+    QCOMPARE(e[1].modifiers, Qt::KeyboardModifiers(Qt::ControlModifier));
+    QCOMPARE(e[2].type, QEvent::KeyPress);
+    QCOMPARE(e[2].key, int(Qt::Key_Control));
+    QCOMPARE(e[3].type, QEvent::ShortcutOverride);
+    QCOMPARE(e[3].key, int(Qt::Key_Shift));
+    QCOMPARE(e[4].type, QEvent::KeyPress);
+    QCOMPARE(e[4].key, int(Qt::Key_Shift));
+    QCOMPARE(e[4].modifiers, both);
+    for (int i = 5; i <= 9; ++i) {
+        QCOMPARE(e[i].modifiers, both);
+    }
+    QCOMPARE(e[5].type, QEvent::MouseMove);
+    QCOMPARE(e[6].type, QEvent::MouseButtonPress);
+    QCOMPARE(e[9].type, QEvent::MouseButtonRelease);
+    QCOMPARE(e[10].type, QEvent::KeyRelease);
+    QCOMPARE(e[10].key, int(Qt::Key_Shift));
+    QCOMPARE(e[10].modifiers, Qt::KeyboardModifiers(Qt::ControlModifier));
+    QCOMPARE(e[11].type, QEvent::KeyRelease);
+    QCOMPARE(e[11].key, int(Qt::Key_Control));
+    QCOMPARE(e[11].modifiers, Qt::KeyboardModifiers(Qt::NoModifier));
+    for (const Recorded &recorded : e) {
+        QVERIFY(recorded.spontaneous);
+    }
+}
+
+void TestControlInputInjectorTest::testDoubleClick()
+{
+    RecordingWidget widget;
+    widget.resize(100, 100);
+    TestControlInputInjector injector;
+
+    TestControlInputInjector::Options doubleClick = options(false);
+    doubleClick.doubleClick = true;
+
+    QString error;
+    auto record = [&error](const TestControlInputInjector::Report &r) {
+        error = r.error;
+    };
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        threePoints(),
+                        doubleClick,
+                        record);
+    QVERIFY(error.contains("double click"));
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Tablet,
+                        Qt::LeftButton,
+                        {threePoints()[0]},
+                        doubleClick,
+                        record);
+    QVERIFY(error.contains("double click"));
+
+    bool finished = false;
+    TestControlInputInjector::Report report;
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        {threePoints()[0]},
+                        doubleClick,
+                        [&](const TestControlInputInjector::Report &r) {
+                            report = r;
+                            finished = true;
+                        });
+    QTRY_VERIFY(finished);
+    QVERIFY(report.error.isEmpty());
+
+    // Enter, hover move, then Qt's sequence: press, release, double click, release.
     const QVector<Recorded> &e = widget.events;
     QCOMPARE(e.size(), 6);
-    QCOMPARE(e[0].type, QEvent::TabletPress);
-    QCOMPARE(e[0].pressure, 0.2);
-    QCOMPARE(e[1].type, QEvent::MouseButtonPress);
-    QCOMPARE(e[1].source, Qt::MouseEventSynthesizedBySystem);
-    QCOMPARE(e[2].type, QEvent::TabletMove);
-    QCOMPARE(e[2].pressure, 0.6);
-    QCOMPARE(e[2].buttons, Qt::MouseButtons(Qt::LeftButton));
-    QCOMPARE(e[3].type, QEvent::TabletMove);
-    QCOMPARE(e[3].pressure, 1.0);
-    QCOMPARE(e[4].type, QEvent::TabletRelease);
-    QCOMPARE(e[4].pressure, 0.0);
-    QCOMPARE(e[4].buttons, Qt::MouseButtons(Qt::NoButton));
+    QCOMPARE(e[1].type, QEvent::MouseMove);
+    QCOMPARE(e[2].type, QEvent::MouseButtonPress);
+    QCOMPARE(e[3].type, QEvent::MouseButtonRelease);
+    QCOMPARE(e[4].type, QEvent::MouseButtonDblClick);
+    QCOMPARE(e[4].button, Qt::LeftButton);
+    QCOMPARE(e[4].buttons, Qt::MouseButtons(Qt::LeftButton));
     QCOMPARE(e[5].type, QEvent::MouseButtonRelease);
-    QCOMPARE(e[5].source, Qt::MouseEventSynthesizedBySystem);
+    QCOMPARE(e[5].buttons, Qt::MouseButtons(Qt::NoButton));
+    for (const Recorded &recorded : e) {
+        QCOMPARE(recorded.position, QPointF(10, 10));
+    }
 }
 
 void TestControlInputInjectorTest::testRealtimeTiming()
@@ -229,7 +481,7 @@ void TestControlInputInjectorTest::testRealtimeTiming()
                         TestControlInputInjector::Device::Mouse,
                         Qt::LeftButton,
                         threePoints(),
-                        true,
+                        options(true),
                         [&](const TestControlInputInjector::Report &r) {
                             report = r;
                             finished = true;
@@ -248,17 +500,23 @@ void TestControlInputInjectorTest::testRejectsInvalidStrokes()
         error = r.error;
     };
 
-    injector.playStroke(&widget, TestControlInputInjector::Device::Mouse, Qt::LeftButton, {}, false, record);
+    injector.playStroke(&widget, TestControlInputInjector::Device::Mouse, Qt::LeftButton, {}, options(false), record);
     QVERIFY(!error.isEmpty());
 
     QVector<TestControlInputInjector::Point> points = threePoints();
     std::swap(points[1].timeMs, points[2].timeMs);
     error.clear();
-    injector.playStroke(&widget, TestControlInputInjector::Device::Mouse, Qt::LeftButton, points, false, record);
+    injector
+        .playStroke(&widget, TestControlInputInjector::Device::Mouse, Qt::LeftButton, points, options(false), record);
     QVERIFY(!error.isEmpty());
 
     error.clear();
-    injector.playStroke(nullptr, TestControlInputInjector::Device::Mouse, Qt::LeftButton, threePoints(), false, record);
+    injector.playStroke(nullptr,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        threePoints(),
+                        options(false),
+                        record);
     QVERIFY(!error.isEmpty());
 
     bool finished = false;
@@ -266,12 +524,17 @@ void TestControlInputInjectorTest::testRejectsInvalidStrokes()
                         TestControlInputInjector::Device::Mouse,
                         Qt::LeftButton,
                         threePoints(),
-                        true,
+                        options(true),
                         [&finished](const TestControlInputInjector::Report &) {
                             finished = true;
                         });
     error.clear();
-    injector.playStroke(&widget, TestControlInputInjector::Device::Mouse, Qt::LeftButton, threePoints(), false, record);
+    injector.playStroke(&widget,
+                        TestControlInputInjector::Device::Mouse,
+                        Qt::LeftButton,
+                        threePoints(),
+                        options(false),
+                        record);
     QVERIFY(error.contains("still playing"));
     QTRY_VERIFY(finished);
 }
@@ -287,7 +550,7 @@ void TestControlInputInjectorTest::testTargetDestroyed()
                         TestControlInputInjector::Device::Mouse,
                         Qt::LeftButton,
                         threePoints(),
-                        true,
+                        options(true),
                         [&](const TestControlInputInjector::Report &r) {
                             error = r.error;
                             finished = true;
