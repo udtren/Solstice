@@ -34,6 +34,15 @@ protected:
     bool event(QEvent *event) override
     {
         switch (event->type()) {
+        case QEvent::Enter: {
+            auto *enter = static_cast<QEnterEvent *>(event);
+            Recorded recorded;
+            recorded.type = event->type();
+            recorded.position = enter->position();
+            recorded.spontaneous = event->spontaneous();
+            events.append(recorded);
+            return QWidget::event(event);
+        }
         case QEvent::MouseButtonPress:
         case QEvent::MouseMove:
         case QEvent::MouseButtonRelease: {
@@ -153,12 +162,16 @@ void TestControlInputInjectorTest::testMouseStroke()
     QTRY_VERIFY(finished);
 
     QVERIFY(report.error.isEmpty());
-    QCOMPARE(report.eventsSent, 4);
+    QCOMPARE(report.eventsSent, 5);
     QVERIFY(report.pressAccepted);
     QVERIFY(report.releaseAccepted);
 
-    const QVector<Recorded> &e = widget.events;
-    QCOMPARE(e.size(), 4);
+    QCOMPARE(widget.events.size(), 5);
+    // The pointer enters the canvas before the press.
+    QCOMPARE(widget.events[0].type, QEvent::Enter);
+    QCOMPARE(widget.events[0].position, QPointF(10, 10));
+    QVERIFY(widget.events[0].spontaneous);
+    const QVector<Recorded> e = widget.events.mid(1);
     QCOMPARE(e[0].type, QEvent::MouseButtonPress);
     QCOMPARE(e[0].button, Qt::LeftButton);
     QCOMPARE(e[0].buttons, Qt::MouseButtons(Qt::LeftButton));
@@ -201,7 +214,7 @@ void TestControlInputInjectorTest::testTabletStroke()
                         });
     QTRY_VERIFY(finished);
     QVERIFY(report.error.isEmpty());
-    QCOMPARE(report.eventsSent, 9);
+    QCOMPARE(report.eventsSent, 10);
     QVERIFY2(report.durationMs >= TestControlInputInjector::HoverSettleMs,
              qPrintable(QString::number(report.durationMs)));
 
@@ -209,7 +222,10 @@ void TestControlInputInjectorTest::testTabletStroke()
     QCOMPARE(proximity[0].type, QEvent::TabletEnterProximity);
     QCOMPARE(proximity[1].type, QEvent::TabletLeaveProximity);
 
-    const QVector<Recorded> &e = widget.events;
+    QCOMPARE(widget.events.size(), 8);
+    QCOMPARE(widget.events[0].type, QEvent::Enter);
+    QVERIFY(widget.events[0].spontaneous);
+    const QVector<Recorded> e = widget.events.mid(1);
     QCOMPARE(e.size(), 7);
     // The hover move switches Krita to the stylus before the press.
     QCOMPARE(e[0].type, QEvent::TabletMove);

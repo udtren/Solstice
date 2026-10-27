@@ -105,6 +105,10 @@ void TestControlInputInjector::playStroke(QWidget *target,
 
     const int last = points.size() - 1;
     m_steps.clear();
+    // The pointer enters the canvas first, as with a real device. The
+    // shortcut matcher suppresses every action after a Leave (for example
+    // when another window covered the pointer), until the next Enter.
+    m_steps.append({QEvent::Enter, 0});
     if (device == Device::Mouse) {
         m_steps.append({QEvent::MouseButtonPress, 0});
         for (int i = 1; i <= last; ++i) {
@@ -133,7 +137,8 @@ void TestControlInputInjector::playStroke(QWidget *target,
 
 qint64 TestControlInputInjector::stepOffsetMs(const Step &step) const
 {
-    if (m_device != Device::Tablet || step.hover || step.type == QEvent::TabletEnterProximity) {
+    if (m_device != Device::Tablet || step.hover || step.type == QEvent::Enter
+        || step.type == QEvent::TabletEnterProximity) {
         return 0;
     }
     return HoverSettleMs;
@@ -172,6 +177,11 @@ void TestControlInputInjector::sendStep(const Step &step)
         (isRelease || step.hover) ? Qt::MouseButtons(Qt::NoButton) : Qt::MouseButtons(m_button);
 
     switch (step.type) {
+    case QEvent::Enter: {
+        QEnterEvent event(point.position, scene, global);
+        sendSpontaneous(m_target, &event);
+        break;
+    }
     case QEvent::MouseButtonPress:
     case QEvent::MouseMove:
     case QEvent::MouseButtonRelease: {

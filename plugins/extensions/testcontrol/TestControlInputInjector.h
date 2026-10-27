@@ -26,6 +26,10 @@ class QPointingDevice;
  * QCoreApplication::notify(), as QTest does: tools cancel a shape on a
  * non-spontaneous release, and sendEvent() clears the flag in Qt 6.
  *
+ * Every stroke starts with an Enter at the first point, as when a real
+ * pointer reaches the canvas: KisShortcutMatcher suppresses all actions
+ * after a Leave, which the canvas gets when another window covers the
+ * pointer.
  * Mouse: press, moves, release.
  * Tablet: TabletEnterProximity (to the application), one hover TabletMove at
  * the first point, TabletPress after HoverSettleMs, a system-synthesized
