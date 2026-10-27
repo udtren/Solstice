@@ -2133,3 +2133,36 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `get()`. Not reproduced again, so verified only by the backtrace, the
   workflow test and the scenario suite ([Layer Comps](../layer-comps.md)).
 - All 26 scenarios pass twice on Linux; Windows not checked.
+
+## 2026-10-27 fix: selection outline animation in covered views
+
+- `KisSelectionDecoration::antsAttackEvent()` now skips views whose
+  `visibleRegion()` is empty. Background tabs of the tabbed document area
+  are covered, not hidden, so every document with a selection repainted its
+  canvas every 150 ms. Found while investigating the test control
+  `wait_idle` slowdown (branch `claude/test-control-linux`).
+- Verified on Linux (Xvfb, software OpenGL) with this commit on top of the
+  test control branch (local build only): with 40 documents that have
+  selections, the longest GUI poll gap stayed at 73 ms instead of 296 ms,
+  `wait_idle` after a selection at 751 ms instead of 1246 ms, and after a
+  brush stroke at 40 ms instead of 552 ms. The visible view animates; a
+  covered view resumes when brought to the front (`windows_next`, about 710
+  changed pixels per 0.3 s, none for a document without a selection); in
+  subwindow mode two tiled views animate at once. Selection and decoration
+  tests (8) pass.
+- Verified on Windows 11 (hardware OpenGL) the same way, comparing the test
+  control branch with and without this commit (local build only). With 40
+  documents that have selections, GUI timers were not delayed even without
+  the fix (longest poll gap 23 ms; `wait_idle` 739 ms after a selection and
+  40 ms after a brush stroke, both builds; 40 of 40 selection reads
+  correct). The cost on Windows was CPU: idle, Solstice used 331 ms of CPU
+  per second without the fix and 24 ms with it. Screen captures 0.3 s apart:
+  the visible view, covered views brought to the front (`windows_next`) and
+  the view after minimize and restore animate (510-770 changed pixels, all
+  on the outline); a document without a selection does not change; in
+  subwindow mode two tiled views animate at once. Selection and decoration
+  tests (7 on Windows) pass.
+- Test control's `canvas_capture` (`QWidget::grab()` of the canvas) shows no
+  selection outline on Windows, so it cannot judge the animation there; the
+  Windows check compared screen captures of the main window instead.
+- Touch point recorded in [feature inventory](../feature-inventory.md).
