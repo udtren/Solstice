@@ -1093,6 +1093,8 @@ void KisToolTransform::endStroke()
 {
     if (!m_strokeId) return;
 
+    currentStrategy()->flushPendingRecalculation();
+
     if (m_currentlyUsingOverlayPreviewStyle &&
         !m_transaction.rootNodes().isEmpty() &&
         !m_currentArgs.isUnchanging()) {
