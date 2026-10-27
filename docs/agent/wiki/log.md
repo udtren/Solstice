@@ -2258,3 +2258,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the Move Tool guide. The website got the same card and order on branch
   `claude/duplicate-selection-page` of the website repository (not
   published; publish after the release).
+
+## 2026-10-27 release prep: Solstice 0.6.0
+
+- User request: release 0.6.0 (`MINOR`, new features) instead of the
+  unreleased 0.5.3. Version bumped in `CMakeLists.txt`; README "In
+  development: 0.6.0" lists Clipping Mask, duplicating a selection on the
+  same layer, the HueSVC fix, the clipboard rewrite and fixes, the
+  2026-W44 intake, the fixes found by test control and test control
+  itself; [versioning](../versioning.md) records the preparation.
+- Next: the Windows x64 trial build on `main`, GitHub Release `v0.6.0`, the
+  post-release README and guide index, and the website (same day).
