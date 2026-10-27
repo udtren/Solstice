@@ -13,6 +13,8 @@
 #include <QColor>
 #include <QImage>
 #include <QJsonArray>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QPixmap>
 #include <QPointer>
 #include <QSysInfo>
@@ -41,10 +43,12 @@
 #include <kis_paint_device.h>
 #include <kis_pixel_selection.h>
 #include <kis_selection.h>
+#include <klocalizedstring.h>
 #include <kundo2stack.h>
 
 #include "TestControlImageCompare.h"
 #include "TestControlInputInjector.h"
+#include "TestControlSpontaneous.h"
 #include "TestControlSupport.h"
 
 using namespace TestControlSupport;
@@ -119,7 +123,8 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
 
     server->addTool("tool_activate",
                     "Activate a tool by its factory ID, e.g. KritaShape/KisToolBrush or KisToolSelectRectangular. "
-                    "An unknown ID fails and lists the available IDs.",
+                    "If it is already active it is activated again (restarted: true), so the tool always starts "
+                    "fresh, e.g. a new transform. An unknown ID fails and lists the available IDs.",
                     objectSchema({{"id", schemaProperty("string", "Tool factory ID.")}}, {"id"}),
                     std::bind(&TestControlCanvasTools::toolActivate, this, _1, _2));
 
@@ -180,6 +185,7 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                             {"coordinates", enumProperty({"image", "widget"}, "Coordinate space (default image).")},
                             {"button", enumProperty({"left", "right", "middle"}, "Button (default left).")},
                             {"pressure", schemaProperty("number", "Pressure 0-1 (tablet only, default 1).")},
+                            {"doubleClick", schemaProperty("boolean", "Double click (mouse only, default false).")},
                             {"modifiers", modifiersSchema},
                         },
                         {"x", "y"}),
@@ -226,6 +232,21 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                     objectSchema({{"name", schemaProperty("string", "Action name.")}}, {"name"}),
                     std::bind(&TestControlCanvasTools::actionTrigger, this, _1, _2));
 
+    server->addTool("input_key",
+                    "Press and release a key on the canvas, e.g. Return to apply a transform or Escape to cancel "
+                    "it. The canvas gets keyboard focus first (the window is activated). Call wait_idle "
+                    "afterwards.",
+                    objectSchema(
+                        {
+                            {"key",
+                             schemaProperty("string",
+                                            "Key in QKeySequence portable text, e.g. Return, Escape, Delete, "
+                                            "Ctrl+Z.")},
+                            {"modifiers", modifiersSchema},
+                        },
+                        {"key"}),
+                    std::bind(&TestControlCanvasTools::inputKey, this, _1, _2));
+
     server->addTool(
         "query_pixels",
         "Hash and measure a rectangle of the active layer or of the image projection, in image pixels: "
@@ -268,6 +289,7 @@ void TestControlCanvasTools::sessionInfo(const Arguments &, const Reply &reply)
         {"kritaCompatibilityVersion", KritaVersionWrapper::versionString(true)},
         {"qtVersion", QString::fromLatin1(qVersion())},
         {"platform", QSysInfo::prettyProductName()},
+        {"uiLanguages", QJsonArray::fromStringList(KLocalizedString::languages())},
         {"mainWindows", KisPart::instance()->mainwindowCount()},
         {"activeTool", KoToolManager::instance()->activeToolId()},
         {"document", documentInfo(viewManager)},
@@ -368,6 +390,15 @@ void TestControlCanvasTools::toolActivate(const Arguments &arguments, const Repl
         return;
     }
 
+    // Activating gives a freshly activated tool: requesting the active tool
+    // again is a no-op in KoToolManager, which would leave, for example, an
+    // applied transform without a new one, so switch away first.
+    const bool restart = KoToolManager::instance()->activeToolId() == id;
+    if (restart) {
+        KoToolManager::instance()->switchToolRequested(id == QLatin1String("KisToolSelectRectangular")
+                                                           ? QStringLiteral("KritaShape/KisToolBrush")
+                                                           : QStringLiteral("KisToolSelectRectangular"));
+    }
     KoToolManager::instance()->switchToolRequested(id);
 
     TestControlSupport::pollUntil(
@@ -376,14 +407,14 @@ void TestControlCanvasTools::toolActivate(const Arguments &arguments, const Repl
             return KoToolManager::instance()->activeToolId() == id;
         },
         2000,
-        [reply, id](bool active, qint64) {
+        [reply, id, restart](bool active, qint64) {
             const QString activeTool = KoToolManager::instance()->activeToolId();
             if (!active) {
                 reply(TestControlMcpServer::ToolResult::failure("The tool did not become active",
                                                                 {{"requested", id}, {"activeTool", activeTool}}));
                 return;
             }
-            reply(TestControlMcpServer::ToolResult::success({{"activeTool", activeTool}}));
+            reply(TestControlMcpServer::ToolResult::success({{"activeTool", activeTool}, {"restarted", restart}}));
         });
 }
 
@@ -496,6 +527,7 @@ void TestControlCanvasTools::inputClick(const Arguments &arguments, const Reply 
         reply(TestControlMcpServer::ToolResult::failure("input_click needs numeric x and y"));
         return;
     }
+    options.doubleClick = arguments.value("doubleClick").toBool(false);
     SourcePoint point;
     point.position = QPointF(arguments.value("x").toDouble(), arguments.value("y").toDouble());
     point.pressure = arguments.value("pressure").toDouble(1.0);
@@ -596,12 +628,15 @@ void TestControlCanvasTools::playPoints(const QVector<SourcePoint> &sourcePoints
             reply(TestControlMcpServer::ToolResult::failure("The canvas closed before the stroke"));
             return;
         }
+        TestControlInputInjector::Options injectorOptions;
+        injectorOptions.modifiers = options.modifiers;
+        injectorOptions.realtime = options.realtime;
+        injectorOptions.doubleClick = options.doubleClick;
         m_injector->playStroke(target,
                                options.device,
                                options.button,
-                               options.modifiers,
                                points,
-                               options.realtime,
+                               injectorOptions,
                                [reply, outside, modifierNames](const TestControlInputInjector::Report &report) {
                                    const QJsonObject details{
                                        {"eventsSent", report.eventsSent},
@@ -627,6 +662,12 @@ void TestControlCanvasTools::playPoints(const QVector<SourcePoint> &sourcePoints
 
     // KisInputManager keeps synthetic modifiers only while the canvas has
     // keyboard focus; without it, it reads the real keyboard instead.
+    withCanvasFocus(widget, reply, play);
+}
+
+void TestControlCanvasTools::withCanvasFocus(QWidget *widget, const Reply &reply, std::function<void()> then)
+{
+    QPointer<QWidget> target(widget);
     widget->window()->activateWindow();
     widget->setFocus(Qt::OtherFocusReason);
     pollUntil(
@@ -635,15 +676,90 @@ void TestControlCanvasTools::playPoints(const QVector<SourcePoint> &sourcePoints
             return target && target->hasFocus();
         },
         2000,
-        [play, reply, viewManager](bool focused, qint64) {
+        [then, reply](bool focused, qint64) {
             if (!focused) {
                 reply(TestControlMcpServer::ToolResult::failure(
-                    "Modifiers need keyboard focus on the canvas, and the window could not be activated",
-                    {{"canvas", canvasInfo(viewManager)}}));
+                    "Keys and modifiers need keyboard focus on the canvas, and the window could not be activated",
+                    {{"canvas", canvasInfo(currentViewManager())}}));
                 return;
             }
-            play();
+            then();
         });
+}
+
+void TestControlCanvasTools::inputKey(const Arguments &arguments, const Reply &reply)
+{
+    KisViewManager *viewManager = currentViewManager();
+    KisCanvas2 *canvas = viewManager ? viewManager->canvasBase() : nullptr;
+    QWidget *widget = canvas ? canvas->canvasWidget() : nullptr;
+    if (!widget) {
+        reply(TestControlMcpServer::ToolResult::failure("No canvas; create or open a document first"));
+        return;
+    }
+
+    const QString keyName = arguments.value("key").toString();
+    const QKeySequence sequence(keyName, QKeySequence::PortableText);
+    if (sequence.count() != 1 || sequence[0].key() == Qt::Key_unknown) {
+        reply(TestControlMcpServer::ToolResult::failure("Unknown key: " + keyName));
+        return;
+    }
+    const Qt::Key key = sequence[0].key();
+    Qt::KeyboardModifiers modifiers = sequence[0].keyboardModifiers();
+    StrokeOptions options;
+    QString error;
+    if (!parseStrokeOptions(QJsonObject{{"modifiers", arguments.value("modifiers")}}, &options, &error)) {
+        reply(TestControlMcpServer::ToolResult::failure(error));
+        return;
+    }
+    modifiers |= options.modifiers;
+
+    QPointer<QWidget> target(widget);
+    withCanvasFocus(widget, reply, [this, target, key, modifiers, keyName, reply]() {
+        if (!target) {
+            reply(TestControlMcpServer::ToolResult::failure("The canvas closed before the key"));
+            return;
+        }
+        // Modifier keys first, each carrying the state before it, as from the
+        // platform; then the key itself, then the releases in reverse.
+        const std::pair<Qt::KeyboardModifier, Qt::Key> modifierKeys[] = {
+            {Qt::ControlModifier, Qt::Key_Control},
+            {Qt::ShiftModifier, Qt::Key_Shift},
+            {Qt::AltModifier, Qt::Key_Alt},
+            {Qt::MetaModifier, Qt::Key_Meta},
+        };
+        Qt::KeyboardModifiers held;
+        bool accepted = false;
+        for (const auto &entry : modifierKeys) {
+            if (modifiers.testFlag(entry.first)) {
+                QKeyEvent shortcut(QEvent::ShortcutOverride, entry.second, held);
+                TestControlSpontaneous::send(target, &shortcut);
+                QKeyEvent press(QEvent::KeyPress, entry.second, held);
+                TestControlSpontaneous::send(target, &press);
+                held |= entry.first;
+            }
+        }
+        QKeyEvent shortcut(QEvent::ShortcutOverride, key, held);
+        TestControlSpontaneous::send(target, &shortcut);
+        QKeyEvent press(QEvent::KeyPress, key, held);
+        TestControlSpontaneous::send(target, &press);
+        accepted = shortcut.isAccepted() || press.isAccepted();
+        QKeyEvent release(QEvent::KeyRelease, key, held);
+        TestControlSpontaneous::send(target, &release);
+        for (auto it = std::rbegin(modifierKeys); it != std::rend(modifierKeys); ++it) {
+            if (modifiers.testFlag(it->first)) {
+                QKeyEvent releaseModifier(QEvent::KeyRelease, it->second, held);
+                TestControlSpontaneous::send(target, &releaseModifier);
+                held &= ~it->first;
+            }
+        }
+        QTimer::singleShot(0, this, [reply, keyName, accepted]() {
+            reply(TestControlMcpServer::ToolResult::success({
+                {"key", keyName},
+                {"accepted", accepted},
+                {"activeTool", KoToolManager::instance()->activeToolId()},
+            }));
+        });
+    });
 }
 
 void TestControlCanvasTools::queryPixels(const Arguments &arguments, const Reply &reply)

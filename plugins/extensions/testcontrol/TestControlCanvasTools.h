@@ -42,6 +42,7 @@ private:
     void inputStroke(const Arguments &arguments, const Reply &reply);
     void inputClick(const Arguments &arguments, const Reply &reply);
     void inputDrag(const Arguments &arguments, const Reply &reply);
+    void inputKey(const Arguments &arguments, const Reply &reply);
     void waitIdle(const Arguments &arguments, const Reply &reply);
     void queryState(const Arguments &arguments, const Reply &reply);
     void actionTrigger(const Arguments &arguments, const Reply &reply);
@@ -55,6 +56,7 @@ private:
         Qt::KeyboardModifiers modifiers;
         bool imageCoordinates = true;
         bool realtime = true;
+        bool doubleClick = false;
     };
     /// A point as given by a tool call, before conversion to widget pixels.
     struct SourcePoint {
@@ -69,6 +71,9 @@ private:
     /// Converts the points to the canvas widget and plays them; with
     /// modifiers, gives the canvas keyboard focus first.
     void playPoints(const QVector<SourcePoint> &points, const StrokeOptions &options, const Reply &reply);
+    /// Gives @p widget keyboard focus (activating its window), then calls
+    /// @p then; fails the call if focus does not arrive within 2 s.
+    void withCanvasFocus(QWidget *widget, const Reply &reply, std::function<void()> then);
 
     TestControlInputInjector *m_injector;
 };

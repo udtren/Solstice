@@ -34,7 +34,11 @@ class QPointingDevice;
  * and Meta follow the Enter, every pointer event carries the modifiers, and
  * KeyRelease events end the stroke. KisInputManager keeps such modifiers only
  * while the canvas has keyboard focus; otherwise it reads the real keyboard.
- * Mouse: press, moves, release.
+ * Mouse: a move without buttons to the first point, then, HoverSettleMs
+ * later, press, moves, release (for a double click: press, release, double
+ * click, release). The move is what a real mouse does before it presses;
+ * tools such as the polygon selection close their shape only when the
+ * pointer hovered over the first point before the click.
  * Tablet: TabletEnterProximity (to the application), one hover TabletMove at
  * the first point, TabletPress after HoverSettleMs, a system-synthesized
  * mouse press, TabletMoves, TabletRelease and TabletLeaveProximity. The hover
@@ -77,10 +81,18 @@ public:
         QString error;
     };
 
+    struct Options {
+        Qt::KeyboardModifiers modifiers;
+        /// Send each point at its time offset; otherwise back to back.
+        bool realtime = true;
+        /// A one-point mouse click becomes a double click.
+        bool doubleClick = false;
+    };
+
     using Done = std::function<void(const Report &report)>;
 
-    /// Time between the hover move and the press of a tablet stroke. Longer
-    /// than KisInputManager's move compression (tabletEventsDelay, 10 ms by
+    /// Time between the hover move and the press. Longer than
+    /// KisInputManager's move compression (tabletEventsDelay, 10 ms by
     /// default), which a press would otherwise discard.
     static constexpr qint64 HoverSettleMs = 50;
 
@@ -96,9 +108,8 @@ public:
     void playStroke(QWidget *target,
                     Device device,
                     Qt::MouseButton button,
-                    Qt::KeyboardModifiers modifiers,
                     const QVector<Point> &points,
-                    bool realtime,
+                    const Options &options,
                     Done done);
 
 private:
@@ -107,14 +118,14 @@ private:
         int pointIndex;
         /// Mouse event sent with Qt::MouseEventSynthesizedBySystem.
         bool synthesizedMouse = false;
-        /// Tablet move without buttons or pressure, before the press.
+        /// Move without buttons or pressure to the first point, before the press.
         bool hover = false;
         /// The modifier key of a key event step.
         Qt::Key key = Qt::Key(0);
     };
 
-    /// Time offset of @p step: tablet steps after the hover move are
-    /// shifted by HoverSettleMs.
+    /// Time offset of @p step: steps after the hover move are shifted by
+    /// HoverSettleMs.
     qint64 stepOffsetMs(const Step &step) const;
     void scheduleNext();
     void sendStep(const Step &step);

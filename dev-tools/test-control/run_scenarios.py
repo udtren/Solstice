@@ -20,6 +20,11 @@ port and token default to SOLSTICE_TEST_CONTROL_PORT and
 SOLSTICE_TEST_CONTROL_TOKEN. With --launch, the runner starts that executable
 with a scratch profile, test root, port and token, and quits it at the end.
 
+Scenario expectations compare English UI texts (undo command names, button
+labels). --launch therefore sets the scratch profile's UI language to English
+(--language); against a running Solstice in another language the runner
+warns, and text expectations fail.
+
 Exit status: 0 when every scenario passed, 1 when one failed, 2 on a usage,
 scenario-file or connection error.
 """
@@ -358,10 +363,16 @@ def platform_key_for(session):
 class Launched:
     """A Solstice started by the runner with a scratch profile and test root."""
 
-    def __init__(self, executable, port):
+    def __init__(self, executable, port, language):
         self.directory = Path(tempfile.mkdtemp(prefix="solstice-scenarios-"))
-        (self.directory / "profile").mkdir()
+        (self.directory / "profile" / "config").mkdir(parents=True)
         (self.directory / "root").mkdir()
+        if language != "system":
+            # The language override Settings > Switch Application Language
+            # writes; read from the profile's config folder before the UI
+            # starts, keyed by the application name (krita or solstice).
+            (self.directory / "profile" / "config" / "klanguageoverridesrc").write_text(
+                f"[Language]\nkrita={language}\nsolstice={language}\n", encoding="utf-8")
         self.token = secrets.token_hex(16)
         environment = dict(os.environ)
         environment.update({
@@ -422,6 +433,9 @@ def parse_arguments(argv):
     parser.add_argument("--fail-fast", action="store_true", help="Stop a scenario at its first failing step")
     parser.add_argument("--launch", metavar="EXECUTABLE", help="Start this Solstice and quit it at the end")
     parser.add_argument("--launch-timeout", type=int, default=180, help="Seconds to wait for a launched Solstice")
+    parser.add_argument("--language", default="en_US",
+                        help="UI language of a launched Solstice (default en_US, which scenarios expect; 'system' keeps "
+                             "the system language)")
     return parser.parse_args(argv)
 
 
@@ -441,7 +455,7 @@ def main(argv=None):
         for path in paths:
             load_scenario(path)
         if args.launch:
-            launched = Launched(args.launch, args.port)
+            launched = Launched(args.launch, args.port, args.language)
             args.token = launched.token
         if len(args.token) < 16:
             raise RunnerError("No token: pass --token or set SOLSTICE_TEST_CONTROL_TOKEN")
@@ -458,10 +472,14 @@ def main(argv=None):
             "platformKey": platform_key,
             "record": args.record,
             "solstice": {key: session.get(key) for key in ("solsticeVersion", "kritaCompatibilityVersion",
-                                                             "qtVersion", "platform")},
+                                                             "qtVersion", "platform", "uiLanguages")},
             "scenarios": [],
         }
         print(f"Solstice {session.get('solsticeVersion')} on {session.get('platform')}, key {platform_key}")
+        languages = session.get("uiLanguages") or []
+        if languages and not str(languages[0]).startswith("en"):
+            print(f"warning: the UI language is {languages[0]}; scenarios compare English texts, so text "
+                  "expectations will fail. Use --launch, or switch Solstice to English.", file=sys.stderr)
         for path in paths:
             scenario_report = run_scenario(client, path, args, platform_key)
             report["scenarios"].append(scenario_report)

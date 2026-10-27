@@ -8,6 +8,7 @@ set(kritatestcontrol_SOURCES
     TestControlImageCompare.cpp
     TestControlPaths.cpp
     TestControlSupport.cpp
+    TestControlUiTools.cpp
 )
 
 kis_add_library(kritatestcontrol MODULE ${kritatestcontrol_SOURCES})

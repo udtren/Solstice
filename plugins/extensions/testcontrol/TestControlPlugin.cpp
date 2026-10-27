@@ -16,6 +16,7 @@
 #include "TestControlHttpServer.h"
 #include "TestControlMcpServer.h"
 #include "TestControlPaths.h"
+#include "TestControlUiTools.h"
 
 K_PLUGIN_FACTORY_WITH_JSON(TestControlPluginFactory, "kritatestcontrol.json", registerPlugin<TestControlPlugin>();)
 
@@ -65,6 +66,9 @@ TestControlPlugin::TestControlPlugin(QObject *parent, const QVariantList &)
     }
     m_documentTools = new TestControlDocumentTools(testRoot, this);
     m_documentTools->registerTools(m_mcp);
+
+    m_uiTools = new TestControlUiTools(this);
+    m_uiTools->registerTools(m_mcp);
 
     TestControlMcpServer *mcp = m_mcp;
     m_http = new TestControlHttpServer(
