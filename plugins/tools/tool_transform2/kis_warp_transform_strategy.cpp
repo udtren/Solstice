@@ -761,6 +761,18 @@ void KisWarpTransformStrategy::externalConfigChanged()
 
 bool KisWarpTransformStrategy::beginPrimaryAction(const QPointF &pt)
 {
+    const bool pointMode = m_d->mode == Private::OVER_POINT || m_d->mode == Private::MULTIPLE_POINT_SELECTION
+        || m_d->mode == Private::ROTATE_PIN || m_d->mode == Private::DELETE_POINT;
+    if (pointMode
+        && (m_d->pointIndexUnderCursor < 0 || m_d->pointIndexUnderCursor >= m_d->currentArgs.transfPoints().size())) {
+        // The hover that set this mode belonged to other points: a new
+        // transform started, and the press came without a hover move, as
+        // the first mouse event after the canvas switched from the pen
+        // (KoToolManager keeps one tool per input device). Decide for the
+        // press position, as that hover would have.
+        setTransformFunction(pt, false, m_d->shiftOnHover, false);
+    }
+
     const bool isEditingPoints = m_d->currentArgs.isEditingTransformPoints();
     bool retval = false;
 
