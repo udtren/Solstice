@@ -432,9 +432,10 @@ protocol was played by `dev-tools/test-control/paint_trace_series.py`
 in every process: tablet events with constant pressure 1, 25 points 12 ms
 apart, 180 px long, one row per condition, 0.5 s after each stroke. In this
 series the release followed the last move at once; the injector now waits
-50 ms before it (a fix for compressed tools). The freehand brush gets
-uncompressed moves, so the timed inputs are the same, but a later series
-differs in the stroke's end and should say so. The
+50 ms before it by default (`releaseDelayMs`; the Transform Tool needs the
+pause, see [Test control](test-control.md#known-limitations-and-pending-work)).
+The freehand brush gets uncompressed moves, so the timed inputs are the same,
+but a later series differs in the stroke's end and should say so. The
 document is `document_new`'s RGBA F32 2480x3508 (one transparent paint
 layer, white canvas color), not the hand series' document with a white
 background; `b) Basic-4 Flow Opacity` at opacity 1; a fresh scratch profile

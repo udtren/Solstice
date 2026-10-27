@@ -191,14 +191,29 @@ and label visibility combos are connected to `activated`, so setting their
 index did nothing. Emit `activated` and `textActivated` after setting a
 combo box when imitating a choice (test control's `ui_set` does).
 
-## A quick release drops the last compressed move
+## A result one step short has more than one cause
 
-For tools that do not ask for high-resolution input (the `KisTool` default;
-freehand tools do ask), `KisInputManager` holds the latest move in a 10 ms
-compressor (`tabletEventsDelay`). A release does not deliver a pending move
-first, so a release sent right after the last move can arrive before it: the
-Transform Tool's dragged pin stopped one or two 5 px steps short in about 1
-of 7 synthetic drags, which made a Puppet Warp scenario fail at random. Pause
-before the release, longer than the compressor (test control: 50 ms), as a
-hand that stops before letting go does. A result that differs by exactly a
-step count of the drag points to this rather than to the feature.
+Two separate mechanisms end a synthetic drag short, and they look alike
+(the result is a whole number of drag steps off):
+
+- **The input manager holds a move.** For tools that do not ask for
+  high-resolution input (the `KisTool` default; freehand tools do ask),
+  `KisInputManager` keeps the latest move in a 10 ms compressor
+  (`tabletEventsDelay`). A release used not to deliver it, so a release
+  right after fast movement ended the action short; `KisInputManager` now
+  delivers it first. It only shows when moves come faster than 10 ms: on a
+  test display with software OpenGL each move's repaint already took longer,
+  and nothing was held until the moves were sent back to back in a small
+  window.
+- **The tool applies late.** The Transform Tool's Warp, Cage, Puppet and
+  Mesh strategies send the drag's position to the stroke from a 40 ms
+  compressor, and Apply within 40 ms of the last move applied the previous
+  position. This caused the random Puppet Warp failures; a pause before the
+  release hid it.
+
+Before blaming the input path, trace where the moves arrive: a gdb `dprintf`
+on the strategy's `continuePrimaryAction(KoPointerEvent *)` and
+`endPrimaryAction(KoPointerEvent *)` printing `event->point` needs no
+rebuild, and showed every move and the release at the final position while
+the result was still short. A debugger also slows the run enough to hide a
+timer race, so count failures with and without it.

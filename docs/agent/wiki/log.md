@@ -2080,3 +2080,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   50 ms before releasing a stroke with moves; the core behavior is recorded
   in [Test control](../test-control.md#known-limitations-and-pending-work)
   for the user to decide.
+
+## 2026-10-27 fix and correction: releases, compressed moves, Transform Apply
+
+- The user asked to fix `KisInputManager` so a release delivers the move
+  its compression holds. Done (`Private::flushCompressedMove()` before mouse
+  and tablet releases); verified on Linux with back-to-back free transform
+  drags (at least 29 of 30 short per device without it, 30 of 30 exact with
+  it) and the new scenario `transform-quick-release`
+  ([feature inventory](../feature-inventory.md)).
+- Correction of the previous entry: the random `puppet-show-mesh` failures
+  were not the release. A gdb trace showed every move reaching the Puppet
+  strategy; the cause is the Transform Tool's 40 ms recalculation compressor
+  with Apply right after the drag ([Test control](../test-control.md#known-limitations-and-pending-work),
+  [Puppet Warp](../puppet-warp.md)). Not fixed; the injector's pause before
+  the release keeps the scenarios stable.
+- Found while checking: a crash when Puppet pins placed with the mouse are
+  dragged with the pen (separate tool instances, stale pin index), and a
+  Layer Comps crash on a null document after fast document switching. Not
+  fixed.
+- Lesson: [one step short has more than one cause](pitfalls/synthetic-canvas-input.md).

@@ -454,6 +454,16 @@ rigid points unrotated (tore the joint).
 7. Opaque backgrounds mask the entire rectangle.
 8. Full-resolution mask construction is synchronous, although cached.
 9. Rotation rings can become visually crowded.
+10. Apply (button or Return) within 40 ms of the last pin drag applies the
+    pin's previous position: the strategy sends its arguments to the stroke
+    from `recalculateSignalCompressor` (40 ms), and
+    `KisToolTransform::endStroke()` sends the current arguments only for the
+    overlay preview style. Found by test control (2026-10-27); not fixed.
+11. Pins placed with the mouse and dragged with the pen live in separate
+    tool instances (one set per input device), and the next mouse press then
+    crashed in `beginPrimaryAction()` on a stale pin index (2026-10-27); not
+    fixed. Details for both in
+    [Test control](test-control.md#known-limitations-and-pending-work).
 
 ## Recommended improvement path
 
