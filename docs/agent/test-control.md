@@ -13,8 +13,9 @@ are in [UI test automation plan](ui-automation-plan.md).
 Scope: phase 0 of the plan (feasibility, done 2026-10-27), phase 1
 (minimum protocol) and phase 2 (runner, recorded expectations, tolerance
 comparison), both on `claude/test-control-phase1`, and phase 3 (selection
-tools, Transform Tool, Lazy Tools and Quick Access coverage, on
-`claude/test-control-phase3`): 24 tools, documents in the current window,
+tools, Transform Tool, Lazy Tools and Quick Access coverage) and phase 4
+(the [paint trace series](#paint-trace-series)), both on
+`claude/test-control-phase3`: 24 tools, documents in the current window,
 RGBA documents created by `document_new` or opened from the test root, the
 layer tree, modifier and other keys with canvas focus, widgets and dialogs
 found by object name, text, tool tip, class or window title,
@@ -102,6 +103,12 @@ Verification (2026-10-26, cloud session, no Krita build available):
   test now uses native separators and passes. The rename scenario found a
   crash in `KisNodeModel` (see below), fixed on the same branch. Windows not
   yet checked.
+- Phase 4 (2026-10-27, Linux, same setup and branch): a feasibility pass per
+  mode, then a nine-process series; all runs accepted (results in the
+  [run sheet](paint-trace-baseline-runs.md#synthetic-series-linux-2026-10-27-test-control)).
+  The series tool's tests (5) and the runner's tests pass. Every launch on
+  this machine showed Vision ML's startup warning, closed by a scratch
+  click helper during the series. Windows not yet checked.
 
 ## Source locations
 
@@ -119,6 +126,7 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp` |
 | Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
 | Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
+| Paint trace series (developer tool, phase 4) | `dev-tools/test-control/paint_trace_series.py`, `test_paint_trace_series.py`; summaries by `build-tools/paint-trace/summarize.py` |
 | Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (6); `libs/ui/tests/scenarios/lazy-*.json` (4); `plugins/dockers/layerdocker/tests/scenarios/` (1); `plugins/dockers/quickaccess/tests/scenarios/` (3) |
 | Object names for the Puppet Warp options (no behavior change) | `plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp` |
 | Hook in an upstream file | `plugins/extensions/CMakeLists.txt` (`add_subdirectory(testcontrol)` only when `BUILD_WITH_QT6`) |
@@ -162,11 +170,11 @@ tested in the cloud session.
   keyed by the profile root, so the second launch hands its arguments to the
   running instance and exits (operational rule, user decision 2026-10-26).
 
-### Tools (phases 0-3)
+### Tools (phases 0-4)
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
-| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables |
+| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables, and `gpuEngine`: the device, driver and failed state once the GPU engine has started (null before, or without it) |
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi). Every `document` result has size, color model, depth and profile, the file name (`fileName`, without the folder, empty for an unsaved document) and `modified` |
 | `tool_activate` | `id` (factory ID) | Active tool ID and `restarted`; a tool that is already active is switched away (to the rectangle selection, or from it to the brush) and back, so it starts fresh; an unknown ID lists all IDs |
 | `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, points outside the canvas widget, modifiers, active tool |
@@ -182,7 +190,7 @@ tested in the cloud session.
 | `document_export_png` | `path` (relative, `.png`) | Exports the active document's image without dialogs, replacing a file; size in bytes |
 | `document_close` | `all` | Closes the active document or every document without asking; documents closed and left |
 | `view_reset` | `width`, `height` (window, default 1280x900) | Normal window of that size, zoom 100 %, no rotation or mirroring, image centered; zoom, rotation, image rectangle in the canvas |
-| `brush_set` | `preset` (name), `size` (1-1000), `opacity` (0-1), `eraser`, `color` (`#RRGGBB`) | Current preset, size, opacity, flow, blending mode (`compositeOp`), eraser mode, preserve alpha and foreground color (`color`, and `colorRgb` as three numbers for tolerances); without arguments it only reports; an unknown preset lists up to 200 names |
+| `brush_set` | `preset` (name), `size` (1-1000), `opacity` (0-1), `eraser`, `color` (`#RRGGBB`), `paintMode` (`buildup`/`wash`, the preset's `PaintOpAction` as an unsaved change) | Current preset, size, opacity, flow, blending mode (`compositeOp`), eraser mode, painting mode, preserve alpha and foreground color (`color`, and `colorRgb` as three numbers for tolerances); without arguments it only reports; an unknown preset lists up to 200 names |
 | `query_layers` | none | The layer tree from top to bottom as the Layers docker lists it: name, class, visibility, opacity (0-255), blending mode, color label, lock, alpha lock (paint layers), `active`, and `children` of groups; the active node's name. Fails while the image is busy |
 | `layer_activate` | `name`, `select` (names) | Makes the first node with that name (from the top, parents before children) active and selects it, or selects the listed nodes, through `KisNodeManager::slotImageRequestNodeReselection()`; active and selected names |
 | `ui_query` | `nameFilter`, `within` (object name of a container), `window` (window title), `includeUnnamed` | Visible widgets with object name, class, enabled state and value (button text and checked state, combo items and index, spin box value, label text, tool tip, window title of top-level widgets) |
@@ -228,8 +236,14 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   pointer reaches the canvas: after a `Leave` (for example when another
   window appeared over the pointer) `KisShortcutMatcher` suppresses all
   actions until the next `Enter`. Mouse: a hover move (no buttons) at the
-  first point, the press `HoverSettleMs` later, moves, release; a double
-  click adds `MouseButtonDblClick` and a second release. The hover move is
+  first point, the press `HoverSettleMs` later, moves, and the release
+  `ReleaseSettleMs` (50 ms) after the last move; a double click adds
+  `MouseButtonDblClick` and a second release. The release waits because the
+  input manager's move compression (`tabletEventsDelay`, 10 ms) can still
+  hold the last move, which a release does not deliver; tools without
+  high-resolution input (the Transform Tool, unlike the freehand brush) then
+  stopped one or two moves short (see the limitations). Tablet strokes wait
+  the same before `TabletRelease`; clicks without moves do not wait. The hover move is
   what a real pointer sends before a click; the polygonal selection tool
   snaps to its first point and decides about closing the shape from the
   hover position. Tablet: `TabletEnterProximity` (to the
@@ -604,7 +618,72 @@ first click ([pitfall](wiki/pitfalls/synthetic-canvas-input.md)).
 The `LANGUAGE` environment variable does not choose Solstice's UI language;
 the language override file does, otherwise the system locale.
 
+## Paint trace series
+
+`dev-tools/test-control/paint_trace_series.py` (phase 4 of the
+[plan](ui-automation-plan.md); Python standard library) replays the stroke set
+of the paint trace [controlled capture protocol](paint-trace-baseline-runs.md)
+with synthetic input and summarizes the traces:
+
+```bat
+python dev-tools\test-control\paint_trace_series.py --launch <krita-dev-root>\_install\bin\solstice.exe --out <new folder>
+python dev-tools\test-control\paint_trace_series.py --launch ... --out <new folder> --modes cpu projection brush
+```
+
+- Each run is a fresh process started like `run_scenarios.py --launch`
+  (scratch profile, English UI) with `KRITA_PAINT_TRACE=<run folder>/trace`,
+  `KRITA_GPU_VALIDATION=0` and the mode's switches: `cpu` 0/0, `projection`
+  1/0, `brush` 1/1 (`KRITA_GPU_PROJECTION`/`KRITA_GPU_BRUSH`), as
+  `build-tools/paint-trace/run.cmd`. Without `--modes`, three rounds in the
+  baseline's rotation (cpu, projection, brush; projection, brush, cpu; brush,
+  cpu, projection); `--modes` runs the given modes once (a feasibility pass).
+- Per run: an RGBA F32 2480x3508 document (`document_new`: one transparent
+  paint layer, white canvas color), `view_reset` 1920x1080, `b) Basic-4 Flow
+  Opacity` at opacity 1, black. Then 64 px Build-up, 64 px Wash, 256 px
+  Build-up and 256 px Wash, each one warm-up and three measured strokes:
+  tablet, pressure 1, 25 points 12 ms apart (288 ms), 180 px long (shorter if
+  the visible area is narrow), one row per condition and strokes 256 px apart
+  inside the visible image area, `wait_idle` and 0.5 s after each. Painting
+  mode and size are set with `brush_set` before each stroke. It checks 16
+  undo steps, quits normally (the trace is written at exit) and keeps the
+  trace, `solstice.log`, `strokes.json` and `summary.json` per run.
+- Checks per run: no dropped events, 16 traced strokes whose recorded
+  conditions (size, `incremental`, preset) match the played order. Warm-ups
+  are the first stroke of each condition, by order. A run with a problem is
+  kept but left out of the aggregate.
+- Aggregate (`series.json`, and a table on stdout), as the baseline: per
+  process and condition, the median of the three measured stroke medians
+  (`command_presentation_timing`, Qt input receipt to the last required
+  command swap) and of their p95 values; per mode and condition, the median
+  and range of the process values, and the timed inputs. `series.json` also
+  holds the source revision, SHA-256 of the installed binaries (the series
+  stops if they change), each run's GPU device (`gpuEngine`) and its summed
+  execution path records.
+- The output folder must be new or empty: a series is never appended to, as
+  the baseline sheet requires.
+
+The synthetic series differs from the hand-drawn series by design: identical
+strokes in every process, constant pressure, no tablet driver, and a test
+display. Never pool the two. On a machine where Vision ML shows its startup
+warning, close it in every process (the runner cannot).
+
 ## Known limitations and pending work
+
+- A release drops a compressed move (found 2026-10-27, Krita behavior):
+  `KisInputManager` compresses moves for tools that do not ask for
+  high-resolution input (`KisTool::primaryActionSupportsHiResEvents()` is
+  false by default; the freehand tools say true) and delivers the latest one
+  from a 10 ms compressor. A `MouseButtonRelease` goes to the shortcut
+  matcher without first delivering a pending move, which then arrives as a
+  button-less hover. `puppet-show-mesh` failed 2 of 8 runs this way: the
+  dragged pin ended 5 or 10 px short (one or two of the drag's 5 px steps);
+  3 of 20 repeated passes differed, with Show mesh on and off alike. With the
+  injector's 50 ms pause before the release, 30 of 30 passes matched and
+  the scenario suite passed twice. A hand that releases within about 10 ms
+  of a fast move (a high-rate mouse) loses that last bit of movement in
+  these tools too; delivering the pending move before a release in
+  `KisInputManager` would fix it for everyone, a core change for the user
+  to decide.
 
 - Lazy Tools and Quick Access scenarios change the profile they run in: the
   Quick Access profile gains a brush item, `name_color_list.txt` a `tc-ink`

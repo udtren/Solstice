@@ -150,6 +150,24 @@ whatever your system language; `--language system` keeps your language. If
 you run scenarios against your own Solstice in another language, the runner
 warns you, and steps that check texts fail.
 
+### Paint timing series
+
+`dev-tools/test-control/paint_trace_series.py` measures painting the way the
+hand-drawn paint trace runs do, but with identical synthetic strokes: it
+starts a separate test copy of Solstice for each of the CPU, GPU projection
+and GPU brush modes, draws the same 16 pen strokes (64 px and 256 px brushes,
+Build-up and Wash), closes Solstice so the timing record is written, and
+prints a summary table:
+
+```powershell
+python dev-tools\test-control\paint_trace_series.py --launch "C:\path\to\Solstice\bin\solstice.exe" --out "$env:TEMP\paint-series-1"
+```
+
+A full series starts nine copies one after another and took under ten
+minutes on the Linux test machine; `--modes cpu` runs one. Close your own Solstice first, and do not
+use the computer for heavy work meanwhile. The results are a separate series
+from hand-drawn measurements and must not be mixed with them.
+
 ## Limitations
 
 - The pen is simulated inside Solstice. It does not test your tablet driver

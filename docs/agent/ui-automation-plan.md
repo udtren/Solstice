@@ -10,8 +10,9 @@ branch `claude/test-control-phase1` and checked on Linux, with the Windows
 check pending. The user authorized phase 3 the same day, first the
 selection tools and the Transform Tool / Puppet Warp items, then Lazy Tools
 and Quick Access; both parts are implemented on `claude/test-control-phase3`
-and checked on Linux, Windows pending. Phases 4-5 remain proposals that need
-the user's go-ahead.
+and checked on Linux, Windows pending. Phase 4 (paint trace automation) was
+authorized and run on Linux the same day, on the same branch; phase 5 remains
+a proposal that needs the user's go-ahead.
 
 ## Goal
 
@@ -41,7 +42,7 @@ Non-goals:
 | Expectations | Hashes and state in the repository; reference images only where tolerance comparison needs them, kept small. |
 | Scenario files | Next to each feature's tests. |
 | Second running instance | Handled by operation: no other Solstice may run during a test session; no `krita/main.cc` change. |
-| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks; after phase 1 the user said to keep going ("I will test on windows later so keep going"), taken as the go-ahead for phase 2. Phase 3, first part: "Go ahead with phase 3: start with the selection tools (ellipse, polygon, freehand, contiguous) and selection modifiers, then the state-checkable Transform Tool / Puppet Warp checklist items." Then: "Go ahead with the rest of phase 3: Lazy Tools and Quick Access through the ui tools." |
+| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks; after phase 1 the user said to keep going ("I will test on windows later so keep going"), taken as the go-ahead for phase 2. Phase 3, first part: "Go ahead with phase 3: start with the selection tools (ellipse, polygon, freehand, contiguous) and selection modifiers, then the state-checkable Transform Tool / Puppet Warp checklist items." Then: "Go ahead with the rest of phase 3: Lazy Tools and Quick Access through the ui tools." Phase 4: "go phase 4". |
 
 Consequences for the design: with MCP in-process, the transport is MCP
 Streamable HTTP on `127.0.0.1` instead of a named pipe to a bridge. Because
@@ -260,6 +261,18 @@ mesh fill and expansion, multiple layers and groups), listed in
 - Replay the [baseline run](paint-trace-baseline-runs.md) stroke set with
   `KRITA_PAINT_TRACE` for CPU, projection and brush modes; record results as a
   new series, not pooled with hand-drawn runs.
+
+Authorized and done 2026-10-27 on `claude/test-control-phase3`, Linux only:
+
+| Part | As implemented |
+| --- | --- |
+| Series tool | `dev-tools/test-control/paint_trace_series.py`: a fresh process per run with the mode's `KRITA_GPU_*` switches and `KRITA_PAINT_TRACE`, the 16-stroke protocol as identical tablet strokes, normal exit, `build-tools/paint-trace/summarize.py`, checks, and the baseline's aggregation; [Test control](test-control.md#paint-trace-series) |
+| Tool changes | `brush_set` `paintMode` (Build-up/Wash); `session_info` `gpuEngine` (the device the engine started on); the runner's launcher takes extra environment variables |
+| First series | Nine processes, all accepted; results, hashes and interpretation in the [run sheet](paint-trace-baseline-runs.md#synthetic-series-linux-2026-10-27-test-control). GPU engine on the RTX 5090, canvas on Xvfb's software OpenGL |
+
+Left: the same series on Windows (with a hardware-GL canvas and the
+shared-buffer path), tracing-disabled runs for the overhead, and the README
+operation workloads the protocol mentions.
 
 ### Phase 5: optional CI
 

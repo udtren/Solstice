@@ -17,6 +17,7 @@ sources:
   - Linux phase 3 scenario runs, 2026-10-27 (xdotool, Xvfb)
   - plugins/dockers/layerdocker/LayerBox.cpp (QComboBox::activated connections)
   - libs/ui/KisSolsticeLazyTools.cpp (showRenameDialog, exec())
+  - libs/ui/input/kis_input_manager.cpp (compressMoveEventCommon, MouseButtonRelease)
   - docs/agent/test-control.md
 related:
   - transform-tool-input.md
@@ -189,3 +190,15 @@ and nothing when the index does not change. The Layers docker's color label
 and label visibility combos are connected to `activated`, so setting their
 index did nothing. Emit `activated` and `textActivated` after setting a
 combo box when imitating a choice (test control's `ui_set` does).
+
+## A quick release drops the last compressed move
+
+For tools that do not ask for high-resolution input (the `KisTool` default;
+freehand tools do ask), `KisInputManager` holds the latest move in a 10 ms
+compressor (`tabletEventsDelay`). A release does not deliver a pending move
+first, so a release sent right after the last move can arrive before it: the
+Transform Tool's dragged pin stopped one or two 5 px steps short in about 1
+of 7 synthetic drags, which made a Puppet Warp scenario fail at random. Pause
+before the release, longer than the compressor (test control: 50 ms), as a
+hand that stops before letting go does. A result that differs by exactly a
+step count of the drag points to this rather than to the feature.

@@ -2054,3 +2054,29 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   and case matters ([Lazy Tools](../lazy-tools.md)). The code was right.
 - `git clang-format` re-sorted the include block next to the new include
   again ([build pitfalls](pitfalls/build-format-test.md)); restored.
+
+## 2026-10-27 feature: test control phase 4 (paint trace series)
+
+- The user said "go phase 4"; recorded in the
+  [UI test automation plan](../ui-automation-plan.md).
+- Added `dev-tools/test-control/paint_trace_series.py` (with tests): the
+  paint trace protocol's 16 strokes as identical synthetic tablet strokes in
+  fresh processes per mode, checked and aggregated like the hand baseline.
+  `brush_set` gained `paintMode`, `session_info` `gpuEngine`.
+- First synthetic series on Linux (nine processes, all accepted), recorded
+  as a separate series in the
+  [run sheet](../paint-trace-baseline-runs.md#synthetic-series-linux-2026-10-27-test-control).
+- Lessons: on Xvfb the canvas draws with software OpenGL, so the time after
+  the last upload is the same in every mode and dominates the absolute
+  numbers; compare modes by the part before the upload. The shared-buffer
+  canvas path needs a hardware-GL display, so Xvfb never exercises it.
+  Identical input shrank the process ranges to about 1 ms at 64 px.
+  Vision ML's startup warning appears in every fresh scratch process on a
+  machine where it cannot initialize; a multi-process tool needs someone
+  (or a helper) to close it each time.
+- The regression run after the series found `puppet-show-mesh` failing at
+  random: a release right after the last move dropped the compressed move
+  ([pitfall](pitfalls/synthetic-canvas-input.md)). The injector now waits
+  50 ms before releasing a stroke with moves; the core behavior is recorded
+  in [Test control](../test-control.md#known-limitations-and-pending-work)
+  for the user to decide.
