@@ -11,6 +11,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
@@ -378,7 +379,10 @@ private Q_SLOTS:
         QTemporaryDir dir;
         auto config = KSharedConfig::openConfig(dir.filePath("test.ini"), KConfig::SimpleConfig);
         QCOMPARE(Export::explorerFolders(config), QStringList());
-        Export::setExplorerFolders({" C:\\Art\\Root ", "", "C:/Art/Root", "D:/Work"}, config);
+        // Native separators: backslashes are separators only on Windows; elsewhere
+        // they are part of a file name and stay.
+        Export::setExplorerFolders({" " + QDir::toNativeSeparators("C:/Art/Root") + " ", "", "C:/Art/Root", "D:/Work"},
+                                   config);
         config->reparseConfiguration();
         QCOMPARE(config->group(QString()).readEntry("Solstice/FastExportExplorerFolders", QStringList()),
                  QStringList({"C:/Art/Root", "D:/Work"}));
@@ -386,6 +390,10 @@ private Q_SLOTS:
         // The export dialog saves Settings on Export; that must not touch the list.
         Export::Settings().save(config);
         QCOMPARE(Export::explorerFolders(config), QStringList({"C:/Art/Root", "D:/Work"}));
+#ifndef Q_OS_WIN
+        Export::setExplorerFolders({"/art/a\\b", "/art/A\\b"}, config);
+        QCOMPARE(Export::explorerFolders(config), QStringList({"/art/a\\b", "/art/A\\b"}));
+#endif
     }
 
     void registeredFolderBrowse()

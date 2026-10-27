@@ -2045,3 +2045,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   ([pitfall](pitfalls/compressed-updates-outlive-their-model.md),
   [feature inventory](../feature-inventory.md)).
 - Lessons: [modal dialogs and combo `activated`](pitfalls/synthetic-canvas-input.md).
+
+## 2026-10-27 fix: KisLazyToolsTest on Linux
+
+- `explorerFolders` gave the folder list a Windows path with backslashes,
+  which only Windows normalizes, so the case failed on Linux. The input now
+  uses native separators, plus a non-Windows check that backslashes stay
+  and case matters ([Lazy Tools](../lazy-tools.md)). The code was right.
+- `git clang-format` re-sorted the include block next to the new include
+  again ([build pitfalls](pitfalls/build-format-test.md)); restored.

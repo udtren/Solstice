@@ -305,6 +305,11 @@ covers the empty state, listed folders, the chooser's start folder (selected,
 missing and none), the chosen folder filling Export folder and switching the
 destination, cancellation, and a synthetic folder drop. It uses Qt's
 non-native chooser (`AA_DontUseNativeDialogs`).
+`explorerFolders` builds its backslash input with `QDir::toNativeSeparators()`
+(2026-10-27): a backslash is a separator only on Windows, and on Linux it is
+part of a file name, so the Windows-only input made the case fail there. On
+other systems it also checks that such names stay as they are and that
+duplicates are compared case-sensitively. 21/21 cases pass on Linux.
 `kritaui` and the test built without new warnings; offscreen QtTest passed
 15/15 and the UI DLL was installed with matching build/install SHA-256
 hashes. Manual check 9 is still pending.

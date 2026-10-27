@@ -97,9 +97,9 @@ Verification (2026-10-26, cloud session, no Krita build available):
   `--all --strict --launch` passed all 23 scenarios twice; a wrong
   expectation in each new scenario failed on that step. The test control
   tests, `kis_node_model_test` and the runner's tests pass through `ctest`.
-  `KisLazyToolsTest` fails one case on Linux (`explorerFolders`, which
-  expects `C:\Art\Root` with backslashes to normalize as on Windows); that
-  predates this work and its code is unchanged. The rename scenario found a
+  `KisLazyToolsTest` failed one case on Linux (`explorerFolders`, which
+  expected `C:\Art\Root` with backslashes to normalize as on Windows); the
+  test now uses native separators and passes. The rename scenario found a
   crash in `KisNodeModel` (see below), fixed on the same branch. Windows not
   yet checked.
 
