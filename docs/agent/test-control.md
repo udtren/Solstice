@@ -36,8 +36,8 @@ Verification (2026-10-26, cloud session, no Krita build available):
   The [manual checks](#manual-regression-checklist) were run against a
   running Solstice through the MCP endpoint; results are recorded there.
   Three input defects they found are fixed (spontaneous events, the hover
-  move before a pen press, `wait_idle` settling). Step 10 stays a known
-  limitation.
+  move before a pen press, `wait_idle` settling). Step 10 stayed a known
+  limitation until 2026-10-27 (fixed, see below).
 - Windows (2026-10-27, Windows 11 25H2, Qt 6.8, `_install`, scratch
   `SOLSTICE_PROFILE_ROOT`, branch `claude/test-control-linux`): both tests
   pass through `ctest`; the manual checks were run against a running
@@ -49,6 +49,10 @@ Verification (2026-10-26, cloud session, no Krita build available):
   `claude/test-control-linux` at `a83b58884c`): both tests pass through
   `ctest` (three runs); the manual checks give the same results as on
   2026-10-26, now with the 600 ms settle; results recorded there.
+- Step 10 fix (2026-10-27, Linux): the cause was a `Leave` the canvas got
+  when a window covered the pointer, not focus; strokes now begin with an
+  `Enter`. Step 10 passes on Linux; the rest of the checklist passes again.
+  Windows has not been re-run with this change.
 
 ## Source locations
 
@@ -146,7 +150,10 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   delivered with `QCoreApplication::notify()`, as QTest does:
   `KisToolRectangleBase` and `KisToolOutlineBase` cancel the shape on a
   non-spontaneous release, and `sendEvent()` clears the flag in Qt 6.
-  Mouse: press, moves, release. Tablet: `TabletEnterProximity` (to the
+  Every stroke starts with an `Enter` at the first point, as when a real
+  pointer reaches the canvas: after a `Leave` (for example when another
+  window appeared over the pointer) `KisShortcutMatcher` suppresses all
+  actions until the next `Enter`. Mouse: press, moves, release. Tablet: `TabletEnterProximity` (to the
   application object, where `ProximityNotifier` listens), one hover
   `TabletMove` (no buttons, no pressure) at the first point, `TabletPress`
   `HoverSettleMs` (50 ms) later, a `Qt::MouseEventSynthesizedBySystem` mouse
@@ -281,7 +288,7 @@ branch `claude/test-control-linux` at `a83b58884c`):
 | 7 | Pass: undo 3. |
 | 8 | Pass: "Select Rectangle", bounds (100,100) 200x100, 20000 pixels, read right after `wait_idle`. |
 | 9 | Pass: `deselect` clears it; `edit_undo` restores it. |
-| 10 | Limitation unchanged: with xclock holding X focus, the stroke is accepted but paints nothing (undo 0). |
+| 10 | Limitation unchanged: with xclock holding X focus, the stroke is accepted but paints nothing (undo 0). Investigated and fixed afterwards; see below. |
 | 11 | Pass: Ctrl+Q 1.5 s into a 4 s real-time stroke (no unsaved change) closes Solstice with exit 0; the injector reports "The target widget was destroyed during the stroke" after 72 events. No crash. |
 | 12 | Pass: 401 without the token, 403 for a foreign Origin, 200 for a valid ping; the token is not in the log. |
 
@@ -304,11 +311,24 @@ So with a vector selection active, something keeps making the image briefly
 busy, more often with more documents open, and each busy poll restarts the
 31-poll count. Not investigated.
 
+Step 10 on Linux, investigated 2026-10-27 with `DEBUG_MATCHER` traces of
+`KisShortcutMatcher` (a temporary local build): the failing strokes reached
+`buttonPressed()` but started no action, because `prepareReadyShortcuts()`
+returns nothing while `actionsSuppressed()` is true, which it is whenever
+`cursorEntered` is false. The canvas gets a `Leave` when another window
+(xclock) is mapped over the pointer, and nothing sends an `Enter` again
+until the pointer moves or Solstice gets focus (`CanvasSwitcher` sends a
+synthetic `Enter` on `FocusIn`). Focus itself is not the cause: with xclock
+focused but not covering the pointer, or covering it while Solstice had
+focus, strokes painted. On Windows the foreground window was not over the
+pointer, so step 10 passed there. Fix: the injector sends a spontaneous
+`QEnterEvent` before each stroke. After it, with xclock covering the canvas
+and holding focus, mouse and pen strokes paint in full (5 of 5 rounds), and
+the whole checklist passes again on Linux, including step 11 with a save
+prompt during the stroke (202 events sent, "No" exits 0).
+
 ## Known limitations and pending work
 
-- Strokes do not paint while another application holds focus on
-  Linux/X11 (step 10); on Windows they do. Not investigated further: real
-  input would activate the window first.
 - An active selection limits where strokes paint. A scenario that selects
   and then paints elsewhere must `deselect` first; otherwise the stroke adds
   an undo step and changes no pixels.

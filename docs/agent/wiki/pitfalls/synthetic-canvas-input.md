@@ -89,6 +89,18 @@ happens). A real pen hovers first. Send a hover `TabletMove` (no buttons, no
 pressure) and wait longer than the move compression (`tabletEventsDelay`,
 10 ms by default) before the press; a press discards a compressed move.
 
+## A Leave suppresses every action until the next Enter
+
+`KisShortcutMatcher::actionsSuppressed()` is true while `cursorEntered` is
+false, and then `prepareReadyShortcuts()` offers no shortcut: a press
+reaches `buttonPressed()` and starts nothing, while the event still counts
+as accepted. The canvas gets a `Leave` whenever another window appears over
+the pointer, and only a later `Enter` (pointer movement, or the synthetic
+one `CanvasSwitcher` sends on `FocusIn`) clears it. Synthetic strokes looked
+focus-dependent on Linux for this reason (2026-10-27): they failed only when
+Solstice had lost focus and another window covered the pointer. Start every
+synthetic stroke with an `Enter`, as a real pointer reaching the canvas does.
+
 ## Idle once is not settled
 
 `KisImage::isIdle()` can be true while follow-up work is still queued to the

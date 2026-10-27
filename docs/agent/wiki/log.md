@@ -1942,3 +1942,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - New: with a vector selection active, `wait_idle` slows as documents
   accumulate (0.6 s with a few, 1.2 s with 12, past the 10 s timeout with
   about 75). Cause not investigated; listed as a limitation.
+
+## 2026-10-27 fix: test control step 10 on Linux
+
+- Investigated why synthetic strokes did not paint on Linux while another
+  window had focus: matcher traces (`DEBUG_MATCHER`, local only) showed the
+  press starting no action because the canvas had received a `Leave` when a
+  window covered the pointer; focus was incidental. The injector now sends a
+  spontaneous `Enter` before each stroke. Step 10 passes on Linux and the
+  rest of the checklist passes again; Windows not re-run.
+- Lesson added to [synthetic canvas input](pitfalls/synthetic-canvas-input.md).

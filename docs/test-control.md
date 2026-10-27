@@ -86,8 +86,6 @@ many undo steps there are."
   they can change the result.
 - Modifier keys (Ctrl, Shift, Alt) are not supported yet.
 - Strokes go to the active document's canvas only.
-- On Linux, strokes do not paint while another application has the
-  keyboard focus; on Windows they do. Keep Solstice in front during a test.
 - A selection limits where strokes paint. Clear it (the `deselect` action)
   before painting outside it.
 - While a selection made with the selection tools exists, waiting takes
