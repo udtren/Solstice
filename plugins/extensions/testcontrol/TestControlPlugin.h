@@ -10,6 +10,7 @@
 #include <QVariant>
 
 class TestControlCanvasTools;
+class TestControlDocumentTools;
 class TestControlHttpServer;
 class TestControlMcpServer;
 
@@ -30,6 +31,7 @@ public:
 
 private:
     TestControlCanvasTools *m_tools = nullptr;
+    TestControlDocumentTools *m_documentTools = nullptr;
     TestControlMcpServer *m_mcp = nullptr;
     TestControlHttpServer *m_http = nullptr;
 };

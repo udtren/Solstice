@@ -4,6 +4,9 @@ set(kritatestcontrol_SOURCES
     TestControlMcpServer.cpp
     TestControlInputInjector.cpp
     TestControlCanvasTools.cpp
+    TestControlDocumentTools.cpp
+    TestControlPaths.cpp
+    TestControlSupport.cpp
 )
 
 kis_add_library(kritatestcontrol MODULE ${kritatestcontrol_SOURCES})

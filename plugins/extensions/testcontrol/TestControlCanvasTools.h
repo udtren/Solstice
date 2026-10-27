@@ -10,9 +10,8 @@
 
 #include <functional>
 
+#include "TestControlInputInjector.h"
 #include "TestControlMcpServer.h"
-
-class TestControlInputInjector;
 
 /**
  * The MCP tools that act on the running application: documents, tools,
@@ -41,18 +40,35 @@ private:
     void documentNew(const Arguments &arguments, const Reply &reply);
     void toolActivate(const Arguments &arguments, const Reply &reply);
     void inputStroke(const Arguments &arguments, const Reply &reply);
+    void inputClick(const Arguments &arguments, const Reply &reply);
+    void inputDrag(const Arguments &arguments, const Reply &reply);
     void waitIdle(const Arguments &arguments, const Reply &reply);
     void queryState(const Arguments &arguments, const Reply &reply);
     void actionTrigger(const Arguments &arguments, const Reply &reply);
     void canvasCapture(const Arguments &arguments, const Reply &reply);
+    void queryPixels(const Arguments &arguments, const Reply &reply);
 
-    /// Calls @p done(true) once @p condition holds, or done(false) after @p timeoutMs.
-    /// With @p stablePolls > 1 the condition must hold on that many consecutive
-    /// polls, 20 ms apart, so events queued in between are processed too.
-    void pollUntil(std::function<bool()> condition,
-                   int timeoutMs,
-                   std::function<void(bool, qint64)> done,
-                   int stablePolls = 1);
+    /// Options shared by the input tools.
+    struct StrokeOptions {
+        TestControlInputInjector::Device device = TestControlInputInjector::Device::Mouse;
+        Qt::MouseButton button = Qt::LeftButton;
+        Qt::KeyboardModifiers modifiers;
+        bool imageCoordinates = true;
+        bool realtime = true;
+    };
+    /// A point as given by a tool call, before conversion to widget pixels.
+    struct SourcePoint {
+        QPointF position;
+        qreal pressure = 1.0;
+        qreal xTilt = 0.0;
+        qreal yTilt = 0.0;
+        qint64 timeMs = 0;
+    };
+
+    static bool parseStrokeOptions(const Arguments &arguments, StrokeOptions *options, QString *error);
+    /// Converts the points to the canvas widget and plays them; with
+    /// modifiers, gives the canvas keyboard focus first.
+    void playPoints(const QVector<SourcePoint> &points, const StrokeOptions &options, const Reply &reply);
 
     TestControlInputInjector *m_injector;
 };

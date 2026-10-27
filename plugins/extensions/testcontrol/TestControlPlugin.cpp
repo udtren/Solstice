@@ -12,8 +12,10 @@
 #include <kpluginfactory.h>
 
 #include "TestControlCanvasTools.h"
+#include "TestControlDocumentTools.h"
 #include "TestControlHttpServer.h"
 #include "TestControlMcpServer.h"
+#include "TestControlPaths.h"
 
 K_PLUGIN_FACTORY_WITH_JSON(TestControlPluginFactory, "kritatestcontrol.json", registerPlugin<TestControlPlugin>();)
 
@@ -54,6 +56,16 @@ TestControlPlugin::TestControlPlugin(QObject *parent, const QVariantList &)
     m_tools = new TestControlCanvasTools(this);
     m_tools->registerTools(m_mcp);
 
+    // Optional: the directory the document tools may read and write.
+    const QString rootValue = qEnvironmentVariable("SOLSTICE_TEST_CONTROL_ROOT");
+    const QString testRoot = TestControlPaths::testRoot(rootValue);
+    if (!rootValue.isEmpty() && testRoot.isEmpty()) {
+        warnPlugins << "Test control: SOLSTICE_TEST_CONTROL_ROOT must be an existing absolute directory; "
+                       "document_open and document_export_png are unavailable";
+    }
+    m_documentTools = new TestControlDocumentTools(testRoot, this);
+    m_documentTools->registerTools(m_mcp);
+
     TestControlMcpServer *mcp = m_mcp;
     m_http = new TestControlHttpServer(
         token,
@@ -70,6 +82,9 @@ TestControlPlugin::TestControlPlugin(QObject *parent, const QVariantList &)
 
     connect(qApp, &QCoreApplication::aboutToQuit, m_http, &TestControlHttpServer::close);
     infoPlugins << qPrintable(QStringLiteral("Test control: MCP endpoint at http://127.0.0.1:%1/mcp").arg(port));
+    if (!testRoot.isEmpty()) {
+        infoPlugins << qPrintable(QStringLiteral("Test control: test root %1").arg(testRoot));
+    }
 }
 
 TestControlPlugin::~TestControlPlugin() = default;

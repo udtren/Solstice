@@ -10,12 +10,15 @@
 #include <QCryptographicHash>
 #include <QElapsedTimer>
 
+#include <QColor>
 #include <QImage>
 #include <QJsonArray>
 #include <QPixmap>
+#include <QPointer>
 #include <QSysInfo>
 #include <QTimer>
 #include <memory>
+#include <utility>
 
 #include <KisDocument.h>
 #include <KisMainWindow.h>
@@ -41,13 +44,16 @@
 #include <kundo2stack.h>
 
 #include "TestControlInputInjector.h"
+#include "TestControlSupport.h"
+
+using namespace TestControlSupport;
 
 namespace
 {
 constexpr int MaxStrokePoints = 10000;
 constexpr int DefaultPointSpacingMs = 10;
 constexpr qint64 MaxStrokeDurationMs = 120000;
-constexpr qint64 MaxHashedBytes = qint64(512) * 1024 * 1024;
+constexpr qint64 MaxQueriedPixels = qint64(4096) * 4096;
 // wait_idle polls every 20 ms. Three idle polls let work queued to the GUI
 // thread run. A vector (shape) selection renders its pixels from timers the
 // image does not report as busy (KisSelectionUpdateCompressor, 100 ms, then
@@ -59,93 +65,6 @@ constexpr qint64 MaxHashedBytes = qint64(512) * 1024 * 1024;
 // such gap each, so the wait adds twice the longest gap seen.
 constexpr int IdlePolls = 3;
 constexpr qint64 ShapeSelectionSettleMs = 600;
-
-KisMainWindow *currentWindow()
-{
-    return KisPart::instance()->currentMainwindow();
-}
-
-KisViewManager *currentViewManager()
-{
-    KisMainWindow *window = currentWindow();
-    return window ? window->viewManager() : nullptr;
-}
-
-QJsonObject rectToJson(const QRect &rect)
-{
-    return {{"x", rect.x()}, {"y", rect.y()}, {"width", rect.width()}, {"height", rect.height()}};
-}
-
-QString sha256(const QByteArray &bytes)
-{
-    return QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex());
-}
-
-/// Reads @p rect of @p device; returns false if the rect is too large to hash.
-bool readDevice(KisPaintDeviceSP device, const QRect &rect, QByteArray *bytes)
-{
-    const qint64 size = qint64(rect.width()) * rect.height() * device->pixelSize();
-    if (size > MaxHashedBytes) {
-        return false;
-    }
-    bytes->resize(int(size));
-    device->readBytes(reinterpret_cast<quint8 *>(bytes->data()), rect);
-    return true;
-}
-
-QJsonValue documentInfo(KisViewManager *viewManager)
-{
-    KisImageSP image;
-    if (viewManager) {
-        image = viewManager->image();
-    }
-    if (!image) {
-        return QJsonValue::Null;
-    }
-    const KoColorSpace *colorSpace = image->colorSpace();
-    return QJsonObject{
-        {"width", image->width()},
-        {"height", image->height()},
-        {"colorModel", colorSpace->colorModelId().id()},
-        {"colorDepth", colorSpace->colorDepthId().id()},
-        {"profile", colorSpace->profile() ? colorSpace->profile()->name() : QString()},
-    };
-}
-
-QJsonValue canvasInfo(KisViewManager *viewManager)
-{
-    KisCanvas2 *canvas = viewManager ? viewManager->canvasBase() : nullptr;
-    QWidget *widget = canvas ? canvas->canvasWidget() : nullptr;
-    if (!widget) {
-        return QJsonValue::Null;
-    }
-    return QJsonObject{
-        {"widgetClass", QString::fromLatin1(widget->metaObject()->className())},
-        {"width", widget->width()},
-        {"height", widget->height()},
-        {"hasFocus", widget->hasFocus()},
-        {"windowActive", widget->isActiveWindow()},
-    };
-}
-
-QJsonObject objectSchema(const QJsonObject &properties, const QStringList &required = QStringList())
-{
-    QJsonObject schema{{"type", "object"}, {"properties", properties}, {"additionalProperties", false}};
-    if (!required.isEmpty()) {
-        schema.insert("required", QJsonArray::fromStringList(required));
-    }
-    return schema;
-}
-
-QJsonObject schemaProperty(const QString &type, const QString &description)
-{
-    return {{"type", type}, {"description", description}};
-}
-
-QJsonObject enumProperty(const QStringList &values, const QString &description)
-{
-    return {{"type", "string"}, {"enum", QJsonArray::fromStringList(values)}, {"description", description}};
-}
 
 QJsonObject environmentInfo()
 {
@@ -202,6 +121,14 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                     objectSchema({{"id", schemaProperty("string", "Tool factory ID.")}}, {"id"}),
                     std::bind(&TestControlCanvasTools::toolActivate, this, _1, _2));
 
+    const QJsonObject modifiersSchema{
+        {"type", "array"},
+        {"items", enumProperty({"shift", "ctrl", "alt", "meta"}, "Modifier key.")},
+        {"description",
+         "Modifier keys held during the input, sent as key events; the canvas gets keyboard focus first "
+         "(the window is activated), and the call fails if it cannot."},
+    };
+
     const QJsonObject pointSchema = objectSchema(
         {
             {"x", schemaProperty("number", "X coordinate.")},
@@ -232,9 +159,49 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                  schemaProperty("boolean",
                                 "Send each point at its time offset (default true); false sends them back "
                                 "to back.")},
+                {"modifiers", modifiersSchema},
             },
             {"points"}),
         std::bind(&TestControlCanvasTools::inputStroke, this, _1, _2));
+
+    const QJsonObject positionSchema = objectSchema(
+        {{"x", schemaProperty("number", "X coordinate.")}, {"y", schemaProperty("number", "Y coordinate.")}},
+        {"x", "y"});
+
+    server->addTool("input_click",
+                    "Press and release at one point, through the same path as input_stroke. Call wait_idle afterwards.",
+                    objectSchema(
+                        {
+                            {"x", schemaProperty("number", "X coordinate.")},
+                            {"y", schemaProperty("number", "Y coordinate.")},
+                            {"device", enumProperty({"mouse", "tablet"}, "Input device (default mouse).")},
+                            {"coordinates", enumProperty({"image", "widget"}, "Coordinate space (default image).")},
+                            {"button", enumProperty({"left", "right", "middle"}, "Button (default left).")},
+                            {"pressure", schemaProperty("number", "Pressure 0-1 (tablet only, default 1).")},
+                            {"modifiers", modifiersSchema},
+                        },
+                        {"x", "y"}),
+                    std::bind(&TestControlCanvasTools::inputClick, this, _1, _2));
+
+    server->addTool(
+        "input_drag",
+        "Drag in a straight line from one point to another in equal steps, through the same path as "
+        "input_stroke. Call wait_idle afterwards.",
+        objectSchema(
+            {
+                {"from", positionSchema},
+                {"to", positionSchema},
+                {"steps", schemaProperty("integer", "Moves after the press (default 20).")},
+                {"durationMs", schemaProperty("number", "Duration of the drag (default 200, max 120000).")},
+                {"device", enumProperty({"mouse", "tablet"}, "Input device (default mouse).")},
+                {"coordinates", enumProperty({"image", "widget"}, "Coordinate space (default image).")},
+                {"button", enumProperty({"left", "right", "middle"}, "Button (default left).")},
+                {"pressure", schemaProperty("number", "Constant pressure 0-1 (tablet only, default 1).")},
+                {"realtime", schemaProperty("boolean", "Send each point at its time offset (default true).")},
+                {"modifiers", modifiersSchema},
+            },
+            {"from", "to"}),
+        std::bind(&TestControlCanvasTools::inputDrag, this, _1, _2));
 
     server->addTool("wait_idle",
                     "Wait until the image has no queued or running strokes and stays idle for three polls "
@@ -256,6 +223,23 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                     "Trigger a main window action by name, e.g. edit_undo, edit_redo, deselect, select_all.",
                     objectSchema({{"name", schemaProperty("string", "Action name.")}}, {"name"}),
                     std::bind(&TestControlCanvasTools::actionTrigger, this, _1, _2));
+
+    server->addTool(
+        "query_pixels",
+        "Hash and measure a rectangle of the active layer or of the image projection, in image pixels: "
+        "SHA-256 of the device's pixels, non-transparent and opaque pixel counts, mean alpha and the mean "
+        "color of the non-transparent pixels (8-bit sRGB), optionally a small PNG. Fails while the image is "
+        "busy.",
+        objectSchema({
+            {"x", schemaProperty("integer", "Left edge (default 0).")},
+            {"y", schemaProperty("integer", "Top edge (default 0).")},
+            {"width", schemaProperty("integer", "Width (default image width).")},
+            {"height", schemaProperty("integer", "Height (default image height).")},
+            {"source", enumProperty({"layer", "projection"}, "Active layer or the whole image (default layer).")},
+            {"includePng", schemaProperty("boolean", "Attach a PNG of the rectangle (default false).")},
+            {"maxPngSize", schemaProperty("integer", "Longest side of that PNG (default 256, max 1024).")},
+        }),
+        std::bind(&TestControlCanvasTools::queryPixels, this, _1, _2));
 
     server->addTool("canvas_capture",
                     "Return a PNG image of the canvas widget as displayed (diagnostic; not a pixel reference).",
@@ -335,7 +319,8 @@ void TestControlCanvasTools::documentNew(const Arguments &arguments, const Reply
     QPointer<KisDocument> guard(document);
     KisPart::instance()->startCustomDocument(document);
 
-    pollUntil(
+    TestControlSupport::pollUntil(
+        this,
         [guard]() {
             KisViewManager *viewManager = currentViewManager();
             return guard && viewManager && viewManager->document() == guard.data() && viewManager->canvasBase();
@@ -372,7 +357,8 @@ void TestControlCanvasTools::toolActivate(const Arguments &arguments, const Repl
 
     KoToolManager::instance()->switchToolRequested(id);
 
-    pollUntil(
+    TestControlSupport::pollUntil(
+        this,
         [id]() {
             return KoToolManager::instance()->activeToolId() == id;
         },
@@ -388,13 +374,64 @@ void TestControlCanvasTools::toolActivate(const Arguments &arguments, const Repl
         });
 }
 
+bool TestControlCanvasTools::parseStrokeOptions(const Arguments &arguments, StrokeOptions *options, QString *error)
+{
+    const QString deviceName = arguments.value("device").toString("mouse");
+    const QString coordinates = arguments.value("coordinates").toString("image");
+    const QString buttonName = arguments.value("button").toString("left");
+    options->realtime = arguments.value("realtime").toBool(true);
+
+    if (deviceName == QLatin1String("mouse")) {
+        options->device = TestControlInputInjector::Device::Mouse;
+    } else if (deviceName == QLatin1String("tablet")) {
+        options->device = TestControlInputInjector::Device::Tablet;
+    } else {
+        *error = "Unknown device: " + deviceName;
+        return false;
+    }
+
+    if (coordinates != QLatin1String("image") && coordinates != QLatin1String("widget")) {
+        *error = "Unknown coordinates: " + coordinates;
+        return false;
+    }
+    options->imageCoordinates = coordinates == QLatin1String("image");
+
+    if (buttonName == QLatin1String("left")) {
+        options->button = Qt::LeftButton;
+    } else if (buttonName == QLatin1String("right")) {
+        options->button = Qt::RightButton;
+    } else if (buttonName == QLatin1String("middle")) {
+        options->button = Qt::MiddleButton;
+    } else {
+        *error = "Unknown button: " + buttonName;
+        return false;
+    }
+
+    options->modifiers = Qt::NoModifier;
+    for (const QJsonValue &value : arguments.value("modifiers").toArray()) {
+        const QString name = value.toString();
+        if (name == QLatin1String("shift")) {
+            options->modifiers |= Qt::ShiftModifier;
+        } else if (name == QLatin1String("ctrl")) {
+            options->modifiers |= Qt::ControlModifier;
+        } else if (name == QLatin1String("alt")) {
+            options->modifiers |= Qt::AltModifier;
+        } else if (name == QLatin1String("meta")) {
+            options->modifiers |= Qt::MetaModifier;
+        } else {
+            *error = "Unknown modifier: " + name;
+            return false;
+        }
+    }
+    return true;
+}
+
 void TestControlCanvasTools::inputStroke(const Arguments &arguments, const Reply &reply)
 {
-    KisViewManager *viewManager = currentViewManager();
-    KisCanvas2 *canvas = viewManager ? viewManager->canvasBase() : nullptr;
-    QWidget *widget = canvas ? canvas->canvasWidget() : nullptr;
-    if (!widget) {
-        reply(TestControlMcpServer::ToolResult::failure("No canvas; create or open a document first"));
+    StrokeOptions options;
+    QString error;
+    if (!parseStrokeOptions(arguments, &options, &error)) {
+        reply(TestControlMcpServer::ToolResult::failure(error));
         return;
     }
 
@@ -405,40 +442,12 @@ void TestControlCanvasTools::inputStroke(const Arguments &arguments, const Reply
         return;
     }
 
-    const QString deviceName = arguments.value("device").toString("mouse");
-    const QString coordinates = arguments.value("coordinates").toString("image");
-    const QString buttonName = arguments.value("button").toString("left");
-    const bool realtime = arguments.value("realtime").toBool(true);
-
-    if (deviceName != QLatin1String("mouse") && deviceName != QLatin1String("tablet")) {
-        reply(TestControlMcpServer::ToolResult::failure("Unknown device: " + deviceName));
-        return;
-    }
-    if (coordinates != QLatin1String("image") && coordinates != QLatin1String("widget")) {
-        reply(TestControlMcpServer::ToolResult::failure("Unknown coordinates: " + coordinates));
-        return;
-    }
-
-    Qt::MouseButton button = Qt::LeftButton;
-    if (buttonName == QLatin1String("right")) {
-        button = Qt::RightButton;
-    } else if (buttonName == QLatin1String("middle")) {
-        button = Qt::MiddleButton;
-    } else if (buttonName != QLatin1String("left")) {
-        reply(TestControlMcpServer::ToolResult::failure("Unknown button: " + buttonName));
-        return;
-    }
-
     bool anyTime = false;
     for (const QJsonValue &value : jsonPoints) {
         anyTime |= value.toObject().contains("t");
     }
 
-    const KisCoordinatesConverter *converter = canvas->coordinatesConverter();
-    const QRectF widgetRect(widget->rect());
-    QVector<TestControlInputInjector::Point> points;
-    int outside = 0;
-
+    QVector<SourcePoint> points;
     for (int i = 0; i < jsonPoints.size(); ++i) {
         const QJsonObject object = jsonPoints[i].toObject();
         if (!object.value("x").isDouble() || !object.value("y").isDouble()) {
@@ -450,14 +459,103 @@ void TestControlCanvasTools::inputStroke(const Arguments &arguments, const Reply
                 QStringLiteral("Point %1 has no t; give t for every point or for none").arg(i)));
             return;
         }
-
-        const QPointF source(object.value("x").toDouble(), object.value("y").toDouble());
-        TestControlInputInjector::Point point;
-        point.position = coordinates == QLatin1String("image") ? converter->imageToWidget(source) : source;
-        point.pressure = qBound(0.0, object.value("pressure").toDouble(1.0), 1.0);
-        point.xTilt = qBound(-60.0, object.value("xTilt").toDouble(0.0), 60.0);
-        point.yTilt = qBound(-60.0, object.value("yTilt").toDouble(0.0), 60.0);
+        SourcePoint point;
+        point.position = QPointF(object.value("x").toDouble(), object.value("y").toDouble());
+        point.pressure = object.value("pressure").toDouble(1.0);
+        point.xTilt = object.value("xTilt").toDouble(0.0);
+        point.yTilt = object.value("yTilt").toDouble(0.0);
         point.timeMs = anyTime ? qint64(object.value("t").toDouble()) : qint64(i) * DefaultPointSpacingMs;
+        points.append(point);
+    }
+
+    playPoints(points, options, reply);
+}
+
+void TestControlCanvasTools::inputClick(const Arguments &arguments, const Reply &reply)
+{
+    StrokeOptions options;
+    QString error;
+    if (!parseStrokeOptions(arguments, &options, &error)) {
+        reply(TestControlMcpServer::ToolResult::failure(error));
+        return;
+    }
+    if (!arguments.value("x").isDouble() || !arguments.value("y").isDouble()) {
+        reply(TestControlMcpServer::ToolResult::failure("input_click needs numeric x and y"));
+        return;
+    }
+    SourcePoint point;
+    point.position = QPointF(arguments.value("x").toDouble(), arguments.value("y").toDouble());
+    point.pressure = arguments.value("pressure").toDouble(1.0);
+    playPoints({point}, options, reply);
+}
+
+void TestControlCanvasTools::inputDrag(const Arguments &arguments, const Reply &reply)
+{
+    StrokeOptions options;
+    QString error;
+    if (!parseStrokeOptions(arguments, &options, &error)) {
+        reply(TestControlMcpServer::ToolResult::failure(error));
+        return;
+    }
+    const QJsonObject from = arguments.value("from").toObject();
+    const QJsonObject to = arguments.value("to").toObject();
+    if (!from.value("x").isDouble() || !from.value("y").isDouble() || !to.value("x").isDouble()
+        || !to.value("y").isDouble()) {
+        reply(TestControlMcpServer::ToolResult::failure("input_drag needs from and to with numeric x and y"));
+        return;
+    }
+    const int steps = arguments.value("steps").toInt(20);
+    const qint64 durationMs = qint64(arguments.value("durationMs").toDouble(200));
+    if (steps < 1 || steps >= MaxStrokePoints) {
+        reply(TestControlMcpServer::ToolResult::failure(
+            QStringLiteral("steps must be between 1 and %1").arg(MaxStrokePoints - 1)));
+        return;
+    }
+    if (durationMs < 0 || durationMs > MaxStrokeDurationMs) {
+        reply(TestControlMcpServer::ToolResult::failure(
+            QStringLiteral("durationMs must be between 0 and %1").arg(MaxStrokeDurationMs)));
+        return;
+    }
+
+    const QPointF start(from.value("x").toDouble(), from.value("y").toDouble());
+    const QPointF end(to.value("x").toDouble(), to.value("y").toDouble());
+    const qreal pressure = arguments.value("pressure").toDouble(1.0);
+    QVector<SourcePoint> points;
+    for (int i = 0; i <= steps; ++i) {
+        const qreal f = qreal(i) / steps;
+        SourcePoint point;
+        point.position = start + (end - start) * f;
+        point.pressure = pressure;
+        point.timeMs = qint64(durationMs * f);
+        points.append(point);
+    }
+    playPoints(points, options, reply);
+}
+
+void TestControlCanvasTools::playPoints(const QVector<SourcePoint> &sourcePoints,
+                                        const StrokeOptions &options,
+                                        const Reply &reply)
+{
+    KisViewManager *viewManager = currentViewManager();
+    KisCanvas2 *canvas = viewManager ? viewManager->canvasBase() : nullptr;
+    QWidget *widget = canvas ? canvas->canvasWidget() : nullptr;
+    if (!widget) {
+        reply(TestControlMcpServer::ToolResult::failure("No canvas; create or open a document first"));
+        return;
+    }
+
+    const KisCoordinatesConverter *converter = canvas->coordinatesConverter();
+    const QRectF widgetRect(widget->rect());
+    QVector<TestControlInputInjector::Point> points;
+    int outside = 0;
+    for (int i = 0; i < sourcePoints.size(); ++i) {
+        const SourcePoint &source = sourcePoints[i];
+        TestControlInputInjector::Point point;
+        point.position = options.imageCoordinates ? converter->imageToWidget(source.position) : source.position;
+        point.pressure = qBound(0.0, source.pressure, 1.0);
+        point.xTilt = qBound(-60.0, source.xTilt, 60.0);
+        point.yTilt = qBound(-60.0, source.yTilt, 60.0);
+        point.timeMs = source.timeMs;
         if (point.timeMs < 0 || point.timeMs > MaxStrokeDurationMs) {
             reply(TestControlMcpServer::ToolResult::failure(
                 QStringLiteral("Point %1: t must be between 0 and %2 ms").arg(i).arg(MaxStrokeDurationMs)));
@@ -469,30 +567,179 @@ void TestControlCanvasTools::inputStroke(const Arguments &arguments, const Reply
         points.append(point);
     }
 
-    const TestControlInputInjector::Device device = deviceName == QLatin1String("tablet")
-        ? TestControlInputInjector::Device::Tablet
-        : TestControlInputInjector::Device::Mouse;
+    QStringList modifierNames;
+    for (const auto &entry : {std::make_pair(Qt::ShiftModifier, "shift"),
+                              std::make_pair(Qt::ControlModifier, "ctrl"),
+                              std::make_pair(Qt::AltModifier, "alt"),
+                              std::make_pair(Qt::MetaModifier, "meta")}) {
+        if (options.modifiers.testFlag(entry.first)) {
+            modifierNames << QString::fromLatin1(entry.second);
+        }
+    }
 
-    m_injector->playStroke(widget,
-                           device,
-                           button,
-                           points,
-                           realtime,
-                           [reply, outside](const TestControlInputInjector::Report &report) {
-                               const QJsonObject details{
-                                   {"eventsSent", report.eventsSent},
-                                   {"pressAccepted", report.pressAccepted},
-                                   {"releaseAccepted", report.releaseAccepted},
-                                   {"durationMs", report.durationMs},
-                                   {"pointsOutsideCanvas", outside},
-                                   {"activeTool", KoToolManager::instance()->activeToolId()},
-                               };
-                               if (!report.error.isEmpty()) {
-                                   reply(TestControlMcpServer::ToolResult::failure(report.error, details));
-                               } else {
-                                   reply(TestControlMcpServer::ToolResult::success(details));
-                               }
-                           });
+    QPointer<QWidget> target(widget);
+    auto play = [this, target, options, points, outside, modifierNames, reply]() {
+        if (!target) {
+            reply(TestControlMcpServer::ToolResult::failure("The canvas closed before the stroke"));
+            return;
+        }
+        m_injector->playStroke(target,
+                               options.device,
+                               options.button,
+                               options.modifiers,
+                               points,
+                               options.realtime,
+                               [reply, outside, modifierNames](const TestControlInputInjector::Report &report) {
+                                   const QJsonObject details{
+                                       {"eventsSent", report.eventsSent},
+                                       {"pressAccepted", report.pressAccepted},
+                                       {"releaseAccepted", report.releaseAccepted},
+                                       {"durationMs", report.durationMs},
+                                       {"pointsOutsideCanvas", outside},
+                                       {"modifiers", QJsonArray::fromStringList(modifierNames)},
+                                       {"activeTool", KoToolManager::instance()->activeToolId()},
+                                   };
+                                   if (!report.error.isEmpty()) {
+                                       reply(TestControlMcpServer::ToolResult::failure(report.error, details));
+                                   } else {
+                                       reply(TestControlMcpServer::ToolResult::success(details));
+                                   }
+                               });
+    };
+
+    if (options.modifiers == Qt::NoModifier) {
+        play();
+        return;
+    }
+
+    // KisInputManager keeps synthetic modifiers only while the canvas has
+    // keyboard focus; without it, it reads the real keyboard instead.
+    widget->window()->activateWindow();
+    widget->setFocus(Qt::OtherFocusReason);
+    pollUntil(
+        this,
+        [target]() {
+            return target && target->hasFocus();
+        },
+        2000,
+        [play, reply, viewManager](bool focused, qint64) {
+            if (!focused) {
+                reply(TestControlMcpServer::ToolResult::failure(
+                    "Modifiers need keyboard focus on the canvas, and the window could not be activated",
+                    {{"canvas", canvasInfo(viewManager)}}));
+                return;
+            }
+            play();
+        });
+}
+
+void TestControlCanvasTools::queryPixels(const Arguments &arguments, const Reply &reply)
+{
+    KisViewManager *viewManager = currentViewManager();
+    KisImageSP image;
+    if (viewManager) {
+        image = viewManager->image();
+    }
+    if (!image) {
+        reply(TestControlMcpServer::ToolResult::failure("No image; create or open a document first"));
+        return;
+    }
+
+    const QRect rect(arguments.value("x").toInt(0),
+                     arguments.value("y").toInt(0),
+                     arguments.value("width").toInt(image->width()),
+                     arguments.value("height").toInt(image->height()));
+    if (rect.isEmpty() || qint64(rect.width()) * rect.height() > MaxQueriedPixels) {
+        reply(TestControlMcpServer::ToolResult::failure(
+            QStringLiteral("The rectangle must be non-empty and at most %1 pixels").arg(MaxQueriedPixels)));
+        return;
+    }
+    const QString source = arguments.value("source").toString("layer");
+    if (source != QLatin1String("layer") && source != QLatin1String("projection")) {
+        reply(TestControlMcpServer::ToolResult::failure("Unknown source: " + source));
+        return;
+    }
+
+    if (!image->tryBarrierLock(true)) {
+        reply(TestControlMcpServer::ToolResult::failure("The image is busy; call wait_idle first"));
+        return;
+    }
+
+    KisPaintDeviceSP device;
+    if (source == QLatin1String("projection")) {
+        device = image->projection();
+    } else if (KisNodeSP node = viewManager->activeNode()) {
+        device = node->paintDevice();
+    }
+    if (!device) {
+        image->unlock();
+        reply(TestControlMcpServer::ToolResult::failure("The active node has no pixels"));
+        return;
+    }
+
+    QByteArray bytes;
+    readDevice(device, rect, &bytes);
+    const QImage pixels = device->convertToQImage(nullptr, rect.x(), rect.y(), rect.width(), rect.height());
+    image->unlock();
+
+    // Counts and the average are taken from 8-bit sRGB; the hash is of the
+    // device's own pixels.
+    qint64 opaque = 0;
+    qint64 visible = 0;
+    double red = 0.0;
+    double green = 0.0;
+    double blue = 0.0;
+    double alpha = 0.0;
+    const QImage argb = pixels.convertToFormat(QImage::Format_ARGB32);
+    for (int y = 0; y < argb.height(); ++y) {
+        const QRgb *line = reinterpret_cast<const QRgb *>(argb.constScanLine(y));
+        for (int x = 0; x < argb.width(); ++x) {
+            const QRgb pixel = line[x];
+            alpha += qAlpha(pixel);
+            if (qAlpha(pixel) == 0) {
+                continue;
+            }
+            visible++;
+            opaque += qAlpha(pixel) == 255;
+            red += qRed(pixel);
+            green += qGreen(pixel);
+            blue += qBlue(pixel);
+        }
+    }
+    const qint64 total = qint64(rect.width()) * rect.height();
+    QJsonObject result{
+        {"rect", rectToJson(rect)},
+        {"source", source},
+        {"colorSpace", device->colorSpace()->id()},
+        {"sha256", sha256(bytes)},
+        {"nonTransparentPixels", visible},
+        {"opaquePixels", opaque},
+        {"meanAlpha", alpha / total},
+    };
+    if (visible > 0) {
+        result.insert("meanColor",
+                      QColor(qRound(red / visible), qRound(green / visible), qRound(blue / visible)).name());
+    }
+
+    TestControlMcpServer::ToolResult toolResult = TestControlMcpServer::ToolResult::success(result);
+    if (arguments.value("includePng").toBool(false)) {
+        const int maxSize = qBound(16, arguments.value("maxPngSize").toInt(256), 1024);
+        QImage scaled = argb;
+        if (scaled.width() > maxSize || scaled.height() > maxSize) {
+            scaled = scaled.scaled(maxSize, maxSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
+        QByteArray png;
+        QBuffer buffer(&png);
+        buffer.open(QIODevice::WriteOnly);
+        if (scaled.save(&buffer, "PNG")) {
+            toolResult.extraContent.append(QJsonObject{
+                {"type", "image"},
+                {"data", QString::fromLatin1(png.toBase64())},
+                {"mimeType", "image/png"},
+            });
+        }
+    }
+    reply(toolResult);
 }
 
 void TestControlCanvasTools::waitIdle(const Arguments &arguments, const Reply &reply)
@@ -517,7 +764,8 @@ void TestControlCanvasTools::waitIdle(const Arguments &arguments, const Reply &r
     };
     auto state = std::make_shared<IdleState>();
     state->clock.start();
-    pollUntil(
+    TestControlSupport::pollUntil(
+        this,
         [image, state]() mutable {
             const qint64 now = state->clock.elapsed();
             if (state->lastPollMs >= 0) {
@@ -701,35 +949,4 @@ void TestControlCanvasTools::canvasCapture(const Arguments &arguments, const Rep
         {"mimeType", "image/png"},
     });
     reply(result);
-}
-
-void TestControlCanvasTools::pollUntil(std::function<bool()> condition,
-                                       int timeoutMs,
-                                       std::function<void(bool, qint64)> done,
-                                       int stablePolls)
-{
-    QElapsedTimer clock;
-    clock.start();
-    int satisfiedPolls = condition() ? 1 : 0;
-    if (satisfiedPolls >= stablePolls) {
-        done(true, 0);
-        return;
-    }
-
-    QTimer *timer = new QTimer(this);
-    timer->setInterval(20);
-    connect(timer,
-            &QTimer::timeout,
-            this,
-            [timer, clock, condition, timeoutMs, done, stablePolls, satisfiedPolls]() mutable {
-                satisfiedPolls = condition() ? satisfiedPolls + 1 : 0;
-                const bool satisfied = satisfiedPolls >= stablePolls;
-                if (!satisfied && clock.elapsed() < timeoutMs) {
-                    return;
-                }
-                timer->stop();
-                timer->deleteLater();
-                done(satisfied, clock.elapsed());
-            });
-    timer->start();
 }

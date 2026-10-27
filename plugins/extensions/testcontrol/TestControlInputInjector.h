@@ -30,6 +30,10 @@ class QPointingDevice;
  * pointer reaches the canvas: KisShortcutMatcher suppresses all actions
  * after a Leave, which the canvas gets when another window covers the
  * pointer.
+ * With modifiers, ShortcutOverride and KeyPress events for Ctrl, Shift, Alt
+ * and Meta follow the Enter, every pointer event carries the modifiers, and
+ * KeyRelease events end the stroke. KisInputManager keeps such modifiers only
+ * while the canvas has keyboard focus; otherwise it reads the real keyboard.
  * Mouse: press, moves, release.
  * Tablet: TabletEnterProximity (to the application), one hover TabletMove at
  * the first point, TabletPress after HoverSettleMs, a system-synthesized
@@ -92,6 +96,7 @@ public:
     void playStroke(QWidget *target,
                     Device device,
                     Qt::MouseButton button,
+                    Qt::KeyboardModifiers modifiers,
                     const QVector<Point> &points,
                     bool realtime,
                     Done done);
@@ -104,6 +109,8 @@ private:
         bool synthesizedMouse = false;
         /// Tablet move without buttons or pressure, before the press.
         bool hover = false;
+        /// The modifier key of a key event step.
+        Qt::Key key = Qt::Key(0);
     };
 
     /// Time offset of @p step: tablet steps after the hover move are
@@ -120,6 +127,9 @@ private:
     QPointer<QWidget> m_target;
     Device m_device = Device::Mouse;
     Qt::MouseButton m_button = Qt::LeftButton;
+    Qt::KeyboardModifiers m_modifiers;
+    /// Modifiers whose KeyPress has been sent and KeyRelease not yet.
+    Qt::KeyboardModifiers m_heldModifiers;
     QVector<Point> m_points;
     QVector<Step> m_steps;
     int m_nextStep = 0;
