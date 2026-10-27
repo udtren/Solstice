@@ -30,7 +30,7 @@ Verification (2026-10-26, cloud session, no Krita build available):
 - Windows (2026-10-26, clang, Qt 6.8): built in `_build` with the full
   tree; both tests pass through `ctest` after two test-only fixes (a
   `quint64` timestamp narrowed to 32-bit `ulong`, and a read loop that
-  starved the same-thread server). Not installed, not run in Solstice.
+  starved the same-thread server).
 - Linux (2026-10-26, Ubuntu 26.04, GCC 15, Qt 6.10, Xvfb without a window
   manager, `xcb`): full build and install; both tests pass through `ctest`.
   The [manual checks](#manual-regression-checklist) were run against a
@@ -38,8 +38,13 @@ Verification (2026-10-26, cloud session, no Krita build available):
   Three input defects they found are fixed (spontaneous events, the hover
   move before a pen press, `wait_idle` settling). Step 10 stays a known
   limitation.
-- Windows: no interactive run yet; repeat the manual checks there,
-  especially 6, 8 and 10.
+- Windows (2026-10-27, Windows 11 25H2, Qt 6.8, `_install`, scratch
+  `SOLSTICE_PROFILE_ROOT`, branch `claude/test-control-linux`): both tests
+  pass through `ctest`; the manual checks were run against a running
+  Solstice through the MCP endpoint; results are recorded there. They found
+  that `wait_idle` returned before a vector selection had its pixels;
+  fixed (600 ms settle while the current selection is a vector selection).
+  Step 10 works on Windows.
 
 ## Source locations
 
@@ -99,7 +104,7 @@ tested in the cloud session.
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi) |
 | `tool_activate` | `id` (factory ID) | Active tool ID; an unknown ID lists all IDs |
 | `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime` | Events sent, press/release accepted flags, duration, points outside the canvas widget, active tool |
-| `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, waited time (at least 40 ms) |
+| `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, or on 31 polls (600 ms) while the current selection has a shape selection; waited time (at least 40 ms, or 600 ms) |
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
@@ -230,11 +235,44 @@ A read right after `wait_idle` once returned an empty selection after "Select
 Rectangle" (1 in 25 runs) when `wait_idle` returned on its first check; with
 the three-poll settle it did not recur in 75 runs.
 
+Results, Windows (2026-10-27, Windows 11 25H2, Qt 6.8, scratch
+`SOLSTICE_PROFILE_ROOT` under `%LOCALAPPDATA%\Temp`, Japanese UI, Solstice
+started from `_install`, MCP calls from a Python client):
+
+| Step | Result |
+| --- | --- |
+| 1 | Pass: no log line; nothing listens on 8765 (`netstat -ano`). |
+| 2 | Pass: "must have at least 16 characters; not started"; nothing listens; the token is not in the log. |
+| 3 | Pass: endpoint logged, listens on `127.0.0.1` only; eight tools listed; `"document": null`. |
+| 4 | Pass: 800x600 RGBA; canvas `KisOpenGLCanvas2` 1370x1260. |
+| 5 | Pass: undo 1 "Freehand Brush Stroke", bounds (80,80) 340x240, press accepted. |
+| 6 | Pass: the first pen stroke on the canvas paints along the whole line, width and opacity growing with pressure. `pressAccepted`/`releaseAccepted` are `true` on Windows. |
+| 7 | Pass: undo 3, bounds extended by the mouse line. |
+| 8 | Pass after the `wait_idle` fix: "Select Rectangle", bounds (100,100) 200x100, 20000 pixels. Before it, the check passed only with a pause before the read; back-to-back calls read an active, empty selection or a busy image (see below). |
+| 9 | Pass: `deselect` adds "Deselect" and clears it; `edit_undo` restores the 200x100 selection. |
+| 10 | Pass, unlike Linux: with another window in the foreground (`windowActive` and `hasFocus` false), mouse and pen strokes paint (undo, bounds and hash change). |
+| 11 | Pass: closing the window 1.5 s into a 4 s real-time stroke with an unsaved change shows the save prompt while the stroke goes on (all 81 events sent); "No" exits with 0. With no unsaved change, Solstice exits 0.4 s after the close request (exit 0); the HTTP call gets no response (the connection closes) instead of the "target widget was destroyed" error seen on Linux. No crash either way. |
+| 12 | Pass: 401 without or with a wrong token, 403 for a foreign Origin or Host, 405 for GET, 200 for a valid ping. |
+
+The selection tools default to vector selections, whose pixels Krita renders
+from timers that `KisImage::isIdle()` does not report
+([pitfall](wiki/pitfalls/synthetic-canvas-input.md)). With the three-poll
+settle, a read right after `wait_idle` was correct in 1 of 25 back-to-back
+selections (2 of 15 in a second series); the selection was always right
+0.5 s later. With the 600 ms settle: 75 of 75 correct, no busy reads;
+`wait_idle` then takes 0.6-1.1 s while such a selection exists and still
+about 40 ms without one.
+
 ## Known limitations and pending work
 
-- Strokes do not paint while another application holds focus (step 10,
-  Linux/X11; unverified on Windows). Not investigated further: real input
-  would activate the window first.
+- Strokes do not paint while another application holds focus on
+  Linux/X11 (step 10); on Windows they do. Not investigated further: real
+  input would activate the window first.
+- An active selection limits where strokes paint. A scenario that selects
+  and then paints elsewhere must `deselect` first; otherwise the stroke adds
+  an undo step and changes no pixels.
+- `wait_idle` waits 600 ms of idle polls whenever the current selection is
+  a vector selection, also for strokes that do not touch it.
 - `pressAccepted`/`releaseAccepted` report Qt's accepted flag. On Linux
   without Krita's Qt enter/leave patch, the input manager clears it for every
   tablet press, move and release so that Qt synthesizes mouse events, so

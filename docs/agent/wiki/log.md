@@ -1913,3 +1913,22 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md)
   (spontaneous releases and `sendEvent()`, stylus device switch, settling
   idle, platform-dependent accepted flags).
+
+## 2026-10-27 fix: test control phase 0 checks on Windows
+
+- Ran the twelve phase 0 manual checks against a running Solstice on
+  Windows 11 (Qt 6.8, `_install`, scratch profile) through the MCP endpoint;
+  results recorded in [Test control](../test-control.md). All pass; step 10
+  (strokes while another window has focus) works on Windows, unlike Linux.
+- Fixed `wait_idle`: the selection tools default to vector selections, whose
+  pixels Krita renders from update compressors that `KisImage::isIdle()` does
+  not report. A read right after the three-poll settle was empty or busy in
+  most back-to-back runs (1 of 25 correct). `wait_idle` now needs 600 ms of
+  idle polls while the current selection has a shape selection: 75 of 75
+  correct. The first guess (the projection compressor alone, 400 ms) left a
+  late job at about 430 ms that made 1 of 50 reads busy.
+- A scratch profile root on Windows needs the `ready` marker in
+  `config/SOLSTICE_PROFILE` (and `klanguageoverridesrc`) when a Krita
+  profile exists, or the first start stops at the native import question.
+- Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md)
+  ("A vector selection renders its pixels later").

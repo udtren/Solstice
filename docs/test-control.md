@@ -14,7 +14,7 @@ computer and only with a password (token) you choose.
 > **Status: early test version.** The first set of tools is in place for
 > trying out the approach. It does not yet support modifier keys, opening or
 > exporting files, or choosing brush presets. It has been checked in a
-> running Solstice on Linux; Windows has not been checked yet.
+> running Solstice on Linux and on Windows.
 
 ## Starting Solstice with test control
 
@@ -86,8 +86,13 @@ many undo steps there are."
   they can change the result.
 - Modifier keys (Ctrl, Shift, Alt) are not supported yet.
 - Strokes go to the active document's canvas only.
-- While another application has the keyboard focus, strokes do not paint
-  (seen on Linux). Keep Solstice in front during a test.
+- On Linux, strokes do not paint while another application has the
+  keyboard focus; on Windows they do. Keep Solstice in front during a test.
+- A selection limits where strokes paint. Clear it (the `deselect` action)
+  before painting outside it.
+- While a selection made with the selection tools exists, waiting takes
+  about half a second longer: Solstice finishes drawing the selection after
+  the stroke itself.
 - Judge a stroke by the undo history and the layer it changed. The
   "accepted" values in a stroke's result do not show success: on Linux they
   are always false for pen strokes.

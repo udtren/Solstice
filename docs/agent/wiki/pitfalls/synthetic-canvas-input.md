@@ -1,6 +1,6 @@
 ---
 type: pitfall
-updated: 2026-10-26
+updated: 2026-10-27
 sources:
   - libs/ui/input/kis_input_manager.cpp (KisInputManager::eventFilter, eventFilterImpl, TabletPress/TabletRelease cases)
   - libs/ui/input/kis_input_manager_p.cpp (EventEater::eventFilter, ProximityNotifier::eventFilter, CanvasSwitcher::addCanvas, allowMouseEvents, fixShortcutMatcherModifiersState)
@@ -9,6 +9,9 @@ sources:
   - libs/flake/KoToolProxy.cpp (tabletEvent), libs/flake/KoToolManager.cpp (Private::switchInputDevice)
   - QtTest/qtestmouse.h, QtTest/qtestspontaneevent.h (Qt 6.10)
   - Linux run of the phase 0 checks, 2026-10-26
+  - Windows run of the phase 0 checks, 2026-10-27
+  - libs/image/kis_selection.cc, KisSelectionUpdateCompressor.cpp, kis_selection_mask.cpp (update compressors)
+  - libs/ui/tool/kis_selection_tool_config_widget_helper.cpp (default selection mode)
   - plugins/extensions/testcontrol/TestControlInputInjector.cpp
   - docs/agent/test-control.md
 related:
@@ -20,7 +23,8 @@ related:
 
 Found by reading the input manager while writing the
 [test control](../../test-control.md) input injector (2026-10-26), and by
-running its phase 0 checks on Linux the same day (the last three sections).
+running its phase 0 checks on Linux the same day and on Windows on
+2026-10-27 (the last four sections).
 
 ## Only the current receiver is filtered
 
@@ -88,8 +92,22 @@ pressure) and wait longer than the move compression (`tabletEventsDelay`,
 ## Idle once is not settled
 
 `KisImage::isIdle()` can be true while follow-up work is still queued to the
-GUI thread. After a rectangle selection on a document without a global
-selection, a read right after the first idle check found "Select Rectangle"
-on the undo stack but an empty selection in about 1 of 25 runs. Require
-idle on several polls with event-loop passes in between (test control:
-three polls 20 ms apart; no failure in 75 runs).
+GUI thread. Require idle on several polls with event-loop passes in between
+(test control: three polls 20 ms apart).
+
+## A vector selection renders its pixels later
+
+The selection tools default to vector mode (`SHAPE_PROTECTION` in
+`KisSelectionToolConfigWidgetHelper`). A vector selection's pixels are not
+written by the tool's stroke: `KisSelection` renders its shape selection
+into the pixel selection from `KisSelectionUpdateCompressor` (100 ms,
+postponed by every change), and the selection mask's own update compressor
+follows. Neither timer makes `KisImage::isIdle()` false. After a rectangle
+selection, "Select Rectangle" is on the undo stack at once, but the selection
+reads as active and empty (0x0 bounds) for 70-220 ms; a short job runs at
+about 60-100 ms and another about 430 ms after the stroke, and a read during
+either finds the image busy. Three polls 20 ms apart missed it in about 1 of
+25 runs on Linux and in 13 of 15 on Windows. Test control's `wait_idle`
+therefore needs 600 ms of idle polls while the current selection
+`hasShapeSelection()` (75 of 75 reads correct on Windows), and keeps three
+polls otherwise.
