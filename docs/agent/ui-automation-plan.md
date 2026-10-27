@@ -5,9 +5,9 @@ its twelve manual checks were run against a live Solstice on Windows and on
 Linux; the results, the input fixes they led to and the remaining limits are
 in [Test control](test-control.md), which owns the current protocol,
 lifecycle and verification status. The user authorized phase 1 on
-2026-10-27 ([decisions](#user-decisions-2026-10-26)); it is in progress on
-branch `claude/test-control-phase1`. Phases 2-5 remain proposals that need
-the user's go-ahead.
+2026-10-27 ([decisions](#user-decisions-2026-10-26)); it is implemented on
+branch `claude/test-control-phase1` and checked on Linux, with the Windows
+check pending. Phases 2-5 remain proposals that need the user's go-ahead.
 
 ## Goal
 
@@ -159,14 +159,16 @@ same day.
 
 ### Phase 1: minimum protocol
 
-Authorized 2026-10-27; in progress on `claude/test-control-phase1`.
+Authorized 2026-10-27; implemented on `claude/test-control-phase1` the same
+day and checked on Linux (tools live, the three scenarios four times each,
+phase 0 checks unchanged); Windows pending.
 
 - The planned additions for documents, view reset, brush presets and
   modifiers; document paths restricted to a test root.
 - Three scenarios: brush stroke then undo; rectangular selection then fill
   inside it; eraser stroke over a painted area.
 
-Planned scope (2026-10-27; details and verification will be in [Test control](test-control.md)):
+Scope as implemented (details, scenario format and verification in [Test control](test-control.md)):
 
 | Tool | Purpose |
 | --- | --- |

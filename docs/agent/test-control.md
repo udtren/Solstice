@@ -10,9 +10,12 @@ idle, and read state and pixel hashes. The user guide is
 [Test control](../test-control.md); the plan, user decisions and later phases
 are in [UI test automation plan](ui-automation-plan.md).
 
-Scope is phase 0 of the plan (feasibility): eight tools, one document at a
-time in the current window, RGBA documents only, no modifiers, no file
-commands.
+Scope: phase 0 of the plan (feasibility, done 2026-10-27) and phase 1
+(minimum protocol, in progress on `claude/test-control-phase1`): sixteen
+tools, documents in the current window, RGBA documents created by
+`document_new` or opened from the test root, modifier keys with canvas
+focus, and [scenario files](#scenarios-format-version-1) replayed through
+the tools. No scenario runner yet (phase 2).
 
 Verification (2026-10-26, cloud session, no Krita build available):
 
@@ -53,6 +56,16 @@ Verification (2026-10-26, cloud session, no Krita build available):
   when a window covered the pointer, not focus; strokes now begin with an
   `Enter`. Step 10 passes on Linux; the rest of the checklist passes again.
   Windows has not been re-run with this change.
+- Phase 1 (2026-10-27, Linux, same setup, branch `claude/test-control-phase1`):
+  `TestControlPathsTest` (7 cases) and the injector test with the new
+  modifier case (8 cases) pass through `ctest`. Live, through the endpoint:
+  the new tools behave as described below, including rejected paths
+  (`..`, absolute, wrong extension, missing directory, a test root that does
+  not exist); a Shift drag with the rectangle selection tool adds to the
+  selection (union bounds 400x300); the [three scenarios](#scenarios-format-version-1)
+  pass in four runs each, and a copy with two wrong expectations fails on
+  exactly those steps. The phase 0 checklist still passes. Windows not yet
+  checked.
 
 ## Source locations
 
@@ -61,15 +74,19 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Plugin entry, environment gate | `plugins/extensions/testcontrol/TestControlPlugin.{h,cpp}`, `kritatestcontrol.json` |
 | HTTP endpoint (QtNetwork only) | `TestControlHttpServer.{h,cpp}` |
 | JSON-RPC/MCP handling, call queue (QtCore only) | `TestControlMcpServer.{h,cpp}` |
-| Synthetic pointer strokes (QtWidgets only) | `TestControlInputInjector.{h,cpp}` |
-| Tools acting on Solstice | `TestControlCanvasTools.{h,cpp}` |
-| Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp` |
+| Synthetic pointer strokes and modifier keys (QtWidgets only) | `TestControlInputInjector.{h,cpp}` |
+| Canvas tools: session, documents from scratch, tools, input, waits, queries | `TestControlCanvasTools.{h,cpp}` |
+| Document tools: open, export, close, view reset, brush | `TestControlDocumentTools.{h,cpp}` |
+| Helpers shared by the tool classes, `pollUntil` | `TestControlSupport.{h,cpp}` |
+| Test root path checks (QtCore only) | `TestControlPaths.{h,cpp}` |
+| Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp` |
+| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`; `libs/ui/tests/scenarios/rect-select-fill.json` |
 | Hook in an upstream file | `plugins/extensions/CMakeLists.txt` (`add_subdirectory(testcontrol)` only when `BUILD_WITH_QT6`) |
 
 ## Build, test, and install
 
 ```bat
-cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritatestcontrol TestControlProtocolTest TestControlInputInjectorTest -j 2"
+cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake --build <krita-dev-root>\_build --target kritatestcontrol TestControlProtocolTest TestControlInputInjectorTest TestControlPathsTest -j 2"
 cmd.exe /d /s /c "call <krita-dev-root>\env.bat && ctest --test-dir <krita-dev-root>\_build -R TestControl --output-on-failure"
 cmd.exe /d /s /c "call <krita-dev-root>\env.bat && cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\extensions\testcontrol\cmake_install.cmake"
 ```
@@ -85,6 +102,7 @@ tested in the cloud session.
 | --- | --- |
 | `SOLSTICE_TEST_CONTROL_PORT` | Port 1024-65535. Unset: the plugin does nothing. |
 | `SOLSTICE_TEST_CONTROL_TOKEN` | Required bearer token, at least 16 characters; otherwise a warning is logged and nothing listens. Never logged. |
+| `SOLSTICE_TEST_CONTROL_ROOT` | Optional. An existing absolute directory, the only place `document_open` and `document_export_png` read and write. Logged at start. Unset: those two tools fail; set but not an existing directory: a warning, and they fail. |
 
 - Endpoint: `http://127.0.0.1:<port>/mcp`, MCP Streamable HTTP, JSON
   responses only (no SSE stream; `GET` returns 405). Protocol versions
@@ -104,18 +122,26 @@ tested in the cloud session.
   keyed by the profile root, so the second launch hands its arguments to the
   running instance and exits (operational rule, user decision 2026-10-26).
 
-### Tools (phase 0)
+### Tools (phases 0 and 1)
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
 | `session_info` | none | Solstice/Krita/Qt versions, platform, window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables |
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi) |
 | `tool_activate` | `id` (factory ID) | Active tool ID; an unknown ID lists all IDs |
-| `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime` | Events sent, press/release accepted flags, duration, points outside the canvas widget, active tool |
+| `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, points outside the canvas widget, modifiers, active tool |
+| `input_click` | `x`, `y`, `device`, `coordinates`, `button`, `pressure`, `modifiers` | As `input_stroke`; one press and release |
+| `input_drag` | `from`, `to` (`x`, `y`), `steps` (default 20), `durationMs` (default 200), `device`, `coordinates`, `button`, `pressure`, `realtime`, `modifiers` | As `input_stroke`; a straight line in equal steps |
 | `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, and, while the current selection has a shape selection, for 600 ms plus twice the longest poll gap, measured with a clock; waited time (at least 40 ms, or about 640 ms), longest gap between polls (`maxPollGapMs`) |
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
+| `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG |
+| `document_open` | `path` (relative to the test root) | Opens without dialogs (`KisMainWindow::BatchMode`); document and canvas once its view is active |
+| `document_export_png` | `path` (relative, `.png`) | Exports the active document's image without dialogs, replacing a file; size in bytes |
+| `document_close` | `all` | Closes the active document or every document without asking; documents closed and left |
+| `view_reset` | `width`, `height` (window, default 1280x900) | Normal window of that size, zoom 100 %, no rotation or mirroring, image centered; zoom, rotation, image rectangle in the canvas |
+| `brush_set` | `preset` (name), `size` (1-1000), `opacity` (0-1), `eraser`, `color` (`#RRGGBB`) | Current preset, size, opacity, eraser mode and foreground color; an unknown preset lists up to 200 names |
 
 Tool failures are MCP tool results with `isError: true` and an `error`
 field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
@@ -170,6 +196,25 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   would lose its press. Leaving proximity re-enables mouse events
   (`allowMouseEvents()`). Events carry timestamps on a monotonic clock; in
   real-time mode each point is sent at its `t` offset.
+- **Modifiers.** With `modifiers`, the canvas tools activate the window,
+  give the canvas widget keyboard focus and wait up to 2 s for it, then the
+  injector sends `ShortcutOverride` and `KeyPress` for Ctrl, Shift, Alt and
+  Meta after the `Enter`, sets the modifiers on every pointer event and ends
+  with `KeyRelease`s. A modifier key's own event carries the state before it,
+  as from the platform (`QKeyEvent::modifiers()` toggles that key's flag).
+  Without focus, `KisInputManager` reads the real keyboard instead
+  (`fixShortcutMatcherModifiersState()`), so the call fails if the canvas
+  cannot get focus.
+- **Documents.** `document_close` follows libkis `Document::close()`: clear
+  the modified flag, `closePath(false)`, close and delete the document's
+  views, then `KisPart::removeDocument()`. `document_open` uses
+  `KisMainWindow::openDocument()` with `BatchMode`, and the document keeps
+  batch mode. `document_export_png` switches the document to batch mode
+  around `exportDocumentSync()` and restores it.
+- **Test root.** `TestControlPaths` accepts only relative paths and resolves
+  `..` and symbolic links (`QFileInfo::canonicalFilePath()`); the result must
+  stay inside the canonical root (case-insensitive on Windows). An export
+  target's directory must exist.
 - **Coordinates.** Image coordinates are converted with
   `KisCoordinatesConverter::imageToWidget()` of the current canvas; points
   outside the widget are still sent and counted.
@@ -350,6 +395,47 @@ and holding focus, mouse and pen strokes paint in full (5 of 5 rounds), and
 the whole checklist passes again on Linux, including step 11 with a save
 prompt during the stroke (202 events sent, "No" exits 0).
 
+## Scenarios (format version 1)
+
+A scenario is a JSON file next to the covered feature's tests (user
+decision): the steps are tool calls, each with optional expectations and
+saved values. Until the phase 2 runner exists, an LLM or a person replays it
+through the endpoint.
+
+```json
+{
+  "format": "solstice-test-control-scenario",
+  "version": 1,
+  "name": "brush-stroke-undo",
+  "description": "What the scenario shows.",
+  "covers": "What it exercises.",
+  "steps": [
+    {"call": "query_pixels", "save": {"emptyLayer": "sha256"}},
+    {"call": "input_stroke", "args": {"points": [{"x": 100, "y": 150}]}},
+    {"call": "wait_idle"},
+    {"call": "query_state", "expect": {"undo.count": 1, "undo.lastCommand": "Freehand Brush Stroke"}},
+    {"call": "query_pixels", "expect": {"sha256": {"notEquals": "$emptyLayer"}, "nonTransparentPixels": {"min": 10000}}}
+  ]
+}
+```
+
+- `call` and `args`: a tool and its arguments. A step fails if the tool
+  returns an error.
+- `expect`: dotted paths into the tool's structured result. A plain value
+  must be equal; an object with `equals`, `notEquals`, `min` and/or `max`
+  compares accordingly. A string starting with `$` names a saved value.
+- `save`: stores result values under names for later steps.
+- Prefer state (undo, bounds, counts) and values saved earlier in the same run
+  (a hash before and after) over absolute hashes, which can differ between
+  platforms and builds. Every step that changes the image is followed by
+  `wait_idle`; scenarios end with `document_close`.
+
+| Scenario | Shows |
+| --- | --- |
+| `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json` | A Basic-5 mouse stroke paints black pixels within the expected bounds; undo restores the empty layer's hash; redo restores the painted hash |
+| `libs/ui/tests/scenarios/rect-select-fill.json` | A mouse-drawn 200x100 selection (vector) is exact; Fill with Foreground Color fills exactly those 20000 pixels red; deselect |
+| `plugins/paintops/defaultpaintops/brush/tests/scenarios/eraser-stroke.json` | On a layer filled blue, a 40 px eraser-mode stroke leaves no pixel under its center line and none touched far from it; undo restores the filled hash |
+
 ## Known limitations and pending work
 
 - An active selection limits where strokes paint. A scenario that selects
@@ -361,9 +447,10 @@ prompt during the stroke (202 events sent, "No" exits 0).
   (marching ants), also in background tabs, which slows the GUI thread as
   documents accumulate, and with software OpenGL a lot. `wait_idle` now
   measures its settle time with a clock (about 1.2 s with 40 such documents
-  instead of over 10 s), but every call still slows down. There is no tool to
-  close documents yet (phase 1); long scenarios should reuse a document. The
-  core cause is in `KisSelectionDecoration`, not in test control.
+  instead of over 10 s), but every call still slows down. Close documents a
+  scenario no longer needs (`document_close`). The core cause is in
+  `KisSelectionDecoration`; a fix is on branch
+  `claude/selection-ants-covered-views`.
 - `pressAccepted`/`releaseAccepted` report Qt's accepted flag. On Linux
   without Krita's Qt enter/leave patch, the input manager clears it for every
   tablet press, move and release so that Qt synthesizes mouse events, so
@@ -377,12 +464,12 @@ prompt during the stroke (202 events sent, "No" exits 0).
 
 Findings from reading the input code (2026-10-26), to confirm in phase 0:
 
-- Modifiers are not supported. `KisInputManager::eventFilterImpl()` resyncs
-  the shortcut matcher from `QApplication::queryKeyboardModifiers()` (the
-  real keyboard) whenever the canvas widget lacks focus or an event's
-  modifiers disagree with the matcher. Synthetic Ctrl/Shift/Alt therefore
-  need key events and canvas focus; see the
-  [pitfall](wiki/pitfalls/synthetic-canvas-input.md).
+- Modifiers: `KisInputManager::eventFilterImpl()` resyncs the shortcut
+  matcher from the real keyboard whenever the canvas widget lacks focus or an
+  event's modifiers disagree with the matcher. Phase 1 therefore sends key
+  events and takes canvas focus, which activates the Solstice window (on
+  Windows the system may refuse to bring it to the front; the call then
+  fails). See the [pitfall](wiki/pitfalls/synthetic-canvas-input.md).
 - Events are sent to the current view's canvas widget. The input manager
   only processes events for its current `eventsReceiver` (set when a canvas
   is added or focused); with several views open, the target may differ.
@@ -390,6 +477,5 @@ Findings from reading the input code (2026-10-26), to confirm in phase 0:
   canvas can interfere with a running test.
 - Real tablet drivers, pressure curves as felt, latency and visual judgement
   remain manual (plan, [What stays manual](ui-automation-plan.md#what-stays-manual)).
-- Not implemented: modifier keys, document open/export/close, view reset,
-  brush preset and size selection, scenario files and runner, tolerance
-  comparison. These are phases 1-3 of the plan.
+- Not implemented: the scenario runner and tolerance comparison (phase 2),
+  `query_layers`, `log_drain` and `ui_click` (phases 2-3).

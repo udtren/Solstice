@@ -58,6 +58,16 @@ synthetic Ctrl-click without focus therefore runs as a plain click, and a key
 the tester holds changes a synthetic stroke. Synthetic modifiers need key
 press/release events through the matcher while the canvas has focus.
 
+Two details found when implementing them (2026-10-27): send
+`ShortcutOverride` and then `KeyPress` for each modifier, as Qt does (Krita
+handles keys in `ShortcutOverride`), and build a modifier key's own event
+with the state *before* it. `QKeyEvent::modifiers()` toggles the flag of the
+key itself, because platforms report the earlier state, so a Ctrl `KeyPress`
+built with `ControlModifier` reads as no modifier. Taking focus needs
+`activateWindow()` plus `setFocus()`, then a wait until `hasFocus()`: on
+Linux/X11 without a window manager it works at once; on Windows the system
+may refuse to bring another application's window forward.
+
 ## Accepted flags differ by event type and platform
 
 For mouse presses the input manager sets the event's accepted flag to the

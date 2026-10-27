@@ -1974,3 +1974,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Phase 0 recorded as done in the [UI test automation plan](../ui-automation-plan.md)
   (checks pass on Windows and Linux); the user authorized phase 1, whose
   planned scope is listed there.
+
+## 2026-10-27 feature: test control phase 1
+
+- Added eight tools: `document_open` and `document_export_png` (confined to
+  `SOLSTICE_TEST_CONTROL_ROOT`), `document_close`, `view_reset`,
+  `brush_set`, `input_click`, `input_drag`, `query_pixels`; and `modifiers`
+  on the input tools (key events plus canvas focus). Shared helpers moved to
+  `TestControlSupport`, path checks to `TestControlPaths` (unit tested).
+- Defined scenario format version 1 and added three scenarios next to the
+  covered features' tests (brush stroke and undo, rectangular selection and
+  fill, eraser stroke); they pass on Linux in four runs each, and a copy with
+  wrong expectations fails where expected. Recorded in
+  [Test control](../test-control.md); plan status in the
+  [UI test automation plan](../ui-automation-plan.md). Windows not checked.
+- Lesson: modifier key events carry the state before the key
+  ([synthetic canvas input](pitfalls/synthetic-canvas-input.md)).
