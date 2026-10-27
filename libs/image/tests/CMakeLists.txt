@@ -89,6 +89,7 @@ kis_add_tests(
     kis_fill_interval_map_test.cpp
     kis_scanline_fill_test.cpp
     KisDustDetectorTest.cpp
+    KisClippingTest.cpp
     kis_psd_layer_style_test.cpp
     kis_layer_style_projection_plane_test.cpp
     kis_lod_capable_layer_offset_test.cpp

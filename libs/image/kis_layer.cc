@@ -16,6 +16,8 @@
 #include <QReadWriteLock>
 #include <QReadLocker>
 #include <QWriteLocker>
+#include <QMutex>
+#include <QMutexLocker>
 
 #include <KoIcon.h>
 #include <kis_icon.h>
@@ -47,6 +49,8 @@
 #include "kis_layer_utils.h"
 #include "kis_projection_leaf.h"
 #include "KisSafeNodeProjectionStore.h"
+#include "KisClipStackLayer.h"
+#include "kis_default_bounds.h"
 
 
 class KisCloneLayersList {
@@ -175,6 +179,11 @@ struct Q_DECL_HIDDEN KisLayer::Private
     KisSafeNodeProjectionStoreSP safeProjection;
 
     KisLayerMasksCache masksCache;
+
+    // Solstice: Clipping Mask
+    bool clipped{false};
+    QMutex clipStackLock;
+    KisClipStackLayerSP clipStack;
 };
 
 
@@ -197,6 +206,7 @@ KisLayer::KisLayer(const KisLayer& rhs)
     if (this != &rhs) {
         m_d->metaDataStore = new KisMetaData::Store(*rhs.m_d->metaDataStore);
         m_d->channelFlags = rhs.m_d->channelFlags;
+        m_d->clipped = rhs.m_d->clipped;
 
         setName(rhs.name());
         m_d->projectionPlane = toQShared(new KisLayerProjectionPlane(this));
@@ -331,6 +341,46 @@ void KisLayer::disableAlphaChannel(bool disable)
     setChannelFlags(newChannelFlags);
 }
 
+bool KisLayer::isClipped() const
+{
+    return m_d->clipped;
+}
+
+void KisLayer::setClipped(bool value)
+{
+    if (m_d->clipped == value) {
+        return;
+    }
+
+    m_d->clipped = value;
+
+    baseNodeChangedCallback();
+    baseNodeInvalidateAllFramesCallback();
+}
+
+KisLayerSP KisLayer::clipStackLayer() const
+{
+    QMutexLocker l(&m_d->clipStackLock);
+
+    if (!m_d->clipStack) {
+        m_d->clipStack = new KisClipStackLayer(const_cast<KisLayer *>(this));
+    }
+
+    return m_d->clipStack.data();
+}
+
+KisPaintDeviceList KisLayer::getLodCapableDevices() const
+{
+    KisPaintDeviceList list = KisNode::getLodCapableDevices();
+
+    QMutexLocker l(&m_d->clipStackLock);
+    if (m_d->clipStack) {
+        list << m_d->clipStack->getLodCapableDevices();
+    }
+
+    return list;
+}
+
 bool KisLayer::alphaChannelDisabled() const
 {
     KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(colorSpace(), false);
@@ -383,6 +433,15 @@ void KisLayer::setImage(KisImageWSP image)
         projection->setDefaultBounds(new KisDefaultBounds(image));
     }
     m_d->safeProjection->setImage(image);
+
+    {
+        QMutexLocker l(&m_d->clipStackLock);
+        if (m_d->clipStack) {
+            m_d->clipStack->setImage(image);
+            m_d->clipStack->original()->setDefaultBounds(new KisDefaultBounds(image));
+            m_d->clipStack->syncColorSpace();
+        }
+    }
 
     KisNode::setImage(image);
 }

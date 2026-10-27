@@ -44,6 +44,8 @@ public:
     bool dependsOnLowerNodes() const;
     bool visible() const;
     quint8 opacity() const;
+    /// Solstice: the blend mode used to composite this leaf onto its parent
+    QString compositeOpId() const;
     QBitArray channelFlags() const;
     bool isStillInGraph() const;
     bool hasClones() const;

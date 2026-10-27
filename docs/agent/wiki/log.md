@@ -1897,3 +1897,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   or run in Solstice; verification status in [Test control](../test-control.md).
 - Lessons: [build pitfalls](pitfalls/build-format-test.md), "Tests"
   (same-thread server, 32-bit `ulong`).
+
+## 2026-10-27 ingest: Clipping Mask spike
+
+- Investigation of the forum requests for Clipping Mask and for duplicating
+  a selection on the same layer; the user chose option A for both. Plans:
+  [Clipping Mask](../clipping-mask-plan.md),
+  [duplicate selection](../duplicate-selection-in-layer-plan.md).
+- Clipping spike in `libs/image`: a `KisClipStackLayer` outside the node
+  graph replaces a clip base and its run in the projection leaf tree, so
+  the walkers and `KisAsyncMerger` composite it like a group. Pixel-identical
+  to an inherit-alpha group in `KisClippingTest`; GPU, LoD and UI unverified.
+- Lesson: a projection leaf may belong to a node that is not in the graph,
+  but `isRoot()` must then not rely on `node->parent()`, and overrides
+  queried from the stack must read the base node, not the base leaf.

@@ -132,7 +132,8 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
     }
 
     KisGpuBlendOp op;
-    if (!KisGpuProjectionCompositor::blendOpForCompositeOp(layer->compositeOpId(), &op)) {
+    // the leaf's blend mode differs from the layer's inside a clip stack
+    if (!KisGpuProjectionCompositor::blendOpForCompositeOp(leaf->compositeOpId(), &op)) {
         return false;
     }
 
