@@ -51,6 +51,7 @@ private Q_SLOTS:
     void testRotationTransformsPixels();
     void testCancelledContinuedTransformRedraws();
     void testSelectionMoveWithInstantPreview();
+    void testSelectionDuplicateWithInstantPreview();
 };
 
 namespace
@@ -307,6 +308,52 @@ void KisBrushStrokeLayerTransformTest::testSelectionMoveWithInstantPreview()
     QCOMPARE(layer->strokes().size(), 1);
     QCOMPARE(layer->strokes().first()->jobs.first().pi1.pos(), firstPoint + offset);
     QString difference;
+    QVERIFY2(KisBrushStrokeLayer::strokesMatchPixels(layer->strokes(), layer->paintDevice(), &difference),
+             qPrintable(difference));
+}
+
+/// The same for a duplicate (Ctrl-drag): the full stroke adds one moved
+/// copy of the recorded stroke and keeps the original; undo removes it
+void KisBrushStrokeLayerTransformTest::testSelectionDuplicateWithInstantPreview()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    const QRect bounds(0, 0, 400, 200);
+    KisSurrogateUndoStore *undoStore = new KisSurrogateUndoStore();
+    KisImageSP image = new KisImage(undoStore, bounds.width(), bounds.height(), cs, "lod duplicate");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    paintStroke(image, layer, loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp")));
+    const KisRecordedBrushStrokeSP original = layer->strokes().first();
+    const QPointF firstPoint = original->jobs.first().pi1.pos();
+
+    image->setLodPreferences(KisLodPreferences(2));
+    image->waitForDone();
+    {
+        KisSelectionSP selection = new KisSelection();
+        selection->pixelSelection()->select(QRect(0, 0, 200, 200), OPACITY_OPAQUE_U8);
+        KisSetGlobalSelectionCommand command(image, selection);
+        command.redo();
+    }
+
+    const QPoint offset(160, 40);
+    MoveSelectionStrokeStrategy *strategy =
+        new MoveSelectionStrokeStrategy(layer, image->globalSelection(), image.data(), image.data(), true);
+    KisStrokeId id = image->startStroke(strategy);
+    image->addJob(id, new MoveStrokeStrategy::Data(offset));
+    image->endStroke(id);
+    image->waitForDone();
+
+    QCOMPARE(layer->strokes().size(), 2);
+    QCOMPARE(layer->strokes().first(), original);
+    QCOMPARE(layer->strokes().last()->jobs.first().pi1.pos(), firstPoint + offset);
+    QString difference;
+    QVERIFY2(KisBrushStrokeLayer::strokesMatchPixels(layer->strokes(), layer->paintDevice(), &difference),
+             qPrintable(difference));
+
+    undoStore->undo();
+    image->waitForDone();
+    QCOMPARE(layer->strokes().size(), 1);
+    QCOMPARE(layer->strokes().first(), original);
     QVERIFY2(KisBrushStrokeLayer::strokesMatchPixels(layer->strokes(), layer->paintDevice(), &difference),
              qPrintable(difference));
 }

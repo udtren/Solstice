@@ -48,6 +48,8 @@ Access items with icons.
 
 - [Puppet Warp](puppet-warp.md): posing and reshaping artwork with pins in
   the Transform Tool.
+- [Move Tool](move-tool.md): duplicating a selection on the same layer with
+  Ctrl-drag.
 - [Remove Dust](remove-dust.md): removing or selecting small specks and
   filling small holes, with a tool or a filter. Added in 0.5.0.
 - [Vision ML](vision-ml.md): AI-assisted selection, Smart Fill and

@@ -1,7 +1,8 @@
 ---
 type: pitfall
-updated: 2026-10-26
+updated: 2026-10-27
 sources:
+  - docs/agent/duplicate-selection-in-layer.md (2026-10-27, out-of-tree build of libkritaimage, libkritaui, libkritalibkra and the Move Tool while another session rebuilt _build)
   - "docs/agent/quick-access.md (\"Icon item span regression checks\", 2026-10-24)"
   - docs/agent/coding-rules.md ("Formatting and diffs")
   - docs/agent/development-workflow.md (build, test, install)
@@ -39,6 +40,33 @@ wrong anyway.
   deletes after linking. Rebuild them from the target's `build` statement in
   `build.ninja` (inputs, `LINK_PATH`, `LINK_LIBRARIES`). Install by copying
   the DLL into `_install\lib\kritaplugins` and comparing SHA-256 hashes.
+- **A shared-library change can be built the same way, but `_build` is a
+  moving target** (duplicate selection, 2026-10-27). While this worktree
+  built `libkritaui`, another session working in the main checkout rebuilt
+  `libkritaimage`/`libkritaui` there and installed them into `_install`
+  too, so neither tree matched `main` any more; a first link silently mixed
+  in its objects, and the test then failed to start with
+  `STATUS_ENTRYPOINT_NOT_FOUND` (0xC0000139) on symbols only that branch
+  exports. Decide per link input from `ninja -t deps`: reuse an object only
+  when no dependency is newer than it and no source/header dependency
+  differs between the main checkout and the worktree; compile every other
+  one from the worktree. `build.ninja` follows the main checkout's CMake
+  files, so drop objects (and `mocs_compilation.cpp` includes) of sources
+  the worktree does not have, regenerate the mocs of changed headers from
+  `AutogenInfo.json`'s options, and rebuild a static library when a member
+  is not reusable. Then put the rebuilt DLLs next to the test executables
+  (searched before `PATH`) and compare every `libkrita*` import with the
+  exports of the DLL that will load (`llvm-objdump -p`). Do not judge
+  `_install` current from its timestamps alone.
+- **Launching the commands.** Run compile and link commands with
+  `CreateProcess` (Python `subprocess.run(cmd)` without `shell=True`): a
+  kritaui compile line exceeds `cmd.exe`'s 8191-character limit ("The
+  command line is too long"). `call env.bat && ...` can stop after the
+  script with "The system cannot find the path specified" (a non-zero exit
+  status); chain with `&` instead. A test run outside `_buildin` also
+  needs `_buildin` and the toolchain's `libc++.dll` on `PATH`
+  (0xC0000135, `STATUS_DLL_NOT_FOUND`, otherwise). Redirecting the test's
+  output through `cmd.exe` left the log empty; `-o <file>,txt` writes it.
 
 ## Formatting
 

@@ -67,6 +67,7 @@ private Q_SLOTS:
     void testStrokeStartRecorded();
     void testAbrTipSaved();
     void testSelectionMoveMovesStrokes();
+    void testSelectionDuplicateCopiesStrokes();
     void testRecordCheckFindsOtherEdits();
     void testTextureFollowsMovedStrokes();
     void testScaleKeepsDeletedEdges();
@@ -822,6 +823,68 @@ void KisBrushStrokeLayerTest::testSelectionMoveMovesStrokes()
          before[1]},
         layer->paintDevice(),
         &difference));
+
+    command->undo();
+    QCOMPARE(layer->strokes(), before);
+}
+
+/// Duplicating a selection with the Move Tool (Ctrl-drag) keeps the strokes
+/// inside it and adds copies, moved and pasted over everything; a stroke
+/// the selection cuts leaves the record unchanged
+void KisBrushStrokeLayerTest::testSelectionDuplicateCopiesStrokes()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->colorSpace("RGBA", "F32", QString());
+    const QRect bounds(0, 0, 420, 140);
+    KisImageSP image = new KisImage(new KisSurrogateUndoStore(), bounds.width(), bounds.height(), cs, "duplicate");
+    KisBrushStrokeLayerSP layer = new KisBrushStrokeLayer(image, "strokes", OPACITY_OPAQUE_U8, cs);
+    image->addNode(layer, image->root());
+    KisPaintOpPresetSP preset = loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp"));
+    paintStroke(image, layer, preset, KoColor(Qt::black, cs));
+    paintStroke(image, layer, preset, KoColor(Qt::red, cs), nullptr, QPointF(210, 0));
+    const QVector<KisRecordedBrushStrokeSP> before = layer->strokes();
+    QCOMPARE(before.size(), 2);
+
+    // a selection that cuts the black stroke
+    {
+        KisSelectionSP cutting = new KisSelection();
+        cutting->pixelSelection()->select(QRect(0, 0, 90, 140));
+        KisPaintDeviceSP mask = new KisPaintDevice(*cutting->projection());
+        QVERIFY(!layer->createSelectionDuplicateCommand(mask, QPoint(5, 5)));
+    }
+
+    // a copy of the black stroke, over the red one: it comes last
+    KisSelectionSP selection = new KisSelection();
+    selection->pixelSelection()->select(QRect(0, 0, 205, 140));
+    KisPaintDeviceSP mask = new KisPaintDevice(*selection->projection());
+    QVERIFY(!layer->createSelectionDuplicateCommand(mask, QPoint()));
+    const QPoint offset(200, 6);
+    {
+        // what MoveSelectionStrokeStrategy does in duplicate mode
+        KisPaintDeviceSP device = layer->paintDevice();
+        const QRect rect = selection->selectedRect();
+        KisPaintDeviceSP copy = new KisPaintDevice(cs);
+        KisPainter gc(copy);
+        gc.setSelection(selection);
+        gc.bitBlt(rect.topLeft(), device, rect);
+        gc.end();
+        copy->moveTo(copy->offset() + offset);
+        const QRect copyRect = copy->exactBounds();
+        KisPainter paste(device);
+        paste.bitBlt(copyRect.topLeft(), copy, copyRect);
+        paste.end();
+    }
+    QScopedPointer<KUndo2Command> command(layer->createSelectionDuplicateCommand(mask, offset));
+    QVERIFY(command);
+    command->redo();
+    const QVector<KisRecordedBrushStrokeSP> after = layer->strokes();
+    QCOMPARE(after.size(), 3);
+    QCOMPARE(after[0], before[0]);
+    QCOMPARE(after[1], before[1]);
+    QCOMPARE(after[2]->jobs.first().pi1.pos(), before[0]->jobs.first().pi1.pos() + offset);
+    QString difference;
+    QVERIFY2(KisBrushStrokeLayer::strokesMatchPixels(after, layer->paintDevice(), &difference), qPrintable(difference));
+    // the originals alone are not the pixels any more
+    QVERIFY(!KisBrushStrokeLayer::strokesMatchPixels(before, layer->paintDevice(), &difference));
 
     command->undo();
     QCOMPARE(layer->strokes(), before);

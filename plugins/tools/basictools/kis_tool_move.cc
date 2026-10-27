@@ -141,7 +141,7 @@ void KisToolMove::resetCursorStyle()
     }
 }
 
-bool KisToolMove::startStrokeImpl(MoveToolMode mode, const QPoint *pos)
+bool KisToolMove::startStrokeImpl(MoveToolMode mode, const QPoint *pos, bool duplicate)
 {
     KisNodeSP node;
     KisImageSP image = this->image();
@@ -159,6 +159,19 @@ bool KisToolMove::startStrokeImpl(MoveToolMode mode, const QPoint *pos)
             paintLayer && selection &&
             !selection->selectedRect().isEmpty() &&
             !selection->selectedExactRect().isEmpty();
+
+    /**
+     * Solstice: Ctrl-drag with a selection duplicates the selected pixels on
+     * the layer. Each duplicate is a stroke of its own, so that dragging
+     * again stamps the next copy from the last one; the layer mode does not
+     * matter for a selection. Without a selection, Ctrl-drag moves the group
+     * as before.
+     */
+    const bool duplicateSelection = duplicate && canUseSelectionMode;
+    if (duplicateSelection) {
+        endStroke();
+        mode = moveToolMode();
+    }
 
     if (pos) {
         // finish stroke by clicking outside image bounds
@@ -198,10 +211,7 @@ bool KisToolMove::startStrokeImpl(MoveToolMode mode, const QPoint *pos)
         KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(selection, false);
 
         MoveSelectionStrokeStrategy *moveStrategy =
-            new MoveSelectionStrokeStrategy(paintLayer,
-                                            selection,
-                                            image.data(),
-                                            image.data());
+            new MoveSelectionStrokeStrategy(paintLayer, selection, image.data(), image.data(), duplicateSelection);
 
         connect(moveStrategy,
                 SIGNAL(sigHandlesRectCalculated(const QRect&)),
@@ -252,6 +262,7 @@ bool KisToolMove::startStrokeImpl(MoveToolMode mode, const QPoint *pos)
     m_strokeId = image->startStroke(strategy);
     m_currentlyProcessingNodes = nodes;
     m_currentlyUsingSelection = isMoveSelection;
+    m_currentlyDuplicating = duplicateSelection;
     m_currentMode = mode;
     m_accumulatedOffset = QPoint();
 
@@ -521,7 +532,8 @@ void KisToolMove::beginAlternateAction(KoPointerEvent *event, AlternateAction ac
 
         startAction(event, mode);
     } else {
-        startAction(event, MoveGroup);
+        // Solstice: Ctrl-drag (SampleFgImage) duplicates a selection
+        startAction(event, MoveGroup, action == SampleFgImage);
     }
 }
 
@@ -549,13 +561,13 @@ void KisToolMove::mouseMoveEvent(KoPointerEvent *event)
     }
 }
 
-void KisToolMove::startAction(KoPointerEvent *event, MoveToolMode mode)
+void KisToolMove::startAction(KoPointerEvent *event, MoveToolMode mode, bool duplicate)
 {
     QPoint pos = convertToPixelCoordAndSnap(event).toPoint();
     m_dragStart = pos;
     m_dragPos = pos;
 
-    if (startStrokeImpl(mode, &pos)) {
+    if (startStrokeImpl(mode, &pos, duplicate)) {
         setMode(KisTool::PAINT_MODE);
 
         if (m_currentlyUsingSelection) {
@@ -601,6 +613,13 @@ void KisToolMove::endAction(KoPointerEvent *event)
     m_accumulatedOffset += pos - m_dragStart;
     m_dragStart = QPoint();
     m_dragPos = QPoint();
+
+    // Solstice: a Ctrl-click without a drag duplicates nothing
+    if (m_currentlyDuplicating && m_accumulatedOffset.isNull()) {
+        cancelStroke();
+        return;
+    }
+
     commitChanges();
 
     if (m_currentlyUsingSelection) {
@@ -628,6 +647,13 @@ void KisToolMove::endStroke()
 {
     if (!m_strokeId) return;
 
+    // Solstice: a duplicate back where it started would only paste the copy
+    // over its source (darkening semi-transparent pixels)
+    if (m_currentlyDuplicating && m_accumulatedOffset.isNull()) {
+        cancelStroke();
+        return;
+    }
+
     if (m_asyncUpdateHelper.isActive()) {
         m_asyncUpdateHelper.endUpdateStream();
     }
@@ -638,6 +664,7 @@ void KisToolMove::endStroke()
     m_changesTracker.reset();
     m_currentlyProcessingNodes.clear();
     m_currentlyUsingSelection = false;
+    m_currentlyDuplicating = false;
     m_currentMode = MoveSelectedLayer;
     m_accumulatedOffset = QPoint();
     qobject_cast<KisCanvas2*>(canvas())->updateCanvas();
@@ -710,6 +737,7 @@ void KisToolMove::cancelStroke()
     m_changesTracker.reset();
     m_currentlyProcessingNodes.clear();
     m_currentlyUsingSelection = false;
+    m_currentlyDuplicating = false;
     m_currentMode = MoveSelectedLayer;
     m_accumulatedOffset = QPoint();
     notifyGuiAfterMove();

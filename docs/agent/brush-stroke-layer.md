@@ -45,7 +45,7 @@ Paths in this table are relative to the repository root. The
 | [kis_resources_snapshot.h](../../libs/ui/tool/kis_resources_snapshot.h) | Stroke resources and mirror state |
 | [KisRedrawableLayerInterface.h](../../libs/image/KisRedrawableLayerInterface.h), [kis_transform_processing_visitor.cpp](../../libs/image/processing/kis_transform_processing_visitor.cpp) | Image-library interface and image/layer scale hook, without an image-to-UI dependency |
 | [inplace_transform_stroke_strategy.cpp](../../plugins/tools/tool_transform2/strokes/inplace_transform_stroke_strategy.cpp), [transform_stroke_strategy.cpp](../../plugins/tools/tool_transform2/strokes/transform_stroke_strategy.cpp) | Final Transform Tool redraw and pixel-transform fallback |
-| [move_selection_stroke_strategy.cpp](../../plugins/tools/basictools/strokes/move_selection_stroke_strategy.cpp) | Undoable full-resolution selection move |
+| [move_selection_stroke_strategy.cpp](../../plugins/tools/basictools/strokes/move_selection_stroke_strategy.cpp) | Undoable full-resolution selection move and duplicate ([Duplicate selection](duplicate-selection-in-layer.md)) |
 | [libkra](../../plugins/impex/libkra) | Layer attribute, record sidecar and preservation of saved pixels on load failure |
 
 Keep the redraw interface destructor out of line for shared-library RTTI.
@@ -173,6 +173,12 @@ later comparison detects the mismatch. Selecting only a mirror copy counts
 as cutting its stroke. Erase/non-over compositing can still mismatch after
 reordering, so selection moves request verification.
 
+`createSelectionDuplicateCommand(mask, offset)` (Move Tool Ctrl-drag,
+[Duplicate selection](duplicate-selection-in-layer.md)) uses the same
+classification. Inside strokes stay, and moved clones of them are appended
+after every stroke, matching the copy pasted over the layer. A crossing
+stroke leaves the record unchanged, as for a move.
+
 The Move Tool applies the record command only at LOD 0, with a copy of the
 selection moved back to its original position. Do not update records again
 from the Instant Preview clone. Selection transforms/scales remain pixel
@@ -259,8 +265,8 @@ and the source/build/install separation. For implementation changes, build
 
 | Test target | Coverage to preserve |
 | --- | --- |
-| `KisBrushStrokeLayerTest` | Record/replay pixels, scales, undo, partial/full fallback, erased edges, HDR/GrayA, serialization/KRA, embedded tips/ABR, starting state, mirrors, many copies, invalid records, texture/selection moves, background edit/recovery and device-offset timing |
-| `KisBrushStrokeLayerTransformTest` | Actual in-place scale/rotation, cancelled continued transforms and selection moves with Instant Preview |
+| `KisBrushStrokeLayerTest` | Record/replay pixels, scales, undo, partial/full fallback, erased edges, HDR/GrayA, serialization/KRA, embedded tips/ABR, starting state, mirrors, many copies, invalid records, texture/selection moves and duplicates, background edit/recovery and device-offset timing |
+| `KisBrushStrokeLayerTransformTest` | Actual in-place scale/rotation, cancelled continued transforms and selection moves and duplicates with Instant Preview |
 | `KisBrushStrokeReplayTest` | Deterministic native replay and scale/edge-quality comparisons |
 | `MoveSelectionStrokeTest`, `kis_processings_test` | Shared Move Tool and image-processing regressions |
 | `KisBrushStrokePreviewTest` | Adjacent native replay path when shared recording/rendering code changes |
@@ -304,6 +310,8 @@ Use these for relevant behavior changes; automated tests do not replace them.
 2. Move a whole layer, then fully selected strokes; check texture alignment,
    ordering and undo/redo. Repeat selection moves with Instant Preview.
    A selection cutting a stroke or only one mirror copy must be detected.
+   Duplicate fully selected strokes with Ctrl-drag; the originals stay and
+   the copies redraw on scaling.
 3. Apply Free Transform scale, undo/redo, then reopen a continued transform
    and cancel. Records and pixels must retain the preceding committed scale.
    Check both preview strategies; rotation and selected transforms use pixels.

@@ -2166,3 +2166,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   selection outline on Windows, so it cannot judge the animation there; the
   Windows check compared screen captures of the main window instead.
 - Touch point recorded in [feature inventory](../feature-inventory.md).
+
+## 2026-10-27 feature: duplicate selection in the same layer
+
+- Move Tool Ctrl-drag with a selection on a paint layer duplicates the
+  selected pixels (`MoveSelectionStrokeStrategy` duplicate mode: no cut,
+  "Duplicate Selection" undo entry); on a Brush Stroke Layer the strokes
+  inside the selection are copied (`createSelectionDuplicateCommand()`).
+  Maintained reference [Duplicate selection](../duplicate-selection-in-layer.md),
+  user guide [Move Tool](../../move-tool.md); the plan is archived in
+  [history](history/duplicate-selection-in-layer-plan.md).
+- Tests: two new `MoveSelectionStrokeTest` cases and one each in
+  `KisBrushStrokeLayerTest` and `KisBrushStrokeLayerTransformTest`; built
+  out of tree and run on Windows. No manual check yet.
+- Lessons: [build pitfalls](pitfalls/build-format-test.md), "Worktrees"
+  (`_build` and `_install` changing under an out-of-tree build, launching
+  the commands).
