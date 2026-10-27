@@ -2248,3 +2248,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   for the remaining test control work.
 - Lessons: [build pitfalls](pitfalls/build-format-test.md), "Tests"
   (clipboard formats at exit, `QFile::link()` on Windows).
+
+## 2026-10-27 docs: Duplicate on the same layer card
+
+- README New Features: a "Duplicate on the same layer" card with the user's
+  image `docs/images/duplicate_in_same_layer.png` as #08 (after Effects &
+  Color), linking to [Move Tool](../../move-tool.md#duplicating-a-selection);
+  Layer Comps moved from #09 to the last place (#11). The image is also in
+  the Move Tool guide. The website got the same card and order on branch
+  `claude/duplicate-selection-page` of the website repository (not
+  published; publish after the release).
