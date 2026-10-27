@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [In development: 0.6.0](#in-development-060)
+- [What's new in 0.6.0](#whats-new-in-060)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,9 +59,10 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## In development: 0.6.0
+## What's new in 0.6.0
 
-Solstice 0.6.0 adds [Clipping Mask](docs/clipping-mask.md): clip a layer to
+[Solstice 0.6.0](https://github.com/udtren/Solstice/releases/tag/v0.6.0)
+adds [Clipping Mask](docs/clipping-mask.md): clip a layer to
 the layer or group directly below it without a group, and bake it in with
 Merge Down. It also adds [duplicating a selection](docs/move-tool.md) on the
 same layer with Ctrl-drag in the Move Tool. Other changes:

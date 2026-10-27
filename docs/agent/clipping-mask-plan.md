@@ -1,9 +1,11 @@
 # Clipping Mask — implementation plan
 
-Status: **option A approved by the user (2026-10-27); the rendering spike
-passes its tests (see [Spike](#spike-clip-stack-in-the-projection-leaf-tree-2026-10-27)).
-There is no UI or file format support yet.** The decisions recorded below and
-the remaining [open questions](#open-questions) bound the work. Unverified
+Status: **option A implemented and released in
+[0.6.0](https://github.com/udtren/Solstice/releases/tag/v0.6.0) (PR #45,
+2026-10-27): rendering, the undoable property, Merge Down, Merge Selected,
+`.kra` and PSD, and the Layers docker.** The sections below record how it
+got there, starting with the [spike](#spike-clip-stack-in-the-projection-leaf-tree-2026-10-27);
+the remaining [open questions](#open-questions) bound later work. Unverified
 statements are marked as such.
 
 ## User decisions (2026-10-27)

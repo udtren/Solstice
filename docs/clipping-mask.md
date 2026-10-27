@@ -6,9 +6,7 @@ the layer you clip to keeps its name.
 
 ![A character painted inside an oval; in the Layers docker, Group 24 carries the orange clipping icon and bar and is clipped to the oval Paint Layer 46 below it](images/clipping_mask.png)
 
-> **In development.** Clipping Mask is on a development branch and is not in
-> a released build yet. This page describes the current state and changes
-> with it.
+Added in [0.6.0](https://github.com/udtren/Solstice/releases/tag/v0.6.0).
 
 ## Clipping a layer
 

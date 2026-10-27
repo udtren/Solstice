@@ -105,17 +105,9 @@ appears in the version strings.
 
 ## History
 
-0.6.0 is being prepared on 2026-10-27 (user request, `MINOR`: new features).
-It replaces 0.5.3, which was prepared on 2026-10-25 (HueSVC color space fix,
-PR #37) but never released, and adds Clipping Mask (PR #45), duplicating a
-selection on the same layer (PR #42), the upstream clipboard rewrite and
-2026-W44 intake (PRs #39, #40), test control (PRs #41, #43), the covered-view
-selection animation fix (PR #44) and the clipboard crash fix (PR #46).
-Publication and package verification are pending; the Krita version is
-unchanged.
-
 | Version | Date | Reason |
 | --- | --- | --- |
+| `0.6.0` | 2026-10-27 | Clipping Mask (PR #45) and duplicating a selection on the same layer (PR #42), with the HueSVC fix (PR #37) of the never-released 0.5.3, the upstream clipboard rewrite and fixes (PRs #40, #46), the 2026-W44 intake (PR #39), test control (PRs #41, #43) and the covered-view selection animation fix (PR #44); requested by the user (`MINOR`). Regular GitHub Release `v0.6.0` at `87fb3e39798c` (PR #48, run 40491540847); [package verification](wiki/history/release-0.6.0.md). Krita compatibility version is unchanged. |
 | `0.5.2` | 2026-10-24 | Fast Image Export keeps the format's remembered export options such as Force convert to sRGB (PR #35), a fix to 0.5.1 confirmed by the user in the application; requested by the user. Regular GitHub Release `v0.5.2` at `e352f1c51963` (PR #35, run 40091292555); [package verification](wiki/history/release-0.5.2.md). Krita compatibility version is unchanged. |
 | `0.5.1` | 2026-10-24 | Lazy Tools Fast Image Export registered folders, export name and Export Region, the Rename Layer preset editor and illustrated guide (PR #33), with the Quick Access icon-span fix (PR #32); requested by the user (`PATCH`: existing features extended). Regular GitHub Release `v0.5.1` at `00153a635789` (PR #33, run 40076396030); [package verification](wiki/history/release-0.5.1.md). Krita compatibility version is unchanged. |
 | `0.5.0` | 2026-10-21 | Remove Dust tool and filter (PR #30), with an illustrated user guide; version chosen by the user. Regular GitHub Release `v0.5.0` at `49697aadce6c` (PR #30, run 39566003093); [package verification](wiki/history/release-0.5.0.md). Krita compatibility version is unchanged. |
