@@ -1926,3 +1926,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   not exported, so tests outside `kritaimage` cannot construct
   `KisNodePropertyListCommand`; use `setNodePropertyAutoUndo()` with a
   `KisSurrogateUndoStore` (`kritacommand`).
+
+## 2026-10-27 ingest: Clipping Mask PSD, Merge Selected, assert fix
+
+- PSD import/export of clipping, Merge Selected/Flatten with clip stacks,
+  `zh_CN` strings, the README New Features card (#04, before Puppet Warp)
+  and the guide image. Row indents were added and removed again at the
+  user's request. Details: [Clipping Mask plan](../clipping-mask-plan.md).
+- Lessons: the PSD test loads the *installed* PSD plugins, so install them
+  before trusting a round-trip result. A property that switches another
+  property off must record that in `KisNodePropertyListCommand`'s new list,
+  or `mergeWith()` asserts on the next merged command;
+  `QTest::failOnWarning("SAFE ASSERT")` turns such asserts into test failures.

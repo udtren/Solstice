@@ -532,6 +532,56 @@ Not done in this phase: PSD import/export, Merge Selected / Flatten with
 clipped layers, the indent of clipped rows, the `zh_CN` catalog entries for
 the new strings, `libkis`, and an interactive check in Solstice.
 
+## Phase 4: docker indent, PSD, Merge Selected, translations (2026-10-27)
+
+- **Indent**: added for clipped and inherit-alpha rows (user request), then
+  removed again the same day at the user's request (2026-10-27). Rows are
+  not indented; the orange bar beside the thumbnail still marks a clipped
+  layer.
+- **Undo merge assert** (2026-10-27): toggling inherit alpha twice on a
+  clipped layer (Shift+G) raised the safe assert in
+  `KisNodePropertyListCommand::mergeWith()`. The first command's new list
+  said "inherit alpha on, clipping on", but the layer really switched
+  clipping off, so the merge found clipping changed between the two
+  commands. The constructor now records the exclusion in its new list
+  (`withClippingExclusion()`), so the list is the state the node gets.
+  `testToggleInheritAlphaTwiceOnClippedLayer` uses `QTest::failOnWarning()`
+  on "SAFE ASSERT" and fails without the fix (checked).
+- **PSD**. Export writes the layer record's `clipping` byte from
+  `isClipped()` (both writers in `libs/psd/psd_layer_section.cpp`). Import
+  sets `setClipped(record->clipping != 0)` for every created layer in
+  `plugins/impex/psd/psd_loader.cpp`. A group takes the value from its
+  folder record, which follows its bounding divider.
+  `KisPSDTest::testRoundTripClipping` covers a paint layer base and a group
+  base. The test loads the *installed* PSD plugins, so it failed until they
+  were installed.
+- **Merge Selected / Flatten** (`MergeLayersMultiple` in
+  `kis_layer_utils.cpp`):
+  - A selected base and the selected clipped layers of its stack
+    composite into a temporary stack device. That device is then applied
+    with the base's blend mode, opacity and channel flags.
+  - Clipped layers whose base is not selected are painted with their own
+    blend options (`applyWithOwnBlending()`).
+  - `CreateMergedLayerMultiple` makes the result clipped when every
+    source layer is clipped.
+  - Flatten Layer and Flatten Image use the same path.
+- **zh_CN**: the five new strings are translated. Clipping Mask stays in
+  English as a feature name (translation policy). Catalog regenerated with
+  `update_translations.py`: 10,541 translated, none fuzzy.
+
+Results (2026-10-27, Windows):
+
+- `KisClippingTest` passes all 19 cases (after the assert fix), now including Merge Selected of a
+  whole stack (unchanged pixels with a Normal 100% base, no clipped layer
+  left), of clipped layers only (one clipped layer, unchanged pixels), and
+  Flatten Image (unchanged pixels).
+- `KisClippingKraTest` passes, and `KisPSDTest` passes 10 selected cases:
+  opening, masks, groups, layer styles, saving all formats, the
+  round-trip cases and the new `testRoundTripClipping`.
+- The 15 `libs/image` regression tests pass.
+- Not checked: Flatten Layer with a clipped group,
+  and opening a PSD made in Photoshop or CSP.
+
 ## Open questions
 
 - .kra: decided, a plain attribute `clipped` (2026-10-27). Open: what

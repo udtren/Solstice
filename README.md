@@ -103,36 +103,39 @@ which extended [Lazy Tools](docs/lazy-tools.md) and fixed Quick Access:
 <p><b><a href="docs/brush-editor.md#brush-options-in-tool-options">Brush options in Tool Options</a></b><br>Eye marks put Brush Editor settings in Tool Options.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<a href="docs/puppet-warp.md"><img src="docs/images/puppet_warp.png" alt="A painted figure and a copy reposed with Puppet Warp, with pins on the Transform Tool's mesh and the Puppet Warp Tool Options" width="100%"></a>
-<p><b><a href="docs/puppet-warp.md">Puppet Warp</a></b><br>Repose artwork with movable, rotatable pins in the Transform Tool.</p>
+<a href="docs/clipping-mask.md"><img src="docs/images/clipping_mask.png" alt="A character painted inside an oval; in the Layers docker, Group 24 carries the orange clipping icon and bar and is clipped to the oval Paint Layer 46 below it" width="100%"></a>
+<p><b><a href="docs/clipping-mask.md">Clipping Mask</a></b><br>Clip a layer to the layer or group directly below it, without a group.</p>
 </td>
 </tr>
 <tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/puppet-warp.md"><img src="docs/images/puppet_warp.png" alt="A painted figure and a copy reposed with Puppet Warp, with pins on the Transform Tool's mesh and the Puppet Warp Tool Options" width="100%"></a>
+<p><b><a href="docs/puppet-warp.md">Puppet Warp</a></b><br>Repose artwork with movable, rotatable pins in the Transform Tool.</p>
+</td>
 <td width="50%" align="center" valign="top">
 <a href="docs/brush-stroke-layer.md"><img src="docs/images/brush-stroke-layer.png" alt="A small figure sketch and a copy enlarged and drawn again at the new size, on two Brush Stroke Layers" width="100%"></a>
 <p><b><a href="docs/brush-stroke-layer.md">Brush Stroke Layer</a></b><br>Strokes are redrawn at the new size when scaled, without blurring.</p>
 </td>
+</tr>
+<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/effects-filters.md"><img src="docs/images/more_filter.png" alt="Nine versions of one portrait with Solstice effects such as Chromatic Aberration, Color Filter, Crystal, Drop Shadow, Color Reference and Film Grain" width="100%"></a>
 <p><b><a href="docs/effects-filters.md">Effects &amp; Color</a></b><br>New native filters such as Film Grain, Glow and Color Reference.</p>
 </td>
-</tr>
-<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/reference-tool.md"><img src="docs/images/reference-tool-filters.png" alt="A selected reference drawing with Desaturate, Posterize and Glow in the Filter menu; Glow offers enable, edit, reorder and remove controls" width="100%"></a>
 <p><b><a href="docs/reference-tool.md">Reference Tool filters</a></b><br>Non-destructive filter stacks and templates for reference images.</p>
 </td>
+</tr>
+<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Layer Comps docker with four comps checked for export, Apply and Export columns, and its action buttons" width="100%"></a>
 <p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states.</p>
 </td>
-</tr>
-<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/remove-dust.md"><img src="docs/images/remove_dust.png" alt="A rectangle drawn with the Remove Dust Tool around specks on a sketch, and the same area afterwards without the specks" width="100%"></a>
 <p><b><a href="docs/remove-dust.md">Remove Dust</a></b><br>Remove or select small specks, and fill small gaps, with a tool or a filter.</p>
 </td>
-<td width="50%"></td>
 </tr>
 </table>
 

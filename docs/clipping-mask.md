@@ -4,6 +4,8 @@ A clipped layer shows only where the layer directly below it has pixels,
 as in Photoshop, Clip Studio Paint and SAI. You do not need a group, and
 the layer you clip to keeps its name.
 
+![A character painted inside an oval; in the Layers docker, Group 24 carries the orange clipping icon and bar and is clipped to the oval Paint Layer 46 below it](images/clipping_mask.png)
+
 > **In development.** Clipping Mask is on a development branch and is not in
 > a released build yet. This page describes the current state and changes
 > with it.
@@ -44,10 +46,20 @@ All of these can be undone.
 result keeps the base's name, blend mode and opacity, and looks the same as
 before. Merging two clipped layers gives one clipped layer.
 
+**Merge Selected** with a base and its clipped layers selected merges the
+base and the clipped layers as they look together. Merging only clipped
+layers gives one clipped layer. Clipped layers merged without their base are
+merged as if unclipped. As with any merge in Solstice, blend modes other
+than Normal and opacity below 100% may look different after merging.
+**Flatten Image** and **Flatten Layer** keep how clipped layers look.
+
 ## Files
 
-`.kra` files keep clipping. Krita itself ignores it and shows clipped layers
-unclipped. PSD import and export do not support clipping yet.
+- `.kra` files keep clipping. Krita itself ignores it and shows clipped
+  layers unclipped.
+- PSD files keep clipping in both directions: Photoshop's clipped layers
+  open as clipped layers, and clipped layers are saved as Photoshop's
+  clipping. Photoshop ignores a clipped group.
 
 ## Current limitations
 
@@ -55,7 +67,5 @@ unclipped. PSD import and export do not support clipping yet.
   layers.
 - Copy, Destination In and Destination Atop are not supported as the base's
   blend mode.
-- Merge Selected, Flatten Layer and Flatten Image have not been checked with
-  clipped layers yet.
 
 Technical notes are in the [agent plan](agent/clipping-mask-plan.md).

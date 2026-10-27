@@ -109,6 +109,17 @@ QSize NodeDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelInd
     return QSize(option.rect.width(), d->rowHeight);
 }
 
+namespace
+{
+bool hasTrueProperty(const QModelIndex &index, const KoID &id)
+{
+    const KisBaseNode::PropertyList props = index.data(KisNodeModel::PropertiesRole).value<KisBaseNode::PropertyList>();
+    return std::any_of(props.begin(), props.end(), [&id](const KisBaseNode::Property &prop) {
+        return prop.id == id.id() && prop.state.toBool();
+    });
+}
+} // namespace
+
 void NodeDelegate::paint(QPainter *p, const QStyleOptionViewItem &o, const QModelIndex &index) const
 {
     p->save();
@@ -313,11 +324,7 @@ void NodeDelegate::drawThumbnail(QPainter *p, const QStyleOptionViewItem &option
 
     // Solstice: a bar beside the thumbnail marks a clipped layer; it uses the
     // clipping icon's accent, which stays visible on a selected row
-    const KisBaseNode::PropertyList props = index.data(KisNodeModel::PropertiesRole).value<KisBaseNode::PropertyList>();
-    const bool clipped = std::any_of(props.begin(), props.end(), [](const KisBaseNode::Property &prop) {
-        return prop.id == KisLayerPropertiesIcons::clipping.id() && prop.state.toBool();
-    });
-    if (clipped) {
+    if (hasTrueProperty(index, KisLayerPropertiesIcons::clipping)) {
         const int barWidth = 2;
         const int x = option.direction == Qt::RightToLeft ? borderRect.right() + 2 : borderRect.left() - 2 - barWidth;
         p->fillRect(QRect(x, borderRect.top(), barWidth, borderRect.height()), QColor(0xf6, 0x74, 0x00));

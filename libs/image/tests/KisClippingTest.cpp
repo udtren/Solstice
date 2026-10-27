@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <QRegularExpression>
 #include <QTest>
 #include <simpletest.h>
 
@@ -157,6 +158,10 @@ private Q_SLOTS:
     void testMergeDownBakesIntoBase();
     void testMergeDownOfClippedLayers();
     void testImageCopyKeepsClipping();
+    void testMergeSelectedBaseAndClippedLayers();
+    void testMergeSelectedClippedLayers();
+    void testFlattenImageKeepsResult();
+    void testToggleInheritAlphaTwiceOnClippedLayer();
 };
 
 void KisClippingTest::testLeafTree()
@@ -505,6 +510,95 @@ void KisClippingTest::testImageCopyKeepsClipping()
     QVERIFY(!base->isClipped());
     QCOMPARE(clip1->projectionLeaf()->parent(), base->clipStackLayer()->projectionLeaf());
     QCOMPARE(refreshAndRead(copy), before);
+}
+
+void KisClippingTest::testMergeSelectedBaseAndClippedLayers()
+{
+    // with a Normal base at full opacity, Merge Selected of a whole stack
+    // gives one unclipped layer that looks the same
+    ClipScene scene;
+    scene.base->setCompositeOpId(COMPOSITE_OVER);
+    scene.base->setOpacity(OPACITY_OPAQUE_U8);
+    const QByteArray before = refreshAndRead(scene.image);
+
+    scene.image->mergeMultipleLayers(KisNodeList() << scene.base << scene.clip1 << scene.clip2, scene.clip2);
+    scene.image->waitForDone();
+
+    QVERIFY(!findLayer(scene.image, "clip1"));
+    QVERIFY(!findLayer(scene.image, "clip2"));
+    int clippedCount = 0;
+    for (KisNodeSP node = scene.image->root()->firstChild(); node; node = node->nextSibling()) {
+        KisLayer *layer = qobject_cast<KisLayer *>(node.data());
+        clippedCount += layer && layer->isClipped();
+    }
+    QCOMPARE(clippedCount, 0);
+    QCOMPARE(scene.image->root()->childCount(), 3u);
+    QCOMPARE(refreshAndRead(scene.image), before);
+}
+
+void KisClippingTest::testMergeSelectedClippedLayers()
+{
+    // clipped layers alone merge into one clipped layer
+    ClipScene scene;
+    scene.clip2->setCompositeOpId(COMPOSITE_OVER);
+    scene.clip2->setOpacity(OPACITY_OPAQUE_U8);
+    const QByteArray before = refreshAndRead(scene.image);
+
+    scene.image->mergeMultipleLayers(KisNodeList() << scene.clip1 << scene.clip2, scene.clip2);
+    scene.image->waitForDone();
+
+    QVERIFY(!findLayer(scene.image, "clip2"));
+    KisLayerSP merged = qobject_cast<KisLayer *>(scene.base->nextSibling().data());
+    QVERIFY(merged);
+    QVERIFY(merged->isClipped());
+    QCOMPARE(merged->projectionLeaf()->parent(), scene.base->clipStackLayer()->projectionLeaf());
+    QCOMPARE(refreshAndRead(scene.image), before);
+}
+
+void KisClippingTest::testFlattenImageKeepsResult()
+{
+    ClipScene scene;
+    const QByteArray before = refreshAndRead(scene.image);
+
+    scene.image->flatten(scene.top);
+    scene.image->waitForDone();
+
+    QCOMPARE(scene.image->root()->childCount(), 1u);
+    QCOMPARE(refreshAndRead(scene.image), before);
+}
+
+void KisClippingTest::testToggleInheritAlphaTwiceOnClippedLayer()
+{
+    // Toggling inherit alpha twice on a clipped layer merges the two undo
+    // commands. Their property lists must record that clipping went off,
+    // or the merge asserts (Shift+G twice, 2026-10-27).
+    QTest::failOnWarning(QRegularExpression(QStringLiteral("SAFE ASSERT")));
+
+    KisSurrogateUndoStore *undoStore = new KisSurrogateUndoStore();
+    ClipScene scene(undoStore);
+    refreshAndRead(scene.image);
+
+    KisLayerPropertiesIcons::setNodePropertyAutoUndo(scene.clip1,
+                                                     KisLayerPropertiesIcons::inheritAlpha,
+                                                     true,
+                                                     scene.image);
+    scene.image->waitForDone();
+    QVERIFY(!scene.clip1->isClipped());
+    QVERIFY(scene.clip1->alphaChannelDisabled());
+
+    KisLayerPropertiesIcons::setNodePropertyAutoUndo(scene.clip1,
+                                                     KisLayerPropertiesIcons::inheritAlpha,
+                                                     false,
+                                                     scene.image);
+    scene.image->waitForDone();
+    QVERIFY(!scene.clip1->isClipped());
+    QVERIFY(!scene.clip1->alphaChannelDisabled());
+
+    // however the commands merged, undoing all of them restores clipping
+    undoStore->undoAll();
+    scene.image->waitForDone();
+    QVERIFY(scene.clip1->isClipped());
+    QVERIFY(!scene.clip1->alphaChannelDisabled());
 }
 
 SIMPLE_TEST_MAIN(KisClippingTest)

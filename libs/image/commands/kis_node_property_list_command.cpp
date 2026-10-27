@@ -55,6 +55,43 @@ QSet<QString> changedProperties(const KisBaseNode::PropertyList &before,
 }
 
 /**
+ * Solstice: clipping and inherit alpha exclude each other; the one switched
+ * on in \p after switches the other off (KisLayer::setSectionModelProperties()).
+ * Record that in the list itself, so that the command's new list is the state
+ * the node really gets: merging and undo compare those lists.
+ */
+KisBaseNode::PropertyList withClippingExclusion(const KisBaseNode::PropertyList &before,
+                                                KisBaseNode::PropertyList after)
+{
+    auto stateOf = [](const KisBaseNode::PropertyList &list, const QString &id) {
+        Q_FOREACH (const KisBaseNode::Property &prop, list) {
+            if (prop.id == id)
+                return prop.state.toBool();
+        }
+        return false;
+    };
+    auto setState = [](KisBaseNode::PropertyList *list, const QString &id, bool value) {
+        for (auto it = list->begin(); it != list->end(); ++it) {
+            if (it->id == id)
+                it->state = value;
+        }
+    };
+
+    const QString clipping = KisLayerPropertiesIcons::clipping.id();
+    const QString inheritAlpha = KisLayerPropertiesIcons::inheritAlpha.id();
+
+    if (stateOf(after, clipping) && stateOf(after, inheritAlpha)) {
+        if (!stateOf(before, clipping)) {
+            setState(&after, inheritAlpha, false);
+        } else {
+            setState(&after, clipping, false);
+        }
+    }
+
+    return after;
+}
+
+/**
  * Solstice: changing clipping or inherit alpha moves the clipped layers
  * next to the node onto another base, so their bounds change too
  */
@@ -70,16 +107,15 @@ QRect clippingUpdateRect(KisNodeSP node, const QSet<QString> &changed)
 }
 }
 
-
 KisNodePropertyListCommand::KisNodePropertyListCommand(KisNodeSP node, KisBaseNode::PropertyList newPropertyList)
-    : KisNodeCommand(kundo2_i18n("Property Changes"), node),
-      m_newPropertyList(newPropertyList),
-      m_oldPropertyList(node->sectionModelProperties())
-    /**
-     * TODO instead of "Property Changes" check which property
-     * has been changed and display either lock/unlock, visible/hidden
-     * or "Property Changes" (this require new strings)
-     */
+    : KisNodeCommand(kundo2_i18n("Property Changes"), node)
+    , m_newPropertyList(withClippingExclusion(node->sectionModelProperties(), newPropertyList))
+    , m_oldPropertyList(node->sectionModelProperties())
+/**
+ * TODO instead of "Property Changes" check which property
+ * has been changed and display either lock/unlock, visible/hidden
+ * or "Property Changes" (this require new strings)
+ */
 {
 }
 

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-10-24 16:57+0900\n"
+"POT-Creation-Date: 2026-10-27 17:47+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -11285,29 +11285,59 @@ msgctxt "action"
 msgid "Toggle layer alpha inheritance"
 msgstr "打开/关闭 - 继承透明度"
 
+#. i18n: context: text @ Action (toggle_layer_clipping), Actions (Layers), ActionCollection (Krita)
+#. i18n: context: iconText @ Action (toggle_layer_clipping), Actions (Layers), ActionCollection (Krita)
+#: krita/krita.action:2820 krita/krita.action:2823
+#, kde-format
+msgctxt "action"
+msgid "Toggle Clipping Mask"
+msgstr "切换 Clipping Mask"
+
+#. i18n: context: toolTip @ Action (toggle_layer_clipping), Actions (Layers), ActionCollection (Krita)
+#: krita/krita.action:2822
+#, kde-format
+msgctxt "action"
+msgid "Clip the layer to the layer directly below it"
+msgstr "将图层剪贴到其正下方的图层"
+
+#. i18n: context: text @ Action (new_clipping_layer), Actions (Layers), ActionCollection (Krita)
+#. i18n: context: iconText @ Action (new_clipping_layer), Actions (Layers), ActionCollection (Krita)
+#: krita/krita.action:2832 krita/krita.action:2835
+#, kde-format
+msgctxt "action"
+msgid "New Clipping Layer"
+msgstr "新建剪贴图层"
+
+#. i18n: context: toolTip @ Action (new_clipping_layer), Actions (Layers), ActionCollection (Krita)
+#: krita/krita.action:2834
+#, kde-format
+msgctxt "action"
+msgid "Add a paint layer clipped to the active layer"
+msgstr "添加剪贴到活动图层的绘画图层"
+
 #. i18n: context: text @ Action (add_new_paint_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2820
+#: krita/krita.action:2844
 #, kde-format
 msgctxt "action"
 msgid "Add &Paint Layer"
 msgstr "新建颜料图层(&P)"
 
 #. i18n: context: toolTip @ Action (add_new_paint_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2822
+#: krita/krita.action:2846
 #, kde-format
 msgctxt "action"
 msgid "Add a new Paint Layer"
 msgstr "添加一个颜料图层"
 
 #. i18n: context: iconText @ Action (add_new_paint_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2823
+#: krita/krita.action:2847
 #, kde-format
 msgctxt "action"
 msgid "Paint Layer"
 msgstr "颜料图层"
 
 #. i18n: context: text @ Action (new_from_visible), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2832
+#: krita/krita.action:2856
 #, kde-format
 msgctxt "action"
 msgid "&New Layer From Visible"
@@ -11315,14 +11345,14 @@ msgstr "新建图层 - 基于可见内容(&N)"
 
 #. i18n: context: toolTip @ Action (new_from_visible), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (new_from_visible), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2834 krita/krita.action:2835
+#: krita/krita.action:2858 krita/krita.action:2859
 #, kde-format
 msgctxt "action"
 msgid "New layer from visible"
 msgstr "新建图层 - 基于可见内容"
 
 #. i18n: context: text @ Action (duplicatelayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2844
+#: krita/krita.action:2868
 #, kde-format
 msgctxt "action"
 msgid "&Duplicate Layer or Mask"
@@ -11330,14 +11360,14 @@ msgstr "复制图层/蒙版为副本(&D)"
 
 #. i18n: context: toolTip @ Action (duplicatelayer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (duplicatelayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2846 krita/krita.action:2847
+#: krita/krita.action:2870 krita/krita.action:2871
 #, kde-format
 msgctxt "action"
 msgid "Duplicate Layer or Mask"
 msgstr "复制图层/蒙版为副本"
 
 #. i18n: context: text @ Action (cut_selection_to_new_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2856
+#: krita/krita.action:2880
 #, kde-format
 msgctxt "action"
 msgid "&Cut Selection to New Layer"
@@ -11345,14 +11375,14 @@ msgstr "剪切选区 - 到新图层(&C)"
 
 #. i18n: context: toolTip @ Action (cut_selection_to_new_layer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (cut_selection_to_new_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2858 krita/krita.action:2859
+#: krita/krita.action:2882 krita/krita.action:2883
 #, kde-format
 msgctxt "action"
 msgid "Cut Selection to New Layer"
 msgstr "剪切选区 - 到新图层"
 
 #. i18n: context: text @ Action (copy_selection_to_new_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2868
+#: krita/krita.action:2892
 #, kde-format
 msgctxt "action"
 msgid "Copy &Selection to New Layer"
@@ -11360,14 +11390,14 @@ msgstr "复制选区 - 到新图层(&S)"
 
 #. i18n: context: toolTip @ Action (copy_selection_to_new_layer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (copy_selection_to_new_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2870 krita/krita.action:2871
+#: krita/krita.action:2894 krita/krita.action:2895
 #, kde-format
 msgctxt "action"
 msgid "Copy Selection to New Layer"
 msgstr "复制选区 - 到新图层"
 
 #. i18n: context: text @ Action (copy_layer_clipboard), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2880
+#: krita/krita.action:2904
 #, kde-format
 msgctxt "action"
 msgid "Copy Layer"
@@ -11375,14 +11405,14 @@ msgstr "复制图层"
 
 #. i18n: context: toolTip @ Action (copy_layer_clipboard), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (copy_layer_clipboard), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2882 krita/krita.action:2883
+#: krita/krita.action:2906 krita/krita.action:2907
 #, kde-format
 msgctxt "action"
 msgid "Copy layer to clipboard"
 msgstr "复制图层到剪贴板"
 
 #. i18n: context: text @ Action (cut_layer_clipboard), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2892
+#: krita/krita.action:2916
 #, kde-format
 msgctxt "action"
 msgid "Cut Layer"
@@ -11390,14 +11420,14 @@ msgstr "剪切图层"
 
 #. i18n: context: toolTip @ Action (cut_layer_clipboard), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (cut_layer_clipboard), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2894 krita/krita.action:2895
+#: krita/krita.action:2918 krita/krita.action:2919
 #, kde-format
 msgctxt "action"
 msgid "Cut layer to clipboard"
 msgstr "剪切图层到剪贴板"
 
 #. i18n: context: text @ Action (paste_layer_from_clipboard), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2904
+#: krita/krita.action:2928
 #, kde-format
 msgctxt "action"
 msgid "Paste Layer"
@@ -11405,7 +11435,7 @@ msgstr "粘贴图层"
 
 #. i18n: context: toolTip @ Action (paste_layer_from_clipboard), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (paste_layer_from_clipboard), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2906 krita/krita.action:2907
+#: krita/krita.action:2930 krita/krita.action:2931
 #, kde-format
 msgctxt "action"
 msgid "Paste layer from clipboard"
@@ -11413,14 +11443,14 @@ msgstr "从剪贴板粘贴图层"
 
 #. i18n: context: text @ Action (create_quick_group), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (create_quick_group), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2916 krita/krita.action:2919
+#: krita/krita.action:2940 krita/krita.action:2943
 #, kde-format
 msgctxt "action"
 msgid "Quick Group"
 msgstr "图层编组"
 
 #. i18n: context: toolTip @ Action (create_quick_group), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2918
+#: krita/krita.action:2942
 #, kde-format
 msgctxt "action"
 msgid "Create a group layer containing selected layers"
@@ -11428,14 +11458,14 @@ msgstr "新建一个包含选中图层的图层组"
 
 #. i18n: context: text @ Action (quick_ungroup), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (quick_ungroup), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2928 krita/krita.action:2931
+#: krita/krita.action:2952 krita/krita.action:2955
 #, kde-format
 msgctxt "action"
 msgid "Quick Ungroup"
 msgstr "移出编组"
 
 #. i18n: context: toolTip @ Action (quick_ungroup), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2930
+#: krita/krita.action:2954
 #, kde-format
 msgctxt "action"
 msgid "Remove grouping of the layers or remove one layer out of the group"
@@ -11443,21 +11473,21 @@ msgstr "解散选中图层组或者将选中图层移出所在组"
 
 #. i18n: context: text @ Action (create_quick_clipping_group), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (create_quick_clipping_group), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2940 krita/krita.action:2943
+#: krita/krita.action:2964 krita/krita.action:2967
 #, kde-format
 msgctxt "action"
 msgid "Quick Clipping Group"
 msgstr "剪贴编组"
 
 #. i18n: context: toolTip @ Action (create_quick_clipping_group), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2942
+#: krita/krita.action:2966
 #, kde-format
 msgctxt "action"
 msgid "Group selected layers and add a layer with clipped alpha channel"
 msgstr "将选中图层移进新图层组并添加一个已启用继承透明度的图层"
 
 #. i18n: context: text @ Action (select_all_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2952
+#: krita/krita.action:2976
 #, kde-format
 msgctxt "action"
 msgid "All Layers"
@@ -11465,14 +11495,14 @@ msgstr "所有图层"
 
 #. i18n: context: toolTip @ Action (select_all_layers), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (select_all_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2954 krita/krita.action:2955
+#: krita/krita.action:2978 krita/krita.action:2979
 #, kde-format
 msgctxt "action"
 msgid "Select all layers"
 msgstr "选择所有图层"
 
 #. i18n: context: text @ Action (select_visible_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2964
+#: krita/krita.action:2988
 #, kde-format
 msgctxt "action"
 msgid "Visible Layers"
@@ -11480,14 +11510,14 @@ msgstr "可见图层"
 
 #. i18n: context: toolTip @ Action (select_visible_layers), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (select_visible_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2966 krita/krita.action:2967
+#: krita/krita.action:2990 krita/krita.action:2991
 #, kde-format
 msgctxt "action"
 msgid "Select all visible layers"
 msgstr "选择所有可见图层"
 
 #. i18n: context: text @ Action (select_locked_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2976
+#: krita/krita.action:3000
 #, kde-format
 msgctxt "action"
 msgid "Locked Layers"
@@ -11495,14 +11525,14 @@ msgstr "已锁定图层"
 
 #. i18n: context: toolTip @ Action (select_locked_layers), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (select_locked_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2978 krita/krita.action:2979
+#: krita/krita.action:3002 krita/krita.action:3003
 #, kde-format
 msgctxt "action"
 msgid "Select all locked layers"
 msgstr "选择所有已锁定图层"
 
 #. i18n: context: text @ Action (select_invisible_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2988
+#: krita/krita.action:3012
 #, kde-format
 msgctxt "action"
 msgid "Invisible Layers"
@@ -11510,14 +11540,14 @@ msgstr "不可见图层"
 
 #. i18n: context: toolTip @ Action (select_invisible_layers), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (select_invisible_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:2990 krita/krita.action:2991
+#: krita/krita.action:3014 krita/krita.action:3015
 #, kde-format
 msgctxt "action"
 msgid "Select all invisible layers"
 msgstr "选择所有不可见图层"
 
 #. i18n: context: text @ Action (select_unlocked_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3000
+#: krita/krita.action:3024
 #, kde-format
 msgctxt "action"
 msgid "Unlocked Layers"
@@ -11525,14 +11555,14 @@ msgstr "未锁定图层"
 
 #. i18n: context: toolTip @ Action (select_unlocked_layers), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (select_unlocked_layers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3002 krita/krita.action:3003
+#: krita/krita.action:3026 krita/krita.action:3027
 #, kde-format
 msgctxt "action"
 msgid "Select all unlocked layers"
 msgstr "选择所有未锁定图层"
 
 #. i18n: context: text @ Action (save_node_as_image), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3012
+#: krita/krita.action:3036
 #, kde-format
 msgctxt "action"
 msgid "&Save Layer/Mask..."
@@ -11540,14 +11570,14 @@ msgstr "导出图层/蒙版(&S)..."
 
 #. i18n: context: toolTip @ Action (save_node_as_image), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (save_node_as_image), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3014 krita/krita.action:3015
+#: krita/krita.action:3038 krita/krita.action:3039
 #, kde-format
 msgctxt "action"
 msgid "Save Layer/Mask"
 msgstr "导出图层/蒙版"
 
 #. i18n: context: text @ Action (save_vector_node_to_svg), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3024
+#: krita/krita.action:3048
 #, kde-format
 msgctxt "action"
 msgid "Save Vector Layer as SVG..."
@@ -11555,14 +11585,14 @@ msgstr "将矢量图层另存为 SVG..."
 
 #. i18n: context: toolTip @ Action (save_vector_node_to_svg), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (save_vector_node_to_svg), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3026 krita/krita.action:3027
+#: krita/krita.action:3050 krita/krita.action:3051
 #, kde-format
 msgctxt "action"
 msgid "Save Vector Layer as SVG"
 msgstr "将矢量图层另存为 SVG"
 
 #. i18n: context: text @ Action (save_groups_as_images), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3036
+#: krita/krita.action:3060
 #, kde-format
 msgctxt "action"
 msgid "Save &Group Layers..."
@@ -11570,21 +11600,21 @@ msgstr "导出图层组(&G)…"
 
 #. i18n: context: toolTip @ Action (save_groups_as_images), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (save_groups_as_images), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3038 krita/krita.action:3039
+#: krita/krita.action:3062 krita/krita.action:3063
 #, kde-format
 msgctxt "action"
 msgid "Save Group Layers"
 msgstr "导出图层组"
 
 #. i18n: context: text @ Action (convert_group_to_animated), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3048
+#: krita/krita.action:3072
 #, kde-format
 msgctxt "action"
 msgid "Convert Group to &Animated Layer"
 msgstr "转换图层组为动画图层(&A)"
 
 #. i18n: context: toolTip @ Action (convert_group_to_animated), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3050
+#: krita/krita.action:3074
 #, kde-format
 msgctxt "action"
 msgid ""
@@ -11593,14 +11623,14 @@ msgid ""
 msgstr "将一个图层组的子图层转换为一个包含多帧动画的单个图层"
 
 #. i18n: context: iconText @ Action (convert_group_to_animated), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3051
+#: krita/krita.action:3075
 #, kde-format
 msgctxt "action"
 msgid "Convert child layers into animation frames"
 msgstr "将子图层转换为动画帧"
 
 #. i18n: context: text @ Action (convert_to_animated), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3060
+#: krita/krita.action:3084
 #, kde-format
 msgctxt "action"
 msgid "Convert to &Animated Layer"
@@ -11608,35 +11638,35 @@ msgstr "转换为动画图层(&A)"
 
 #. i18n: context: toolTip @ Action (convert_to_animated), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (convert_to_animated), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3062 krita/krita.action:3063
+#: krita/krita.action:3086 krita/krita.action:3087
 #, kde-format
 msgctxt "action"
 msgid "Convert layer into animation frames"
 msgstr "将图层转换为动画帧"
 
 #. i18n: context: text @ Action (convert_to_file_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3072
+#: krita/krita.action:3096
 #, kde-format
 msgctxt "action"
 msgid "Convert to &File Layer..."
 msgstr "转换为文件图层(&F)..."
 
 #. i18n: context: toolTip @ Action (convert_to_file_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3074
+#: krita/krita.action:3098
 #, kde-format
 msgctxt "action"
 msgid "Saves out the layers into a new image and then references that image."
 msgstr "将图层保存为新图像并引用该图像。"
 
 #. i18n: context: iconText @ Action (convert_to_file_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3075
+#: krita/krita.action:3099
 #, kde-format
 msgctxt "action"
 msgid "Convert to File Layer"
 msgstr "转换为文件图层"
 
 #. i18n: context: text @ Action (import_layer_from_file), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3084
+#: krita/krita.action:3108
 #, kde-format
 msgctxt "action"
 msgid "I&mport Layer..."
@@ -11644,14 +11674,14 @@ msgstr "导入图层(&M)..."
 
 #. i18n: context: toolTip @ Action (import_layer_from_file), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (import_layer_from_file), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3086 krita/krita.action:3087
+#: krita/krita.action:3110 krita/krita.action:3111
 #, kde-format
 msgctxt "action"
 msgid "Import Layer"
 msgstr "导入图层"
 
 #. i18n: context: text @ Action (import_layer_as_paint_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3096
+#: krita/krita.action:3120
 #, kde-format
 msgctxt "action"
 msgid "&as Paint Layer..."
@@ -11659,14 +11689,14 @@ msgstr "作为颜料图层(&A)..."
 
 #. i18n: context: toolTip @ Action (import_layer_as_paint_layer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (import_layer_as_paint_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3098 krita/krita.action:3099
+#: krita/krita.action:3122 krita/krita.action:3123
 #, kde-format
 msgctxt "action"
 msgid "as Paint Layer"
 msgstr "作为颜料图层"
 
 #. i18n: context: text @ Action (import_layer_as_transparency_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3108
+#: krita/krita.action:3132
 #, kde-format
 msgctxt "action"
 msgid "as &Transparency Mask..."
@@ -11674,14 +11704,14 @@ msgstr "作为透明度蒙版(&T)..."
 
 #. i18n: context: toolTip @ Action (import_layer_as_transparency_mask), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (import_layer_as_transparency_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3110 krita/krita.action:3111
+#: krita/krita.action:3134 krita/krita.action:3135
 #, kde-format
 msgctxt "action"
 msgid "as Transparency Mask"
 msgstr "作为透明度蒙版"
 
 #. i18n: context: text @ Action (import_layer_as_filter_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3120
+#: krita/krita.action:3144
 #, kde-format
 msgctxt "action"
 msgid "as &Filter Mask..."
@@ -11689,14 +11719,14 @@ msgstr "作为滤镜蒙版(&F)..."
 
 #. i18n: context: toolTip @ Action (import_layer_as_filter_mask), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (import_layer_as_filter_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3122 krita/krita.action:3123
+#: krita/krita.action:3146 krita/krita.action:3147
 #, kde-format
 msgctxt "action"
 msgid "as Filter Mask"
 msgstr "作为滤镜蒙版"
 
 #. i18n: context: text @ Action (import_layer_as_selection_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3132
+#: krita/krita.action:3156
 #, kde-format
 msgctxt "action"
 msgid "as &Selection Mask..."
@@ -11704,14 +11734,14 @@ msgstr "作为选区蒙版(&S)..."
 
 #. i18n: context: toolTip @ Action (import_layer_as_selection_mask), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (import_layer_as_selection_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3134 krita/krita.action:3135
+#: krita/krita.action:3158 krita/krita.action:3159
 #, kde-format
 msgctxt "action"
 msgid "as Selection Mask"
 msgstr "作为选区蒙版"
 
 #. i18n: context: text @ Action (convert_to_paint_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3144
+#: krita/krita.action:3168
 #, kde-format
 msgctxt "action"
 msgid "Convert to &Paint Layer"
@@ -11719,14 +11749,14 @@ msgstr "转换为颜料图层(&P)"
 
 #. i18n: context: toolTip @ Action (convert_to_paint_layer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (convert_to_paint_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3146 krita/krita.action:3147
+#: krita/krita.action:3170 krita/krita.action:3171
 #, kde-format
 msgctxt "action"
 msgid "to Paint Layer"
 msgstr "为颜料图层"
 
 #. i18n: context: text @ Action (convert_to_transparency_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3156
+#: krita/krita.action:3180
 #, kde-format
 msgctxt "action"
 msgid "Convert to &Transparency Mask"
@@ -11734,14 +11764,14 @@ msgstr "转换为透明度蒙版(&T)"
 
 #. i18n: context: toolTip @ Action (convert_to_transparency_mask), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (convert_to_transparency_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3158 krita/krita.action:3159
+#: krita/krita.action:3182 krita/krita.action:3183
 #, kde-format
 msgctxt "action"
 msgid "to Transparency Mask"
 msgstr "为透明度蒙版"
 
 #. i18n: context: text @ Action (convert_to_filter_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3168
+#: krita/krita.action:3192
 #, kde-format
 msgctxt "action"
 msgid "Convert to &Filter Mask..."
@@ -11749,14 +11779,14 @@ msgstr "转换为滤镜蒙版(&F)..."
 
 #. i18n: context: toolTip @ Action (convert_to_filter_mask), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (convert_to_filter_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3170 krita/krita.action:3171
+#: krita/krita.action:3194 krita/krita.action:3195
 #, kde-format
 msgctxt "action"
 msgid "to Filter Mask"
 msgstr "为滤镜蒙版"
 
 #. i18n: context: text @ Action (convert_to_selection_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3180
+#: krita/krita.action:3204
 #, kde-format
 msgctxt "action"
 msgid "Convert to &Selection Mask"
@@ -11764,14 +11794,14 @@ msgstr "转换为选区蒙版(&S)"
 
 #. i18n: context: toolTip @ Action (convert_to_selection_mask), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (convert_to_selection_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3182 krita/krita.action:3183
+#: krita/krita.action:3206 krita/krita.action:3207
 #, kde-format
 msgctxt "action"
 msgid "to Selection Mask"
 msgstr "为选区蒙版"
 
 #. i18n: context: text @ Action (split_alpha_into_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3192
+#: krita/krita.action:3216
 #, kde-format
 msgctxt "action"
 msgid "&Alpha into Mask"
@@ -11779,14 +11809,14 @@ msgstr "拆分透明度到蒙版(&A)"
 
 #. i18n: context: toolTip @ Action (split_alpha_into_mask), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (split_alpha_into_mask), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3194 krita/krita.action:3195
+#: krita/krita.action:3218 krita/krita.action:3219
 #, kde-format
 msgctxt "action"
 msgid "Alpha into Mask"
 msgstr "拆分透明度到蒙版"
 
 #. i18n: context: text @ Action (split_alpha_write), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3204
+#: krita/krita.action:3228
 #, kde-format
 msgctxt "action"
 msgid "&Write as Alpha"
@@ -11794,14 +11824,14 @@ msgstr "作为透明度写入(&W)"
 
 #. i18n: context: toolTip @ Action (split_alpha_write), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (split_alpha_write), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3206 krita/krita.action:3207
+#: krita/krita.action:3230 krita/krita.action:3231
 #, kde-format
 msgctxt "action"
 msgid "Write as Alpha"
 msgstr "作为透明度写入"
 
 #. i18n: context: text @ Action (split_alpha_save_merged), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3216
+#: krita/krita.action:3240
 #, kde-format
 msgctxt "action"
 msgid "&Save Merged..."
@@ -11809,14 +11839,14 @@ msgstr "合并保存透明度(&S)..."
 
 #. i18n: context: toolTip @ Action (split_alpha_save_merged), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (split_alpha_save_merged), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3218 krita/krita.action:3219
+#: krita/krita.action:3242 krita/krita.action:3243
 #, kde-format
 msgctxt "action"
 msgid "Save Merged"
 msgstr "合并保存透明度"
 
 #. i18n: context: text @ Action (layersplit), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3228
+#: krita/krita.action:3252
 #, kde-format
 msgctxt "action"
 msgid "Split Layer..."
@@ -11824,14 +11854,14 @@ msgstr "拆分图层颜色..."
 
 #. i18n: context: toolTip @ Action (layersplit), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (layersplit), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3230 krita/krita.action:3231
+#: krita/krita.action:3254 krita/krita.action:3255
 #, kde-format
 msgctxt "action"
 msgid "Split Layer"
 msgstr "拆分图层颜色"
 
 #. i18n: context: text @ Action (waveletdecompose), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3240
+#: krita/krita.action:3264
 #, kde-format
 msgctxt "action"
 msgid "Wavelet Decompose ..."
@@ -11839,14 +11869,14 @@ msgstr "小波分解..."
 
 #. i18n: context: toolTip @ Action (waveletdecompose), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (waveletdecompose), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3242 krita/krita.action:3243
+#: krita/krita.action:3266 krita/krita.action:3267
 #, kde-format
 msgctxt "action"
 msgid "Wavelet Decompose"
 msgstr "小波分解"
 
 #. i18n: context: text @ Action (mirrorNodeX), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3252
+#: krita/krita.action:3276
 #, kde-format
 msgctxt "action"
 msgid "Mirror Layers Hori&zontally"
@@ -11854,14 +11884,14 @@ msgstr "翻转图层 (水平) (&Z)"
 
 #. i18n: context: toolTip @ Action (mirrorNodeX), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (mirrorNodeX), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3254 krita/krita.action:3255
+#: krita/krita.action:3278 krita/krita.action:3279
 #, kde-format
 msgctxt "action"
 msgid "Mirror Layers Horizontally"
 msgstr "翻转图层 (水平)"
 
 #. i18n: context: text @ Action (mirrorNodeY), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3264
+#: krita/krita.action:3288
 #, kde-format
 msgctxt "action"
 msgid "Mirror Layers &Vertically"
@@ -11869,14 +11899,14 @@ msgstr "翻转图层 (垂直) (&V)"
 
 #. i18n: context: toolTip @ Action (mirrorNodeY), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (mirrorNodeY), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3266 krita/krita.action:3267
+#: krita/krita.action:3290 krita/krita.action:3291
 #, kde-format
 msgctxt "action"
 msgid "Mirror Layers Vertically"
 msgstr "翻转图层 (垂直)"
 
 #. i18n: context: text @ Action (rotatelayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3276
+#: krita/krita.action:3300
 #, kde-format
 msgctxt "action"
 msgid "&Rotate Layers..."
@@ -11884,14 +11914,14 @@ msgstr "旋转图层(&R)..."
 
 #. i18n: context: toolTip @ Action (rotatelayer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (rotatelayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3278 krita/krita.action:3279
+#: krita/krita.action:3302 krita/krita.action:3303
 #, kde-format
 msgctxt "action"
 msgid "Rotate Layers"
 msgstr "旋转图层"
 
 #. i18n: context: text @ Action (rotateLayerCW90), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3288
+#: krita/krita.action:3312
 #, kde-format
 msgctxt "action"
 msgid "Rotate &Layers 90° to the Right"
@@ -11899,14 +11929,14 @@ msgstr "旋转图层 (向右 90°) (&L)"
 
 #. i18n: context: toolTip @ Action (rotateLayerCW90), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (rotateLayerCW90), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3290 krita/krita.action:3291
+#: krita/krita.action:3314 krita/krita.action:3315
 #, kde-format
 msgctxt "action"
 msgid "Rotate Layers 90° to the Right"
 msgstr "旋转图层 (向右 90°)"
 
 #. i18n: context: text @ Action (rotateLayerCCW90), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3300
+#: krita/krita.action:3324
 #, kde-format
 msgctxt "action"
 msgid "Rotate Layers &90° to the Left"
@@ -11914,14 +11944,14 @@ msgstr "旋转图层 (向左 &90°)"
 
 #. i18n: context: toolTip @ Action (rotateLayerCCW90), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (rotateLayerCCW90), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3302 krita/krita.action:3303
+#: krita/krita.action:3326 krita/krita.action:3327
 #, kde-format
 msgctxt "action"
 msgid "Rotate Layers 90° to the Left"
 msgstr "旋转图层 (向左 90°)"
 
 #. i18n: context: text @ Action (rotateLayer180), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3312
+#: krita/krita.action:3336
 #, kde-format
 msgctxt "action"
 msgid "Rotate Layers &180°"
@@ -11929,14 +11959,14 @@ msgstr "旋转图层 (&180°)"
 
 #. i18n: context: toolTip @ Action (rotateLayer180), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (rotateLayer180), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3314 krita/krita.action:3315
+#: krita/krita.action:3338 krita/krita.action:3339
 #, kde-format
 msgctxt "action"
 msgid "Rotate Layers 180°"
 msgstr "旋转图层 (180°)"
 
 #. i18n: context: text @ Action (layersize), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3324
+#: krita/krita.action:3348
 #, kde-format
 msgctxt "action"
 msgid "Scale &Layers to new Size..."
@@ -11944,14 +11974,14 @@ msgstr "缩放图层(&L)..."
 
 #. i18n: context: toolTip @ Action (layersize), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (layersize), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3326 krita/krita.action:3327
+#: krita/krita.action:3350 krita/krita.action:3351
 #, kde-format
 msgctxt "action"
 msgid "Scale Layers to new Size"
 msgstr "缩放图层"
 
 #. i18n: context: text @ Action (shearlayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3336
+#: krita/krita.action:3360
 #, kde-format
 msgctxt "action"
 msgid "&Shear Layers..."
@@ -11959,14 +11989,14 @@ msgstr "斜切图层(&S)..."
 
 #. i18n: context: toolTip @ Action (shearlayer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (shearlayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3338 krita/krita.action:3339
+#: krita/krita.action:3362 krita/krita.action:3363
 #, kde-format
 msgctxt "action"
 msgid "Shear Layers"
 msgstr "斜切图层"
 
 #. i18n: context: text @ Action (mirrorAllNodesX), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3348
+#: krita/krita.action:3372
 #, kde-format
 msgctxt "action"
 msgid "Mirror All Layers Hori&zontally"
@@ -11974,14 +12004,14 @@ msgstr "翻转所有图层 (水平) (&Z)"
 
 #. i18n: context: toolTip @ Action (mirrorAllNodesX), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (mirrorAllNodesX), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3350 krita/krita.action:3351
+#: krita/krita.action:3374 krita/krita.action:3375
 #, kde-format
 msgctxt "action"
 msgid "Mirror All Layers Horizontally"
 msgstr "翻转所有图层 (水平)"
 
 #. i18n: context: text @ Action (mirrorAllNodesY), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3360
+#: krita/krita.action:3384
 #, kde-format
 msgctxt "action"
 msgid "Mirror All Layers &Vertically"
@@ -11989,14 +12019,14 @@ msgstr "翻转所有图层 (垂直) (&V)"
 
 #. i18n: context: toolTip @ Action (mirrorAllNodesY), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (mirrorAllNodesY), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3362 krita/krita.action:3363
+#: krita/krita.action:3386 krita/krita.action:3387
 #, kde-format
 msgctxt "action"
 msgid "Mirror All Layers Vertically"
 msgstr "翻转所有图层 (垂直)"
 
 #. i18n: context: text @ Action (rotateAllLayers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3372
+#: krita/krita.action:3396
 #, kde-format
 msgctxt "action"
 msgid "&Rotate All Layers..."
@@ -12004,14 +12034,14 @@ msgstr "旋转所有图层(&R)..."
 
 #. i18n: context: toolTip @ Action (rotateAllLayers), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (rotateAllLayers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3374 krita/krita.action:3375
+#: krita/krita.action:3398 krita/krita.action:3399
 #, kde-format
 msgctxt "action"
 msgid "Rotate All Layers"
 msgstr "旋转所有图层"
 
 #. i18n: context: text @ Action (rotateAllLayersCW90), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3384
+#: krita/krita.action:3408
 #, kde-format
 msgctxt "action"
 msgid "Rotate All &Layers 90° to the Right"
@@ -12019,14 +12049,14 @@ msgstr "旋转所有图层 (向右 90°) (&L)"
 
 #. i18n: context: toolTip @ Action (rotateAllLayersCW90), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (rotateAllLayersCW90), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3386 krita/krita.action:3387
+#: krita/krita.action:3410 krita/krita.action:3411
 #, kde-format
 msgctxt "action"
 msgid "Rotate All Layers 90° to the Right"
 msgstr "旋转所有图层 (向右 90°)"
 
 #. i18n: context: text @ Action (rotateAllLayersCCW90), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3396
+#: krita/krita.action:3420
 #, kde-format
 msgctxt "action"
 msgid "Rotate All Layers &90° to the Left"
@@ -12034,14 +12064,14 @@ msgstr "旋转所有图层 (向左 &90°)"
 
 #. i18n: context: toolTip @ Action (rotateAllLayersCCW90), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (rotateAllLayersCCW90), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3398 krita/krita.action:3399
+#: krita/krita.action:3422 krita/krita.action:3423
 #, kde-format
 msgctxt "action"
 msgid "Rotate All Layers 90° to the Left"
 msgstr "旋转所有图层 (向左 90°)"
 
 #. i18n: context: text @ Action (rotateAllLayers180), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3408
+#: krita/krita.action:3432
 #, kde-format
 msgctxt "action"
 msgid "Rotate All Layers &180°"
@@ -12049,14 +12079,14 @@ msgstr "旋转所有图层 (&180°)"
 
 #. i18n: context: toolTip @ Action (rotateAllLayers180), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (rotateAllLayers180), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3410 krita/krita.action:3411
+#: krita/krita.action:3434 krita/krita.action:3435
 #, kde-format
 msgctxt "action"
 msgid "Rotate All Layers 180°"
 msgstr "旋转所有图层 (180°)"
 
 #. i18n: context: text @ Action (scaleAllLayers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3420
+#: krita/krita.action:3444
 #, kde-format
 msgctxt "action"
 msgid "Scale All &Layers to new Size..."
@@ -12064,14 +12094,14 @@ msgstr "缩放所有图层(&L)..."
 
 #. i18n: context: toolTip @ Action (scaleAllLayers), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (scaleAllLayers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3422 krita/krita.action:3423
+#: krita/krita.action:3446 krita/krita.action:3447
 #, kde-format
 msgctxt "action"
 msgid "Scale All Layers to new Size"
 msgstr "缩放所有图层"
 
 #. i18n: context: text @ Action (shearAllLayers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3432
+#: krita/krita.action:3456
 #, kde-format
 msgctxt "action"
 msgid "&Shear All Layers..."
@@ -12079,14 +12109,14 @@ msgstr "斜切所有图层(&S)..."
 
 #. i18n: context: toolTip @ Action (shearAllLayers), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (shearAllLayers), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3434 krita/krita.action:3435
+#: krita/krita.action:3458 krita/krita.action:3459
 #, kde-format
 msgctxt "action"
 msgid "Shear All Layers"
 msgstr "斜切所有图层"
 
 #. i18n: context: text @ Action (offsetlayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3444
+#: krita/krita.action:3468
 #, kde-format
 msgctxt "action"
 msgid "&Offset Layers..."
@@ -12094,14 +12124,14 @@ msgstr "偏移图层(&O)..."
 
 #. i18n: context: toolTip @ Action (offsetlayer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (offsetlayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3446 krita/krita.action:3447
+#: krita/krita.action:3470 krita/krita.action:3471
 #, kde-format
 msgctxt "action"
 msgid "Offset Layers"
 msgstr "偏移图层"
 
 #. i18n: context: text @ Action (clones_array), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3456
+#: krita/krita.action:3480
 #, kde-format
 msgctxt "action"
 msgid "Clones &Array..."
@@ -12109,14 +12139,14 @@ msgstr "克隆阵列(&A)..."
 
 #. i18n: context: toolTip @ Action (clones_array), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (clones_array), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3458 krita/krita.action:3459
+#: krita/krita.action:3482 krita/krita.action:3483
 #, kde-format
 msgctxt "action"
 msgid "Clones Array"
 msgstr "克隆阵列"
 
 #. i18n: context: text @ Action (EditLayerMetaData), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3468
+#: krita/krita.action:3492
 #, kde-format
 msgctxt "action"
 msgid "&Edit metadata..."
@@ -12124,14 +12154,14 @@ msgstr "编辑元数据(&E)..."
 
 #. i18n: context: toolTip @ Action (EditLayerMetaData), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (EditLayerMetaData), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3470 krita/krita.action:3471
+#: krita/krita.action:3494 krita/krita.action:3495
 #, kde-format
 msgctxt "action"
 msgid "Edit metadata"
 msgstr "编辑元数据"
 
 #. i18n: context: text @ Action (histogram), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3480
+#: krita/krita.action:3504
 #, kde-format
 msgctxt "action"
 msgid "&Histogram..."
@@ -12139,14 +12169,14 @@ msgstr "直方图(&H)..."
 
 #. i18n: context: toolTip @ Action (histogram), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (histogram), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3482 krita/krita.action:3483
+#: krita/krita.action:3506 krita/krita.action:3507
 #, kde-format
 msgctxt "action"
 msgid "Histogram"
 msgstr "直方图"
 
 #. i18n: context: text @ Action (layercolorspaceconversion), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3492
+#: krita/krita.action:3516
 #, kde-format
 msgctxt "action"
 msgid "&Convert Layer Color Space..."
@@ -12154,7 +12184,7 @@ msgstr "转换图层色彩空间(&C)..."
 
 #. i18n: context: toolTip @ Action (layercolorspaceconversion), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (layercolorspaceconversion), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3494 krita/krita.action:3495
+#: krita/krita.action:3518 krita/krita.action:3519
 #, kde-format
 msgctxt "action"
 msgid "Convert Layer Color Space"
@@ -12162,14 +12192,14 @@ msgstr "转换图层色彩空间"
 
 #. i18n: context: text @ Action (unifylayerscolorspace), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (unifylayerscolorspace), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3504 krita/krita.action:3507
+#: krita/krita.action:3528 krita/krita.action:3531
 #, kde-format
 msgctxt "action"
 msgid "Unify Layers Color Space"
 msgstr "统一图层色彩空间"
 
 #. i18n: context: toolTip @ Action (unifylayerscolorspace), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3506
+#: krita/krita.action:3530
 #, kde-format
 msgctxt "action"
 msgid ""
@@ -12178,7 +12208,7 @@ msgid ""
 msgstr "将所有图层转换为图像的色彩空间 (如果图层的色彩空间与图像不统一)"
 
 #. i18n: context: text @ Action (merge_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3516
+#: krita/krita.action:3540
 #, kde-format
 msgctxt "action"
 msgid "&Merge with Layer Below"
@@ -12186,14 +12216,14 @@ msgstr "向下合并图层(&M)"
 
 #. i18n: context: toolTip @ Action (merge_layer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (merge_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3518 krita/krita.action:3519
+#: krita/krita.action:3542 krita/krita.action:3543
 #, kde-format
 msgctxt "action"
 msgid "Merge with Layer Below"
 msgstr "向下合并图层"
 
 #. i18n: context: text @ Action (flatten_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3528
+#: krita/krita.action:3552
 #, kde-format
 msgctxt "action"
 msgid "&Flatten Layer"
@@ -12201,14 +12231,14 @@ msgstr "合并图层效果(&F)"
 
 #. i18n: context: toolTip @ Action (flatten_layer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (flatten_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3530 krita/krita.action:3531
+#: krita/krita.action:3554 krita/krita.action:3555
 #, kde-format
 msgctxt "action"
 msgid "Flatten Layer"
 msgstr "合并图层效果"
 
 #. i18n: context: text @ Action (flatten_image), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3540
+#: krita/krita.action:3564
 #, kde-format
 msgctxt "action"
 msgid "Flatten ima&ge"
@@ -12216,14 +12246,14 @@ msgstr "合并整个图像(&G)"
 
 #. i18n: context: toolTip @ Action (flatten_image), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (flatten_image), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3542 krita/krita.action:3543
+#: krita/krita.action:3566 krita/krita.action:3567
 #, kde-format
 msgctxt "action"
 msgid "Flatten image"
 msgstr "合并整个图像"
 
 #. i18n: context: text @ Action (layer_style), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3552
+#: krita/krita.action:3576
 #, kde-format
 msgctxt "action"
 msgid "La&yer Style..."
@@ -12231,7 +12261,7 @@ msgstr "图层样式(&Y)..."
 
 #. i18n: context: toolTip @ Action (layer_style), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (layer_style), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3554 krita/krita.action:3555
+#: krita/krita.action:3578 krita/krita.action:3579
 #, kde-format
 msgctxt "action"
 msgid "Layer Style"
@@ -12240,7 +12270,7 @@ msgstr "图层样式"
 #. i18n: context: text @ Action (LayerGroupSwitcher/previous), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (LayerGroupSwitcher/previous), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (LayerGroupSwitcher/previous), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3564 krita/krita.action:3566 krita/krita.action:3567
+#: krita/krita.action:3588 krita/krita.action:3590 krita/krita.action:3591
 #, kde-format
 msgctxt "action"
 msgid "Move into previous group"
@@ -12249,7 +12279,7 @@ msgstr "移进上一组"
 #. i18n: context: text @ Action (LayerGroupSwitcher/next), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (LayerGroupSwitcher/next), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (LayerGroupSwitcher/next), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3576 krita/krita.action:3578 krita/krita.action:3579
+#: krita/krita.action:3600 krita/krita.action:3602 krita/krita.action:3603
 #, kde-format
 msgctxt "action"
 msgid "Move into next group"
@@ -12258,14 +12288,14 @@ msgstr "移进下一组"
 #. i18n: context: text @ Action (RenameCurrentLayer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (RenameCurrentLayer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (RenameCurrentLayer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3588 krita/krita.action:3590 krita/krita.action:3591
+#: krita/krita.action:3612 krita/krita.action:3614 krita/krita.action:3615
 #, kde-format
 msgctxt "action"
 msgid "Rename current layer"
 msgstr "重命名当前图层"
 
 #. i18n: context: text @ Action (remove_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3600
+#: krita/krita.action:3624
 #, kde-format
 msgctxt "action"
 msgid "&Remove Layer"
@@ -12273,7 +12303,7 @@ msgstr "移除图层(&R)"
 
 #. i18n: context: toolTip @ Action (remove_layer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (remove_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3602 krita/krita.action:3603
+#: krita/krita.action:3626 krita/krita.action:3627
 #, kde-format
 msgctxt "action"
 msgid "Remove Layer"
@@ -12281,7 +12311,7 @@ msgstr "移除图层"
 
 #. i18n: context: text @ Action (move_layer_up), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (move_layer_up), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3612 krita/krita.action:3614
+#: krita/krita.action:3636 krita/krita.action:3638
 #, kde-format
 msgctxt "action"
 msgid "Move Layer or Mask Up"
@@ -12289,14 +12319,14 @@ msgstr "上移图层/蒙版"
 
 #. i18n: context: text @ Action (move_layer_down), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (move_layer_down), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3622 krita/krita.action:3624
+#: krita/krita.action:3646 krita/krita.action:3648
 #, kde-format
 msgctxt "action"
 msgid "Move Layer or Mask Down"
 msgstr "下移图层/蒙版"
 
 #. i18n: context: text @ Action (layer_properties), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3632
+#: krita/krita.action:3656
 #, kde-format
 msgctxt "action"
 msgid "&Properties..."
@@ -12304,28 +12334,28 @@ msgstr "图层属性(&P)..."
 
 #. i18n: context: toolTip @ Action (layer_properties), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: iconText @ Action (layer_properties), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3634 krita/krita.action:3635
+#: krita/krita.action:3658 krita/krita.action:3659
 #, kde-format
 msgctxt "Layer Properties"
 msgid "Properties"
 msgstr "图层属性"
 
 #. i18n: context: text @ Action (set-copy-from), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3644
+#: krita/krita.action:3668
 #, kde-format
 msgctxt "action"
 msgid "Set Copy F&rom..."
 msgstr "克隆图层来源(&R)..."
 
 #. i18n: context: toolTip @ Action (set-copy-from), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3646
+#: krita/krita.action:3670
 #, kde-format
 msgctxt "action"
 msgid "Set the source for the selected clone layer(s)."
 msgstr "设置选中的克隆图层的源。"
 
 #. i18n: context: iconText @ Action (set-copy-from), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3647
+#: krita/krita.action:3671
 #, kde-format
 msgctxt "action"
 msgid "Set Copy From"
@@ -12333,7 +12363,7 @@ msgstr "克隆图层来源"
 
 #. i18n: context: text @ Action (create_reference_image_from_active_layer), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (create_reference_image_from_active_layer), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3656 krita/krita.action:3658
+#: krita/krita.action:3680 krita/krita.action:3682
 #, kde-format
 msgctxt "action"
 msgid "Reference Image from Layer"
@@ -12341,14 +12371,14 @@ msgstr "创建参考图像 (来自活动图层)"
 
 #. i18n: context: text @ Action (create_reference_image_from_visible_canvas), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (create_reference_image_from_visible_canvas), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3668 krita/krita.action:3670
+#: krita/krita.action:3692 krita/krita.action:3694
 #, kde-format
 msgctxt "action"
 msgid "Reference Image from Visible"
 msgstr "创建参考图像 (来自可见图层)"
 
 #. i18n: context: text @ Action (force_palette_colors), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3680
+#: krita/krita.action:3704
 #, kde-format
 msgctxt "action"
 msgid "Force Palette Colors"
@@ -12356,7 +12386,7 @@ msgstr "强制拾取色板颜色"
 
 #. i18n: context: whatsThis @ Action (force_palette_colors), Actions (Layers), ActionCollection (Krita)
 #. i18n: context: toolTip @ Action (force_palette_colors), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3681 krita/krita.action:3682
+#: krita/krita.action:3705 krita/krita.action:3706
 #, kde-format
 msgctxt "action"
 msgid ""
@@ -12365,7 +12395,7 @@ msgid ""
 msgstr "强制拾色器仅拾取当前色板包含的颜色。"
 
 #. i18n: context: iconText @ Action (force_palette_colors), Actions (Layers), ActionCollection (Krita)
-#: krita/krita.action:3683
+#: krita/krita.action:3707
 #, kde-format
 msgctxt "action"
 msgid "Force Palette"
@@ -12438,7 +12468,7 @@ msgstr "新建(&N)"
 msgid "&Import/Export"
 msgstr "导入/导出(&I)"
 
-#: krita/krita5.xmlgui:239 plugins/dockers/layerdocker/LayerBox.cpp:1302
+#: krita/krita5.xmlgui:239 plugins/dockers/layerdocker/LayerBox.cpp:1304
 #, kde-format
 msgid "&Convert"
 msgstr "转换(&C)"
@@ -12464,7 +12494,7 @@ msgstr "变形 - 所有图层(&A)"
 msgid "S&plit"
 msgstr "拆分(&P)"
 
-#: krita/krita5.xmlgui:298 plugins/dockers/layerdocker/LayerBox.cpp:1311
+#: krita/krita5.xmlgui:298 plugins/dockers/layerdocker/LayerBox.cpp:1313
 #, kde-format
 msgid "S&plit Alpha"
 msgstr "透明度通道操作(&P)"
@@ -15421,7 +15451,7 @@ msgstr "重做"
 
 #: libs/flake/KoMarkerCollection.cpp:67
 #: libs/flake/resources/KoSvgSymbolCollectionResource.cpp:136
-#: libs/ui/flake/kis_shape_layer.cc:613
+#: libs/ui/flake/kis_shape_layer.cc:615
 #, kde-format
 msgid ""
 "Parsing error in the main document at line %1, column %2\n"
@@ -19928,8 +19958,8 @@ msgstr "取消选择"
 
 #: libs/image/commands/kis_image_layer_add_command.cpp:20
 #: libs/image/commands/kis_image_layer_add_command.cpp:37
-#: libs/ui/actions/KisPasteActionFactories.cpp:267
-#: libs/ui/kis_layer_manager.cc:757 libs/ui/kis_layer_manager.cc:810
+#: libs/ui/actions/KisPasteActionFactories.cpp:239
+#: libs/ui/kis_layer_manager.cc:774 libs/ui/kis_layer_manager.cc:827
 msgctxt "(qtundo-format)"
 msgid "Add Layer"
 msgstr "添加图层"
@@ -19956,7 +19986,7 @@ msgctxt "(qtundo-format)"
 msgid "Opacity Change"
 msgstr "不透明度更改"
 
-#: libs/image/commands/kis_node_property_list_command.cpp:61
+#: libs/image/commands/kis_node_property_list_command.cpp:75
 msgctxt "(qtundo-format)"
 msgid "Property Changes"
 msgstr "属性更改"
@@ -19967,7 +19997,7 @@ msgid "Reselect"
 msgstr "重新选择"
 
 #: libs/image/commands/kis_set_global_selection_command.cpp:54
-#: libs/image/kis_layer_utils.cpp:2097
+#: libs/image/kis_layer_utils.cpp:2166
 #: libs/impex/KisExportCheckRegistry.cpp:129
 #, kde-format
 msgid "Selection Mask"
@@ -20204,7 +20234,7 @@ msgid "Imported Image"
 msgstr "导入的图像"
 
 #. i18n.
-#: libs/image/kis_image.cc:769 libs/ui/KisDocument.cpp:2661
+#: libs/image/kis_image.cc:769 libs/ui/KisDocument.cpp:2651
 #: libs/ui/kis_import_catcher.cc:50 plugins/impex/psd/psd_loader.cpp:221
 #, kde-format
 msgctxt "Name for the bottom-most layer in the layerstack"
@@ -20212,6 +20242,7 @@ msgid "Background"
 msgstr "背景"
 
 #: libs/image/kis_image.cc:773 libs/ui/kis_layer_manager.cc:684
+#: libs/ui/kis_layer_manager.cc:698
 #, kde-format
 msgid "Paint Layer"
 msgstr "颜料图层"
@@ -20367,7 +20398,7 @@ msgstr "旋转 (Y)"
 msgid "Rotation (Z)"
 msgstr "旋转 (Z)"
 
-#: libs/image/kis_layer.cc:275 libs/widgets/KoZoomActionState.cpp:20
+#: libs/image/kis_layer.cc:285 libs/widgets/KoZoomActionState.cpp:20
 #, kde-format
 msgid "%1%"
 msgstr "%1%"
@@ -20456,7 +20487,12 @@ msgstr "错误"
 msgid "Layer Color Space Mismatch"
 msgstr "图层色彩空间不匹配"
 
-#: libs/image/kis_layer_properties_icons.cpp:128
+#: libs/image/kis_layer_properties_icons.cpp:40
+#, kde-format
+msgid "Clipping Mask"
+msgstr "Clipping Mask"
+
+#: libs/image/kis_layer_properties_icons.cpp:133
 #, kde-format
 msgctxt "a tooltip shown in when hovering layer's property"
 msgid ""
@@ -20473,58 +20509,58 @@ msgstr ""
 msgid "Merged"
 msgstr "合并"
 
-#: libs/image/kis_layer_utils.cpp:1472
+#: libs/image/kis_layer_utils.cpp:1541
 msgctxt "(qtundo-format)"
 msgid "Merge Down"
 msgstr "向下合并图层"
 
-#: libs/image/kis_layer_utils.cpp:1744
+#: libs/image/kis_layer_utils.cpp:1813
 #, kde-format
 msgid "Copy of"
 msgstr "副本"
 
-#: libs/image/kis_layer_utils.cpp:1822
+#: libs/image/kis_layer_utils.cpp:1891
 msgctxt "(qtundo-format)"
 msgid "Change projection color"
 msgstr "更改视图色彩空间"
 
-#: libs/image/kis_layer_utils.cpp:2048
+#: libs/image/kis_layer_utils.cpp:2117
 msgctxt "(qtundo-format)"
 msgid "Merge Selected Nodes"
 msgstr "合并选中的节点"
 
-#: libs/image/kis_layer_utils.cpp:2066
+#: libs/image/kis_layer_utils.cpp:2135
 msgctxt "(qtundo-format)"
 msgid "New From Visible"
 msgstr "用可见内容新建"
 
-#: libs/image/kis_layer_utils.cpp:2067
+#: libs/image/kis_layer_utils.cpp:2136
 #, kde-format
 msgctxt "New layer created from all the visible layers"
 msgid "Visible"
 msgstr "可见"
 
-#: libs/image/kis_layer_utils.cpp:2146
+#: libs/image/kis_layer_utils.cpp:2215
 msgctxt "(qtundo-format)"
 msgid "Merge Selection Masks"
 msgstr "合并选区蒙版"
 
-#: libs/image/kis_layer_utils.cpp:2170
+#: libs/image/kis_layer_utils.cpp:2239
 msgctxt "(qtundo-format)"
 msgid "Flatten Layer"
 msgstr "合并图层分组/合并图层效果"
 
-#: libs/image/kis_layer_utils.cpp:2186
+#: libs/image/kis_layer_utils.cpp:2255
 msgctxt "(qtundo-format)"
 msgid "Flatten Image"
 msgstr "合并整个图像"
 
-#: libs/image/kis_layer_utils.cpp:2420
+#: libs/image/kis_layer_utils.cpp:2489
 msgctxt "(qtundo-format)"
 msgid "Split Alpha into a Mask"
 msgstr "拆分透明度到蒙版"
 
-#: libs/image/kis_layer_utils.cpp:2446
+#: libs/image/kis_layer_utils.cpp:2515
 msgctxt "(qtundo-format)"
 msgid "Convert to a Paint Layer"
 msgstr "转换为颜料图层"
@@ -20536,8 +20572,8 @@ msgstr "正在处理"
 
 #: libs/image/kis_psd_layer_style.cpp:106
 #: libs/ui/KisApplicationArguments.cpp:396 libs/ui/KisMainWindow.cpp:1527
-#: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:32
-#: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:38
+#: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:28
+#: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:34
 #: plugins/impex/libkra/kis_kra_saver.cpp:89
 #, kde-format
 msgid "Unnamed"
@@ -20779,30 +20815,30 @@ msgstr ""
 "此图像包含的动画使用了 <b>非整数毫秒</b> 的帧持续时间。此格式不支持非整数毫秒"
 "的帧持续时间，它将被四舍五入为最接近的整数毫秒。"
 
-#: libs/impex/KisExportCheckRegistry.cpp:109 libs/ui/kis_layer_manager.cc:729
+#: libs/impex/KisExportCheckRegistry.cpp:109 libs/ui/kis_layer_manager.cc:746
 #, kde-format
 msgid "Clone Layer"
 msgstr "克隆图层"
 
-#: libs/impex/KisExportCheckRegistry.cpp:111 libs/ui/kis_layer_manager.cc:713
-#: libs/ui/kis_node_manager.cpp:1636
+#: libs/impex/KisExportCheckRegistry.cpp:111 libs/ui/kis_layer_manager.cc:730
+#: libs/ui/kis_node_manager.cpp:1680
 #, kde-format
 msgctxt "A group of layers"
 msgid "Group"
 msgstr "图层组"
 
-#: libs/impex/KisExportCheckRegistry.cpp:113 libs/ui/kis_layer_manager.cc:1050
+#: libs/impex/KisExportCheckRegistry.cpp:113 libs/ui/kis_layer_manager.cc:1067
 #, kde-format
 msgid "File Layer"
 msgstr "文件图层"
 
-#: libs/impex/KisExportCheckRegistry.cpp:115 libs/ui/kis_layer_manager.cc:742
+#: libs/impex/KisExportCheckRegistry.cpp:115 libs/ui/kis_layer_manager.cc:759
 #: plugins/impex/svg/kis_svg_import.cc:93
 #, kde-format
 msgid "Vector Layer"
 msgstr "矢量图层"
 
-#: libs/impex/KisExportCheckRegistry.cpp:117 libs/ui/kis_layer_manager.cc:766
+#: libs/impex/KisExportCheckRegistry.cpp:117 libs/ui/kis_layer_manager.cc:783
 #, kde-format
 msgid "Filter Layer"
 msgstr "滤镜图层"
@@ -20829,7 +20865,7 @@ msgid "Transform Mask"
 msgstr "变形蒙版"
 
 #: libs/impex/KisExportCheckRegistry.cpp:127 libs/ui/kis_mask_manager.cc:216
-#: libs/ui/kis_node_manager.cpp:1398
+#: libs/ui/kis_node_manager.cpp:1404
 #: plugins/impex/libkra/kis_kra_load_visitor.cpp:216
 #: plugins/impex/psd/psd_loader.cpp:599
 #: plugins/impex/tiff/kis_tiff_import.cc:565
@@ -22334,9 +22370,9 @@ msgstr "简单色彩转换引擎"
 
 #: libs/pigment/resources/KoColorSet.cpp:1100
 #: libs/pigment/resources/KoColorSet.cpp:1447
-#: libs/pigment/resources/KoColorSet.cpp:1527
-#: libs/pigment/resources/KoColorSet.cpp:1945 libs/ui/KisMainWindow.cpp:2037
-#: libs/ui/KisView.cpp:1164 libs/ui/actions/KisPasteActionFactories.cpp:392
+#: libs/pigment/resources/KoColorSet.cpp:1528
+#: libs/pigment/resources/KoColorSet.cpp:1946 libs/ui/KisMainWindow.cpp:2037
+#: libs/ui/KisView.cpp:1167 libs/ui/actions/KisPasteActionFactories.cpp:324
 #: libs/ui/animation/KisDlgAnimationRenderer.cpp:599
 #: plugins/generators/seexpr/kis_wdg_seexpr.cpp:34
 #, kde-format
@@ -22354,7 +22390,7 @@ msgctxt "Automatically created layer name when saving into PSD"
 msgid "Background"
 msgstr "背景"
 
-#: libs/psd/psd_layer_section.cpp:973 libs/psd/psd_layer_section.cpp:1151
+#: libs/psd/psd_layer_section.cpp:975 libs/psd/psd_layer_section.cpp:1155
 #, kde-format
 msgid "Unnamed Layer"
 msgstr "未命名图层"
@@ -22385,7 +22421,7 @@ msgstr "本地资源"
 #: libs/ui/KisReferenceImage.cpp:192 libs/ui/KisRemoteFileFetcher.cpp:40
 #: libs/ui/KisRemoteFileFetcher.cpp:64 libs/ui/KisRemoteFileFetcher.cpp:91
 #: libs/ui/KisTemplateCreateDia.cpp:285 libs/ui/KisTemplateCreateDia.cpp:392
-#: libs/ui/KisView.cpp:682 libs/ui/KisView.cpp:1168
+#: libs/ui/KisView.cpp:685 libs/ui/KisView.cpp:1171
 #: libs/ui/KisWelcomePageWidget.cpp:753
 #: libs/ui/animation/KisAnimationRender.cpp:69
 #: libs/ui/animation/KisAnimationRender.cpp:153
@@ -22403,14 +22439,14 @@ msgstr "本地资源"
 #: libs/ui/animation/KisDlgImportVideoAnimation.cpp:783
 #: libs/ui/dialogs/kis_dlg_layer_style.cpp:401
 #: libs/ui/dialogs/kis_dlg_preferences.cc:1140
-#: libs/ui/input/kis_tablet_debugger.cpp:107 libs/ui/kis_clipboard.cc:782
+#: libs/ui/input/kis_tablet_debugger.cpp:107 libs/ui/kis_clipboard.cc:509
 #: libs/ui/kis_custom_pattern.cc:127 libs/ui/kis_filter_manager.cc:234
 #: libs/ui/kis_filter_manager.cc:245 libs/ui/kis_layer_manager.cc:328
-#: libs/ui/kis_layer_manager.cc:1059 libs/ui/kis_node_manager.cpp:1322
-#: libs/ui/kis_node_manager.cpp:1385
+#: libs/ui/kis_layer_manager.cc:1076 libs/ui/kis_node_manager.cpp:1328
+#: libs/ui/kis_node_manager.cpp:1391
 #: libs/ui/opengl/KisOpenGLCanvasRenderer.cpp:336
-#: libs/ui/widgets/kis_custom_image_widget.cc:289
-#: libs/ui/widgets/kis_custom_image_widget.cc:433
+#: libs/ui/widgets/kis_custom_image_widget.cc:296
+#: libs/ui/widgets/kis_custom_image_widget.cc:456
 #: plugins/assistants/Assistants/kis_assistant_tool.cc:1580
 #: plugins/assistants/Assistants/kis_assistant_tool.cc:1584
 #: plugins/dockers/gamutmask/gamutmask_dock.cpp:293
@@ -23709,13 +23745,13 @@ msgstr "打开 %1 时遇到问题。"
 msgid "Not Saved"
 msgstr "未保存图像"
 
-#: libs/ui/KisDocument.cpp:2668
+#: libs/ui/KisDocument.cpp:2658
 #, kde-format
 msgctxt "Name of automatically created background color fill layer"
 msgid "Background Fill"
 msgstr "背景色填充"
 
-#: libs/ui/KisDocument.cpp:2730
+#: libs/ui/KisDocument.cpp:2720
 #, kde-format
 msgctxt ""
 "progress dialog message when the user closes the document that is being saved"
@@ -24358,14 +24394,14 @@ msgid "Saving As"
 msgstr "保存为"
 
 #: libs/ui/KisMainWindow.cpp:2003
-#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:213
+#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:221
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:171
 #, kde-format
 msgid "Export Region"
 msgstr "导出区域"
 
 #: libs/ui/KisMainWindow.cpp:2005
-#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:215
+#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:223
 #, kde-format
 msgid "Exported Region"
 msgstr "已导出区域"
@@ -24561,20 +24597,20 @@ msgctxt "Shows up when deleting a swatch group"
 msgid "Keep the Colors"
 msgstr "保留颜色"
 
-#: libs/ui/KisPaletteEditor.cpp:358 libs/ui/KisPaletteEditor.cpp:449
+#: libs/ui/KisPaletteEditor.cpp:359 libs/ui/KisPaletteEditor.cpp:451
 #, kde-format
 msgctxt "Default name for a color swatch"
 msgid "Color %1"
 msgstr "颜色 %1"
 
-#: libs/ui/KisPaletteEditor.cpp:391 libs/ui/KisPaletteEditor.cpp:437
+#: libs/ui/KisPaletteEditor.cpp:393 libs/ui/KisPaletteEditor.cpp:439
 #: libs/widgets/kis_palette_view.cpp:129
 #, kde-format
 msgctxt "@title:dialog"
 msgid "Add a new Color Swatch"
 msgstr "新建色块"
 
-#: libs/ui/KisPaletteEditor.cpp:406 libs/ui/KisPaletteEditor.cpp:456
+#: libs/ui/KisPaletteEditor.cpp:408 libs/ui/KisPaletteEditor.cpp:458
 #: libs/widgets/kis_palette_view.cpp:140
 #, kde-format
 msgctxt "@info:tooltip"
@@ -24583,37 +24619,37 @@ msgid ""
 "paints it has available to it. The opposite is called a process color."
 msgstr "专色：打印机无需混合色料直接打印出来的颜色，反之则是混色。"
 
-#: libs/ui/KisPaletteEditor.cpp:410 libs/ui/KisPaletteEditor.cpp:459
+#: libs/ui/KisPaletteEditor.cpp:412 libs/ui/KisPaletteEditor.cpp:461
 #: libs/widgets/kis_palette_view.cpp:142
 #, kde-format
 msgid "Swatch ID:"
 msgstr "色块 ID："
 
-#: libs/ui/KisPaletteEditor.cpp:411 libs/ui/KisPaletteEditor.cpp:460
+#: libs/ui/KisPaletteEditor.cpp:413 libs/ui/KisPaletteEditor.cpp:462
 #: libs/widgets/kis_palette_view.cpp:143
 #, kde-format
 msgid "Color swatch name:"
 msgstr "色块名称："
 
-#: libs/ui/KisPaletteEditor.cpp:412 libs/ui/KisPaletteEditor.cpp:461
+#: libs/ui/KisPaletteEditor.cpp:414 libs/ui/KisPaletteEditor.cpp:463
 #: libs/widgets/kis_palette_view.cpp:144
 #, kde-format
 msgctxt "Color as the Color of a Swatch in a Palette"
 msgid "Color:"
 msgstr "颜色："
 
-#: libs/ui/KisPaletteEditor.cpp:413 libs/ui/KisPaletteEditor.cpp:462
+#: libs/ui/KisPaletteEditor.cpp:415 libs/ui/KisPaletteEditor.cpp:464
 #: libs/widgets/kis_palette_view.cpp:145
 #, kde-format
 msgid "Spot color:"
 msgstr "专色："
 
-#: libs/ui/KisPaletteEditor.cpp:458 libs/widgets/kis_palette_view.cpp:141
+#: libs/ui/KisPaletteEditor.cpp:460 libs/widgets/kis_palette_view.cpp:141
 #, kde-format
 msgid "Swatch Group:"
 msgstr "色块组："
 
-#: libs/ui/KisPaletteEditor.cpp:620 libs/ui/KisPaletteEditor.cpp:623
+#: libs/ui/KisPaletteEditor.cpp:622 libs/ui/KisPaletteEditor.cpp:625
 #, kde-format
 msgctxt "Default new group name"
 msgid "New Group %1"
@@ -24997,13 +25033,13 @@ msgstr "加载此模板"
 msgid "Show in Tool Options"
 msgstr "在工具选项中显示"
 
-#: libs/ui/KisView.cpp:593 libs/ui/actions/KisPasteActionFactories.cpp:298
-#: libs/ui/actions/KisPasteActionFactories.cpp:399
+#: libs/ui/KisView.cpp:594 libs/ui/actions/KisPasteActionFactories.cpp:263
+#: libs/ui/actions/KisPasteActionFactories.cpp:331
 #, kde-format
 msgid "(pasted)"
 msgstr "(粘贴)"
 
-#: libs/ui/KisView.cpp:683 libs/ui/kis_clipboard.cc:783
+#: libs/ui/KisView.cpp:686 libs/ui/kis_clipboard.cc:510
 #, kde-format
 msgid ""
 "Could not open %2.\n"
@@ -25012,80 +25048,80 @@ msgstr ""
 "无法打开 %2。\n"
 "原因如下：%1。"
 
-#: libs/ui/KisView.cpp:750
+#: libs/ui/KisView.cpp:753
 #, kde-format
 msgid "You cannot drag and drop colors on the selected layer type."
 msgstr "您不能在所选图层类型上拖放颜色。"
 
-#: libs/ui/KisView.cpp:758 libs/ui/tool/kis_tool_utils.cpp:419
+#: libs/ui/KisView.cpp:761 libs/ui/tool/kis_tool_utils.cpp:420
 #, kde-format
 msgid "Layer is locked and invisible."
 msgstr "图层已锁定且不可见。"
 
-#: libs/ui/KisView.cpp:760 libs/ui/tool/kis_tool_utils.cpp:421
+#: libs/ui/KisView.cpp:763 libs/ui/tool/kis_tool_utils.cpp:422
 #, kde-format
 msgid "Layer is locked."
 msgstr "图层已锁定。"
 
-#: libs/ui/KisView.cpp:762 libs/ui/tool/kis_tool_utils.cpp:423
+#: libs/ui/KisView.cpp:765 libs/ui/tool/kis_tool_utils.cpp:424
 #, kde-format
 msgid "Layer is invisible."
 msgstr "图层不可见。"
 
-#: libs/ui/KisView.cpp:775
-#: libs/ui/actions/kis_selection_action_factories.cpp:243
+#: libs/ui/KisView.cpp:778
+#: libs/ui/actions/kis_selection_action_factories.cpp:167
 msgctxt "(qtundo-format)"
 msgid "Flood Fill Layer"
 msgstr "浸漫填充图层"
 
-#: libs/ui/KisView.cpp:1169
+#: libs/ui/KisView.cpp:1172
 #, kde-format
 msgid ""
 "<p>The document <b>'%1'</b> has been modified.</p><p>Do you want to save it?"
 "</p>"
 msgstr "<p>图像<b>“%1”</b> 已被修改。</p><p>您想要保存它吗？</p>"
 
-#: libs/ui/KisView.cpp:1244
+#: libs/ui/KisView.cpp:1247
 #, kde-format
 msgid "Write Protected"
 msgstr "写保护"
 
-#: libs/ui/KisView.cpp:1248
+#: libs/ui/KisView.cpp:1251
 #, kde-format
 msgid "Recovered"
 msgstr "已恢复"
 
-#: libs/ui/KisView.cpp:1350
+#: libs/ui/KisView.cpp:1353
 #, kde-format
 msgid "Soft Proofing doesn't work in floating point."
 msgstr "色彩校样不支持浮点通道。"
 
-#: libs/ui/KisView.cpp:1355
+#: libs/ui/KisView.cpp:1358
 #, kde-format
 msgid "Soft Proofing turned on."
 msgstr "色彩校样已启用。"
 
-#: libs/ui/KisView.cpp:1357
+#: libs/ui/KisView.cpp:1360
 #, kde-format
 msgid "Soft Proofing turned off."
 msgstr "色彩校样已关闭。"
 
-#: libs/ui/KisView.cpp:1369
+#: libs/ui/KisView.cpp:1372
 #, kde-format
 msgid "Gamut Warnings don't work in floating point."
 msgstr "色域超出警告不支持浮点通道。"
 
-#: libs/ui/KisView.cpp:1375
+#: libs/ui/KisView.cpp:1378
 #, kde-format
 msgid "Gamut Warnings turned on."
 msgstr "色域超出警告色已启用。"
 
-#: libs/ui/KisView.cpp:1377
+#: libs/ui/KisView.cpp:1380
 #, kde-format
 msgid "But Soft Proofing is still off."
 msgstr "但色彩校样尚未启用。"
 
-#: libs/ui/KisView.cpp:1380
+#: libs/ui/KisView.cpp:1383
 #, kde-format
 msgid "Gamut Warnings turned off."
 msgstr "色域超出警告色已关闭。"
@@ -25507,17 +25543,17 @@ msgctxt "major time unit and minor time unit"
 msgid "%1 and %2"
 msgstr "%1 %2"
 
-#: libs/ui/actions/KisPasteActionFactories.cpp:120
+#: libs/ui/actions/KisPasteActionFactories.cpp:121
 msgctxt "(qtundo-format)"
 msgid "Paste shapes"
 msgstr "粘贴形状"
 
-#: libs/ui/actions/KisPasteActionFactories.cpp:397
+#: libs/ui/actions/KisPasteActionFactories.cpp:329
 #, kde-format
 msgid "Pasted"
 msgstr "粘贴"
 
-#: libs/ui/actions/KisPasteActionFactories.cpp:452
+#: libs/ui/actions/KisPasteActionFactories.cpp:384
 msgctxt "(qtundo-format)"
 msgid "Paste Style"
 msgstr "粘贴样式"
@@ -25527,57 +25563,57 @@ msgctxt "(qtundo-format)"
 msgid "Activate transform tool"
 msgstr "激活变形工具"
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:156
+#: libs/ui/actions/kis_selection_action_factories.cpp:80
 msgctxt "(qtundo-format)"
 msgid "Select All"
 msgstr "选择全部"
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:385
+#: libs/ui/actions/kis_selection_action_factories.cpp:302
 msgctxt "(qtundo-format)"
 msgid "Cut"
 msgstr "剪切"
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:386
+#: libs/ui/actions/kis_selection_action_factories.cpp:303
 msgctxt "(qtundo-format)"
 msgid "Copy"
 msgstr "复制"
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:472
+#: libs/ui/actions/kis_selection_action_factories.cpp:392
 msgctxt "(qtundo-format)"
 msgid "Copy Merged"
 msgstr "合并复制"
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:489
+#: libs/ui/actions/kis_selection_action_factories.cpp:409
 #, kde-format
 msgctxt "floating message"
 msgid "Selection is already in a vector format "
 msgstr "选区已是矢量格式 "
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:514
-#: libs/ui/actions/kis_selection_action_factories.cpp:534
+#: libs/ui/actions/kis_selection_action_factories.cpp:434
+#: libs/ui/actions/kis_selection_action_factories.cpp:454
 msgctxt "(qtundo-format)"
 msgid "Convert to Vector Selection"
 msgstr "转换为矢量选区"
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:529
+#: libs/ui/actions/kis_selection_action_factories.cpp:449
 #, kde-format
 msgctxt "floating message"
 msgid "Selection is already in a raster format "
 msgstr "选区已是栅格格式 "
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:576
+#: libs/ui/actions/kis_selection_action_factories.cpp:496
 #, kde-format
 msgctxt "floating message"
 msgid "The shape already belongs to a selection"
 msgstr "此形状已属于一个选区"
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:582
+#: libs/ui/actions/kis_selection_action_factories.cpp:502
 msgctxt "(qtundo-format)"
 msgid "Convert shapes to vector selection"
 msgstr "转换形状为矢量选区"
 
-#: libs/ui/actions/kis_selection_action_factories.cpp:635
-#: libs/ui/actions/kis_selection_action_factories.cpp:694
+#: libs/ui/actions/kis_selection_action_factories.cpp:555
+#: libs/ui/actions/kis_selection_action_factories.cpp:614
 #: plugins/tools/tool_polyline/kis_tool_polyline.cc:55
 msgctxt "(qtundo-format)"
 msgid "Draw Polyline"
@@ -27762,12 +27798,12 @@ msgstr ""
 msgid "Create new document"
 msgstr "新建图像"
 
-#: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:33
+#: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:29
 #, kde-format
 msgid "Custom Document"
 msgstr "新建图像 - 自定义"
 
-#: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:39
+#: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:35
 #, kde-format
 msgid "Create from Clipboard"
 msgstr "新建图像 - 剪贴板"
@@ -28265,7 +28301,7 @@ msgstr "图层属性"
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2290
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2348 libs/ui/kis_paintop_box.cc:281
 #: libs/ui/kis_paintop_box.cc:282 libs/ui/widgets/KisAutoLevelsWidget.cpp:19
-#: libs/ui/widgets/kis_custom_image_widget.cc:96
+#: libs/ui/widgets/kis_custom_image_widget.cc:105
 #: libs/widgets/kis_color_input.cpp:139 libs/widgets/kis_color_input.cpp:170
 #: plugins/dockers/layerdocker/LayerBox.cpp:247
 #: plugins/filters/halftone/KisHalftoneConfigPageWidget.cpp:48
@@ -29043,7 +29079,7 @@ msgstr "添加参考图像"
 msgid "Reference images"
 msgstr "参考图像"
 
-#: libs/ui/flake/kis_shape_controller.cpp:196
+#: libs/ui/flake/kis_shape_controller.cpp:235
 #, kde-format
 msgid "Vector Layer %1"
 msgstr "矢量图层 %1"
@@ -32512,7 +32548,7 @@ msgstr "当前笔刷预设"
 #: libs/ui/widgets/kis_workspace_chooser.cpp:134
 #: libs/ui/widgets/kis_workspace_chooser.cpp:209
 #: plugins/extensions/resourcemanager/dlg_create_bundle.cpp:75
-#: plugins/paintops/libpaintop/kis_clipboard_brush_widget.cpp:162
+#: plugins/paintops/libpaintop/kis_clipboard_brush_widget.cpp:168
 #: plugins/paintops/libpaintop/kis_custom_brush_widget.cpp:137
 #: plugins/python/scripter/ui_scripter/actions/saveaction/saveaction.py:26
 #, kde-format
@@ -33820,13 +33856,13 @@ msgid "Anchor:"
 msgstr "锚点："
 
 #: libs/ui/imagesize/wdg_imagesize.cc:54
-#: libs/ui/widgets/kis_custom_image_widget.cc:54
+#: libs/ui/widgets/kis_custom_image_widget.cc:53
 #, kde-format
 msgid "Pixels/Inch"
 msgstr "像素/英寸"
 
 #: libs/ui/imagesize/wdg_imagesize.cc:60
-#: libs/ui/widgets/kis_custom_image_widget.cc:60
+#: libs/ui/widgets/kis_custom_image_widget.cc:59
 #, kde-format
 msgid "Pixels/Centimeter"
 msgstr "像素/厘米"
@@ -35077,7 +35113,7 @@ msgstr "滤镜图层属性"
 msgid "File Layer Properties"
 msgstr "文件图层属性"
 
-#: libs/ui/kis_layer_manager.cc:329 libs/ui/kis_layer_manager.cc:1060
+#: libs/ui/kis_layer_manager.cc:329 libs/ui/kis_layer_manager.cc:1077
 #, kde-format
 msgid "No file name specified"
 msgstr "未指定文件名"
@@ -35114,48 +35150,48 @@ msgctxt "(qtundo-format)"
 msgid "Convert to a file layer"
 msgstr "转换为文件图层"
 
-#: libs/ui/kis_layer_manager.cc:698
+#: libs/ui/kis_layer_manager.cc:715
 #, kde-format
 msgid "Brush Stroke Layer"
 msgstr "Brush Stroke Layer"
 
-#: libs/ui/kis_layer_manager.cc:766
+#: libs/ui/kis_layer_manager.cc:783
 #, kde-format
 msgid "New Filter Layer"
 msgstr "新建滤镜图层"
 
-#: libs/ui/kis_layer_manager.cc:814 libs/ui/kis_mimedata.cpp:357
+#: libs/ui/kis_layer_manager.cc:831 libs/ui/kis_mimedata.cpp:489
 #, kde-format
 msgid "Fill Layer"
 msgstr "填充图层"
 
-#: libs/ui/kis_layer_manager.cc:841
+#: libs/ui/kis_layer_manager.cc:858
 #, kde-format
 msgctxt "@title:window"
 msgid "Flatten Image"
 msgstr "合并整个图像"
 
-#: libs/ui/kis_layer_manager.cc:842
+#: libs/ui/kis_layer_manager.cc:859
 #, kde-format
 msgid ""
 "The image contains hidden layers that will be lost. Do you want to flatten "
 "the image?"
 msgstr "此图像包含隐藏图层，它们将在合并后被丢弃。您确定要继续合并该图像吗？"
 
-#: libs/ui/kis_layer_manager.cc:920
+#: libs/ui/kis_layer_manager.cc:937
 #, kde-format
 msgctxt "floating message in layer manager"
 msgid "Layer is locked"
 msgid_plural "Layers are locked"
 msgstr[0] "图层已锁定"
 
-#: libs/ui/kis_layer_manager.cc:942
+#: libs/ui/kis_layer_manager.cc:959
 #, kde-format
 msgctxt "floating message in layer manager when previous layer is locked"
 msgid "Layer is locked"
 msgstr "图层已锁定"
 
-#: libs/ui/kis_layer_manager.cc:959
+#: libs/ui/kis_layer_manager.cc:976
 #, kde-format
 msgctxt ""
 "floating message in layer manager when trying to merge a non-animated layer "
@@ -35165,12 +35201,12 @@ msgid ""
 "whole clip, create at least one frame"
 msgstr "非动画图层已被合并到当前帧。要将它合并到整个剪辑，请至少创建一个帧。"
 
-#: libs/ui/kis_layer_manager.cc:1008
+#: libs/ui/kis_layer_manager.cc:1025
 #, kde-format
 msgid "Convert Invisible Groups"
 msgstr "导出不可见图层组"
 
-#: libs/ui/kis_layer_manager.cc:1011
+#: libs/ui/kis_layer_manager.cc:1028
 #, kde-format
 msgid "Export Only Toplevel Groups"
 msgstr "仅导出顶级图层组"
@@ -35240,141 +35276,141 @@ msgstr "镜像视图 - 以光标位置为轴"
 msgid "Mirror View Around Canvas"
 msgstr "镜像视图 - 以画布中线为轴"
 
-#: libs/ui/kis_node_manager.cpp:490
+#: libs/ui/kis_node_manager.cpp:496
 #, kde-format
 msgid "Layer is locked"
 msgstr "图层已锁定"
 
-#: libs/ui/kis_node_manager.cpp:492 libs/ui/kis_node_manager.cpp:517
+#: libs/ui/kis_node_manager.cpp:498 libs/ui/kis_node_manager.cpp:523
 #, kde-format
 msgid "Layer \"%1\" is locked"
 msgstr "图层“%1”已锁定"
 
-#: libs/ui/kis_node_manager.cpp:545
+#: libs/ui/kis_node_manager.cpp:551
 msgctxt "(qtundo-format)"
 msgid "Move Nodes"
 msgstr "移动图层节点"
 
-#: libs/ui/kis_node_manager.cpp:552
+#: libs/ui/kis_node_manager.cpp:558
 msgctxt "(qtundo-format)"
 msgid "Copy Nodes"
 msgstr "复制图层节点"
 
-#: libs/ui/kis_node_manager.cpp:559
+#: libs/ui/kis_node_manager.cpp:565
 msgctxt "(qtundo-format)"
 msgid "Add Nodes"
 msgstr "添加图层节点"
 
-#: libs/ui/kis_node_manager.cpp:733
+#: libs/ui/kis_node_manager.cpp:739
 msgctxt "(qtundo-format)"
 msgid "Convert to a Selection Mask"
 msgstr "转换为选区蒙版"
 
-#: libs/ui/kis_node_manager.cpp:779
+#: libs/ui/kis_node_manager.cpp:785
 #, kde-format
 msgctxt "error dialog from the reference tool"
 msgid "Could not create a reference image from the active layer."
 msgstr "无法从活动图层创建参考图像。"
 
-#: libs/ui/kis_node_manager.cpp:780
+#: libs/ui/kis_node_manager.cpp:786
 #, kde-format
 msgctxt "error dialog from the reference tool"
 msgid "Could not create a reference image from the visible canvas."
 msgstr "无法从可见图层创建参考图像。"
 
-#: libs/ui/kis_node_manager.cpp:1035
+#: libs/ui/kis_node_manager.cpp:1041
 #, kde-format
 msgid "Onion skins require a layer with transparent background."
 msgstr "绘图纸外观只能在背景透明的图层上发挥作用。"
 
-#: libs/ui/kis_node_manager.cpp:1062
+#: libs/ui/kis_node_manager.cpp:1068
 msgctxt "(qtundo-format)"
 msgid "Duplicate Nodes"
 msgstr "创建图层节点副本"
 
-#: libs/ui/kis_node_manager.cpp:1087
+#: libs/ui/kis_node_manager.cpp:1093
 msgctxt "(qtundo-format)"
 msgid "Raise Nodes"
 msgstr "上移图层节点"
 
-#: libs/ui/kis_node_manager.cpp:1096
+#: libs/ui/kis_node_manager.cpp:1102
 msgctxt "(qtundo-format)"
 msgid "Lower Nodes"
 msgstr "下移图层节点"
 
-#: libs/ui/kis_node_manager.cpp:1116
+#: libs/ui/kis_node_manager.cpp:1122
 msgctxt "(qtundo-format)"
 msgid "Remove Nodes"
 msgstr "移除图层节点"
 
-#: libs/ui/kis_node_manager.cpp:1132
+#: libs/ui/kis_node_manager.cpp:1138
 msgctxt "(qtundo-format)"
 msgid "Mirror Mask Horizontally"
 msgstr "翻转蒙版 (水平)"
 
-#: libs/ui/kis_node_manager.cpp:1135
+#: libs/ui/kis_node_manager.cpp:1141
 #, kde-format
 msgctxt "(qtundo-format)"
 msgid "Mirror Layer Horizontally"
 msgid_plural "Mirror %1 Layers Horizontally"
 msgstr[0] "翻转 %1 个图层 (水平)"
 
-#: libs/ui/kis_node_manager.cpp:1146
+#: libs/ui/kis_node_manager.cpp:1152
 msgctxt "(qtundo-format)"
 msgid "Mirror Mask Vertically"
 msgstr "翻转蒙版 (垂直)"
 
-#: libs/ui/kis_node_manager.cpp:1149
+#: libs/ui/kis_node_manager.cpp:1155
 #, kde-format
 msgctxt "(qtundo-format)"
 msgid "Mirror Layer Vertically"
 msgid_plural "Mirror %1 Layers Vertically"
 msgstr[0] "翻转 %1 个图层 (垂直)"
 
-#: libs/ui/kis_node_manager.cpp:1157
+#: libs/ui/kis_node_manager.cpp:1163
 msgctxt "(qtundo-format)"
 msgid "Mirror All Layers Horizontally"
 msgstr "翻转所有图层 (水平)"
 
-#: libs/ui/kis_node_manager.cpp:1164
+#: libs/ui/kis_node_manager.cpp:1170
 msgctxt "(qtundo-format)"
 msgid "Mirror All Layers Vertically"
 msgstr "翻转所有图层 (垂直)"
 
-#: libs/ui/kis_node_manager.cpp:1296
+#: libs/ui/kis_node_manager.cpp:1302
 #, kde-format
 msgid "Export \"%1\""
 msgstr "导出“%1”"
 
-#: libs/ui/kis_node_manager.cpp:1323
+#: libs/ui/kis_node_manager.cpp:1329
 #, kde-format
 msgid "Could not save the layer. %1"
 msgstr "无法保存图层。%1"
 
-#: libs/ui/kis_node_manager.cpp:1340
+#: libs/ui/kis_node_manager.cpp:1346
 #, kde-format
 msgctxt "warning message when trying to export a transform mask"
 msgid "Layer has no pixel data"
 msgstr "图层不含像素数据"
 
-#: libs/ui/kis_node_manager.cpp:1364
+#: libs/ui/kis_node_manager.cpp:1370
 #, kde-format
 msgctxt "@title:window"
 msgid "Export to SVG"
 msgstr "导出为 SVG"
 
-#: libs/ui/kis_node_manager.cpp:1386
+#: libs/ui/kis_node_manager.cpp:1392
 #, kde-format
 msgid "Could not save to svg: %1"
 msgstr "无法保存为 SVG：%1"
 
-#: libs/ui/kis_node_manager.cpp:1411
+#: libs/ui/kis_node_manager.cpp:1417
 #, kde-format
 msgctxt "@title:window"
 msgid "Layer %1 is not editable"
 msgstr "图层 %1 不可编辑"
 
-#: libs/ui/kis_node_manager.cpp:1412
+#: libs/ui/kis_node_manager.cpp:1418
 #, kde-format
 msgid ""
 "Cannot write alpha channel of the parent layer \"%1\".\n"
@@ -35383,49 +35419,49 @@ msgstr ""
 "无法写入父图层的透明度通道“%1”。\n"
 "操作将被取消。"
 
-#: libs/ui/kis_node_manager.cpp:1443
+#: libs/ui/kis_node_manager.cpp:1449
 msgctxt "(qtundo-format)"
 msgid "Write Alpha into a Layer"
 msgstr "写入透明度到图层"
 
-#: libs/ui/kis_node_manager.cpp:1583
+#: libs/ui/kis_node_manager.cpp:1627
 msgctxt "(qtundo-format)"
 msgid "Cut Nodes"
 msgstr "剪切图层节点"
 
-#: libs/ui/kis_node_manager.cpp:1666
+#: libs/ui/kis_node_manager.cpp:1710
 msgctxt "(qtundo-format)"
 msgid "Quick Group"
 msgstr "图层编组"
 
-#: libs/ui/kis_node_manager.cpp:1677
+#: libs/ui/kis_node_manager.cpp:1721
 msgctxt "(qtundo-format)"
 msgid "Quick Clipping Group"
 msgstr "剪贴编组"
 
-#: libs/ui/kis_node_manager.cpp:1684
+#: libs/ui/kis_node_manager.cpp:1728
 #, kde-format
 msgctxt "default name for a clipping group layer"
 msgid "Clipping Group"
 msgstr "剪贴编组"
 
-#: libs/ui/kis_node_manager.cpp:1685
+#: libs/ui/kis_node_manager.cpp:1729
 #, kde-format
 msgctxt "default name for quick clip group mask layer"
 msgid "Mask Layer"
 msgstr "蒙版图层"
 
-#: libs/ui/kis_node_manager.cpp:1712
+#: libs/ui/kis_node_manager.cpp:1756
 #, kde-format
 msgid "Cannot move layer \"%1\" into new parent \"%2\""
 msgstr "无法将图层“%1”移动到新的上级图层“%2”之下"
 
-#: libs/ui/kis_node_manager.cpp:1715
+#: libs/ui/kis_node_manager.cpp:1759
 #, kde-format
 msgid "Cannot move layer \"%1\" into the root layer"
 msgstr "无法将图层“%1”移动到根图层之下"
 
-#: libs/ui/kis_node_manager.cpp:1723
+#: libs/ui/kis_node_manager.cpp:1767
 msgctxt "(qtundo-format)"
 msgid "Quick Ungroup"
 msgstr "移出编组"
@@ -36784,7 +36820,7 @@ msgstr "导出(&E)..."
 msgid "Pre&view"
 msgstr "预览(&V)"
 
-#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:145
+#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:153
 #, kde-format
 msgid "Unknown document"
 msgstr "未知图像"
@@ -37147,23 +37183,23 @@ msgstr ""
 "X：%1 像素\n"
 "Y：%2 像素"
 
-#: libs/ui/tool/kis_tool_utils.cpp:213 libs/ui/tool/kis_tool_utils.cpp:225
+#: libs/ui/tool/kis_tool_utils.cpp:214 libs/ui/tool/kis_tool_utils.cpp:226
 #: plugins/dockers/animation/KisAnimUtils.cpp:79
 msgctxt "(qtundo-format)"
 msgid "Clear"
 msgstr "清除"
 
-#: libs/ui/tool/kis_tool_utils.cpp:322
+#: libs/ui/tool/kis_tool_utils.cpp:323
 #, kde-format
 msgid "Brush Size: %1 px"
 msgstr "笔刷大小：%1 像素"
 
-#: libs/ui/tool/kis_tool_utils.cpp:425
+#: libs/ui/tool/kis_tool_utils.cpp:426
 #, kde-format
 msgid "Layer can be painted in Wash Mode only."
 msgstr "此图层只能在冲染模式下进行绘制。"
 
-#: libs/ui/tool/kis_tool_utils.cpp:427
+#: libs/ui/tool/kis_tool_utils.cpp:428
 #, kde-format
 msgid "Group not editable."
 msgstr "图层组不可编辑。"
@@ -38929,12 +38965,12 @@ msgstr "无标签"
 msgid "Select a Color Space"
 msgstr "选择色彩空间"
 
-#: libs/ui/widgets/kis_custom_image_widget.cc:114
+#: libs/ui/widgets/kis_custom_image_widget.cc:123
 #, kde-format
 msgid "&Create"
 msgstr "创建(&C)"
 
-#: libs/ui/widgets/kis_custom_image_widget.cc:290
+#: libs/ui/widgets/kis_custom_image_widget.cc:297
 #, kde-format
 msgid ""
 "Linear gamma RGB color spaces are not supposed to be used in 8-bit integer "
@@ -38949,7 +38985,7 @@ msgstr ""
 "\n"
 "点击“确定”创建 8 位整数线性 RGB 色彩空间，或者点击“取消”回到设定对话框。"
 
-#: libs/ui/widgets/kis_custom_image_widget.cc:434
+#: libs/ui/widgets/kis_custom_image_widget.cc:457
 #: plugins/dockers/logdocker/LogDockerDock.cpp:113
 #, kde-format
 msgid ""
@@ -38959,7 +38995,7 @@ msgstr ""
 "无法保存 %1。\n"
 "原因：%2。"
 
-#: libs/ui/widgets/kis_custom_image_widget.cc:536
+#: libs/ui/widgets/kis_custom_image_widget.cc:559
 #, kde-format
 msgctxt ""
 "arg1: width. arg2: height. arg3: colorspace name. arg4: size of a channel in "
@@ -38981,7 +39017,7 @@ msgstr "滤镜设置 XML 文件"
 msgid "No configuration options"
 msgstr "无配置选项"
 
-#: libs/ui/widgets/kis_image_from_clipboard_widget.cpp:145
+#: libs/ui/widgets/kis_image_from_clipboard_widget.cpp:147
 #, kde-format
 msgid "The clipboard is empty or does not have an image in it."
 msgstr "剪贴板为空或者不含图像。"
@@ -39370,7 +39406,7 @@ msgstr "文件名已被使用。继续保存将覆盖原同名工作区。"
 
 #: libs/ui/widgets/kis_workspace_chooser.cpp:204
 #: plugins/paintops/colorsmudge/kis_colorsmudgeop_settings.cpp:144
-#: plugins/paintops/libpaintop/kis_clipboard_brush_widget.cpp:160
+#: plugins/paintops/libpaintop/kis_clipboard_brush_widget.cpp:166
 #: plugins/paintops/libpaintop/kis_custom_brush_widget.cpp:135
 #, kde-format
 msgid "Overwrite"
@@ -39428,7 +39464,7 @@ msgid "Reset angle"
 msgstr "重置角度"
 
 #: libs/widgets/KisDlgInternalColorSelector.cpp:94
-#: plugins/dockers/palettedocker/palettedocker_dock.cpp:123
+#: plugins/dockers/palettedocker/palettedocker_dock.cpp:126
 #, kde-format
 msgid "Load a palette"
 msgstr "加载色板"
@@ -39460,7 +39496,7 @@ msgstr "导入色板文件"
 msgid "Export current palette to file"
 msgstr "导出选中色板文件"
 
-#: libs/widgets/KisPaletteModel.cpp:376
+#: libs/widgets/KisPaletteModel.cpp:378
 #, kde-format
 msgid "Empty slot"
 msgstr "空格"
@@ -43160,18 +43196,18 @@ msgctxt "(qtundo-format)"
 msgid "Cancel Quick Selection Mask"
 msgstr "取消快速选区蒙版"
 
-#: plugins/dockers/layerdocker/LayerBox.cpp:1285
+#: plugins/dockers/layerdocker/LayerBox.cpp:1286
 #, kde-format
 msgid "&Toggle Locks && Visibility"
 msgstr "隐藏/锁定/透明度(&T)"
 
-#: plugins/dockers/layerdocker/LayerBox.cpp:1292
-#: plugins/dockers/layerdocker/LayerBox.cpp:1316
+#: plugins/dockers/layerdocker/LayerBox.cpp:1294
+#: plugins/dockers/layerdocker/LayerBox.cpp:1318
 #, kde-format
 msgid "&Add"
 msgstr "新建(&A)"
 
-#: plugins/dockers/layerdocker/NodeDelegate.cpp:1358
+#: plugins/dockers/layerdocker/NodeDelegate.cpp:1431
 #, kde-format
 msgid "%1 %"
 msgstr "%1 %"
@@ -43199,7 +43235,7 @@ msgid "Toggle visibility of layers with a color label"
 msgstr "切换带有颜色标签的图层的可见性"
 
 #. i18n: context: string @ property (toolTip), widget (KisCompositeOpComboBox, cmbComposite)
-#: plugins/dockers/layerdocker/WdgLayerBox.ui:72 libs/image/kis_layer.cc:280
+#: plugins/dockers/layerdocker/WdgLayerBox.ui:72 libs/image/kis_layer.cc:290
 #: libs/ui/widgets/kis_cmb_composite.cc:76
 #: plugins/paintops/libpaintop/KisCompositeOpOptionWidget.cpp:30
 #: plugins/paintops/libpaintop/KisCompositeOpOptionWidget.cpp:53
@@ -43573,25 +43609,25 @@ msgstr "编辑当前色板"
 msgid "Save current palette"
 msgstr "保存当前色板"
 
-#: plugins/dockers/palettedocker/palettedocker_dock.cpp:224
+#: plugins/dockers/palettedocker/palettedocker_dock.cpp:232
 #, kde-format
 msgid "Export Palette"
 msgstr "导出色板"
 
-#: plugins/dockers/palettedocker/palettedocker_dock.cpp:237
+#: plugins/dockers/palettedocker/palettedocker_dock.cpp:245
 #, kde-format
 msgctxt "Floating message about exporting successful"
 msgid "Palette exported successfully"
 msgstr "色板导出成功"
 
-#: plugins/dockers/palettedocker/palettedocker_dock.cpp:398
+#: plugins/dockers/palettedocker/palettedocker_dock.cpp:407
 #, kde-format
 msgctxt "@tooltip"
 msgid ""
 "Save palette explicitly, will also happen automatically on exiting Solstice."
 msgstr "手动保存色板，且在退出 Solstice 时将自动再次保存。"
 
-#: plugins/dockers/palettedocker/palettedocker_dock.cpp:401
+#: plugins/dockers/palettedocker/palettedocker_dock.cpp:410
 #, kde-format
 msgctxt "@tooltip"
 msgid "Saving for document palettes is done by saving the document."
@@ -44943,49 +44979,49 @@ msgctxt "@info"
 msgid "Tool Options are open beside Quick Brush Adjustments."
 msgstr "工具选项已在 Quick Brush Adjustments 旁边打开。"
 
-#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:85
+#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:87
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Background color; click to swap colors"
 msgstr "背景色；点击可交换颜色"
 
-#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:86
+#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:88
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Foreground color; click to swap colors"
 msgstr "前景色；点击可交换颜色"
 
-#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:94
+#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:96
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Selector shape"
 msgstr "拾色器形状"
 
-#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:105
+#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:107
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Square inside a hue ring"
 msgstr "色相环内的方形"
 
-#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:106
+#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:108
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Hue bar and square"
 msgstr "色相条和方形"
 
-#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:321
+#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:367
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Foreground color"
 msgstr "前景色"
 
-#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:322
+#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:368
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Background color"
 msgstr "背景色"
 
-#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:402
+#: plugins/dockers/quickaccess/QuickColorSelectorDock.cpp:448
 #, kde-format
 msgctxt "@title:window"
 msgid "HueSVC"
@@ -50659,7 +50695,7 @@ msgstr "边框宽度："
 #: plugins/extensions/modify_selection/wdg_border_selection.ui:127
 #: plugins/paintops/sketch/wdgsketchoptions.ui:179
 #: libs/image/kis_layer_properties_icons.cpp:39
-#: libs/ui/flake/kis_shape_layer.cc:327
+#: libs/ui/flake/kis_shape_layer.cc:329
 #, kde-format
 msgid "Anti-aliasing"
 msgstr "抗锯齿"
@@ -57872,7 +57908,7 @@ msgstr ""
 
 #: plugins/impex/libkra/kis_kra_load_visitor.cpp:149
 #: plugins/impex/libkra/kis_kra_loader.cpp:699
-#: plugins/impex/libkra/kis_kra_loader.cpp:1149
+#: plugins/impex/libkra/kis_kra_loader.cpp:1150
 #, kde-format
 msgctxt "@title:window"
 msgid "File not found"
@@ -58075,7 +58111,7 @@ msgstr ""
 "请检查图像的效果是否正确。如果图像显示效果异常，可在“设置->配置 Solstice->常"
 "规->工具->CMYK 混合模式”中将该选项设置为旧版的“加色法”"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:1144
+#: plugins/impex/libkra/kis_kra_loader.cpp:1145
 #, kde-format
 msgctxt "@info"
 msgid ""
@@ -61060,7 +61096,7 @@ msgstr "颜料量"
 #: plugins/paintops/hairy/wdgInkOptions.ui:62
 #: plugins/paintops/hairy/wdghairyeoptions.ui:301
 #: libs/image/brushengine/kis_standard_uniform_properties_factory.h:19
-#: libs/image/kis_keyframe_channel.cpp:27 libs/image/kis_layer.cc:275
+#: libs/image/kis_keyframe_channel.cpp:27 libs/image/kis_layer.cc:285
 #: libs/widgets/KoColorPopupAction.cpp:85
 #: plugins/paintops/libpaintop/KisStandardOptionData.h:17
 #: plugins/paintops/mypaint/MyPaintBasicOptionWidget.cpp:65
@@ -62701,7 +62737,7 @@ msgctxt "Text Brush tip mode"
 msgid "Text"
 msgstr "文本笔尖"
 
-#: plugins/paintops/libpaintop/kis_clipboard_brush_widget.cpp:100
+#: plugins/paintops/libpaintop/kis_clipboard_brush_widget.cpp:106
 #, kde-format
 msgid ""
 "Nothing copied\n"
