@@ -2269,3 +2269,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   itself; [versioning](../versioning.md) records the preparation.
 - Next: the Windows x64 trial build on `main`, GitHub Release `v0.6.0`, the
   post-release README and guide index, and the website (same day).
+
+## 2026-10-27 release: Solstice 0.6.0
+
+- Released `v0.6.0` at `87fb3e39798c` (run 40491540847) and published the
+  website the same day (tidalboxstudio-web #17, #18), including the new
+  `/features/` page and a top page reduced to six highlights. Evidence:
+  [0.6.0 release verification](history/release-0.6.0.md).
+- README, the guide index and the Clipping Mask guide and plan now describe
+  0.6.0 as released.
+- Lesson: `SHA256SUMS.txt` from the Windows build has CRLF line endings;
+  `sha256sum -c` in Git Bash needs them stripped (`tr -d '\r'`).

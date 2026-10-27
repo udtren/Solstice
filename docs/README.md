@@ -6,13 +6,14 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.5.2](https://github.com/udtren/Solstice/releases/tag/v0.5.2) fixes
+[0.6.0](https://github.com/udtren/Solstice/releases/tag/v0.6.0) adds
+[Clipping Mask](clipping-mask.md) and
+[duplicating a selection on the same layer](move-tool.md), fixes the
+[HueSVC](quick-access.md#huesvc) color selector, and adopts the upstream Krita
+clipboard rewrite. It builds on
+[0.5.2](https://github.com/udtren/Solstice/releases/tag/v0.5.2), which fixed
 [Fast Image Export](lazy-tools.md#fast-image-export): format options such as
-Force convert to sRGB keep their last values. It builds on
-[0.5.1](https://github.com/udtren/Solstice/releases/tag/v0.5.1), which
-extended [Lazy Tools](lazy-tools.md) with registered export folders, an
-export name, Export Region and a Rename Layer preset editor, and fixed Quick
-Access items with icons.
+Force convert to sRGB keep their last values.
 
 ## Getting started
 
@@ -47,11 +48,11 @@ Access items with icons.
 ## Editing
 
 - [Clipping Mask](clipping-mask.md): clip a layer to the layer below it
-  without a group. In development.
+  without a group. Added in 0.6.0.
 - [Puppet Warp](puppet-warp.md): posing and reshaping artwork with pins in
   the Transform Tool.
 - [Move Tool](move-tool.md): duplicating a selection on the same layer with
-  Ctrl-drag.
+  Ctrl-drag. Added in 0.6.0.
 - [Remove Dust](remove-dust.md): removing or selecting small specks and
   filling small holes, with a tool or a filter. Added in 0.5.0.
 - [Vision ML](vision-ml.md): AI-assisted selection, Smart Fill and
