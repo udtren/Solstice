@@ -124,8 +124,18 @@ which extended [Lazy Tools](docs/lazy-tools.md) and fixed Quick Access:
 <p><b><a href="docs/effects-filters.md">Effects &amp; Color</a></b><br>New native filters such as Film Grain, Glow and Color Reference.</p>
 </td>
 <td width="50%" align="center" valign="top">
+<a href="docs/move-tool.md#duplicating-a-selection"><img src="docs/images/duplicate_in_same_layer.png" alt="Three star shapes on one paint layer, Paint Layer 8: the lowest, inside a freehand selection, was copied with Ctrl-drag in the Move Tool, whose options are shown" width="100%"></a>
+<p><b><a href="docs/move-tool.md#duplicating-a-selection">Duplicate on the same layer</a></b><br>Ctrl-drag a selection with the Move Tool to place a copy on the same layer.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" valign="top">
 <a href="docs/reference-tool.md"><img src="docs/images/reference-tool-filters.png" alt="A selected reference drawing with Desaturate, Posterize and Glow in the Filter menu; Glow offers enable, edit, reorder and remove controls" width="100%"></a>
 <p><b><a href="docs/reference-tool.md">Reference Tool filters</a></b><br>Non-destructive filter stacks and templates for reference images.</p>
+</td>
+<td width="50%" align="center" valign="top">
+<a href="docs/remove-dust.md"><img src="docs/images/remove_dust.png" alt="A rectangle drawn with the Remove Dust Tool around specks on a sketch, and the same area afterwards without the specks" width="100%"></a>
+<p><b><a href="docs/remove-dust.md">Remove Dust</a></b><br>Remove or select small specks, and fill small gaps, with a tool or a filter.</p>
 </td>
 </tr>
 <tr>
@@ -133,10 +143,7 @@ which extended [Lazy Tools](docs/lazy-tools.md) and fixed Quick Access:
 <a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Layer Comps docker with four comps checked for export, Apply and Export columns, and its action buttons" width="100%"></a>
 <p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states.</p>
 </td>
-<td width="50%" align="center" valign="top">
-<a href="docs/remove-dust.md"><img src="docs/images/remove_dust.png" alt="A rectangle drawn with the Remove Dust Tool around specks on a sketch, and the same area afterwards without the specks" width="100%"></a>
-<p><b><a href="docs/remove-dust.md">Remove Dust</a></b><br>Remove or select small specks, and fill small gaps, with a tool or a filter.</p>
-</td>
+<td width="50%"></td>
 </tr>
 </table>
 
