@@ -19,6 +19,7 @@ sources:
   - libs/ui/KisSolsticeLazyTools.cpp (showRenameDialog, exec())
   - libs/ui/input/kis_input_manager.cpp (compressMoveEventCommon, MouseButtonRelease)
   - docs/agent/test-control.md
+  - docs/agent/paint-trace-baseline-runs.md (Trace overhead, Linux; held times)
 related:
   - transform-tool-input.md
   - idle-tasks-wait-for-open-strokes.md
@@ -222,3 +223,14 @@ on the strategy's `continuePrimaryAction(KoPointerEvent *)` and
 rebuild, and showed every move and the release at the final position while
 the result was still short. A debugger also slows the run enough to hide a
 timer race, so count failures with and without it.
+
+## A busy GUI thread stretches a real-time stroke
+
+The injector plays real-time points from a `QTimer` on the GUI thread, so
+every point waits until the thread is free. In the paint trace series the
+16 tablet strokes, scheduled to last 338 ms from press to release, took a
+median 471-566 ms (up to 824 ms) on Xvfb's software OpenGL canvas, more
+with the GPU brush, with or without the trace. The input rate the
+application sees is therefore lower than the schedule. Read the actual
+times from the result (`durationMs`, `pressedAtMs`, `releasedAtMs`) rather
+than from the points' `t` values.

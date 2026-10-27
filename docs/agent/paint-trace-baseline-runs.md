@@ -532,10 +532,96 @@ Interpretation, for this machine and display only:
   Windows hand series also had higher 256 px medians when projection was
   requested, there with the shared-buffer canvas. Getting the GPU result to
   the canvas is a candidate, not an established cause.
-- Not measured: tracing overhead (no tracing-disabled runs), a hardware-GL
-  display, Windows. The series tool is meant to run there unchanged; not
-  tried yet.
+- Not measured: a hardware-GL display, Windows. The series tool is meant to
+  run there unchanged; not tried yet. Tracing overhead was measured later
+  the same day ([below](#trace-overhead-linux-2026-10-27-test-control)).
 
 Archive: the session's scratch folder `trace-series-linux-1/` (294 MB: per
 run `trace.<pid>.json`, `summary.json`, `strokes.json`, `solstice.log`; and
 `series.json`). It is temporary; the hashes above identify the traces.
+
+## Trace overhead, Linux (2026-10-27, test control)
+
+A separate series that measures what `KRITA_PAINT_TRACE` itself costs, with
+the [synthetic protocol](#synthetic-series-linux-2026-10-27-test-control)
+unchanged: `paint_trace_series.py --overhead`, 18 fresh processes, each mode
+once without and once with the trace per round (off/on, on/off, off/on),
+modes in the baseline rotation, 22:10-22:24 local time. Same machine, display
+and GPU as the synthetic series (Xvfb software OpenGL canvas; GPU engine on
+the RTX 5090 Laptop GPU, driver 595.99.02, in every projection and brush
+process). Source HEAD `d14a32455ffb3154b56d67b0f1abbef8a64799e3`
+(`claude/test-control-phase4`, from `main` after 0.6.0) with only an agent
+document uncommitted. Every process: exit 0, 16 undo steps, no frame or
+trace problem; the nine traced processes have zero dropped events, 384 timed
+and 32 excluded inputs and the expected conditions.
+
+| Installed artifact | SHA-256 |
+| --- | --- |
+| `bin/krita` | `a9f881ef72655d5984b56178ca07de9d460ae05e46da09f548840e01fc8f4e77` |
+| `lib/x86_64-linux-gnu/libkritaimage.so` | `0a5548a4776164a950e59c5bc8892f9941c309f355ee7d6d40f7269fb089f11d` |
+| `lib/x86_64-linux-gnu/libkritaui.so` | `c72a91702fcfcb33eae2939fe85422dbc352cb7e8a59a307735116561ee2794b` |
+| `lib/x86_64-linux-gnu/libkritagpu.so` | `0a50e588001db5a25b58e1ae2684d0f23f7c17075aa26098d3ed39457f3fd904` |
+| `lib/x86_64-linux-gnu/kritaplugins/kritadefaultpaintops.so` | `f261cdf097a2fd7865c3087adb1ce042fa65cbe9e5e0527ec3b18634d927dd82` |
+| `lib/x86_64-linux-gnu/kritaplugins/kritatestcontrol.so` | `c45e1faf134ee9b5555bf4be5cbf74b6d5885d6d75de45b75bc7ec9d6fe8e211` |
+
+Traces of the traced runs (2, 4, 6, 7, 9, 11, 14, 16, 18):
+`trace.2414719.json` `6281ed25…`, `trace.2416509.json` `a84228b8…`,
+`trace.2417996.json` `8ce7a5da…`, `trace.2418785.json` `c7cbcf83…`,
+`trace.2420289.json` `f0b7d518…`, `trace.2421888.json` `14bb5fc8…`,
+`trace.2424135.json` `e90e7384…`, `trace.2425695.json` `c7c6728f…`,
+`trace.2427201.json` `3c5b81be…` (full SHA-256 in `series.json`).
+
+The comparison needs a measure the trace does not provide, so test control
+supplies it (`canvas_frames`, `pressedAtMs`/`releasedAtMs`, `session_info`
+`process`; [Test control](test-control.md#paint-trace-series)): the time
+from the injected release to the last frame the canvas presented after it
+(`frameSwapped`, the trace's own command-swap endpoint), and the process's
+CPU time while the 16 strokes play. Release to last frame, median of the
+three process medians (range), measured strokes only, ms:
+
+| Condition | CPU off / on | Projection-requested off / on | Brush-requested off / on |
+| --- | --- | --- | --- |
+| 64px Buildup | 39.60 (39.51–40.95) / 39.55 (39.53–39.71) | 38.90 (37.62–38.94) / 41.74 (40.42–42.91) | 40.96 (40.92–41.53) / 40.76 (40.06–41.26) |
+| 64px Wash | 27.80 (23.98–28.20) / 28.99 (28.80–29.45) | 29.32 (20.74–30.13) / 29.14 (28.46–30.22) | 23.70 (23.58–24.13) / 23.67 (23.40–24.28) |
+| 256px Buildup | 73.00 (53.52–77.54) / 73.46 (59.11–73.56) | 73.04 (72.91–76.45) / 79.83 (79.65–81.08) | 55.38 (54.82–75.48) / 57.72 (55.60–57.94) |
+| 256px Wash | 55.77 (53.58–79.08) / 76.74 (58.67–77.40) | 80.79 (76.52–83.66) / 78.06 (76.00–90.18) | 55.90 (54.57–57.79) / 57.20 (55.28–59.31) |
+
+| Mode | CPU time off / on, ms (range) | Wall time off / on, ms |
+| --- | --- | --- |
+| CPU | 40516 (40286–40658) / 40540 (40038–41030) | 18242–18286 / 18248–18480 |
+| Projection-requested | 42388 (41751–55196) / 42001 (41113–42664) | 18635–18681 / 18482–18655 |
+| Brush-requested | 44156 (44052–44318) / 44230 (43378–45165) | 19494–19529 / 19359–19560 |
+
+Interpretation, for this machine and display only:
+
+- CPU time differs by less than 1 % in every mode (the 55 s projection run
+  without the trace, run 3, is a single outlier in the other direction), and
+  wall time and the median frame interval while the pen is down (about 14 ms
+  at 64 px, 32-35 ms at 256 px) do not change with the trace.
+- At 256 px the release-to-last-frame values form two clusters one frame
+  apart (about 53-62 and 73-83 ms), so a median of three strokes jumps
+  between them: the +37.6 % of CPU 256px Wash comes from five of nine
+  strokes in the low cluster without the trace against two with it, not
+  from trace work. Compare such cells by their stroke distributions, not
+  by the medians.
+- The one consistent difference is projection-requested Build-up: about
+  +3 ms at 64 px and +6 ms at 256 px with the trace, process ranges apart,
+  every traced stroke at or above most untraced ones. Its Wash rows and
+  every CPU and brush row show no shift. The cause is not established.
+- The trace-on aggregate repeats the earlier synthetic series within about
+  2 ms per cell (for example 64px Buildup CPU 42.09 against 42.69 ms, brush
+  28.85 against 29.37 ms) on a newer build, so the series is reproducible.
+- The injector's strokes lasted longer than scheduled: the median held time
+  was 471-566 ms against the scheduled 338 ms (up to 824 ms), the same with
+  and without the trace. A busy GUI thread delays the timer that plays the
+  points, so the synthetic input rate is lower than its schedule, more so in
+  the brush mode.
+- Therefore the trace's overhead on this machine is below the run variation
+  for CPU and brush modes and a few milliseconds of stroke tail for
+  projection Build-up. Not measured: the per-input overhead within a stroke
+  (the trace-off runs have no per-input endpoint), a hardware-GL display and
+  Windows.
+
+Archive: the session's scratch folder `overhead-linux-1/` (297 MB, the same
+layout plus `-notrace` run folders). It is temporary; the hashes above
+identify the traces.

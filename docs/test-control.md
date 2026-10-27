@@ -83,6 +83,7 @@ many undo steps there are."
 | `query_state` | Reports undo history, selection bounds and size, and layer bounds with a pixel fingerprint |
 | `action_trigger` | Runs a menu action such as Undo or Deselect |
 | `canvas_capture` | Returns a picture of the canvas |
+| `canvas_frames` | Records when the canvas shows a new frame, for timing strokes |
 | `input_click`, `input_drag` | Clicks at a point, or drags in a straight line, with the mouse or the simulated pen |
 | `query_pixels` | Measures a rectangle of the layer or of the whole image: a pixel fingerprint, how many pixels are painted, and their average color |
 | `document_open`, `document_export_png` | Opens an image from the test folder, or saves the image there as PNG (see below) |
@@ -164,7 +165,13 @@ python dev-tools\test-control\paint_trace_series.py --launch "C:\path\to\Solstic
 ```
 
 A full series starts nine copies one after another and took under ten
-minutes on the Linux test machine; `--modes cpu` runs one. Close your own Solstice first, and do not
+minutes on the Linux test machine; `--modes cpu` runs one.
+
+To find out how much the timing record itself slows Solstice down, add
+`--overhead`: each mode then also runs without the record, and the tool
+compares the two by measures that need no record: how long after the pen
+is lifted the canvas shows the last frame of the stroke, and how much CPU
+time Solstice used. This starts 18 copies. Close your own Solstice first, and do not
 use the computer for heavy work meanwhile. The results are a separate series
 from hand-drawn measurements and must not be mixed with them.
 

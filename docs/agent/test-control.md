@@ -122,8 +122,9 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Widget tools: query, click, set, close windows; dockers | `TestControlUiTools.{h,cpp}` |
 | Document tools: open, export, close, view reset, brush, layer tree, active layer | `TestControlDocumentTools.{h,cpp}` |
 | Helpers shared by the tool classes, `pollUntil` | `TestControlSupport.{h,cpp}` |
+| Clock, process CPU time, canvas frame recorder (QtWidgets only) | `TestControlTiming.{h,cpp}`, `tests/TestControlTimingTest.cpp` |
 | Test root path checks (QtCore only) | `TestControlPaths.{h,cpp}` |
-| Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp` |
+| Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp`, `tests/TestControlTimingTest.cpp` |
 | Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
 | Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
 | Paint trace series (developer tool, phase 4) | `dev-tools/test-control/paint_trace_series.py`, `test_paint_trace_series.py`; summaries by `build-tools/paint-trace/summarize.py` |
@@ -174,10 +175,10 @@ tested in the cloud session.
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
-| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables, and `gpuEngine`: the device, driver and failed state once the GPU engine has started (null before, or without it) |
+| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables, `gpuEngine`: the device, driver and failed state once the GPU engine has started (null before, or without it), and `process`: the process's CPU time so far (`cpuUserMs`, `cpuSystemMs`, all threads; `getrusage`/`GetProcessTimes`) and the current time (`clockMs`) |
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi). Every `document` result has size, color model, depth and profile, the file name (`fileName`, without the folder, empty for an unsaved document) and `modified` |
 | `tool_activate` | `id` (factory ID) | Active tool ID and `restarted`; a tool that is already active is switched away (to the rectangle selection, or from it to the brush) and back, so it starts fresh; an unknown ID lists all IDs |
-| `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `releaseDelayMs` (0-1000, default 50), `keyAfterRelease` (one key in `QKeySequence` portable text, sent with canvas focus right after the release), `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, points outside the canvas widget, modifiers, active tool |
+| `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `releaseDelayMs` (0-1000, default 50), `keyAfterRelease` (one key in `QKeySequence` portable text, sent with canvas focus right after the release), `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, when the first press and the last release were sent (`pressedAtMs`, `releasedAtMs`, on the `canvas_frames` clock; null without one), points outside the canvas widget, modifiers, active tool |
 | `input_click` | `x`, `y`, `device`, `coordinates`, `button`, `pressure`, `modifiers`, `doubleClick` (mouse only) | As `input_stroke`; one press and release, or with `doubleClick` press, release, `MouseButtonDblClick`, release |
 | `input_key` | `key` (`QKeySequence` portable text: `Return`, `Escape`, `Delete`, `Ctrl+Z`), `modifiers` | `ShortcutOverride`, `KeyPress` and `KeyRelease` to the canvas widget after it got focus, wrapped in the modifier keys' presses and releases |
 | `input_drag` | `from`, `to` (`x`, `y`), `steps` (default 20), `durationMs` (default 200), `device`, `coordinates`, `button`, `pressure`, `realtime`, `releaseDelayMs`, `keyAfterRelease`, `modifiers` | As `input_stroke`; a straight line in equal steps |
@@ -185,6 +186,7 @@ tested in the cloud session.
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name`, `async` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...). With `async`, replies first and triggers from the event loop afterwards, for actions that open a modal dialog (Rename Alternative) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
+| `canvas_frames` | `action` (`start`/`read`/`stop`, default `read`), `sinceMs` | Times when the current canvas presented frames, for timing without the paint trace: `start` clears the record and follows the canvas widget (`frameSwapped()` of the OpenGL canvas, connected by name, the paint trace's command-swap endpoint; otherwise the start of each paint event, `kind` `paint`); `read` returns the frames after `sinceMs`, `recording`, `overflowed` (more than 100000 frames) and `nowMs`. All times are milliseconds on one monotonic clock (`TestControlTiming::clockMs()`, `std::chrono::steady_clock`) |
 | `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize`, `fullResolutionPng` (at most 2048x2048), `reference` (base64 PNG), `maxChannelDiff`, `maxMismatchPixels` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG; with a reference, `reference` (`matches`, `maxChannelDiff`, `mismatchPixels`, `tolerance`) |
 | `document_open` | `path` (relative to the test root) | Opens without dialogs (`KisMainWindow::BatchMode`); document and canvas once its view is active |
 | `document_export_png` | `path` (relative, `.png`) | Exports the active document's image without dialogs, replacing a file; size in bytes |
@@ -631,6 +633,7 @@ with synthetic input and summarizes the traces:
 ```bat
 python dev-tools\test-control\paint_trace_series.py --launch <krita-dev-root>\_install\bin\solstice.exe --out <new folder>
 python dev-tools\test-control\paint_trace_series.py --launch ... --out <new folder> --modes cpu projection brush
+python dev-tools\test-control\paint_trace_series.py --launch ... --out <new folder> --overhead
 ```
 
 - Each run is a fresh process started like `run_scenarios.py --launch`
@@ -662,6 +665,24 @@ python dev-tools\test-control\paint_trace_series.py --launch ... --out <new fold
   holds the source revision, SHA-256 of the installed binaries (the series
   stops if they change), each run's GPU device (`gpuEngine`) and its summed
   execution path records.
+- Every run also times the strokes without the trace, from `canvas_frames`
+  (started after `document_new`) and the input results' `pressedAtMs` and
+  `releasedAtMs`: per stroke the time from the release to the last frame
+  presented after it (`releaseToLastFrameMs`, the stroke's final pixels on
+  screen), the frames while the pen was down and their median interval, and
+  the held time (release minus press; above the scheduled 338 ms when the
+  GUI thread delays the injector). Per run, the CPU time (`session_info`
+  `process`, user plus system, all threads) and wall time from before the
+  first stroke to after the last. A stroke whose frames had not been quiet
+  for 200 ms when read, or with no frame after the release, is a problem.
+- `--overhead`: each mode runs once with and once without
+  `KRITA_PAINT_TRACE` per round, in the order off/on, on/off, off/on (18
+  processes for three rounds; run folders without the trace end in
+  `-notrace`). `series.json` `overhead` and the second table: per condition,
+  mode and trace state the median and range of the process medians of
+  `releaseToLastFrameMs`, and the CPU time per mode and state, with the
+  difference of the medians. Runs with the trace also get the normal trace
+  aggregate.
 - The output folder must be new or empty: a series is never appended to, as
   the baseline sheet requires.
 

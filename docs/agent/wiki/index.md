@@ -165,6 +165,11 @@ Document ownership and lifecycle are defined in
 - [Clone Layer updates](benchmarks/clone-layer-updates.md): update time and
   GPU downloads per dab for clone offsets, masks, RGBA8/F32 and nesting,
   before and after phases 4.110 and 4.111.
+- [Paint trace overhead](benchmarks/paint-trace-overhead.md): what
+  `KRITA_PAINT_TRACE` costs in the GUI (CPU time and frame cadence
+  unchanged, a few ms of stroke tail for projection Build-up), measured
+  without the trace from canvas frames; end-of-stroke medians jump by
+  whole frames.
 
 ### History
 

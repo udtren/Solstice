@@ -2280,3 +2280,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   0.6.0 as released.
 - Lesson: `SHA256SUMS.txt` from the Windows build has CRLF line endings;
   `sha256sum -c` in Git Bash needs them stripped (`tr -d '\r'`).
+
+## 2026-10-27 test control: paint trace overhead (phase 4 remainder)
+
+- On `claude/test-control-phase4` from `main` after 0.6.0: test control
+  gained `canvas_frames` (frame-present times of the canvas), press and
+  release times in input results and process CPU time in `session_info`,
+  on one clock (`TestControlTiming`); `paint_trace_series.py --overhead`
+  runs each mode with and without the trace per round.
+- 18-process Linux series: the trace leaves CPU time and frame cadence
+  unchanged and adds a few ms of stroke tail only for projection Build-up.
+  New page [Paint trace overhead](benchmarks/paint-trace-overhead.md); run
+  sheet section in [paint trace baseline runs](../paint-trace-baseline-runs.md).
+- Lessons: end-of-stroke times are quantized by frames, so three-stroke
+  medians jump by a frame; a busy GUI thread stretches real-time synthetic
+  strokes by about 40-70 % ([synthetic canvas input](pitfalls/synthetic-canvas-input.md)).
+- Next: the same series on Windows; the README engine workloads there.
