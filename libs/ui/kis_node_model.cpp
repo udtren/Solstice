@@ -309,6 +309,14 @@ void KisNodeModel::setDummiesFacade(KisDummiesFacadeBase *dummiesFacade,
         }
     }
 
+    if (dummiesFacade != oldDummiesFacade) {
+        // Queued updates name the old facade's dummies; the compressor
+        // would deliver them to the new index converter, or to none when
+        // the document closes.
+        m_d->updateCompressor.stop();
+        m_d->updateQueue.clear();
+    }
+
     m_d->image = image;
     m_d->dummiesFacade = dummiesFacade;
     m_d->parentOfRemovedNode = 0;

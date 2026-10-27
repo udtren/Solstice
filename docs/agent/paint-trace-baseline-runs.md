@@ -422,3 +422,120 @@ CPU brush's time before the upload is the next candidate (its minimum update
 period of 10 ms and the canvas's fps-limit compressor still apply to the CPU
 paths; phases 4.88 and 4.92 changed only the GPU paths). Single process per
 mode and hand drawing: treat the ranges as within-process only.
+
+## Synthetic series, Linux (2026-10-27, test control)
+
+A separate series, never pooled with the hand-drawn ones above: phase 4 of
+the [UI test automation plan](ui-automation-plan.md). The same 16-stroke
+protocol was played by `dev-tools/test-control/paint_trace_series.py`
+([Test control](test-control.md#paint-trace-series)), with identical strokes
+in every process: tablet events with constant pressure 1, 25 points 12 ms
+apart, 180 px long, one row per condition, 0.5 s after each stroke. In this
+series the release followed the last move at once; the injector now waits
+50 ms before it by default (`releaseDelayMs`; the Transform Tool needs the
+pause, see [Test control](test-control.md#known-limitations-and-pending-work)).
+The freehand brush gets uncompressed moves, so the timed inputs are the same,
+but a later series differs in the stroke's end and should say so. The
+document is `document_new`'s RGBA F32 2480x3508 (one transparent paint
+layer, white canvas color), not the hand series' document with a white
+background; `b) Basic-4 Flow Opacity` at opacity 1; a fresh scratch profile
+per process with default tool settings; `view_reset` 1920x1080 at 100 %.
+
+Machine: Ubuntu 26.04, Qt 6.10, GCC 15 release build, Xvfb 1920x1080 without
+a window manager (the canvas uses Xvfb's software OpenGL; no hardware GL is
+available there). The GPU engine ran on the NVIDIA GeForce RTX 5090 Laptop
+GPU, driver 595.99.02, as `session_info` reported in every projection and
+brush process; the cpu processes did not start it. Source HEAD
+`59bc4d2b336fcee8360a98f4bcfa4ba5a8afea5e` (`claude/test-control-phase3`)
+with the uncommitted test control changes of the series tool itself
+(`paintMode`, `gpuEngine`); the libraries below were built from HEAD.
+
+| Installed artifact | SHA-256 |
+| --- | --- |
+| `bin/krita` | `31818cc885f6004b9043758d470473f3bedc8d73ab8af14182efe86a49605e43` |
+| `lib/x86_64-linux-gnu/libkritaimage.so` | `75a3169b956b1fb7d3e4df9904080a143db95dc9e75386a70b7e1869737945a3` |
+| `lib/x86_64-linux-gnu/libkritaui.so` | `4d74c923b64d9c4098094dfce2c313451fe50533085451e5b112f87872e8e950` |
+| `lib/x86_64-linux-gnu/libkritagpu.so` | `0a50e588001db5a25b58e1ae2684d0f23f7c17075aa26098d3ed39457f3fd904` |
+| `lib/x86_64-linux-gnu/kritaplugins/kritadefaultpaintops.so` | `f261cdf097a2fd7865c3087adb1ce042fa65cbe9e5e0527ec3b18634d927dd82` |
+| `lib/x86_64-linux-gnu/kritaplugins/kritatestcontrol.so` | `a8c41af6a2ae7fa9f84c3e9d8b6ab0e0fcf0aaccaaec509e473df05eddb3eeb9` |
+
+Nine processes in the baseline's rotation (cpu, projection, brush;
+projection, brush, cpu; brush, cpu, projection), 13:43-13:51 local time.
+Every process: exit 0, zero dropped events, 16 traced strokes whose recorded
+conditions (size, `incremental`, preset) match the played order, 16 undo
+steps, 384 timed inputs and 32 excluded (24 timed inputs per stroke). After
+the four warm-ups, 12 measured strokes / 288 inputs per process.
+
+| Run | Mode | Trace | SHA-256 |
+| ---: | --- | --- | --- |
+| 1 | cpu | `trace.2138156.json` | `a6b6a62bf19efce3be9215adeea570b374c2b17eefcd19f32543380cf781405d` |
+| 2 | projection | `trace.2139273.json` | `58718584a8ada875cef167806416521c7814f059d80cad6e0980787bcfd7d25c` |
+| 3 | brush | `trace.2140651.json` | `4e6215ed2e0e77098403a53f889463b58f0e3bb1d6a3d5f0b076da0d1ff84874` |
+| 4 | projection | `trace.2141662.json` | `1e0a44e55941d071cf68daf5f0fa52bee4bf115b62ddb8f1d1e40595c3b9978c` |
+| 5 | brush | `trace.2142594.json` | `d1d61cba7abcb6fe8ed97f69b90bb07d0954418d6e353db7fe44494cc93fec0f` |
+| 6 | cpu | `trace.2143513.json` | `8d09cf45bd1e25fbd7ed94e13ac789cae66d3292039d97b991990a4053217ec7` |
+| 7 | brush | `trace.2144418.json` | `7c2bdf040f7ed3cab2fa2bfbd48252f342f95dcdd014002e5a3a8137c029fdad` |
+| 8 | cpu | `trace.2145343.json` | `a03d3f8bc9a8fe34685f8ffbc7f6c29cf84018fba42ce2e5ec32ec7b00619af4` |
+| 9 | projection | `trace.2146213.json` | `ee8684aa9f36e11232cb82f0194999f27bec986fd4376e1ebdd859dd128e90c8` |
+
+Execution paths (summed path records over verified inputs; shared work is
+counted once per input): cpu has CPU brush, CPU projection and CPU canvas
+pixels only; projection has CPU brush, GPU compositor submissions and CPU
+canvas pixels; brush has GPU brush submissions (393-402 per process, no CPU
+brush job), compositor submissions and CPU canvas pixels. No process has a
+shared-buffer canvas upload: under Xvfb's software OpenGL the canvas uses
+CPU pixels. Every mode records root recalculations besides original reuse,
+while the hand series reported skipped composition; the documents differ
+(no background layer here), so the projection workload differs too.
+
+Command-presentation median per measured stroke (Qt input receipt to the
+last required command swap), aggregated as in the completed comparison:
+median of the three process values (range), then the median of the process
+p95 values; 216 timed inputs per cell:
+
+| Condition | CPU, ms | Projection-requested, ms | Brush-requested, ms |
+| --- | --- | --- | --- |
+| 64px Buildup | 42.69 (42.53–42.73), p95 59.35 | 43.87 (41.49–44.74), p95 58.84 | 29.37 (29.16–29.75), p95 40.32 |
+| 64px Wash | 34.16 (33.85–37.07), p95 44.58 | 34.44 (31.40–35.76), p95 46.28 | 22.58 (21.85–24.73), p95 31.69 |
+| 256px Buildup | 80.31 (79.26–81.90), p95 104.63 | 98.26 (94.32–100.71), p95 111.44 | 69.07 (69.06–81.60), p95 76.56 |
+| 256px Wash | 77.95 (77.60–81.36), p95 106.70 | 103.96 (100.43–104.50), p95 109.12 | 70.25 (68.48–79.30), p95 77.84 |
+
+Split at the last required upload (`upload_boundary_timing`, the same
+hierarchy, median of process values in ms, before / after):
+
+| Condition | CPU | Projection-requested | Brush-requested |
+| --- | --- | --- | --- |
+| 64px Buildup | 29.6 / 13.5 | 30.0 / 13.5 | 15.8 / 13.7 |
+| 64px Wash | 22.8 / 11.3 | 22.9 / 11.3 | 11.8 / 10.7 |
+| 256px Buildup | 48.6 / 32.0 | 66.9 / 31.4 | 37.3 / 32.6 |
+| 256px Wash | 48.0 / 31.6 | 71.5 / 31.7 | 37.4 / 32.2 |
+
+Interpretation, for this machine and display only:
+
+- Process ranges are narrow (often below 1 ms at 64 px) where the hand
+  series varied by several milliseconds, so identical input removes most of
+  the run-to-run spread; one brush process per 256 px condition was slower
+  (81.60 and 79.30 ms), retained.
+- The time after the last upload is the same in every mode (about 11-14 ms
+  at 64 px and 31-33 ms at 256 px): the software OpenGL canvas, whose cost
+  grows with the updated area. The absolute numbers are therefore far above
+  the Windows series and are not comparable with them.
+- Before the upload, the GPU brush roughly halves the CPU brush's time at
+  64 px (29.6 to 15.8 ms Build-up, 22.8 to 11.8 ms Wash; process ranges do
+  not overlap) and shortens its median at 256 px (48 to 37 ms; the slower
+  brush process, 55 ms, overlaps the CPU range). This agrees in direction
+  with the 2026-10-10 Windows re-baseline, where the GPU brush made input to
+  display about four times shorter.
+- GPU projection with the CPU brush is not faster at 64 px and is slower at
+  256 px (61-72 ms before the upload against 45-54 ms): the canvas here
+  takes CPU pixels of a projection the compositor made on the GPU. The
+  Windows hand series also had higher 256 px medians when projection was
+  requested, there with the shared-buffer canvas. Getting the GPU result to
+  the canvas is a candidate, not an established cause.
+- Not measured: tracing overhead (no tracing-disabled runs), a hardware-GL
+  display, Windows. The series tool is meant to run there unchanged; not
+  tried yet.
+
+Archive: the session's scratch folder `trace-series-linux-1/` (294 MB: per
+run `trace.<pid>.json`, `summary.json`, `strokes.json`, `solstice.log`; and
+`series.json`). It is temporary; the hashes above identify the traces.

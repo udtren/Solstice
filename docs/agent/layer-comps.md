@@ -77,7 +77,11 @@ visits descendants once rather than repeating every nested group.
 ### Transient state and views
 
 `CompositionDocumentState` is a child of `KisDocument`, found with
-`findChild` by every docker showing it. It owns the compressed refresh timer,
+`findChild` by every docker showing it; `get()` returns null without a
+document. The docker can still hold a canvas whose view manager has no
+document while views switch or close, so `updateModel()` returns early
+then and `setCanvas()` binds a state only when there is a document
+(2026-10-27: a delayed refresh in that window crashed in `findChild()`). It owns the compressed refresh timer,
 last applied comp, active indicator and custom-state snapshot. Dockers hold
 it through `QPointer`, disconnect when switching canvases, and share its
 `changed` notification. Image signals use queued connections. Image rebinding
@@ -180,3 +184,16 @@ ask the user to close it. Fully restart after installation.
 - Resize follow-up: `kritacompositiondocker` rebuilt and installed; installed
   DLL SHA-256 matches the build. Changed lines formatted and diff-check clean.
   No additional behavior tests were run for this layout-only adjustment.
+
+2026-10-27 (null-document crash, found by test control; see
+[Test control](test-control.md#known-limitations-and-pending-work)):
+
+- `kritacompositiondocker` and `CompositionWorkflowTest` rebuilt on Linux;
+  `KisLayerCompositionTest` and `CompositionWorkflowTest` pass offscreen
+  (the workflow test now checks `get(nullptr, image)`). The docker was
+  installed into `_install`.
+- The crash was seen once, under gdb, while test control closed and
+  created documents quickly; it was not reproduced again, so the fix is
+  checked by the backtrace and by not regressing (all 26 test control
+  scenarios pass twice). Checklist item 8 (two documents, two views,
+  switching and closing) still needs a manual run.

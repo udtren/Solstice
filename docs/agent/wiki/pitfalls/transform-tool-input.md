@@ -1,14 +1,17 @@
 ---
 type: pitfall
-updated: 2026-10-15
+updated: 2026-10-27
 sources:
   - plugins/tools/tool_transform2/kis_tool_transform.cc (KisToolTransform::endActionImpl)
   - plugins/tools/tool_transform2/kis_simplified_action_policy_strategy.cpp (activateAlternateAction)
   - plugins/tools/tool_transform2/kis_warp_transform_strategy.cpp (setTransformFunction, acceptsClicks, cachedPuppetWorker)
   - krita/data/input/kritadefault.profile ([Alternate Invocation])
   - docs/agent/puppet-warp.md ("Interaction invariants")
+  - plugins/tools/tool_transform2/tests/scenarios/ (test control runs, 2026-10-27)
+  - docs/agent/test-control.md ("Known limitations and pending work")
 related:
   - build-format-test.md
+  - synthetic-canvas-input.md
 ---
 
 # Transform Tool input pitfalls
@@ -51,3 +54,33 @@ The Puppet strategy cached its solved worker by mesh, pins and rotations, but
 the worker also renders by pin order. Order changes then left the Fast
 preview stale while Apply used the new order. When a cached object takes a
 new constructor argument, add it to the key in the same change.
+
+## Driving the tool from synthetic input
+
+Found while writing the Transform Tool scenarios for
+[test control](../../test-control.md) (2026-10-27):
+
+- The transform is a stroke that holds the image until Apply, Return or a
+  tool switch. Reads that need the image idle (layer hashes, undo state)
+  fail as busy in between; read the original before activating the tool and
+  the result after Apply.
+- A press at the exact center of the content grabs the rotation center
+  (pivot) instead of moving the content. Start move drags off-center.
+- The tool keeps its mode and Puppet Warp's lock state for the next
+  transform, also across documents. Switching from Free to Puppet resets
+  Puppet Warp to unlocked Draw mode; check the lock button's text before
+  placing pins.
+- Activating the tool while it is active does nothing, so a second
+  transform after Apply needs a switch to another tool and back (test
+  control's `tool_activate` does that).
+
+## A press can come without a hover
+
+Strategies set their mode and the handle under the cursor on hover
+(`setTransformFunction()`) and act on it at the press. A press without a
+hover move happens: the first mouse event after the canvas switched from
+the pen goes to switching tool instances, not to the strategy. If the
+transform changed since the last hover (a new one started, pins removed),
+the remembered handle index can be out of range. Validate it at the press
+and decide again for the press position (`KisWarpTransformStrategy` does
+since 2026-10-27, after a crash found by test control).
