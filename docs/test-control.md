@@ -90,13 +90,17 @@ many undo steps there are."
 | `view_reset` | Sets the window size, 100 % zoom, no rotation or mirroring, and centers the image |
 | `brush_set` | Chooses a brush preset by name and sets size, opacity, eraser mode and the foreground color |
 | `input_key` | Presses a key on the canvas, for example Return to apply a transform |
-| `ui_query`, `ui_click`, `ui_set` | Lists the buttons, boxes and fields of the window and dockers, clicks a button, or sets a value, for example in Tool Options |
+| `ui_query`, `ui_click`, `ui_set` | Lists the buttons, boxes and fields of the window, dockers and dialogs, clicks a button, or sets a value, for example in Tool Options or Quick Access |
+| `ui_close` | Closes a dialog or popup window by its title |
+| `query_layers`, `layer_activate` | Lists the layers with their names, visibility, opacity and color labels, or selects layers by name |
 | `docker_show` | Shows or hides a docker, for example Tool Options |
 
 Input tools accept modifier keys (Shift, Ctrl, Alt), and `input_click` can
 double-click. For keys, test control brings Solstice to the front and gives
 the canvas the keyboard focus. Selecting a tool that is already selected
-starts it afresh, for example for a new transform.
+starts it afresh, for example for a new transform. An action or button that
+opens a dialog which waits for an answer (such as Rename Alternative) is
+started with `async`, so the dialog can then be filled in and closed.
 
 ### Test folder
 
@@ -111,8 +115,10 @@ Without the setting, those two tools refuse to run.
 A scenario is a file that lists tool calls and the results to expect, kept
 next to the tests of the feature it covers, for example
 `libs/ui/tests/scenarios/rect-select-fill.json`. Scenarios cover the brush,
-the selection tools with their modifier keys, and the Transform Tool with
-Puppet Warp.
+the selection tools with their modifier keys, the Transform Tool with
+Puppet Warp, Lazy Tools (color labels, saved selections, foreground colors,
+Rename Alternative, Fast Image Export) and Quick Access (palette, Quick Brush
+Adjustments, HueSVC).
 
 ### Running scenarios
 
@@ -168,6 +174,10 @@ warns you, and steps that check texts fail.
   still a manual check.
 - The Transform Tool remembers its mode and the Puppet Warp lock between
   transforms, so scenarios set them explicitly.
+- The Lazy Tools and Quick Access scenarios change the settings they run
+  with: they add a brush to Quick Access, a rename preset, export settings,
+  and exported images in the test folder. Run them with `--launch`, which
+  uses a temporary profile, not with your everyday Solstice.
 
 ## Security
 

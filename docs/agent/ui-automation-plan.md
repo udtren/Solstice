@@ -7,11 +7,11 @@ in [Test control](test-control.md), which owns the current protocol,
 lifecycle and verification status. The user authorized phases 1 and 2 on
 2026-10-27 ([decisions](#user-decisions-2026-10-26)); both are implemented on
 branch `claude/test-control-phase1` and checked on Linux, with the Windows
-check pending. The user authorized phase 3 for the selection tools and the
-Transform Tool / Puppet Warp items the same day; that part is implemented on
-`claude/test-control-phase3` and checked on Linux, Windows pending. Lazy
-Tools and Quick Access (the rest of phase 3) and phases 4-5 remain proposals
-that need the user's go-ahead.
+check pending. The user authorized phase 3 the same day, first the
+selection tools and the Transform Tool / Puppet Warp items, then Lazy Tools
+and Quick Access; both parts are implemented on `claude/test-control-phase3`
+and checked on Linux, Windows pending. Phases 4-5 remain proposals that need
+the user's go-ahead.
 
 ## Goal
 
@@ -41,7 +41,7 @@ Non-goals:
 | Expectations | Hashes and state in the repository; reference images only where tolerance comparison needs them, kept small. |
 | Scenario files | Next to each feature's tests. |
 | Second running instance | Handled by operation: no other Solstice may run during a test session; no `krita/main.cc` change. |
-| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks; after phase 1 the user said to keep going ("I will test on windows later so keep going"), taken as the go-ahead for phase 2. Phase 3, first part: "Go ahead with phase 3: start with the selection tools (ellipse, polygon, freehand, contiguous) and selection modifiers, then the state-checkable Transform Tool / Puppet Warp checklist items." |
+| Scope | Phase 0 only. 2026-10-27: phase 1 authorized after the phase 0 checks; after phase 1 the user said to keep going ("I will test on windows later so keep going"), taken as the go-ahead for phase 2. Phase 3, first part: "Go ahead with phase 3: start with the selection tools (ellipse, polygon, freehand, contiguous) and selection modifiers, then the state-checkable Transform Tool / Puppet Warp checklist items." Then: "Go ahead with the rest of phase 3: Lazy Tools and Quick Access through the ui tools." |
 
 Consequences for the design: with MCP in-process, the transport is MCP
 Streamable HTTP on `127.0.0.1` instead of a named pipe to a bridge. Because
@@ -235,8 +235,21 @@ Windows pending. Details in [Test control](test-control.md):
 | Runner | `--language` (English by default for `--launch`, since scenario texts are English) |
 | Solstice change | Object names for the Puppet Warp click-action combo and the four order buttons, so tests can address them; no behavior change |
 
-Left for later: Lazy Tools and Quick Access (need the user's go-ahead), and
-the Puppet Warp checklist items that a running transform's busy image keeps
+Lazy Tools and Quick Access: authorized and implemented the same day on the
+same branch; checked on Linux, Windows pending:
+
+| Part | As implemented |
+| --- | --- |
+| Lazy Tools scenarios | Color label and label visibility controls (`plugins/dockers/layerdocker/tests/scenarios/`), saved selections, foreground slots, Rename Alternative, Fast Image Export (`libs/ui/tests/scenarios/lazy-*.json`) |
+| Quick Access scenarios | Palette brush item, Quick Brush Adjustments, HueSVC rows (`plugins/dockers/quickaccess/tests/scenarios/`) |
+| New tools | `query_layers` (planned for phase 1), `layer_activate`, `ui_close` |
+| Changed tools | Widget selectors by tool tip, class and window title; `async` on `action_trigger` and `ui_click` for modal dialogs; `ui_set` emits `activated`; `brush_set` reports flow, blending mode, preserve alpha and color channels; documents report their file name and modified state |
+| Solstice change | A crash fix in `KisNodeModel` that the rename scenario found (queued updates after the document closed); see [Test control](test-control.md#known-limitations-and-pending-work) |
+
+Left for later: `log_drain`; the Lazy Tools and Quick Access checks listed as
+manual in [Lazy Tools](lazy-tools.md#manual-checks) and
+[Quick Access](quick-access.md#automated-scenarios-2026-10-27); and the Puppet
+Warp checklist items that a running transform's busy image keeps
 from being read or that need more setup (preview against applied output,
 undo of a pin deletion inside the transform, order buttons, rubber band,
 mesh fill and expansion, multiple layers and groups), listed in

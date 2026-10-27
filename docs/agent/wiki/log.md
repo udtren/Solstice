@@ -2025,3 +2025,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   image busy, the center grabs the pivot, mode and lock carry
   over](pitfalls/transform-tool-input.md). Details in
   [Test control](../test-control.md).
+
+## 2026-10-27 feature: test control phase 3 (Lazy Tools and Quick Access)
+
+- The user authorized the rest of phase 3; recorded in the
+  [UI test automation plan](../ui-automation-plan.md).
+- Added `query_layers`, `layer_activate` and `ui_close`; widget selectors
+  by tool tip, class and window title; `async` for modal dialogs; combo
+  `activated` in `ui_set`; more brush and document state.
+- Eight scenarios: Lazy Tools color labels, saved selections, foreground
+  slots, Rename Alternative, Fast Image Export; Quick Access brush item,
+  Quick Brush Adjustments, HueSVC. Covered checks are listed in
+  [Lazy Tools](../lazy-tools.md#manual-checks) and
+  [Quick Access](../quick-access.md#automated-scenarios-2026-10-27). All 23
+  scenarios pass on Linux with `--launch --strict`; a wrong expectation in
+  each new one fails on that step. Windows not checked.
+- The rename scenario found a `KisNodeModel` crash (queued updates after the
+  document closed); fixed in `setDummiesFacade()`
+  ([pitfall](pitfalls/compressed-updates-outlive-their-model.md),
+  [feature inventory](../feature-inventory.md)).
+- Lessons: [modal dialogs and combo `activated`](pitfalls/synthetic-canvas-input.md).

@@ -13,11 +13,13 @@ are in [UI test automation plan](ui-automation-plan.md).
 Scope: phase 0 of the plan (feasibility, done 2026-10-27), phase 1
 (minimum protocol) and phase 2 (runner, recorded expectations, tolerance
 comparison), both on `claude/test-control-phase1`, and phase 3 (selection
-and Transform Tool coverage, on `claude/test-control-phase3`): 21 tools,
-documents in the current window, RGBA documents created by `document_new` or
-opened from the test root, modifier and other keys with canvas focus, widgets
-operated by object name, [scenario files](#scenarios-format-version-1) and
-the [scenario runner](#scenario-runner).
+tools, Transform Tool, Lazy Tools and Quick Access coverage, on
+`claude/test-control-phase3`): 24 tools, documents in the current window,
+RGBA documents created by `document_new` or opened from the test root, the
+layer tree, modifier and other keys with canvas focus, widgets and dialogs
+found by object name, text, tool tip, class or window title,
+[scenario files](#scenarios-format-version-1) and the
+[scenario runner](#scenario-runner).
 
 Verification (2026-10-26, cloud session, no Krita build available):
 
@@ -89,6 +91,17 @@ Verification (2026-10-26, cloud session, no Krita build available):
   Japanese locale, so the UI stayed English); a profile with a Japanese
   language override failed `brush-stroke-undo` on the undo text, as
   expected. Windows not yet checked.
+- Phase 3, Lazy Tools and Quick Access (2026-10-27, Linux, same setup and
+  branch; test control and `kritaui` rebuilt and installed): the eight new
+  [scenarios](#scenarios-format-version-1) pass against a running Solstice;
+  `--all --strict --launch` passed all 23 scenarios twice; a wrong
+  expectation in each new scenario failed on that step. The test control
+  tests, `kis_node_model_test` and the runner's tests pass through `ctest`.
+  `KisLazyToolsTest` fails one case on Linux (`explorerFolders`, which
+  expects `C:\Art\Root` with backslashes to normalize as on Windows); that
+  predates this work and its code is unchanged. The rename scenario found a
+  crash in `KisNodeModel` (see below), fixed on the same branch. Windows not
+  yet checked.
 
 ## Source locations
 
@@ -99,14 +112,14 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | JSON-RPC/MCP handling, call queue (QtCore only) | `TestControlMcpServer.{h,cpp}` |
 | Synthetic pointer strokes and modifier keys (QtWidgets only) | `TestControlInputInjector.{h,cpp}`, `TestControlSpontaneous.h` (spontaneous delivery, shared with key input) |
 | Canvas tools: session, documents from scratch, tools, input, keys, waits, queries | `TestControlCanvasTools.{h,cpp}` |
-| Widget tools: query, click, set by object name; dockers | `TestControlUiTools.{h,cpp}` |
-| Document tools: open, export, close, view reset, brush | `TestControlDocumentTools.{h,cpp}` |
+| Widget tools: query, click, set, close windows; dockers | `TestControlUiTools.{h,cpp}` |
+| Document tools: open, export, close, view reset, brush, layer tree, active layer | `TestControlDocumentTools.{h,cpp}` |
 | Helpers shared by the tool classes, `pollUntil` | `TestControlSupport.{h,cpp}` |
 | Test root path checks (QtCore only) | `TestControlPaths.{h,cpp}` |
 | Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp` |
 | Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
 | Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
-| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (6) |
+| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (6); `libs/ui/tests/scenarios/lazy-*.json` (4); `plugins/dockers/layerdocker/tests/scenarios/` (1); `plugins/dockers/quickaccess/tests/scenarios/` (3) |
 | Object names for the Puppet Warp options (no behavior change) | `plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp` |
 | Hook in an upstream file | `plugins/extensions/CMakeLists.txt` (`add_subdirectory(testcontrol)` only when `BUILD_WITH_QT6`) |
 
@@ -154,7 +167,7 @@ tested in the cloud session.
 | Tool | Arguments | Result |
 | --- | --- | --- |
 | `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables |
-| `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi) |
+| `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi). Every `document` result has size, color model, depth and profile, the file name (`fileName`, without the folder, empty for an unsaved document) and `modified` |
 | `tool_activate` | `id` (factory ID) | Active tool ID and `restarted`; a tool that is already active is switched away (to the rectangle selection, or from it to the brush) and back, so it starts fresh; an unknown ID lists all IDs |
 | `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, points outside the canvas widget, modifiers, active tool |
 | `input_click` | `x`, `y`, `device`, `coordinates`, `button`, `pressure`, `modifiers`, `doubleClick` (mouse only) | As `input_stroke`; one press and release, or with `doubleClick` press, release, `MouseButtonDblClick`, release |
@@ -162,17 +175,20 @@ tested in the cloud session.
 | `input_drag` | `from`, `to` (`x`, `y`), `steps` (default 20), `durationMs` (default 200), `device`, `coordinates`, `button`, `pressure`, `realtime`, `modifiers` | As `input_stroke`; a straight line in equal steps |
 | `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, and, while the current selection has a shape selection, for 600 ms plus twice the longest poll gap, measured with a clock; waited time (at least 40 ms, or about 640 ms), longest gap between polls (`maxPollGapMs`) |
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
-| `action_trigger` | `name` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...) |
+| `action_trigger` | `name`, `async` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...). With `async`, replies first and triggers from the event loop afterwards, for actions that open a modal dialog (Rename Alternative) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
 | `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize`, `fullResolutionPng` (at most 2048x2048), `reference` (base64 PNG), `maxChannelDiff`, `maxMismatchPixels` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG; with a reference, `reference` (`matches`, `maxChannelDiff`, `mismatchPixels`, `tolerance`) |
 | `document_open` | `path` (relative to the test root) | Opens without dialogs (`KisMainWindow::BatchMode`); document and canvas once its view is active |
 | `document_export_png` | `path` (relative, `.png`) | Exports the active document's image without dialogs, replacing a file; size in bytes |
 | `document_close` | `all` | Closes the active document or every document without asking; documents closed and left |
 | `view_reset` | `width`, `height` (window, default 1280x900) | Normal window of that size, zoom 100 %, no rotation or mirroring, image centered; zoom, rotation, image rectangle in the canvas |
-| `brush_set` | `preset` (name), `size` (1-1000), `opacity` (0-1), `eraser`, `color` (`#RRGGBB`) | Current preset, size, opacity, eraser mode and foreground color; an unknown preset lists up to 200 names |
-| `ui_query` | `nameFilter`, `within` (object name of a container), `includeUnnamed` | Visible widgets with object name, class, enabled state and value (button text and checked state, combo items and index, spin box value, label text, tool tip) |
-| `ui_click` | `objectName` and/or `text`, or `objectName` of a `QDialogButtonBox` with `standardButton` (`Apply`, `Reset`, `Ok`, ...); `within`, `index` | Clicks a visible, enabled button with `QAbstractButton::click()`; its state afterwards |
-| `ui_set` | `objectName`, `value`, `within`, `index` | Combo box (index or item text), spin box (number, then `editingFinished`), check box or checkable button (bool), line edit (text, then `editingFinished`); the new state |
+| `brush_set` | `preset` (name), `size` (1-1000), `opacity` (0-1), `eraser`, `color` (`#RRGGBB`) | Current preset, size, opacity, flow, blending mode (`compositeOp`), eraser mode, preserve alpha and foreground color (`color`, and `colorRgb` as three numbers for tolerances); without arguments it only reports; an unknown preset lists up to 200 names |
+| `query_layers` | none | The layer tree from top to bottom as the Layers docker lists it: name, class, visibility, opacity (0-255), blending mode, color label, lock, alpha lock (paint layers), `active`, and `children` of groups; the active node's name. Fails while the image is busy |
+| `layer_activate` | `name`, `select` (names) | Makes the first node with that name (from the top, parents before children) active and selects it, or selects the listed nodes, through `KisNodeManager::slotImageRequestNodeReselection()`; active and selected names |
+| `ui_query` | `nameFilter`, `within` (object name of a container), `window` (window title), `includeUnnamed` | Visible widgets with object name, class, enabled state and value (button text and checked state, combo items and index, spin box value, label text, tool tip, window title of top-level widgets) |
+| `ui_click` | selectors `objectName`, `text`, `toolTip`, `className`, or `standardButton` (`Apply`, `Reset`, `Ok`, ...) of the `QDialogButtonBox` they find; `within`, `window`, `index`, `async` | Clicks a visible, enabled button with `QAbstractButton::click()`; its state afterwards. With `async`, replies first and clicks afterwards, for buttons that may open a modal dialog |
+| `ui_set` | selectors `objectName`, `toolTip`, `className`; `value`, `within`, `window`, `index` | Combo box (index or item text, then `activated` and `textActivated`), spin box (number, then `editingFinished`), check box or checkable button (bool), line edit (text, then `editingFinished`); the new state |
+| `ui_close` | `window` (title) | Closes every visible window with that title (`QWidget::close()`), for modeless dialogs and popups; how many closed |
 | `docker_show` | `id` (docker object name, e.g. `sharedtooldocker`), `visible` | Shows or hides the docker; an unknown ID lists the IDs |
 
 Tool failures are MCP tool results with `isError: true` and an `error`
@@ -248,11 +264,23 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   it) see it as from the keyboard. Window-level shortcuts that the canvas
   does not override go through `action_trigger` instead.
 - **Widgets.** `TestControlUiTools` searches the visible top-level widgets
-  (main window, floating dockers, popups), optionally inside the widget named
-  `within`, and drives them with their own setters and `click()`, so they
-  emit their usual signals. This tests what a widget does, not the mouse
-  handling inside it. Widgets without an object name cannot be addressed;
-  scenarios name buttons by object name where it exists, or by text.
+  (main window, floating dockers, popups, dialogs), optionally only the
+  window with a given title or inside the widget named `within`, and drives
+  them with their own setters and `click()`, so they emit their usual
+  signals. A widget matches when every given selector matches: object name,
+  button text (without `&`), exact tool tip, and class (`inherits()`).
+  `index` picks one of several matches in `ui_query` order. Most Lazy Tools
+  and Quick Access widgets have no object name, so their scenarios use tool
+  tips, button texts, and class plus index inside a docker or dialog; an
+  index breaks when a widget is added before it. `ui_set` emits a combo
+  box's `activated` too, because some controls (the Layers docker's color
+  label combos) act only on it. This tests what a widget does, not the mouse
+  handling inside it.
+- **Modal dialogs.** A tool call runs inside the call queue, so an action or
+  button that opens a modal dialog (`QDialog::exec()`, `QMessageBox`) would
+  block every later call. With `async`, `action_trigger` and `ui_click` reply
+  first and trigger from a zero-delay timer; the dialog's own event loop then
+  serves the next calls, which operate the dialog by its window title.
 - **Documents.** `document_close` follows libkis `Document::close()`: clear
   the modified flag, `closePath(false)`, close and delete the document's
   views, then `KisPart::removeDocument()`. `document_open` uses
@@ -504,6 +532,15 @@ LLM; an LLM or a person can also replay one step by step through the endpoint.
 | `plugins/tools/tool_transform2/tests/scenarios/puppet-show-mesh.json` | The same pin drag gives the same hash with Show mesh on, off and on again |
 | `plugins/tools/tool_transform2/tests/scenarios/puppet-pin-delete.json` | Deleting the right of three pins with Ctrl+Alt-click, and with a plain click while "Click pin" is "Delete pin", each give the same result as placing only the two other pins |
 
+| `plugins/dockers/layerdocker/tests/scenarios/color-label-controls.json` | Lazy Tools label control: labels the active layer only, then a group without its child, then two selected layers; the visibility control toggles every layer with that label, inside groups too, each time it is chosen |
+| `libs/ui/tests/scenarios/lazy-selection-masks.json` | Create Selection Mask Alternative stores the selection in the hidden `Selection_Mask_Group` and deselects; two undos restore the selection and remove the mask, two redos bring both back; the Selection Masks popup restores the saved selection (same hash and bounds) |
+| `libs/ui/tests/scenarios/lazy-foreground-slots.json` | The nine Set Foreground Color actions set their default colors, each channel within 3 (slot 7 `#5badda` reads `#5baddc` on Linux after the conversion to the canvas color space) |
+| `libs/ui/tests/scenarios/lazy-rename-layer.json` | Rename Alternative with a typed name and color renames and labels only the active layer, as one "Node Rename" step; undo restores the name; with Save checked the name becomes a preset button that renames and labels another layer |
+| `libs/ui/tests/scenarios/lazy-fast-export.json` | Fast Image Export of a document opened from the test root: a typed name exports the same pixels next to it; an invalid name and Export Region without a selection warn; Export Region writes exactly the selected 200x100 area; JPEG keeps the size; the document keeps its file name and modified state |
+| `plugins/dockers/quickaccess/tests/scenarios/quick-access-brush-item.json` | Add Current Brush puts the preset on the palette; clicking the item selects it again |
+| `plugins/dockers/quickaccess/tests/scenarios/quick-adjust-controls.json` | Quick Brush Adjustments: size, opacity, flow and blending mode reach the brush; the reload button restores the saved preset; eraser and preserve alpha toggle; layer opacity and blending mode change the layer as undoable steps |
+| `plugins/dockers/quickaccess/tests/scenarios/huesvc-values.json` | HueSVC's V, S, H and R, B, G rows set the foreground color (`#ffffff`, `#ff0000`, `#00ff00`, `#00ffff`, `#80ffff`, `#8000ff`) |
+
 Scenario texts (undo command names, button and combo texts) are English.
 `--launch` sets the scratch profile's UI language to English; against a
 Solstice running in another language, compare by object name and state, or
@@ -569,6 +606,33 @@ the language override file does, otherwise the system locale.
 
 ## Known limitations and pending work
 
+- Lazy Tools and Quick Access scenarios change the profile they run in: the
+  Quick Access profile gains a brush item, `name_color_list.txt` a `tc-ink`
+  preset, `kritarc` the export and rename dialog settings, the test root the
+  exported files. Run them only with `--launch` or another scratch profile.
+  The brush preset keeps edits between scenarios (size, opacity), so
+  scenarios set or reload what they compare.
+- Not covered by scenarios (see the [Lazy Tools](lazy-tools.md#manual-checks)
+  and [Quick Access](quick-access.md) checks): hold keys and temporary
+  brushes (no keys are configured in a fresh profile, and holds need
+  separate key press and release), gestures (they read the real cursor
+  position), Ctrl-drag of palette items and Grid Edit (input on the item
+  widgets, not the canvas), popups, Settings pages, the screen color picker
+  and its global hotkey, menu mnemonics, registered folders and the native
+  folder chooser, and restarts.
+- `KisNodeModel` crash (found 2026-10-27 by `lazy-rename-layer`, Krita bug,
+  also in the Krita 6.0 snapshot): a layer change queues an update that a
+  100 ms compressor delivers; when the document closed within that time
+  (here, a rename that changed name and label, then `document_close`), the
+  timer reached `processUpdateQueue()` with no index converter and crashed.
+  It crashed on the first runner run, with and without gdb, and in a
+  reproduction that renames and closes at once; with 300 ms before the
+  close, 10 rounds passed.
+  `setDummiesFacade()` now drops the queue when the facade changes, as
+  `slotBeginRemoveDummy()` does. After the fix, 30 immediate closes and six
+  runs of the scenario passed. A document switch within 100 ms probably hit
+  the same queue with the other document's dummies; not reproduced.
+
 - Transform Tool: the transform runs as a stroke that keeps the image busy
   until Apply, Return or a tool switch, so `query_state` and `query_pixels`
   fail with "busy" between the tool's activation and Apply. Read what is
@@ -624,6 +688,6 @@ Findings from reading the input code (2026-10-26), to confirm in phase 0:
   canvas can interfere with a running test.
 - Real tablet drivers, pressure curves as felt, latency and visual judgement
   remain manual (plan, [What stays manual](ui-automation-plan.md#what-stays-manual)).
-- Not implemented: `query_layers` and `log_drain`.
+- Not implemented: `log_drain`.
 - The platform key cannot tell GPU settings made in Solstice's preferences
   from the CPU path; it only sees the `KRITA_GPU_*` environment variables.

@@ -15,6 +15,8 @@ sources:
   - plugins/extensions/testcontrol/TestControlInputInjector.cpp
   - libs/ui/tool/kis_tool_polyline_base.cpp (mouseMoveEvent, m_closeSnappingActivated)
   - Linux phase 3 scenario runs, 2026-10-27 (xdotool, Xvfb)
+  - plugins/dockers/layerdocker/LayerBox.cpp (QComboBox::activated connections)
+  - libs/ui/KisSolsticeLazyTools.cpp (showRenameDialog, exec())
   - docs/agent/test-control.md
 related:
   - transform-tool-input.md
@@ -168,3 +170,22 @@ polygonal selection finished after its first click (Return ends the shape),
 while the other tools looked fine (2026-10-27). Dismiss dialogs on a test
 display with a mouse click, keep `xset r off`, and suspect a stuck key when
 a tool finishes or cancels on its own.
+
+## A modal dialog blocks a serialized call queue
+
+Test control runs one tool call at a time. An action or button that opens a
+modal dialog (`QDialog::exec()`, `QMessageBox::warning()`) runs the dialog's
+event loop inside that call, so the call never replies and every later call
+waits behind it: nothing can close the dialog. Trigger such actions after
+replying (test control: `async` on `action_trigger` and `ui_click`); the
+dialog's nested event loop then serves the next calls. Rename Alternative and
+Fast Image Export's warnings work this way.
+
+## setCurrentIndex() is not a user's choice
+
+A user picking a combo box item makes Qt emit `activated` (also for the item
+already shown), while `setCurrentIndex()` emits only `currentIndexChanged`,
+and nothing when the index does not change. The Layers docker's color label
+and label visibility combos are connected to `activated`, so setting their
+index did nothing. Emit `activated` and `textActivated` after setting a
+combo box when imitating a choice (test control's `ui_set` does).
