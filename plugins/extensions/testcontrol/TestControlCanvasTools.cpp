@@ -46,6 +46,14 @@ constexpr int MaxStrokePoints = 10000;
 constexpr int DefaultPointSpacingMs = 10;
 constexpr qint64 MaxStrokeDurationMs = 120000;
 constexpr qint64 MaxHashedBytes = qint64(512) * 1024 * 1024;
+// wait_idle polls every 20 ms. Three idle polls let work queued to the GUI
+// thread run. A vector (shape) selection renders its pixels from timers the
+// image does not report as busy (KisSelectionUpdateCompressor, 100 ms, then
+// the selection mask's update compressor): the pixels arrived up to 220 ms
+// and a last short job ran about 430 ms after the stroke on Windows, so it
+// needs 600 ms.
+constexpr int IdlePolls = 3;
+constexpr int ShapeSelectionIdlePolls = 31;
 
 KisMainWindow *currentWindow()
 {
@@ -226,7 +234,8 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
     server->addTool("wait_idle",
                     "Wait until the image has no queued or running strokes and stays idle for three polls "
                     "20 ms apart, so follow-up work queued to the GUI thread (such as a new selection mask) "
-                    "has run too.",
+                    "has run too. While the current selection is a vector selection, it must stay idle for "
+                    "600 ms, until the selection's pixels are rendered.",
                     objectSchema({{"timeoutMs", schemaProperty("integer", "Timeout (default 10000, max 120000).")}}),
                     std::bind(&TestControlCanvasTools::waitIdle, this, _1, _2));
 
@@ -493,9 +502,18 @@ void TestControlCanvasTools::waitIdle(const Arguments &arguments, const Reply &r
     }
 
     const int timeoutMs = qBound(0, arguments.value("timeoutMs").toInt(10000), 120000);
+    int idlePolls = 0;
     pollUntil(
-        [image]() mutable {
-            return image->isIdle();
+        [image, idlePolls]() mutable {
+            if (!image->isIdle()) {
+                idlePolls = 0;
+                return false;
+            }
+            ++idlePolls;
+            KisViewManager *viewManager = currentViewManager();
+            const KisSelectionSP selection = viewManager ? viewManager->selection() : KisSelectionSP();
+            const bool shapeSelection = selection && selection->hasShapeSelection();
+            return idlePolls >= (shapeSelection ? ShapeSelectionIdlePolls : IdlePolls);
         },
         timeoutMs,
         [reply](bool idle, qint64 waitedMs) {
@@ -506,10 +524,10 @@ void TestControlCanvasTools::waitIdle(const Arguments &arguments, const Reply &r
                                                                 {{"idle", false}, {"waitedMs", waitedMs}}));
             }
         },
-        // An image that reports idle once can still have work queued to the
-        // GUI thread: a selection made on a document without a global
-        // selection was read as empty in about one of 25 runs.
-        3);
+        // The condition counts its own consecutive idle polls (see IdlePolls).
+        // A vector selection read right after three polls was empty in 13 of
+        // 15 runs on Windows and in about one of 25 on Linux.
+        1);
 }
 
 void TestControlCanvasTools::queryState(const Arguments &arguments, const Reply &reply)
