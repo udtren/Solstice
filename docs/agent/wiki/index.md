@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-27
+updated: 2026-10-28
 ---
 
 # Agent wiki
@@ -150,6 +150,9 @@ Document ownership and lifecycle are defined in
   eats the next mouse press and blocks mouse input until proximity leaves;
   modifiers are resynced from the physical keyboard; modal dialogs block a
   serialized call queue; some combo boxes act only on `activated`.
+- [Closing on press moves the next tab under the cursor](pitfalls/close-on-press-shifts-tabs.md):
+  `QMdiArea` closes a document tab on middle press, so a repeated press
+  closed the next tab too; act on release over the same item.
 - [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md):
   filter and fill layers and masks report `nodeColorSpace()` as GrayA, which
   turns `KisVisualColorSelector` into one lightness bar (HueSVC).
