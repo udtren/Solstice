@@ -25,6 +25,12 @@ and dialogs are owned by each `KisViewManager`.
   Export registered folders, Name, Export Region and icon, and the Rename
   Layer Presets editor. Remembered format options followed in
   [0.5.2](wiki/history/release-0.5.2.md) (PR #35).
+- Open issue (found 2026-10-28 by the test control scenario
+  `lazy-selection-masks` on Windows): Create Selection Mask Alternative
+  raises the safe assert `!m_d->parent || !parent` in
+  `KisPaintDevice::setParentNode()` once or twice per use. The mask, undo and
+  redo still behave as the scenario expects; release packages hide safe
+  asserts, development builds show a dialog. Not investigated yet.
 
 ## Build and installation
 

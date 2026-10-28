@@ -1,6 +1,6 @@
 ---
 type: pitfall
-updated: 2026-10-27
+updated: 2026-10-28
 sources:
   - libs/ui/input/kis_input_manager.cpp (KisInputManager::eventFilter, eventFilterImpl, TabletPress/TabletRelease cases)
   - libs/ui/input/kis_input_manager_p.cpp (EventEater::eventFilter, ProximityNotifier::eventFilter, CanvasSwitcher::addCanvas, allowMouseEvents, fixShortcutMatcherModifiersState)
@@ -20,6 +20,8 @@ sources:
   - libs/ui/input/kis_input_manager.cpp (compressMoveEventCommon, MouseButtonRelease)
   - docs/agent/test-control.md
   - docs/agent/paint-trace-baseline-runs.md (Trace overhead, Linux; held times)
+  - Windows run of phases 1-4, 2026-10-28 (fresh profiles, GPU prompt, safe asserts)
+  - libs/ui/KisGpuEngineUi.cpp (offerConversion), plugins/extensions/testcontrol/TestControlDocumentTools.cpp (viewReset)
 related:
   - transform-tool-input.md
   - idle-tasks-wait-for-open-strokes.md
@@ -183,6 +185,15 @@ replying (test control: `async` on `action_trigger` and `ui_click`); the
 dialog's nested event loop then serves the next calls. Rename Alternative and
 Fast Image Export's warnings work this way.
 
+Dialogs a call does not ask for block the same way, and `async` cannot help:
+the GPU engine's offer to convert an opened 8-bit document (a fresh profile
+on a machine with a usable GPU engine, Windows 2026-10-28) and a safe-assert
+dialog in a development build without `HIDE_SAFE_ASSERTS`. After one of them
+every call times out. Keep them out of a test process instead: the profile
+setting `Solstice/GpuEngineConvertDocuments=2` (Keep) or
+`KRITA_GPU_PROJECTION=0`, and `KRITA_NO_ASSERT_MSG=1`, which logs safe
+asserts instead of asking.
+
 ## setCurrentIndex() is not a user's choice
 
 A user picking a combo box item makes Qt emit `activated` (also for the item
@@ -234,3 +245,14 @@ with the GPU brush, with or without the trace. The input rate the
 application sees is therefore lower than the schedule. Read the actual
 times from the result (`durationMs`, `pressedAtMs`, `releasedAtMs`) rather
 than from the points' `t` values.
+
+## A fresh profile's canvas can be too small for the test
+
+`view_reset` sizes the main window, not the canvas. In a new profile on
+Windows (2026-10-28, 150 % scaling) the default dockers left a canvas 228 px
+wide in a 1280x900 window, and a 730x924 visible image area in a 1920x1080
+one; a profile used for a day had 631 px at the same size. Points beyond the
+canvas miss it (`pointsOutsideCanvas`), so a drag ends early: the selection
+is narrower, not missing. Disabling high-DPI scaling did not change it. Read
+`view_reset`'s `canvas` and `imageRectInWidget` and fail early when the
+planned points do not fit, instead of comparing results that cannot match.

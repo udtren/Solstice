@@ -109,6 +109,16 @@ Verification (2026-10-26, cloud session, no Krita build available):
   The series tool's tests (5) and the runner's tests pass. Every launch on
   this machine showed Vision ML's startup warning, closed by a scratch
   click helper during the series. Windows not yet checked.
+- Windows, phases 1-4 (2026-10-28, Windows 11 25H2 at 150 % scaling, Qt 6.8,
+  branch `claude/test-control-phase4` at `86c7fe214a`, full tree built and
+  installed): the test control tests pass through `ctest` except
+  `TestControlPathsTest::testSymbolicLinkOutOfRoot` (`QFile::link()` makes a
+  `.lnk` shortcut on Windows); `TestControlTimingTest` passes 7 of 7. Step 10
+  passes with the `Enter` change. With a large enough canvas all 26
+  scenarios pass (`pressure-stroke` unrecorded: no `windows-*` values yet);
+  with `--launch` six fail and the paint trace series cannot start, because
+  a fresh profile leaves a narrow canvas. Details and the other findings in
+  [Windows, phases 1-4](#windows-phases-1-4-2026-10-28).
 
 ## Source locations
 
@@ -487,6 +497,56 @@ and holding focus, mouse and pen strokes paint in full (5 of 5 rounds), and
 the whole checklist passes again on Linux, including step 11 with a save
 prompt during the stroke (202 events sent, "No" exits 0).
 
+### Windows, phases 1-4 (2026-10-28)
+
+Windows 11 25H2, 150 % display scaling (3840x2160), Qt 6.8, NVIDIA RTX PRO
+6000 Blackwell (driver 596.86), local `RelWithDebInfo` build without
+`HIDE_SAFE_ASSERTS` from `86c7fe214a`, installed in `_install`; the user's
+desktop was in use, with Solstice behind another application.
+
+| Check | Result |
+| --- | --- |
+| `ctest -R testcontrol` | 6 of 7 pass. `TestControlPathsTest` fails only `testSymbolicLinkOutOfRoot`: `QFile::link()` writes a `.lnk` shortcut, which `canonicalFilePath()` does not follow. |
+| Step 10 with the `Enter` change | Pass: with a topmost window covering Solstice and holding focus (`windowActive` false), three rectangle drags each selected 200x100 and a brush stroke painted. |
+| 26 scenarios, one runner call each, against a Solstice started with a scratch profile used since 2026-10-27 (canvas 631x744, GPU engine on, English, `Solstice/GpuEngineConvertDocuments=2`) | 25 pass; `pressure-stroke` unrecorded. The six selection scenarios that failed in the first pass passed when rerun (see the canvas row). |
+| `run_scenarios.py --launch` with all 26 (GPU engine off, `KRITA_NO_ASSERT_MSG=1`) | 19 pass, 1 unrecorded, 6 fail: `rect-select-fill`, `contiguous-select`, `ellipse-select`, `outline-select`, `selection-modifiers` (drags end early, for example width 114 instead of 200) and `color-label-controls` (image busy at `query_layers`). |
+| `paint_trace_series.py --launch --modes cpu projection brush` | Stops at the first run: "The visible image area 730x924 is too small for the stroke set". |
+
+Findings:
+
+- **Fresh profile, narrow canvas.** With a new profile's default dockers,
+  `view_reset` (window 1280x900) leaves a canvas 228 px wide; image
+  coordinates beyond it miss the canvas (19 of a drag's 24 points), so
+  selections end early. The series asks for 1920x1080 and still gets a
+  730x924 visible area. Neither `QT_ENABLE_HIGHDPI_SCALING=0` nor
+  `QT_SCALE_FACTOR=0.6667` helps (the latter gives 99 px heights). The
+  scratch profile used since 2026-10-27 has a 631 px canvas at the same
+  window size.
+- **GPU conversion prompt.** A fresh profile on a machine where the GPU
+  engine is usable asks whether to convert an opened 8-bit file
+  (`lazy-fast-export` step 9 opens a PNG). The modal box blocks the call
+  queue: every later call times out. `Solstice/GpuEngineConvertDocuments=2`
+  (Keep) in the profile, or `KRITA_GPU_PROJECTION=0`, avoids it.
+- **Safe assert in Lazy Tools.** `create_selection_mask_alternative`
+  (`lazy-selection-masks` step 7) raises `!m_d->parent || !parent` in
+  `KisPaintDevice::setParentNode()` (`kis_paint_device.cc`) once or twice
+  per run. Release packages hide safe asserts; a development build shows a
+  modal dialog, which stops a `--launch` run because the runner does not set
+  `KRITA_NO_ASSERT_MSG`. Not caused by test control; recorded in
+  [Lazy Tools](lazy-tools.md#status-and-locations).
+- **Two-point strokes.** An `input_stroke` with exactly two points (press,
+  one move, release) paints only the dab at the end, with the mouse and with
+  the pen; three or more points paint the whole line. Not checked on Linux.
+- **Running the tools on Windows.** `--launch` needs the `env.bat`
+  environment (otherwise 0xC0000135, a missing DLL), empty folders in
+  `SOLSTICE_LEGACY_CONFIG_DIR` and `SOLSTICE_LEGACY_RESOURCE_DIR` on a
+  machine with a Krita profile (otherwise the import prompt waits), and
+  `KRITA_NO_ASSERT_MSG=1` with a development build. `--all` also finds the
+  scenarios of Git worktrees under `.claude/worktrees/`.
+- A scratch profile's `klanguageoverridesrc` needs `solstice=` as well as
+  `krita=`; with only `krita=en_US` the UI followed the system language
+  (Japanese), and scenarios that click buttons by text failed.
+
 ## Scenarios (format version 1)
 
 A scenario is a JSON file next to the covered feature's tests (user
@@ -693,6 +753,14 @@ warning, close it in every process (the runner cannot).
 
 ## Known limitations and pending work
 
+- Windows (2026-10-28, [details](#windows-phases-1-4-2026-10-28)), pending:
+  `view_reset` does not guarantee a canvas large enough for the scenarios
+  and the paint trace series in a fresh profile; `--launch` should keep the
+  GPU conversion prompt and safe-assert dialogs from blocking the call queue
+  (profile setting, `KRITA_NO_ASSERT_MSG`), ignore `.claude/worktrees/`, and
+  document the `env.bat` and legacy-folder requirements; two-point strokes
+  paint only their last dab; `testSymbolicLinkOutOfRoot` should skip when
+  `QFile::link()` made no symbolic link; no `windows-*` values are recorded.
 - Releases and compressed moves (2026-10-27): `KisInputManager` compresses
   moves for tools that do not ask for high-resolution input
   (`KisTool::primaryActionSupportsHiResEvents()` is false by default; the

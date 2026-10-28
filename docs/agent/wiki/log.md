@@ -2296,3 +2296,20 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   medians jump by a frame; a busy GUI thread stretches real-time synthetic
   strokes by about 40-70 % ([synthetic canvas input](pitfalls/synthetic-canvas-input.md)).
 - Next: the same series on Windows; the README engine workloads there.
+
+## 2026-10-28 ingest: test control phases 1-4 on Windows
+
+- Ran the phase 1-4 checks on Windows (branch `claude/test-control-phase4`
+  at `86c7fe214a`): test control tests pass except the `.lnk` case of
+  `TestControlPathsTest`; step 10 passes with the `Enter` change; all 26
+  scenarios pass with a large enough canvas, but six fail under `--launch`
+  and the paint trace series cannot start, because a fresh profile's canvas
+  is too narrow. Also found: the GPU conversion prompt and safe-assert
+  dialogs block the call queue, a safe assert in Create Selection Mask
+  Alternative, two-point strokes that paint only their last dab, and the
+  `env.bat`, legacy-folder and worktree needs of the runner on Windows.
+  Results in [Test control](../test-control.md#windows-phases-1-4-2026-10-28);
+  the Lazy Tools assert in [Lazy Tools](../lazy-tools.md#status-and-locations).
+- Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md),
+  "A modal dialog blocks a serialized call queue" (dialogs a call did not ask
+  for) and "A fresh profile's canvas can be too small for the test".
