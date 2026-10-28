@@ -2280,3 +2280,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   0.6.0 as released.
 - Lesson: `SHA256SUMS.txt` from the Windows build has CRLF line endings;
   `sha256sum -c` in Git Bash needs them stripped (`tr -d '\r'`).
+
+## 2026-10-28 fix: middle-click closed more than one document tab
+
+- User report: middle-clicking the leftmost document tab also closed the
+  other documents. `QMdiArea` closes a tab on middle press, so the next
+  tab slides under the cursor and a repeated press from the same click
+  closes it. `MdiTabMiddleClickCloser` in `libs/ui/KisMainWindow.cpp` now
+  closes on release over the same tab and ignores repeated presses;
+  confirmed by the user in Solstice. Recorded in the
+  [feature inventory](../feature-inventory.md) and the new pitfall
+  [Closing on press moves the next tab under the cursor](pitfalls/close-on-press-shifts-tabs.md).
