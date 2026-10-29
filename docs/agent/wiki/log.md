@@ -2291,3 +2291,37 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   confirmed by the user in Solstice. Recorded in the
   [feature inventory](../feature-inventory.md) and the new pitfall
   [Closing on press moves the next tab under the cursor](pitfalls/close-on-press-shifts-tabs.md).
+
+## 2026-10-29 fix: group thumbnail kept pixels outside the canvas
+
+- User report: a group copied from one document and pasted into another,
+  partly outside the canvas, kept showing the old out-of-canvas image in
+  its layer thumbnail and tooltip after Ctrl+T. The copy constructor
+  copies the group projection, and projection updates are cropped to the
+  image bounds, so those pixels were never refreshed.
+  `KisGroupLayer::setImage()` now crops the group's own projection to the
+  image bounds; `KisGroupLayerTest::testCopyToSmallerImageCropsProjection`
+  fails without it. Confirmed by the user in Solstice. Recorded in
+  the [feature inventory](../feature-inventory.md) and the new pitfall
+  [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md).
+
+## 2026-10-29 fix: filter layer thumbnail kept pixels outside the canvas
+
+- Follow-up to the group fix. A temporary test measured both
+  `KisSelectionBasedLayer` kinds copied from a 200x200 into a 100x100
+  image: the filter layer's original stayed 200x200 even after a full
+  refresh; the fill layer's became 100x100 on its first update.
+  `KisAdjustmentLayer::setImage()` now crops the filtered original to the
+  image bounds; `KisAdjustmentLayerTest::testCopyToSmallerImageCropsOriginal`
+  fails without it; confirmed by the user in Solstice. Fill layers were
+  left unchanged; the reason is in
+  [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md).
+
+## 2026-10-29 release: prepare Solstice 0.6.1
+
+- User request after confirming the group and filter layer thumbnail fixes
+  in Solstice: release them as 0.6.1 (`PATCH`) together with the merged
+  middle-click document tab fix (PR #51). The version, README
+  "In development" summary and the [version ledger](../versioning.md#history)
+  are updated; publication and package verification follow
+  [Releasing](../versioning.md#releasing).
