@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-29
+updated: 2026-10-30
 ---
 
 # Agent wiki
@@ -240,6 +240,9 @@ Document ownership and lifecycle are defined in
 - [0.6.0 release verification](history/release-0.6.0.md): Clipping Mask and
   same-layer duplication release, package integrity, website publication with
   the new `/features/` page.
+- [0.6.1 release verification](history/release-0.6.1.md): group and filter
+  layer thumbnail and middle-click tab fix release, package integrity,
+  website publication.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):
