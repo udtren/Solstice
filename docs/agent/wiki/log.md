@@ -2325,3 +2325,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   "In development" summary and the [version ledger](../versioning.md#history)
   are updated; publication and package verification follow
   [Releasing](../versioning.md#releasing).
+
+## 2026-10-30 release: Solstice 0.6.1
+
+- Released `v0.6.1` at `88fecab57e31` (run 40882283677) on 2026-10-30
+  00:11 JST and published the website the same day (tidalboxstudio-web #19,
+  #20; version only). Evidence:
+  [0.6.1 release verification](history/release-0.6.1.md).
+- README, the guide index and the [version ledger](../versioning.md#history)
+  now describe 0.6.1 as released.
+- Lesson: the publish PR from `develop` to `main` reports no checks; the
+  Cloudflare build runs on the `main` merge commit, and the live site
+  updated about five minutes after the merge.

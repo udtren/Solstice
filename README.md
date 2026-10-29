@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [In development: 0.6.1](#in-development-061)
+- [What's new in 0.6.1](#whats-new-in-061)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,9 +59,10 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## In development: 0.6.1
+## What's new in 0.6.1
 
-Solstice 0.6.1 fixes two problems:
+[Solstice 0.6.1](https://github.com/udtren/Solstice/releases/tag/v0.6.1)
+fixes two problems:
 
 - After a group or filter layer was pasted from another document partly
   outside the canvas, its layer thumbnail kept showing the old pixels
