@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-28
+updated: 2026-10-29
 ---
 
 # Agent wiki
@@ -153,6 +153,9 @@ Document ownership and lifecycle are defined in
 - [Closing on press moves the next tab under the cursor](pitfalls/close-on-press-shifts-tabs.md):
   `QMdiArea` closes a document tab on middle press, so a repeated press
   closed the next tab too; act on release over the same item.
+- [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md):
+  updates are cropped to the image bounds, so pixels a group copied from
+  another document left outside the canvas stayed in its thumbnail.
 - [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md):
   filter and fill layers and masks report `nodeColorSpace()` as GrayA, which
   turns `KisVisualColorSelector` into one lightness bar (HueSVC).
