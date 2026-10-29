@@ -2313,5 +2313,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   refresh; the fill layer's became 100x100 on its first update.
   `KisAdjustmentLayer::setImage()` now crops the filtered original to the
   image bounds; `KisAdjustmentLayerTest::testCopyToSmallerImageCropsOriginal`
-  fails without it. Fill layers were left unchanged; the reason is in
+  fails without it; confirmed by the user in Solstice. Fill layers were
+  left unchanged; the reason is in
   [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md).
+
+## 2026-10-29 release: prepare Solstice 0.6.1
+
+- User request after confirming the group and filter layer thumbnail fixes
+  in Solstice: release them as 0.6.1 (`PATCH`) together with the merged
+  middle-click document tab fix (PR #51). The version, README
+  "In development" summary and the [version ledger](../versioning.md#history)
+  are updated; publication and package verification follow
+  [Releasing](../versioning.md#releasing).
