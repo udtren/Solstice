@@ -7,6 +7,9 @@ sources:
   - "libs/image/kis_async_merger.cpp (KisAsyncMerger::setupProjection())"
   - "libs/image/kis_paint_device_cache.h (createThumbnail(), Precise bounds)"
   - "libs/image/tests/kis_group_layer_test.cpp (testCopyToSmallerImageCropsProjection)"
+  - "libs/image/kis_adjustment_layer.cc (setImage())"
+  - "libs/image/generator/kis_generator_layer.cpp (requestUpdateJobsWithStroke())"
+  - "libs/image/tests/kis_adjustment_layer_test.cpp (testCopyToSmallerImageCropsOriginal)"
 related:
   - strong-image-ref-during-copy.md
   - ../concepts/krita-copy-semantics.md
@@ -39,8 +42,13 @@ image bounds whenever the group joins an image. Note:
 - Use `image.isValid()` before reading the image in `setImage()`: it also
   runs while `KisImage`'s copy constructor clones the root
   ([No strong image reference during a copy](strong-image-ref-during-copy.md)).
-- `KisSelectionBasedLayer` (filter and fill layers) also copies its cached
-  original, and its thumbnail reads that original, so the same stale
-  pixels may show there after a cross-document paste. Not changed or
-  verified yet: check whether fill-layer generators write outside the
-  image bounds before cropping in its `setImage()`.
+- Filter layers (`KisAdjustmentLayer`) have the same property: their
+  filtered original is copied and refreshed only inside the image bounds,
+  and their thumbnail reads it. `KisAdjustmentLayer::setImage()` crops it
+  too (test `testCopyToSmallerImageCropsOriginal`).
+- Fill layers (`KisGeneratorLayer`) share the base class but were left as
+  they are. Their first update after the copy clears the whole original and
+  regenerates `extent() | image bounds` (measured: 200x200 copied into a
+  100x100 image became 100x100). They also remember the generated rect
+  (`preparedRect`), so cropping in the shared `KisSelectionBasedLayer`
+  could leave that record wrong.

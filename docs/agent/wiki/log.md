@@ -2301,6 +2301,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   image bounds, so those pixels were never refreshed.
   `KisGroupLayer::setImage()` now crops the group's own projection to the
   image bounds; `KisGroupLayerTest::testCopyToSmallerImageCropsProjection`
-  fails without it. Not yet checked interactively in Solstice. Recorded in
+  fails without it. Confirmed by the user in Solstice. Recorded in
   the [feature inventory](../feature-inventory.md) and the new pitfall
+  [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md).
+
+## 2026-10-29 fix: filter layer thumbnail kept pixels outside the canvas
+
+- Follow-up to the group fix. A temporary test measured both
+  `KisSelectionBasedLayer` kinds copied from a 200x200 into a 100x100
+  image: the filter layer's original stayed 200x200 even after a full
+  refresh; the fill layer's became 100x100 on its first update.
+  `KisAdjustmentLayer::setImage()` now crops the filtered original to the
+  image bounds; `KisAdjustmentLayerTest::testCopyToSmallerImageCropsOriginal`
+  fails without it. Fill layers were left unchanged; the reason is in
   [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md).
