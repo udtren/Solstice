@@ -2388,3 +2388,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: after a history rewrite, check every ref kind on `origin` for the
   old commits: branches, tags, and the undeletable `refs/pull/*/head`.
   The repository sidebar can lag the contributors API.
+
+## 2026-10-30 fix: PNG "Force convert to sRGB" unticked after updating
+
+- The user reported the box unticked after every download of a new
+  version. `krita.log` showed neither upgrade changed the value: each
+  change from true to false followed a Spine Export of `template.png`. The
+  plugin (a separate repository) called `exportImage()` with
+  `forceSRGB=False` outside batch mode, and the accepted dialog replaced
+  `ExportConfiguration-image/png`. The plugin now sets the document's batch
+  mode around that export.
+- A second, separate fault: the PNG options dialog fell back to off for a
+  configuration without `forceSRGB`, unlike the exporter. Fixed with tests
+  in `kis_png_test`.
+- Lesson: `krita.log` records every export's configuration and the running
+  version. Read the sequence before trusting a reported correlation. See
+  [Exported options are remembered](pitfalls/script-export-replaces-saved-options.md).

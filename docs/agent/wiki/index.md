@@ -160,6 +160,10 @@ Document ownership and lifecycle are defined in
 - [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md):
   filter and fill layers and masks report `nodeColorSpace()` as GrayA, which
   turns `KisVisualColorSelector` into one lightness bar (HueSVC).
+- [Exported options are remembered](pitfalls/script-export-replaces-saved-options.md):
+  a non-batch `exportImage()` shows the options dialog and saves its result
+  over the File > Export options, so a script's own values reach the user's
+  next export.
 - [Translation extraction on Windows](pitfalls/translation-extraction.md):
   `.ui` `comment=` contexts, CRLF resource names, missing `Archive::Zip`,
   reference fix-up order, `QT_TRANSLATE_NOOP` not extracted.
