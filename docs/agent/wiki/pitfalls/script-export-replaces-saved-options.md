@@ -6,8 +6,8 @@ sources:
   - libs/libkis/Document.cpp (exportImage, setBatchmode)
   - libs/libkis/Krita.cpp (setBatchmode)
   - plugins/impex/png/kis_png_export.cc (KisWdgOptionsPNG::setConfiguration)
-related:
-  - ../../lazy-tools.md
+  - docs/agent/lazy-tools.md
+related: []
 ---
 
 # Exported options are remembered
