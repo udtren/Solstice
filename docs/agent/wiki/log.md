@@ -2281,6 +2281,22 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: `SHA256SUMS.txt` from the Windows build has CRLF line endings;
   `sha256sum -c` in Git Bash needs them stripped (`tr -d '\r'`).
 
+## 2026-10-27 test control: paint trace overhead (phase 4 remainder)
+
+- On `claude/test-control-phase4` from `main` after 0.6.0: test control
+  gained `canvas_frames` (frame-present times of the canvas), press and
+  release times in input results and process CPU time in `session_info`,
+  on one clock (`TestControlTiming`); `paint_trace_series.py --overhead`
+  runs each mode with and without the trace per round.
+- 18-process Linux series: the trace leaves CPU time and frame cadence
+  unchanged and adds a few ms of stroke tail only for projection Build-up.
+  New page [Paint trace overhead](benchmarks/paint-trace-overhead.md); run
+  sheet section in [paint trace baseline runs](../paint-trace-baseline-runs.md).
+- Lessons: end-of-stroke times are quantized by frames, so three-stroke
+  medians jump by a frame; a busy GUI thread stretches real-time synthetic
+  strokes by about 40-70 % ([synthetic canvas input](pitfalls/synthetic-canvas-input.md)).
+- Next: the same series on Windows; the README engine workloads there.
+
 ## 2026-10-28 fix: middle-click closed more than one document tab
 
 - User report: middle-clicking the leftmost document tab also closed the
@@ -2291,6 +2307,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   confirmed by the user in Solstice. Recorded in the
   [feature inventory](../feature-inventory.md) and the new pitfall
   [Closing on press moves the next tab under the cursor](pitfalls/close-on-press-shifts-tabs.md).
+
+## 2026-10-28 ingest: test control phases 1-4 on Windows
+
+- Ran the phase 1-4 checks on Windows (branch `claude/test-control-phase4`
+  at `86c7fe214a`): test control tests pass except the `.lnk` case of
+  `TestControlPathsTest`; step 10 passes with the `Enter` change; all 26
+  scenarios pass with a large enough canvas, but six fail under `--launch`
+  and the paint trace series cannot start, because a fresh profile's canvas
+  is too narrow. Also found: the GPU conversion prompt and safe-assert
+  dialogs block the call queue, a safe assert in Create Selection Mask
+  Alternative, two-point strokes that paint only their last dab, and the
+  `env.bat`, legacy-folder and worktree needs of the runner on Windows.
+  Results in [Test control](../test-control.md#windows-phases-1-4-2026-10-28);
+  the Lazy Tools assert in [Lazy Tools](../lazy-tools.md#status-and-locations).
+- Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md),
+  "A modal dialog blocks a serialized call queue" (dialogs a call did not ask
+  for) and "A fresh profile's canvas can be too small for the test".
 
 ## 2026-10-29 fix: group thumbnail kept pixels outside the canvas
 

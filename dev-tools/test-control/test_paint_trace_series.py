@@ -87,5 +87,52 @@ class AggregateTest(unittest.TestCase):
         self.assertNotIn("projection", table["64px Buildup"])
 
 
+
+class FrameTimingTest(unittest.TestCase):
+    def test_frame_metrics(self):
+        frames = [90.0, 110.0, 126.0, 150.0, 170.0, 212.5, 230.0]
+        metrics = series.frame_metrics(frames, pressed=100.0, released=200.0, now=500.0)
+        # Frames 110-170 while the pen was down (intervals 16, 24, 20), then the last one at 230.
+        self.assertEqual(metrics, {"releaseToLastFrameMs": 30.0, "frames": 4, "frameIntervalMs": 20.0,
+                                   "settled": True})
+        self.assertFalse(series.frame_metrics(frames, 100.0, 200.0, now=300.0)["settled"])
+        self.assertIsNone(series.frame_metrics(frames[:5], 100.0, 200.0, now=500.0)["releaseToLastFrameMs"])
+
+    def test_problems_and_selection(self):
+        strokes = series.layout(view())
+        played = [{"releaseToLastFrameMs": 10.0 + i, "frameIntervalMs": 5.0, "frames": 10, "settled": True}
+                  for i in range(16)]
+        self.assertEqual(series.frame_problems(played), [])
+        selected = series.select_frames(played, strokes)
+        self.assertEqual(selected["64px Wash"]["releaseToLastFrameMs"], [15.0, 16.0, 17.0])
+        self.assertEqual(selected["64px Wash"]["processReleaseToLastFrameMs"], 16.0)
+        played[3] = dict(played[3], settled=False, releaseToLastFrameMs=None)
+        self.assertEqual(len(series.frame_problems(played)), 2)
+        self.assertIsNone(series.select_frames(played, strokes)["64px Buildup"]["processReleaseToLastFrameMs"])
+
+    def test_overhead_plan_and_aggregate(self):
+        plan = series.run_plan(series.ROUNDS, overhead=True)
+        self.assertEqual(len(plan), 18)
+        self.assertEqual(plan[:2], [("cpu", False), ("cpu", True)])
+        self.assertEqual(plan[6:8], [("projection", True), ("projection", False)])
+        self.assertEqual(series.run_plan(series.ROUNDS[:1], overhead=False),
+                         [("cpu", True), ("projection", True), ("brush", True)])
+
+        runs = []
+        for trace, latency, cpu in ((False, 20.0, 1000), (True, 22.0, 1100), (False, 24.0, 1200)):
+            runs.append({"mode": "cpu", "traced": trace, "trace": "trace.1.json" if trace else None,
+                         "process": {"cpuMs": cpu},
+                         "frameConditions": {"64px Buildup": {"processReleaseToLastFrameMs": latency,
+                                                              "processFrameIntervalMs": 8.0}}})
+        table = series.aggregate_overhead(runs)
+        off = table["conditions"]["64px Buildup"]["cpu"]["off"]
+        self.assertEqual((off["processes"], off["medianMs"], off["minMs"], off["maxMs"]), (2, 22.0, 20.0, 24.0))
+        self.assertEqual(table["conditions"]["64px Buildup"]["cpu"]["on"]["medianMs"], 22.0)
+        self.assertEqual(table["cpu"]["cpu"]["on"]["medianMs"], 1100)
+        self.assertNotIn("brush", table["cpu"])
+        # Runs without the trace have no trace timing and stay out of that table.
+        self.assertEqual(series.aggregate([dict(run, conditions={}) for run in runs]), {})
+
+
 if __name__ == "__main__":
     unittest.main()

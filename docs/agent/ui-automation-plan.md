@@ -11,7 +11,8 @@ check pending. The user authorized phase 3 the same day, first the
 selection tools and the Transform Tool / Puppet Warp items, then Lazy Tools
 and Quick Access; both parts are implemented on `claude/test-control-phase3`
 and checked on Linux, Windows pending. Phase 4 (paint trace automation) was
-authorized and run on Linux the same day, on the same branch; phase 5 remains
+authorized and run on Linux the same day, on the same branch, and its
+tracing-overhead runs followed on `claude/test-control-phase4`; phase 5 remains
 a proposal that needs the user's go-ahead.
 
 ## Goal
@@ -270,9 +271,19 @@ Authorized and done 2026-10-27 on `claude/test-control-phase3`, Linux only:
 | Tool changes | `brush_set` `paintMode` (Build-up/Wash); `session_info` `gpuEngine` (the device the engine started on); the runner's launcher takes extra environment variables |
 | First series | Nine processes, all accepted; results, hashes and interpretation in the [run sheet](paint-trace-baseline-runs.md#synthetic-series-linux-2026-10-27-test-control). GPU engine on the RTX 5090, canvas on Xvfb's software OpenGL |
 
-Left: the same series on Windows (with a hardware-GL canvas and the
-shared-buffer path), tracing-disabled runs for the overhead, and the README
-operation workloads the protocol mentions.
+Tracing overhead, the same day on `claude/test-control-phase4` (user:
+"create new branch from main and start phase 4", after phase 4's series had
+merged): test control gained trace-independent timing (`canvas_frames`, the
+input results' press and release times, process CPU time in
+`session_info`), and `paint_trace_series.py --overhead` ran 18 processes on
+Linux. CPU time and frame cadence do not change with the trace; the stroke
+tail grows by a few milliseconds only for projection-requested Build-up
+([run sheet](paint-trace-baseline-runs.md#trace-overhead-linux-2026-10-27-test-control)).
+
+Left: both series on Windows (with a hardware-GL canvas and the
+shared-buffer path), where the README's numbers come from, and the README
+operation workloads the protocol mentions (engine benchmarks on the
+validation machine).
 
 ### Phase 5: optional CI
 

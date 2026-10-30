@@ -90,6 +90,10 @@ public:
         bool pressAccepted = false;
         bool releaseAccepted = false;
         qint64 durationMs = 0;
+        /// When the first press and the last release were sent, on
+        /// TestControlTiming::clockMs(); negative when there was none.
+        double pressedAtMs = -1;
+        double releasedAtMs = -1;
         /// Empty on success.
         QString error;
     };

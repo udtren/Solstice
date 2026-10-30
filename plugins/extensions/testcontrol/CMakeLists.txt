@@ -8,6 +8,7 @@ set(kritatestcontrol_SOURCES
     TestControlImageCompare.cpp
     TestControlPaths.cpp
     TestControlSupport.cpp
+    TestControlTiming.cpp
     TestControlUiTools.cpp
 )
 

@@ -109,6 +109,16 @@ Verification (2026-10-26, cloud session, no Krita build available):
   The series tool's tests (5) and the runner's tests pass. Every launch on
   this machine showed Vision ML's startup warning, closed by a scratch
   click helper during the series. Windows not yet checked.
+- Windows, phases 1-4 (2026-10-28, Windows 11 25H2 at 150 % scaling, Qt 6.8,
+  branch `claude/test-control-phase4` at `86c7fe214a`, full tree built and
+  installed): the test control tests pass through `ctest` except
+  `TestControlPathsTest::testSymbolicLinkOutOfRoot` (`QFile::link()` makes a
+  `.lnk` shortcut on Windows); `TestControlTimingTest` passes 7 of 7. Step 10
+  passes with the `Enter` change. With a large enough canvas all 26
+  scenarios pass (`pressure-stroke` unrecorded: no `windows-*` values yet);
+  with `--launch` six fail and the paint trace series cannot start, because
+  a fresh profile leaves a narrow canvas. Details and the other findings in
+  [Windows, phases 1-4](#windows-phases-1-4-2026-10-28).
 
 ## Source locations
 
@@ -122,8 +132,9 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Widget tools: query, click, set, close windows; dockers | `TestControlUiTools.{h,cpp}` |
 | Document tools: open, export, close, view reset, brush, layer tree, active layer | `TestControlDocumentTools.{h,cpp}` |
 | Helpers shared by the tool classes, `pollUntil` | `TestControlSupport.{h,cpp}` |
+| Clock, process CPU time, canvas frame recorder (QtWidgets only) | `TestControlTiming.{h,cpp}`, `tests/TestControlTimingTest.cpp` |
 | Test root path checks (QtCore only) | `TestControlPaths.{h,cpp}` |
-| Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp` |
+| Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp`, `tests/TestControlTimingTest.cpp` |
 | Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
 | Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
 | Paint trace series (developer tool, phase 4) | `dev-tools/test-control/paint_trace_series.py`, `test_paint_trace_series.py`; summaries by `build-tools/paint-trace/summarize.py` |
@@ -174,10 +185,10 @@ tested in the cloud session.
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
-| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables, and `gpuEngine`: the device, driver and failed state once the GPU engine has started (null before, or without it) |
+| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables, `gpuEngine`: the device, driver and failed state once the GPU engine has started (null before, or without it), and `process`: the process's CPU time so far (`cpuUserMs`, `cpuSystemMs`, all threads; `getrusage`/`GetProcessTimes`) and the current time (`clockMs`) |
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi). Every `document` result has size, color model, depth and profile, the file name (`fileName`, without the folder, empty for an unsaved document) and `modified` |
 | `tool_activate` | `id` (factory ID) | Active tool ID and `restarted`; a tool that is already active is switched away (to the rectangle selection, or from it to the brush) and back, so it starts fresh; an unknown ID lists all IDs |
-| `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `releaseDelayMs` (0-1000, default 50), `keyAfterRelease` (one key in `QKeySequence` portable text, sent with canvas focus right after the release), `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, points outside the canvas widget, modifiers, active tool |
+| `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `releaseDelayMs` (0-1000, default 50), `keyAfterRelease` (one key in `QKeySequence` portable text, sent with canvas focus right after the release), `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, when the first press and the last release were sent (`pressedAtMs`, `releasedAtMs`, on the `canvas_frames` clock; null without one), points outside the canvas widget, modifiers, active tool |
 | `input_click` | `x`, `y`, `device`, `coordinates`, `button`, `pressure`, `modifiers`, `doubleClick` (mouse only) | As `input_stroke`; one press and release, or with `doubleClick` press, release, `MouseButtonDblClick`, release |
 | `input_key` | `key` (`QKeySequence` portable text: `Return`, `Escape`, `Delete`, `Ctrl+Z`), `modifiers` | `ShortcutOverride`, `KeyPress` and `KeyRelease` to the canvas widget after it got focus, wrapped in the modifier keys' presses and releases |
 | `input_drag` | `from`, `to` (`x`, `y`), `steps` (default 20), `durationMs` (default 200), `device`, `coordinates`, `button`, `pressure`, `realtime`, `releaseDelayMs`, `keyAfterRelease`, `modifiers` | As `input_stroke`; a straight line in equal steps |
@@ -185,6 +196,7 @@ tested in the cloud session.
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name`, `async` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...). With `async`, replies first and triggers from the event loop afterwards, for actions that open a modal dialog (Rename Alternative) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
+| `canvas_frames` | `action` (`start`/`read`/`stop`, default `read`), `sinceMs` | Times when the current canvas presented frames, for timing without the paint trace: `start` clears the record and follows the canvas widget (`frameSwapped()` of the OpenGL canvas, connected by name, the paint trace's command-swap endpoint; otherwise the start of each paint event, `kind` `paint`); `read` returns the frames after `sinceMs`, `recording`, `overflowed` (more than 100000 frames) and `nowMs`. All times are milliseconds on one monotonic clock (`TestControlTiming::clockMs()`, `std::chrono::steady_clock`) |
 | `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize`, `fullResolutionPng` (at most 2048x2048), `reference` (base64 PNG), `maxChannelDiff`, `maxMismatchPixels` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG; with a reference, `reference` (`matches`, `maxChannelDiff`, `mismatchPixels`, `tolerance`) |
 | `document_open` | `path` (relative to the test root) | Opens without dialogs (`KisMainWindow::BatchMode`); document and canvas once its view is active |
 | `document_export_png` | `path` (relative, `.png`) | Exports the active document's image without dialogs, replacing a file; size in bytes |
@@ -485,6 +497,56 @@ and holding focus, mouse and pen strokes paint in full (5 of 5 rounds), and
 the whole checklist passes again on Linux, including step 11 with a save
 prompt during the stroke (202 events sent, "No" exits 0).
 
+### Windows, phases 1-4 (2026-10-28)
+
+Windows 11 25H2, 150 % display scaling (3840x2160), Qt 6.8, NVIDIA RTX PRO
+6000 Blackwell (driver 596.86), local `RelWithDebInfo` build without
+`HIDE_SAFE_ASSERTS` from `86c7fe214a`, installed in `_install`; the user's
+desktop was in use, with Solstice behind another application.
+
+| Check | Result |
+| --- | --- |
+| `ctest -R testcontrol` | 6 of 7 pass. `TestControlPathsTest` fails only `testSymbolicLinkOutOfRoot`: `QFile::link()` writes a `.lnk` shortcut, which `canonicalFilePath()` does not follow. |
+| Step 10 with the `Enter` change | Pass: with a topmost window covering Solstice and holding focus (`windowActive` false), three rectangle drags each selected 200x100 and a brush stroke painted. |
+| 26 scenarios, one runner call each, against a Solstice started with a scratch profile used since 2026-10-27 (canvas 631x744, GPU engine on, English, `Solstice/GpuEngineConvertDocuments=2`) | 25 pass; `pressure-stroke` unrecorded. The six selection scenarios that failed in the first pass passed when rerun (see the canvas row). |
+| `run_scenarios.py --launch` with all 26 (GPU engine off, `KRITA_NO_ASSERT_MSG=1`) | 19 pass, 1 unrecorded, 6 fail: `rect-select-fill`, `contiguous-select`, `ellipse-select`, `outline-select`, `selection-modifiers` (drags end early, for example width 114 instead of 200) and `color-label-controls` (image busy at `query_layers`). |
+| `paint_trace_series.py --launch --modes cpu projection brush` | Stops at the first run: "The visible image area 730x924 is too small for the stroke set". |
+
+Findings:
+
+- **Fresh profile, narrow canvas.** With a new profile's default dockers,
+  `view_reset` (window 1280x900) leaves a canvas 228 px wide; image
+  coordinates beyond it miss the canvas (19 of a drag's 24 points), so
+  selections end early. The series asks for 1920x1080 and still gets a
+  730x924 visible area. Neither `QT_ENABLE_HIGHDPI_SCALING=0` nor
+  `QT_SCALE_FACTOR=0.6667` helps (the latter gives 99 px heights). The
+  scratch profile used since 2026-10-27 has a 631 px canvas at the same
+  window size.
+- **GPU conversion prompt.** A fresh profile on a machine where the GPU
+  engine is usable asks whether to convert an opened 8-bit file
+  (`lazy-fast-export` step 9 opens a PNG). The modal box blocks the call
+  queue: every later call times out. `Solstice/GpuEngineConvertDocuments=2`
+  (Keep) in the profile, or `KRITA_GPU_PROJECTION=0`, avoids it.
+- **Safe assert in Lazy Tools.** `create_selection_mask_alternative`
+  (`lazy-selection-masks` step 7) raises `!m_d->parent || !parent` in
+  `KisPaintDevice::setParentNode()` (`kis_paint_device.cc`) once or twice
+  per run. Release packages hide safe asserts; a development build shows a
+  modal dialog, which stops a `--launch` run because the runner does not set
+  `KRITA_NO_ASSERT_MSG`. Not caused by test control; recorded in
+  [Lazy Tools](lazy-tools.md#status-and-locations).
+- **Two-point strokes.** An `input_stroke` with exactly two points (press,
+  one move, release) paints only the dab at the end, with the mouse and with
+  the pen; three or more points paint the whole line. Not checked on Linux.
+- **Running the tools on Windows.** `--launch` needs the `env.bat`
+  environment (otherwise 0xC0000135, a missing DLL), empty folders in
+  `SOLSTICE_LEGACY_CONFIG_DIR` and `SOLSTICE_LEGACY_RESOURCE_DIR` on a
+  machine with a Krita profile (otherwise the import prompt waits), and
+  `KRITA_NO_ASSERT_MSG=1` with a development build. `--all` also finds the
+  scenarios of Git worktrees under `.claude/worktrees/`.
+- A scratch profile's `klanguageoverridesrc` needs `solstice=` as well as
+  `krita=`; with only `krita=en_US` the UI followed the system language
+  (Japanese), and scenarios that click buttons by text failed.
+
 ## Scenarios (format version 1)
 
 A scenario is a JSON file next to the covered feature's tests (user
@@ -631,6 +693,7 @@ with synthetic input and summarizes the traces:
 ```bat
 python dev-tools\test-control\paint_trace_series.py --launch <krita-dev-root>\_install\bin\solstice.exe --out <new folder>
 python dev-tools\test-control\paint_trace_series.py --launch ... --out <new folder> --modes cpu projection brush
+python dev-tools\test-control\paint_trace_series.py --launch ... --out <new folder> --overhead
 ```
 
 - Each run is a fresh process started like `run_scenarios.py --launch`
@@ -662,6 +725,24 @@ python dev-tools\test-control\paint_trace_series.py --launch ... --out <new fold
   holds the source revision, SHA-256 of the installed binaries (the series
   stops if they change), each run's GPU device (`gpuEngine`) and its summed
   execution path records.
+- Every run also times the strokes without the trace, from `canvas_frames`
+  (started after `document_new`) and the input results' `pressedAtMs` and
+  `releasedAtMs`: per stroke the time from the release to the last frame
+  presented after it (`releaseToLastFrameMs`, the stroke's final pixels on
+  screen), the frames while the pen was down and their median interval, and
+  the held time (release minus press; above the scheduled 338 ms when the
+  GUI thread delays the injector). Per run, the CPU time (`session_info`
+  `process`, user plus system, all threads) and wall time from before the
+  first stroke to after the last. A stroke whose frames had not been quiet
+  for 200 ms when read, or with no frame after the release, is a problem.
+- `--overhead`: each mode runs once with and once without
+  `KRITA_PAINT_TRACE` per round, in the order off/on, on/off, off/on (18
+  processes for three rounds; run folders without the trace end in
+  `-notrace`). `series.json` `overhead` and the second table: per condition,
+  mode and trace state the median and range of the process medians of
+  `releaseToLastFrameMs`, and the CPU time per mode and state, with the
+  difference of the medians. Runs with the trace also get the normal trace
+  aggregate.
 - The output folder must be new or empty: a series is never appended to, as
   the baseline sheet requires.
 
@@ -672,6 +753,14 @@ warning, close it in every process (the runner cannot).
 
 ## Known limitations and pending work
 
+- Windows (2026-10-28, [details](#windows-phases-1-4-2026-10-28)), pending:
+  `view_reset` does not guarantee a canvas large enough for the scenarios
+  and the paint trace series in a fresh profile; `--launch` should keep the
+  GPU conversion prompt and safe-assert dialogs from blocking the call queue
+  (profile setting, `KRITA_NO_ASSERT_MSG`), ignore `.claude/worktrees/`, and
+  document the `env.bat` and legacy-folder requirements; two-point strokes
+  paint only their last dab; `testSymbolicLinkOutOfRoot` should skip when
+  `QFile::link()` made no symbolic link; no `windows-*` values are recorded.
 - Releases and compressed moves (2026-10-27): `KisInputManager` compresses
   moves for tools that do not ask for high-resolution input
   (`KisTool::primaryActionSupportsHiResEvents()` is false by default; the

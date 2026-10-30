@@ -13,10 +13,15 @@ kis_add_test(TestControlImageCompareTest.cpp ../TestControlImageCompare.cpp
     LINK_LIBRARIES Qt${QT_MAJOR_VERSION}::Gui kritatestsdk)
 target_include_directories(TestControlImageCompareTest PRIVATE ..)
 
-kis_add_test(TestControlInputInjectorTest.cpp ../TestControlInputInjector.cpp
+kis_add_test(TestControlInputInjectorTest.cpp ../TestControlInputInjector.cpp ../TestControlTiming.cpp
     TEST_NAME TestControlInputInjectorTest
     LINK_LIBRARIES Qt${QT_MAJOR_VERSION}::Widgets kritatestsdk)
 target_include_directories(TestControlInputInjectorTest PRIVATE ..)
+
+kis_add_test(TestControlTimingTest.cpp ../TestControlTiming.cpp
+    TEST_NAME TestControlTimingTest
+    LINK_LIBRARIES Qt${QT_MAJOR_VERSION}::Widgets kritatestsdk)
+target_include_directories(TestControlTimingTest PRIVATE ..)
 
 # The scenario runner (dev-tools/test-control) against a fake endpoint.
 find_package(Python3 COMPONENTS Interpreter QUIET)

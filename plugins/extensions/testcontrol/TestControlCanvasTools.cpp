@@ -106,11 +106,26 @@ QJsonValue gpuEngineInfo()
 #endif
     return QJsonValue::Null;
 }
+/// The process's CPU time so far (all threads) and the current time, both
+/// in milliseconds, for timing without the paint trace.
+QJsonObject processInfo()
+{
+    const TestControlTiming::CpuTimes cpu = TestControlTiming::processCpuTimes();
+    auto value = [](double ms) {
+        return ms < 0 ? QJsonValue() : QJsonValue(ms);
+    };
+    return {
+        {"cpuUserMs", value(cpu.userMs)},
+        {"cpuSystemMs", value(cpu.systemMs)},
+        {"clockMs", TestControlTiming::clockMs()},
+    };
+}
 } // namespace
 
 TestControlCanvasTools::TestControlCanvasTools(QObject *parent)
     : QObject(parent)
     , m_injector(new TestControlInputInjector(this))
+    , m_frames(new TestControlFrameRecorder(this))
 {
 }
 
@@ -322,6 +337,16 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
         }),
         std::bind(&TestControlCanvasTools::queryPixels, this, _1, _2));
 
+    server->addTool(
+        "canvas_frames",
+        "Record when the canvas presents frames, for timing without the paint trace. start clears the record "
+        "and follows the current canvas (frameSwapped of the OpenGL canvas, otherwise the start of each paint "
+        "event); read returns the frame times since sinceMs; stop ends the recording. Times are milliseconds "
+        "on the clock of input_stroke's pressedAtMs and releasedAtMs; nowMs is the current time.",
+        objectSchema({{"action", enumProperty({"start", "read", "stop"}, "What to do (default read).")},
+                      {"sinceMs", schemaProperty("number", "read: only frames after this time.")}}),
+        std::bind(&TestControlCanvasTools::canvasFrames, this, _1, _2));
+
     server->addTool("canvas_capture",
                     "Return a PNG image of the canvas widget as displayed (diagnostic; not a pixel reference).",
                     objectSchema({{"maxSize", schemaProperty("integer", "Longest side in pixels (default 1024).")}}),
@@ -343,6 +368,7 @@ void TestControlCanvasTools::sessionInfo(const Arguments &, const Reply &reply)
         {"canvas", canvasInfo(viewManager)},
         {"environment", environmentInfo()},
         {"gpuEngine", gpuEngineInfo()},
+        {"process", processInfo()},
     }));
 }
 
@@ -698,27 +724,30 @@ void TestControlCanvasTools::playPoints(const QVector<SourcePoint> &sourcePoints
         injectorOptions.doubleClick = options.doubleClick;
         injectorOptions.releaseSettleMs = options.releaseDelayMs;
         injectorOptions.keyAfterRelease = options.keyAfterRelease;
-        m_injector->playStroke(target,
-                               options.device,
-                               options.button,
-                               points,
-                               injectorOptions,
-                               [reply, outside, modifierNames](const TestControlInputInjector::Report &report) {
-                                   const QJsonObject details{
-                                       {"eventsSent", report.eventsSent},
-                                       {"pressAccepted", report.pressAccepted},
-                                       {"releaseAccepted", report.releaseAccepted},
-                                       {"durationMs", report.durationMs},
-                                       {"pointsOutsideCanvas", outside},
-                                       {"modifiers", QJsonArray::fromStringList(modifierNames)},
-                                       {"activeTool", KoToolManager::instance()->activeToolId()},
-                                   };
-                                   if (!report.error.isEmpty()) {
-                                       reply(TestControlMcpServer::ToolResult::failure(report.error, details));
-                                   } else {
-                                       reply(TestControlMcpServer::ToolResult::success(details));
-                                   }
-                               });
+        m_injector->playStroke(
+            target,
+            options.device,
+            options.button,
+            points,
+            injectorOptions,
+            [reply, outside, modifierNames](const TestControlInputInjector::Report &report) {
+                const QJsonObject details{
+                    {"eventsSent", report.eventsSent},
+                    {"pressAccepted", report.pressAccepted},
+                    {"releaseAccepted", report.releaseAccepted},
+                    {"durationMs", report.durationMs},
+                    {"pressedAtMs", report.pressedAtMs < 0 ? QJsonValue() : QJsonValue(report.pressedAtMs)},
+                    {"releasedAtMs", report.releasedAtMs < 0 ? QJsonValue() : QJsonValue(report.releasedAtMs)},
+                    {"pointsOutsideCanvas", outside},
+                    {"modifiers", QJsonArray::fromStringList(modifierNames)},
+                    {"activeTool", KoToolManager::instance()->activeToolId()},
+                };
+                if (!report.error.isEmpty()) {
+                    reply(TestControlMcpServer::ToolResult::failure(report.error, details));
+                } else {
+                    reply(TestControlMcpServer::ToolResult::success(details));
+                }
+            });
     };
 
     if (options.modifiers == Qt::NoModifier && options.keyAfterRelease == Qt::Key(0)) {
@@ -1185,4 +1214,43 @@ void TestControlCanvasTools::canvasCapture(const Arguments &arguments, const Rep
         {"mimeType", "image/png"},
     });
     reply(result);
+}
+
+void TestControlCanvasTools::canvasFrames(const Arguments &arguments, const Reply &reply)
+{
+    const QString action = arguments.value("action").toString(QStringLiteral("read"));
+    if (action == QLatin1String("start")) {
+        KisViewManager *viewManager = currentViewManager();
+        KisCanvas2 *canvas = viewManager ? viewManager->canvasBase() : nullptr;
+        QWidget *widget = canvas ? canvas->canvasWidget() : nullptr;
+        if (!widget) {
+            reply(TestControlMcpServer::ToolResult::failure("No canvas; create or open a document first"));
+            return;
+        }
+        m_frames->start(widget);
+        reply(TestControlMcpServer::ToolResult::success(
+            {{"kind", m_frames->kind()}, {"nowMs", TestControlTiming::clockMs()}}));
+        return;
+    }
+    if (action == QLatin1String("stop")) {
+        m_frames->stop();
+    } else if (action != QLatin1String("read")) {
+        reply(TestControlMcpServer::ToolResult::failure("action must be start, read or stop"));
+        return;
+    }
+
+    const double sinceMs = arguments.value("sinceMs").toDouble(-1);
+    QJsonArray frames;
+    for (double frame : m_frames->frames()) {
+        if (frame > sinceMs) {
+            frames.append(frame);
+        }
+    }
+    reply(TestControlMcpServer::ToolResult::success({
+        {"kind", m_frames->kind()},
+        {"recording", m_frames->isRecording()},
+        {"overflowed", m_frames->overflowed()},
+        {"frames", frames},
+        {"nowMs", TestControlTiming::clockMs()},
+    }));
 }

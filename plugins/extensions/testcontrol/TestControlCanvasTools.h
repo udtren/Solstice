@@ -12,6 +12,7 @@
 
 #include "TestControlInputInjector.h"
 #include "TestControlMcpServer.h"
+#include "TestControlTiming.h"
 
 /**
  * The MCP tools that act on the running application: documents, tools,
@@ -48,6 +49,7 @@ private:
     void actionTrigger(const Arguments &arguments, const Reply &reply);
     void canvasCapture(const Arguments &arguments, const Reply &reply);
     void queryPixels(const Arguments &arguments, const Reply &reply);
+    void canvasFrames(const Arguments &arguments, const Reply &reply);
 
     /// Options shared by the input tools.
     struct StrokeOptions {
@@ -78,6 +80,7 @@ private:
     void withCanvasFocus(QWidget *widget, const Reply &reply, std::function<void()> then);
 
     TestControlInputInjector *m_injector;
+    TestControlFrameRecorder *m_frames;
 };
 
 #endif // TESTCONTROLCANVASTOOLS_H
