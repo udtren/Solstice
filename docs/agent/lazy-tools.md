@@ -184,6 +184,9 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
   dialog's configuration back and saves it under the same key (non-batch
   only), so a choice made there is reused by the next Fast Image Export and
   File > Export. Both Export and Export Region use it.
+  On a first export nothing is saved, so the PNG options dialog falls back
+  to its own values; `forceSRGB` falls back to on, matching the exporter
+  (fixed 2026-10-30, it showed off and saved that).
 - Export execution keeps ordered `QPointer<KisDocument>` snapshots, skips null
   and unnamed documents, waits for each named document's image through the
   originating view manager, and calls `exportDocumentSync`. Source folder vs.
