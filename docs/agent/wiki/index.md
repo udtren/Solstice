@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-27
+updated: 2026-10-30
 ---
 
 # Agent wiki
@@ -150,6 +150,13 @@ Document ownership and lifecycle are defined in
   eats the next mouse press and blocks mouse input until proximity leaves;
   modifiers are resynced from the physical keyboard; modal dialogs block a
   serialized call queue; some combo boxes act only on `activated`.
+- [Closing on press moves the next tab under the cursor](pitfalls/close-on-press-shifts-tabs.md):
+  `QMdiArea` closes a document tab on middle press, so a repeated press
+  closed the next tab too; act on release over the same item.
+- [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md):
+  updates are cropped to the image bounds, so pixels a group or filter
+  layer copied from another document left outside the canvas stayed in
+  its thumbnail.
 - [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md):
   filter and fill layers and masks report `nodeColorSpace()` as GrayA, which
   turns `KisVisualColorSelector` into one lightness bar (HueSVC).
@@ -238,6 +245,9 @@ Document ownership and lifecycle are defined in
 - [0.6.0 release verification](history/release-0.6.0.md): Clipping Mask and
   same-layer duplication release, package integrity, website publication with
   the new `/features/` page.
+- [0.6.1 release verification](history/release-0.6.1.md): group and filter
+  layer thumbnail and middle-click tab fix release, package integrity,
+  website publication.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

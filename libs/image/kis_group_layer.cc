@@ -152,6 +152,17 @@ QIcon KisGroupLayer::icon() const
 void KisGroupLayer::setImage(KisImageWSP image)
 {
     m_d->paintDevice->setDefaultBounds(new KisDefaultBounds(image));
+
+    /**
+     * Updates are cropped to the image bounds, so the projection is never
+     * refreshed outside of them. Pixels there can only come from another
+     * image (a group copied between documents) and would stay forever,
+     * e.g. in the layer thumbnail. Drop them.
+     */
+    if (image.isValid()) {
+        m_d->paintDevice->crop(image->bounds());
+    }
+
     KisLayer::setImage(image);
 }
 

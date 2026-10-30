@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 0.6.0](#whats-new-in-060)
+- [What's new in 0.6.1](#whats-new-in-061)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,12 +59,21 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 0.6.0
+## What's new in 0.6.1
 
-[Solstice 0.6.0](https://github.com/udtren/Solstice/releases/tag/v0.6.0)
-adds [Clipping Mask](docs/clipping-mask.md): clip a layer to
+[Solstice 0.6.1](https://github.com/udtren/Solstice/releases/tag/v0.6.1)
+fixes two problems:
+
+- After a group or filter layer was pasted from another document partly
+  outside the canvas, its layer thumbnail kept showing the old pixels
+  outside the canvas, even after the layer was moved or transformed.
+- Middle-clicking a document tab could also close the documents in the
+  tabs that moved under the cursor; it now closes only the clicked tab.
+
+It builds on [0.6.0](https://github.com/udtren/Solstice/releases/tag/v0.6.0),
+which added [Clipping Mask](docs/clipping-mask.md): clip a layer to
 the layer or group directly below it without a group, and bake it in with
-Merge Down. It also adds [duplicating a selection](docs/move-tool.md) on the
+Merge Down. It also added [duplicating a selection](docs/move-tool.md) on the
 same layer with Ctrl-drag in the Move Tool. Other changes:
 
 - [HueSVC](docs/quick-access.md#huesvc) shows its hue bar and
@@ -82,11 +91,6 @@ same layer with Ctrl-drag in the Move Tool. Other changes:
   outline.
 - [Test control](docs/test-control.md): an optional, local-only interface
   that lets test scripts and AI assistants operate Solstice for testing.
-
-It builds on [0.5.2](https://github.com/udtren/Solstice/releases/tag/v0.5.2),
-which fixed [Fast Image Export](docs/lazy-tools.md#fast-image-export):
-format options it does not show, such as **Force convert to sRGB**, now keep
-their last values instead of resetting in every PNG or JPEG options dialog.
 
 ## Highlights
 

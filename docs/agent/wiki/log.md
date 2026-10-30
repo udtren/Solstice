@@ -2297,6 +2297,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   strokes by about 40-70 % ([synthetic canvas input](pitfalls/synthetic-canvas-input.md)).
 - Next: the same series on Windows; the README engine workloads there.
 
+## 2026-10-28 fix: middle-click closed more than one document tab
+
+- User report: middle-clicking the leftmost document tab also closed the
+  other documents. `QMdiArea` closes a tab on middle press, so the next
+  tab slides under the cursor and a repeated press from the same click
+  closes it. `MdiTabMiddleClickCloser` in `libs/ui/KisMainWindow.cpp` now
+  closes on release over the same tab and ignores repeated presses;
+  confirmed by the user in Solstice. Recorded in the
+  [feature inventory](../feature-inventory.md) and the new pitfall
+  [Closing on press moves the next tab under the cursor](pitfalls/close-on-press-shifts-tabs.md).
+
 ## 2026-10-28 ingest: test control phases 1-4 on Windows
 
 - Ran the phase 1-4 checks on Windows (branch `claude/test-control-phase4`
@@ -2313,3 +2324,49 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lessons: [synthetic canvas input](pitfalls/synthetic-canvas-input.md),
   "A modal dialog blocks a serialized call queue" (dialogs a call did not ask
   for) and "A fresh profile's canvas can be too small for the test".
+
+## 2026-10-29 fix: group thumbnail kept pixels outside the canvas
+
+- User report: a group copied from one document and pasted into another,
+  partly outside the canvas, kept showing the old out-of-canvas image in
+  its layer thumbnail and tooltip after Ctrl+T. The copy constructor
+  copies the group projection, and projection updates are cropped to the
+  image bounds, so those pixels were never refreshed.
+  `KisGroupLayer::setImage()` now crops the group's own projection to the
+  image bounds; `KisGroupLayerTest::testCopyToSmallerImageCropsProjection`
+  fails without it. Confirmed by the user in Solstice. Recorded in
+  the [feature inventory](../feature-inventory.md) and the new pitfall
+  [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md).
+
+## 2026-10-29 fix: filter layer thumbnail kept pixels outside the canvas
+
+- Follow-up to the group fix. A temporary test measured both
+  `KisSelectionBasedLayer` kinds copied from a 200x200 into a 100x100
+  image: the filter layer's original stayed 200x200 even after a full
+  refresh; the fill layer's became 100x100 on its first update.
+  `KisAdjustmentLayer::setImage()` now crops the filtered original to the
+  image bounds; `KisAdjustmentLayerTest::testCopyToSmallerImageCropsOriginal`
+  fails without it; confirmed by the user in Solstice. Fill layers were
+  left unchanged; the reason is in
+  [Group projections stop at the canvas](pitfalls/group-projection-outside-canvas.md).
+
+## 2026-10-29 release: prepare Solstice 0.6.1
+
+- User request after confirming the group and filter layer thumbnail fixes
+  in Solstice: release them as 0.6.1 (`PATCH`) together with the merged
+  middle-click document tab fix (PR #51). The version, README
+  "In development" summary and the [version ledger](../versioning.md#history)
+  are updated; publication and package verification follow
+  [Releasing](../versioning.md#releasing).
+
+## 2026-10-30 release: Solstice 0.6.1
+
+- Released `v0.6.1` at `88fecab57e31` (run 40882283677) on 2026-10-30
+  00:11 JST and published the website the same day (tidalboxstudio-web #19,
+  #20; version only). Evidence:
+  [0.6.1 release verification](history/release-0.6.1.md).
+- README, the guide index and the [version ledger](../versioning.md#history)
+  now describe 0.6.1 as released.
+- Lesson: the publish PR from `develop` to `main` reports no checks; the
+  Cloudflare build runs on the `main` merge commit, and the live site
+  updated about five minutes after the merge.

@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.6.0` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.6.1` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -107,6 +107,7 @@ appears in the version strings.
 
 | Version | Date | Reason |
 | --- | --- | --- |
+| `0.6.1` | 2026-10-30 | The group and filter layer thumbnail fix after a cross-document paste (PR #52) and the middle-click document tab fix (PR #51), both confirmed by the user in the application; requested by the user (`PATCH`: fixes only). Regular GitHub Release `v0.6.1` at `88fecab57e31` (PR #52, run 40882283677); [package verification](wiki/history/release-0.6.1.md). Krita compatibility version is unchanged. |
 | `0.6.0` | 2026-10-27 | Clipping Mask (PR #45) and duplicating a selection on the same layer (PR #42), with the HueSVC fix (PR #37) of the never-released 0.5.3, the upstream clipboard rewrite and fixes (PRs #40, #46), the 2026-W44 intake (PR #39), test control (PRs #41, #43) and the covered-view selection animation fix (PR #44); requested by the user (`MINOR`). Regular GitHub Release `v0.6.0` at `87fb3e39798c` (PR #48, run 40491540847); [package verification](wiki/history/release-0.6.0.md). Krita compatibility version is unchanged. |
 | `0.5.2` | 2026-10-24 | Fast Image Export keeps the format's remembered export options such as Force convert to sRGB (PR #35), a fix to 0.5.1 confirmed by the user in the application; requested by the user. Regular GitHub Release `v0.5.2` at `e352f1c51963` (PR #35, run 40091292555); [package verification](wiki/history/release-0.5.2.md). Krita compatibility version is unchanged. |
 | `0.5.1` | 2026-10-24 | Lazy Tools Fast Image Export registered folders, export name and Export Region, the Rename Layer preset editor and illustrated guide (PR #33), with the Quick Access icon-span fix (PR #32); requested by the user (`PATCH`: existing features extended). Regular GitHub Release `v0.5.1` at `00153a635789` (PR #33, run 40076396030); [package verification](wiki/history/release-0.5.1.md). Krita compatibility version is unchanged. |
