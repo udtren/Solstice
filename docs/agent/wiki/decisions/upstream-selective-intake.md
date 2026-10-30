@@ -1,6 +1,6 @@
 ---
 type: decision
-updated: 2026-10-26
+updated: 2026-10-30
 sources:
   - AGENTS.md ("Branch policy")
   - docs/agent/upstream-intake.md
@@ -94,13 +94,22 @@ and message. Each rewritten commit has the same tree as its original.
 
 - GitHub's signatures on the PR merge commits were dropped, so those merges
   no longer show "Verified".
-- Release tags were not moved: `v0.2.0-beta.3` to `v0.4.0` still point to
-  the commits their published binaries were built from (the binaries embed
-  that SHA), so those tags are no longer ancestors of `main`.
-- SHAs in documents written before the rewrite name the old commits. The
-  old commits stay reachable through the tags and the merged feature
-  branches on `origin`; the local backup ref is
+- Release tags `v0.2.0-beta.3` to `v0.4.0` first stayed on the commits
+  their published binaries were built from (the binaries embed that SHA).
+  On 2026-10-30 the user had them moved to the rewritten commits with the
+  same tree (rows below), because the repository page's Contributors
+  sidebar still showed the four developers. The Releases and their assets
+  are unchanged; GitHub's "Source code" archives are regenerated from the
+  new commits, and the binaries still report the old SHAs.
+- SHAs in documents written before the rewrite name the old commits. No
+  branch or tag on `origin` reaches them any more, but the read-only pull
+  request refs `refs/pull/3/head` to `refs/pull/27/head` do, and owners
+  cannot delete those. The local backup ref is
   `backup/main-before-author-rewrite`.
+- On 2026-10-30, before the tag move, the contributors REST API and the
+  Insights graph already listed only `claude` and `udtren`; only the
+  sidebar was stale. GitHub Support (free plan) closed the request to
+  refresh it without acting.
 - Another checkout whose `main` still has the old history must reset it
   (`git fetch origin` and `git reset --keep origin/main` on `main`), and a
   branch based on the old `main` must be rebased with

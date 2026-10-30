@@ -2370,3 +2370,21 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: the publish PR from `develop` to `main` reports no checks; the
   Cloudflare build runs on the `main` merge commit, and the live site
   updated about five minutes after the merge.
+
+## 2026-10-30 fix: release tags moved to the rewritten commits
+
+- The repository page's Contributors sidebar still showed dimula73,
+  PiOverFour, radianfsd and xarblu, although the contributors REST API and
+  the Insights graph listed only `claude` and `udtren`. The four are the
+  GitHub accounts of the nine pre-rewrite W42 intake commits, which only
+  the release tags still reached. GitHub Support (free plan) declined to
+  refresh the cache.
+- At the user's request the lightweight tags `v0.2.0-beta.3` to `v0.4.0`
+  were force-moved (atomic, leased on the old SHAs) to the rewritten
+  commits with identical trees, per the table in
+  [upstream-selective-intake](decisions/upstream-selective-intake.md).
+  Releases keep their assets. The sidebar still showed six right after the
+  push; it was not confirmed to refresh.
+- Lesson: after a history rewrite, check every ref kind on `origin` for the
+  old commits: branches, tags, and the undeletable `refs/pull/*/head`.
+  The repository sidebar can lag the contributors API.
