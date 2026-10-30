@@ -63,9 +63,11 @@ such as Claude and Codex may appear there too (user decision, 2026-10-19).
   The intake steps are in `docs/agent/upstream-intake.md`.
 - `main` was rewritten once, on 2026-10-19 at the user's request, to
   re-author the nine 2026-W42 intake commits. Every commit from the first
-  of them onward has a new SHA; release tags `v0.2.0-beta.3` to `v0.4.0`
-  still point to the pre-rewrite commits their builds came from. SHAs in
-  documents written before the rewrite refer to that history; the mapping
+  of them onward has a new SHA. Release tags `v0.2.0-beta.3` to `v0.4.0`
+  were moved on 2026-10-30, at the user's request, to the rewritten
+  commits with the same tree; their published builds still embed the
+  pre-rewrite SHAs. SHAs in documents written before the rewrite refer to
+  that history; the mapping
   is in `docs/agent/wiki/decisions/upstream-selective-intake.md`. Do not
   rewrite `main` again unless the user asks for it.
 
