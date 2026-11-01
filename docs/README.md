@@ -6,15 +6,15 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.6.1](https://github.com/udtren/Solstice/releases/tag/v0.6.1) fixes the
-layer thumbnails of group and filter layers pasted from another document
-partly outside the canvas, and middle-clicking a document tab closing other
-documents. It builds on
+[0.7.0](https://github.com/udtren/Solstice/releases/tag/v0.7.0) adds the
+[Through-Layer Eraser](through-layer-eraser.md): erase through every visible
+layer, or only the selected layers, with one brush stroke. It builds on
+[0.6.1](https://github.com/udtren/Solstice/releases/tag/v0.6.1), which fixed
+the layer thumbnails of group and filter layers pasted from another document
+and middle-clicking a document tab, and on
 [0.6.0](https://github.com/udtren/Solstice/releases/tag/v0.6.0), which added
 [Clipping Mask](clipping-mask.md) and
-[duplicating a selection on the same layer](move-tool.md), fixed the
-[HueSVC](quick-access.md#huesvc) color selector, and adopted the upstream
-Krita clipboard rewrite.
+[duplicating a selection on the same layer](move-tool.md).
 
 ## Getting started
 
