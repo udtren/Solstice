@@ -258,6 +258,9 @@ Document ownership and lifecycle are defined in
 - [0.6.1 release verification](history/release-0.6.1.md): group and filter
   layer thumbnail and middle-click tab fix release, package integrity,
   website publication.
+- [0.7.0 release verification](history/release-0.7.0.md): Through-Layer Eraser
+  release, package integrity, website publication with the animated feature
+  card.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

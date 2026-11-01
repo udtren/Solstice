@@ -2414,3 +2414,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   [Paint ops read the temporary target when created](pitfalls/paint-ops-read-temporary-target.md).
 - Updates use one graph refresh: see
   [Updating many layers at once](concepts/updating-many-layers.md).
+
+## 2026-11-01 release: Solstice 0.7.0
+
+- Released `v0.7.0` at `51d2d0c6f9d7` (run 41300851395) on 2026-11-01
+  21:54 JST and published the website the same day (tidalboxstudio-web #27,
+  #28). Evidence:
+  [0.7.0 release verification](history/release-0.7.0.md).
+- README, the guide index and the [version ledger](../versioning.md#history)
+  now describe 0.7.0 as released.
+- Lesson: this time the publish PR from `develop` to `main` did report the
+  `Workers Builds` check, pending, so `gh pr view` showed `UNSTABLE`. It does
+  not block the merge. The production build then ran on the merge commit and
+  the live site updated about two minutes later.
+- Lesson: Astro's image service keeps only the first frame of a GIF. The
+  site loads an animated GIF with `?url` and shows it through
+  `FeatureAnimation.astro`; see the website's `docs/solstice-site.md`.
