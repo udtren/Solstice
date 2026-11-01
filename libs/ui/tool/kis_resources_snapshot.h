@@ -97,6 +97,15 @@ public:
     void setSelectionOverride(KisSelectionSP selection);
     void setBrush(const KisPaintOpPresetSP &brush);
 
+    /**
+     * Solstice: the stroke erases @p targets, paint layers listed from the
+     * top of the stack, instead of painting on the current node
+     * (docs/agent/through-layer-eraser.md). The first one becomes the current
+     * node. Such a stroke has no level of detail preview.
+     */
+    void setThroughLayerTargets(const KisNodeList &targets);
+    KisNodeList throughLayerTargets() const;
+
 private:
     struct Private;
     Private * const m_d;

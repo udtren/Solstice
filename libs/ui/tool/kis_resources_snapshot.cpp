@@ -59,6 +59,7 @@ struct KisResourcesSnapshot::Private {
     bool presetAllowsLod {false};
     KisSelectionSP selectionOverride;
     bool hasOverrideSelection {false};
+    KisNodeList throughLayerTargets;
 
     KoCanvasResourcesInterfaceSP globalCanvasResourcesInterface;
 };
@@ -260,6 +261,22 @@ KisPostExecutionUndoAdapter* KisResourcesSnapshot::postExecutionUndoAdapter() co
 void KisResourcesSnapshot::setCurrentNode(KisNodeSP node)
 {
     m_d->currentNode = node;
+}
+
+void KisResourcesSnapshot::setThroughLayerTargets(const KisNodeList &targets)
+{
+    KIS_SAFE_ASSERT_RECOVER_RETURN(!targets.isEmpty());
+
+    m_d->throughLayerTargets = targets;
+    m_d->currentNode = targets.first();
+    m_d->compositeOpId = COMPOSITE_ERASE;
+    m_d->globalAlphaLock = false;
+    m_d->presetAllowsLod = false;
+}
+
+KisNodeList KisResourcesSnapshot::throughLayerTargets() const
+{
+    return m_d->throughLayerTargets;
 }
 
 void KisResourcesSnapshot::setStrokeStyle(KisPainter::StrokeStyle strokeStyle)

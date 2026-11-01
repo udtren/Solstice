@@ -56,6 +56,8 @@ Krita clipboard rewrite.
   Ctrl-drag. Added in 0.6.0.
 - [Remove Dust](remove-dust.md): removing or selecting small specks and
   filling small holes, with a tool or a filter. Added in 0.5.0.
+- [Through-Layer Eraser](through-layer-eraser.md): erasing through all visible
+  layers, or the selected layers, with one brush stroke. Added in 0.7.0.
 - [Vision ML](vision-ml.md): AI-assisted selection, Smart Fill and
   background removal, run on your computer.
 

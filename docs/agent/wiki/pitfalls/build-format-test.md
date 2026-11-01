@@ -226,7 +226,9 @@ wrong anyway.
   - Passed when run alone: `KisSafeDocumentLoaderTest`,
     `KisQmicIntegrationTest`, `KisBrushStrokeLayerTest`,
     `kis_shape_selection_test`, and `KisGpuStrokeTest` (the 900 s timeout
-    in parallel). Do not run test reruns while installing: a rerun that
+    in parallel; on 2026-11-01 it did not finish alone within 1500 s, so give
+    it a longer limit, or run the affected functions by name with
+    `-o <file>,txt` to see progress). Do not run test reruns while installing: a rerun that
     overlapped `cmake --install` failed without output.
   - `TestControlPathsTest::testSymbolicLinkOutOfRoot`: see the `QFile::link()`
     bullet above.
