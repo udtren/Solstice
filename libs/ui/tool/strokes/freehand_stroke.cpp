@@ -161,9 +161,10 @@ void FreehandStrokeStrategy::initRecording(const QVector<KisFreehandStrokeInfo *
 {
     KisResourcesSnapshotSP resources = m_d->resources;
     KisBrushStrokeLayer *layer = dynamic_cast<KisBrushStrokeLayer *>(resources->currentNode().data());
-    // an animated layer's record is never drawn again (its frames differ)
+    // an animated layer's record is never drawn again (its frames differ);
+    // a through-layer erase is not part of the layer's own strokes
     if (!layer || !layer->paintDevice() || layer->paintDevice()->keyframeChannel()
-        || !resources->currentPaintOpPreset()) {
+        || !resources->currentPaintOpPreset() || !resources->throughLayerTargets().isEmpty()) {
         return;
     }
 
@@ -274,6 +275,12 @@ void FreehandStrokeStrategy::finishStrokeCallback()
     m_d->recordingLayer.clear();
     // not recorded: the rest of the stroke's changes are checked
     endRecordedChange();
+
+    for (KisNodeSP node : m_d->resources->throughLayerTargets()) {
+        if (KisBrushStrokeLayer *layer = dynamic_cast<KisBrushStrokeLayer *>(node.data())) {
+            layer->markChangeUnrecorded();
+        }
+    }
 
     KisPainterBasedStrokeStrategy::finishStrokeCallback();
 }
@@ -496,14 +503,14 @@ void FreehandStrokeStrategy::issueSetDirtySignals()
         KritaUtils::addJobSequential(jobs, [this, dirtyRects, dirtyId, traceDirtyRects]() {
             KisPaintTrace::FlowScope dirtyFlow(dirtyId);
             traceDirtyRects("dirty.submitted_rect", dirtyRects);
-            this->targetNode()->setDirty(dirtyRects);
+            this->updateStrokeNodes(dirtyRects);
         });
 
         runnableJobsInterface()->addRunnableJobs(jobs);
 
     } else {
         traceDirtyRects("dirty.submitted_rect", dirtyRects);
-        targetNode()->setDirty(dirtyRects);
+        updateStrokeNodes(dirtyRects);
     }
 
     //KisUpdateTimeMonitor::instance()->reportJobFinished(data, dirtyRects);

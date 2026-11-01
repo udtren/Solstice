@@ -47,6 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
+- [In development](#in-development)
 - [What's new in 0.6.1](#whats-new-in-061)
 - [Highlights](#highlights)
   - [New Features](#new-features)
@@ -58,6 +59,12 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Benchmarks](#benchmarks)
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
+
+## In development
+
+The next version, 0.7.0, adds the
+[Through-Layer Eraser](docs/through-layer-eraser.md): erase through every
+visible layer, or only the selected layers, with one stroke.
 
 ## What's new in 0.6.1
 
@@ -152,7 +159,10 @@ same layer with Ctrl-drag in the Move Tool. Other changes:
 <a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Layer Comps docker with four comps checked for export, Apply and Export columns, and its action buttons" width="100%"></a>
 <p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states.</p>
 </td>
-<td width="50%"></td>
+<td width="50%" align="center" valign="top">
+<a href="docs/through-layer-eraser.md"><img src="docs/images/through-layer%20eraser%20tool.gif" alt="A stroke of the Through-Layer Eraser Tool removing a corner of a red frame and a purple block painted on separate layers, with their Layers docker thumbnails updating" width="100%"></a>
+<p><b><a href="docs/through-layer-eraser.md">Through-Layer Eraser</a></b><br>Erase through all visible layers, or the selected layers, with one stroke.</p>
+</td>
 </tr>
 </table>
 

@@ -87,6 +87,9 @@ protected:
      */
     QVector<KisRunnableStrokeJobData*> doMaskingBrushUpdates(const QVector<QRect> &rects);
 
+    /// Solstice: updates the projection of what the stroke painted in @p rects
+    void updateStrokeNodes(const QVector<QRect> &rects);
+
 protected:
 
     /**
@@ -126,6 +129,11 @@ private:
                       bool hasIndirectPainting,
                       const QString &indirectPaintingCompositeOp);
     void deletePainters();
+    /// Solstice: every node the stroke composites onto
+    KisNodeList strokeNodes() const;
+    /// Solstice: @p node composites the shared device of a through-layer
+    /// erase with its own selection and channel locks
+    void attachThroughLayerTarget(KisNodeSP node, KisPaintDeviceSP device);
     inline int timedID(const QString &id){
         return int(qHash(id));
     }
@@ -142,6 +150,9 @@ private:
     // Solstice (GPU engine): the masking composite runs on the GPU
     // (KisGpuMaskingWorker), decided once per stroke like the brush op's path
     bool m_gpuMasking = false;
+    // Solstice: a Build-up through-layer erase accumulates its dabs in the
+    // shared device at the stroke's opacity, as they would erase one by one
+    bool m_throughLayerBuildUp = false;
 
     KisPaintDeviceSP m_targetDevice;
     KisSelectionSP m_activeSelection;
@@ -158,7 +169,7 @@ private:
     bool m_supportsIndirectPainting {false};
     bool m_supportsContinuedInterstrokeData {false};
 
-    KisIndirectPaintingSupport::FinalMergeSuspenderSP m_finalMergeSuspender;
+    QVector<KisIndirectPaintingSupport::FinalMergeSuspenderSP> m_finalMergeSuspenders;
 
     struct FakeUndoData {
         FakeUndoData();

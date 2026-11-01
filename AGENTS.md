@@ -155,6 +155,7 @@ maintained references, plans and historical records.
 - G'MIC CPU runtime and bridge: [maintenance reference](docs/agent/gmic.md).
 - Illustration filters: [maintenance reference](docs/agent/illustration-filters.md).
 - Remove Dust tool and filter: [development notes](docs/agent/remove-dust.md).
+- Through-Layer Eraser: [development notes](docs/agent/through-layer-eraser.md).
 - Layer Comps: [development notes](docs/agent/layer-comps.md).
 - Color Reference: [development notes](docs/agent/color-reference.md).
 - Translations: [policy and tooling](docs/agent/translations.md).

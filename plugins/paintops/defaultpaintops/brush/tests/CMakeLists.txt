@@ -35,6 +35,11 @@ kis_add_test(KisBrushStrokeLayerTest.cpp
     LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
     )
 
+kis_add_test(KisThroughLayerEraserTest.cpp
+    TEST_NAME KisThroughLayerEraserTest
+    LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
+    )
+
 # the brush stroke layer with the Transform Tool's and the Move Tool's strokes
 kis_add_test(KisBrushStrokeLayerTransformTest.cpp
     TEST_NAME KisBrushStrokeLayerTransformTest

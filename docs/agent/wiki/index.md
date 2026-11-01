@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-30
+updated: 2026-11-01
 ---
 
 # Agent wiki
@@ -84,6 +84,9 @@ Document ownership and lifecycle are defined in
   composite op clearing transparent pixels and clamping HDR colors in SIMD
   batches,
   `KisRandomSubAccessor` weights.
+- [Updating many layers at once](concepts/updating-many-layers.md): one
+  `refreshGraphAsync()` instead of a `setDirty()` per layer, whose merge
+  walkers each composite the whole stack.
 - [Qt numeric and geometry semantics](concepts/qt-numeric-and-geometry.md):
   `qRound()`, `QPolygonF::containsPoint()`, `boundingRect()` /
   `toAlignedRect()`, fuzzy comparisons in Qt 6.8.
@@ -164,6 +167,9 @@ Document ownership and lifecycle are defined in
   a non-batch `exportImage()` shows the options dialog and saves its result
   over the File > Export options, so a script's own values reach the user's
   next export.
+- [Paint ops read the temporary target when created](pitfalls/paint-ops-read-temporary-target.md):
+  `KisOpacityOption` moves opacity sensors to the flow if a temporary target
+  exists, so a forced indirect Build-up stroke must attach it afterwards.
 - [Translation extraction on Windows](pitfalls/translation-extraction.md):
   `.ui` `comment=` contexts, CRLF resource names, missing `Archive::Zip`,
   reference fix-up order, `QT_TRANSLATE_NOOP` not extracted.

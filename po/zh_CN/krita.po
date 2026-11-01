@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-10-27 17:47+0900\n"
+"POT-Creation-Date: 2026-11-01 19:22+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -19986,7 +19986,7 @@ msgctxt "(qtundo-format)"
 msgid "Opacity Change"
 msgstr "不透明度更改"
 
-#: libs/image/commands/kis_node_property_list_command.cpp:75
+#: libs/image/commands/kis_node_property_list_command.cpp:111
 msgctxt "(qtundo-format)"
 msgid "Property Changes"
 msgstr "属性更改"
@@ -20222,7 +20222,7 @@ msgstr ""
 msgid "Mitchell"
 msgstr "Mitchell"
 
-#: libs/image/kis_group_layer.cc:350
+#: libs/image/kis_group_layer.cc:361
 #: libs/image/kis_layer_properties_icons.cpp:29
 #, kde-format
 msgid "Pass Through"
@@ -20571,7 +20571,7 @@ msgid "Processing"
 msgstr "正在处理"
 
 #: libs/image/kis_psd_layer_style.cpp:106
-#: libs/ui/KisApplicationArguments.cpp:396 libs/ui/KisMainWindow.cpp:1527
+#: libs/ui/KisApplicationArguments.cpp:396 libs/ui/KisMainWindow.cpp:1599
 #: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:28
 #: libs/ui/dialogs/KisDlgCreateNewDocument.cpp:34
 #: plugins/impex/libkra/kis_kra_saver.cpp:89
@@ -21170,8 +21170,8 @@ msgctxt "description of a file type"
 msgid "Radiance RGBE Image"
 msgstr "Radiance RGBE 图像"
 
-#: libs/libkis/Document.cpp:986 libs/ui/KisMainWindow.cpp:2369
-#: libs/ui/KisMainWindow.cpp:2453
+#: libs/libkis/Document.cpp:986 libs/ui/KisMainWindow.cpp:2441
+#: libs/ui/KisMainWindow.cpp:2525
 #, kde-format
 msgid "Import frames"
 msgstr "导入帧"
@@ -22371,7 +22371,7 @@ msgstr "简单色彩转换引擎"
 #: libs/pigment/resources/KoColorSet.cpp:1100
 #: libs/pigment/resources/KoColorSet.cpp:1447
 #: libs/pigment/resources/KoColorSet.cpp:1528
-#: libs/pigment/resources/KoColorSet.cpp:1946 libs/ui/KisMainWindow.cpp:2037
+#: libs/pigment/resources/KoColorSet.cpp:1946 libs/ui/KisMainWindow.cpp:2109
 #: libs/ui/KisView.cpp:1167 libs/ui/actions/KisPasteActionFactories.cpp:324
 #: libs/ui/animation/KisDlgAnimationRenderer.cpp:599
 #: plugins/generators/seexpr/kis_wdg_seexpr.cpp:34
@@ -22412,11 +22412,11 @@ msgstr "本地资源"
 #: libs/ui/KisApplication.cpp:1330 libs/ui/KisApplication.cpp:1359
 #: libs/ui/KisDocument.cpp:1044 libs/ui/KisDocument.cpp:1059
 #: libs/ui/KisDocument.cpp:2008 libs/ui/KisDocument.cpp:2052
-#: libs/ui/KisDocument.cpp:2063 libs/ui/KisMainWindow.cpp:1162
-#: libs/ui/KisMainWindow.cpp:1299 libs/ui/KisMainWindow.cpp:1396
-#: libs/ui/KisMainWindow.cpp:2063 libs/ui/KisMainWindow.cpp:2227
-#: libs/ui/KisMainWindow.cpp:2237 libs/ui/KisMainWindow.cpp:2378
-#: libs/ui/KisMainWindow.cpp:2440 libs/ui/KisMainWindow.cpp:2461
+#: libs/ui/KisDocument.cpp:2063 libs/ui/KisMainWindow.cpp:1234
+#: libs/ui/KisMainWindow.cpp:1371 libs/ui/KisMainWindow.cpp:1468
+#: libs/ui/KisMainWindow.cpp:2135 libs/ui/KisMainWindow.cpp:2299
+#: libs/ui/KisMainWindow.cpp:2309 libs/ui/KisMainWindow.cpp:2450
+#: libs/ui/KisMainWindow.cpp:2512 libs/ui/KisMainWindow.cpp:2533
 #: libs/ui/KisPart.cpp:554 libs/ui/KisPart.cpp:559
 #: libs/ui/KisReferenceImage.cpp:192 libs/ui/KisRemoteFileFetcher.cpp:40
 #: libs/ui/KisRemoteFileFetcher.cpp:64 libs/ui/KisRemoteFileFetcher.cpp:91
@@ -22896,7 +22896,7 @@ msgid "Delete resource"
 msgstr "删除资源"
 
 #: libs/resourcewidgets/KisResourceItemChooser.cpp:382
-#: libs/ui/KisMainWindow.cpp:2993
+#: libs/ui/KisMainWindow.cpp:3065
 #: plugins/paintops/libpaintop/kis_predefined_brush_chooser.cpp:419
 #: qmlmodules/components/TagFilterProxyModelQmlWrapper.cpp:347
 #, kde-format
@@ -24298,80 +24298,80 @@ msgctxt "(qtundo-format)"
 msgid "Update layer thumbnails"
 msgstr "更新图层缩略图"
 
-#: libs/ui/KisMainWindow.cpp:201
+#: libs/ui/KisMainWindow.cpp:202
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "Styles"
 msgstr "界面样式"
 
-#: libs/ui/KisMainWindow.cpp:202
+#: libs/ui/KisMainWindow.cpp:203
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "&Dockers"
 msgstr "面板列表(&D)"
 
-#: libs/ui/KisMainWindow.cpp:203
+#: libs/ui/KisMainWindow.cpp:204
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "&Window"
 msgstr "窗口(&W)"
 
-#: libs/ui/KisMainWindow.cpp:204
+#: libs/ui/KisMainWindow.cpp:205
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "New &View"
 msgstr "新建视图(&V)"
 
-#: libs/ui/KisMainWindow.cpp:205
+#: libs/ui/KisMainWindow.cpp:206
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "Wor&kspace"
 msgstr "工作区(&K)"
 
-#: libs/ui/KisMainWindow.cpp:444
+#: libs/ui/KisMainWindow.cpp:512
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "Lock Docked Docker Widths"
 msgstr "锁定停靠面板的宽度"
 
-#: libs/ui/KisMainWindow.cpp:445
+#: libs/ui/KisMainWindow.cpp:513
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "Lock Docked Docker Heights"
 msgstr "锁定停靠面板的高度"
 
-#: libs/ui/KisMainWindow.cpp:618
+#: libs/ui/KisMainWindow.cpp:686
 #, kde-format
 msgid "Show %1 Toolbar"
 msgstr "显示%1工具栏"
 
-#: libs/ui/KisMainWindow.cpp:620
+#: libs/ui/KisMainWindow.cpp:688
 #, kde-format
 msgid "Hide %1 Toolbar"
 msgstr "隐藏%1工具栏"
 
-#: libs/ui/KisMainWindow.cpp:1133
+#: libs/ui/KisMainWindow.cpp:1205
 #, kde-format
 msgid "Save as %1"
 msgstr "另存为 %1"
 
-#: libs/ui/KisMainWindow.cpp:1163
+#: libs/ui/KisMainWindow.cpp:1235
 #, kde-format
 msgid "The file %1 does not exist."
 msgstr "文件 %1 不存在。"
 
-#: libs/ui/KisMainWindow.cpp:1258
+#: libs/ui/KisMainWindow.cpp:1330
 #: libs/ui/dialogs/kis_dlg_import_image_sequence.cpp:141
 #, kde-format
 msgid "Import Images"
 msgstr "导入图像"
 
-#: libs/ui/KisMainWindow.cpp:1258
+#: libs/ui/KisMainWindow.cpp:1330
 #, kde-format
 msgid "Open Images"
 msgstr "打开图像"
 
-#: libs/ui/KisMainWindow.cpp:1397
+#: libs/ui/KisMainWindow.cpp:1469
 #, kde-format
 msgid ""
 "You are saving a file while the image is still rendering. The saved file may "
@@ -24383,35 +24383,35 @@ msgstr ""
 "\n"
 "为保险起见，请将图像另存到不会覆盖原始图像的位置。"
 
-#: libs/ui/KisMainWindow.cpp:1462
+#: libs/ui/KisMainWindow.cpp:1534
 #, kde-format
 msgid "Exporting"
 msgstr "导出"
 
-#: libs/ui/KisMainWindow.cpp:1462
+#: libs/ui/KisMainWindow.cpp:1534
 #, kde-format
 msgid "Saving As"
 msgstr "保存为"
 
-#: libs/ui/KisMainWindow.cpp:2003
+#: libs/ui/KisMainWindow.cpp:2075
 #: libs/ui/lazytools/KisLazyToolsFastExport.cpp:221
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:171
 #, kde-format
 msgid "Export Region"
 msgstr "导出区域"
 
-#: libs/ui/KisMainWindow.cpp:2005
+#: libs/ui/KisMainWindow.cpp:2077
 #: libs/ui/lazytools/KisLazyToolsFastExport.cpp:223
 #, kde-format
 msgid "Exported Region"
 msgstr "已导出区域"
 
-#: libs/ui/KisMainWindow.cpp:2014
+#: libs/ui/KisMainWindow.cpp:2086
 #, kde-format
 msgid "Exporting Region"
 msgstr "正在导出区域"
 
-#: libs/ui/KisMainWindow.cpp:2064
+#: libs/ui/KisMainWindow.cpp:2136
 #, kde-format
 msgid ""
 "Could not export %1\n"
@@ -24420,19 +24420,19 @@ msgstr ""
 "无法导出 %1\n"
 "原因：%2"
 
-#: libs/ui/KisMainWindow.cpp:2196
+#: libs/ui/KisMainWindow.cpp:2268
 #, kde-format
 msgid "Layers/Masks"
 msgstr "图层/蒙版"
 
-#: libs/ui/KisMainWindow.cpp:2222
+#: libs/ui/KisMainWindow.cpp:2294
 #: plugins/extensions/resourcemanager/dlg_bundle_manager.cpp:194
 #: plugins/extensions/resourcemanager/dlg_bundle_manager.cpp:353
 #, kde-format
 msgid "You don't have any resource bundles enabled."
 msgstr "没有启用任何资源包"
 
-#: libs/ui/KisMainWindow.cpp:2226
+#: libs/ui/KisMainWindow.cpp:2298
 #, kde-format
 msgid ""
 "\n"
@@ -24442,7 +24442,7 @@ msgstr ""
 "\n"
 "没有可用的笔刷预设。请在继续操作之前启用一个包含笔刷预设的资源包。\n"
 
-#: libs/ui/KisMainWindow.cpp:2238
+#: libs/ui/KisMainWindow.cpp:2310
 #: plugins/extensions/resourcemanager/dlg_bundle_manager.cpp:206
 #: plugins/extensions/resourcemanager/dlg_bundle_manager.cpp:367
 #, kde-format
@@ -24453,7 +24453,7 @@ msgstr ""
 "\n"
 "仅本地资源可用。"
 
-#: libs/ui/KisMainWindow.cpp:2379 libs/ui/KisMainWindow.cpp:2462
+#: libs/ui/KisMainWindow.cpp:2451 libs/ui/KisMainWindow.cpp:2534
 #, kde-format
 msgid ""
 "Could not finish import animation:\n"
@@ -24462,71 +24462,71 @@ msgstr ""
 "无法完成导入动画：\n"
 "%1"
 
-#: libs/ui/KisMainWindow.cpp:2441
+#: libs/ui/KisMainWindow.cpp:2513
 #, kde-format
 msgid "Failed to create new document. Animation import aborted."
 msgstr "创建新图像失败。动画导入已中止。"
 
-#: libs/ui/KisMainWindow.cpp:2484
+#: libs/ui/KisMainWindow.cpp:2556
 #: libs/ui/animation/KisDlgAnimationRenderer.cpp:56
 #, kde-format
 msgid "Render Animation"
 msgstr "导出动画"
 
-#: libs/ui/KisMainWindow.cpp:2984
+#: libs/ui/KisMainWindow.cpp:3056
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "&Import Workspace..."
 msgstr "导入工作区(&I)..."
 
-#: libs/ui/KisMainWindow.cpp:2999
+#: libs/ui/KisMainWindow.cpp:3071
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "&New Workspace..."
 msgstr "新建工作区(&N)..."
 
-#: libs/ui/KisMainWindow.cpp:3003
+#: libs/ui/KisMainWindow.cpp:3075
 #, kde-format
 msgctxt "@title:window"
 msgid "New Workspace..."
 msgstr "新建工作区..."
 
-#: libs/ui/KisMainWindow.cpp:3004 libs/ui/dialogs/kis_dlg_layer_style.cpp:319
+#: libs/ui/KisMainWindow.cpp:3076 libs/ui/dialogs/kis_dlg_layer_style.cpp:319
 #, kde-format
 msgctxt "@label:textbox"
 msgid "Name:"
 msgstr "名称："
 
-#: libs/ui/KisMainWindow.cpp:3047
+#: libs/ui/KisMainWindow.cpp:3119
 #, kde-format
 msgid "&%1 %2"
 msgstr "&%1 %2"
 
-#: libs/ui/KisMainWindow.cpp:3050
+#: libs/ui/KisMainWindow.cpp:3122
 #, kde-format
 msgid "%1 %2"
 msgstr "%1 %2"
 
-#: libs/ui/KisMainWindow.cpp:3215
+#: libs/ui/KisMainWindow.cpp:3287
 #, kde-format
 msgid ""
 "The Solstice LittleCMS color management plugin is not installed. Solstice "
 "will quit now."
 msgstr "Solstice 的 LittleCMS 色彩管理插件没有安装。Solstice 将立即退出。"
 
-#: libs/ui/KisMainWindow.cpp:3231
+#: libs/ui/KisMainWindow.cpp:3303
 #, kde-format
 msgctxt "@title:window"
 msgid "Installation error"
 msgstr "安装错误"
 
-#: libs/ui/KisMainWindow.cpp:3345
+#: libs/ui/KisMainWindow.cpp:3417
 #, kde-format
 msgctxt "@action:inmenu"
 msgid "&Themes"
 msgstr "主题(&T)"
 
-#: libs/ui/KisMainWindow.cpp:3400
+#: libs/ui/KisMainWindow.cpp:3472
 #, kde-format
 msgid "Expanding Spacer"
 msgstr "<<--- 空白占位符 (自动伸展) --->>"
@@ -28020,7 +28020,7 @@ msgstr "确定"
 #: libs/ui/dialogs/KisAsyncAnimationRenderDialogBase.cpp:167
 #: libs/ui/input/kis_tool_invocation_action.cpp:44
 #: libs/ui/widgets/kis_canvas_drop.cpp:45
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:333
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:341
 #, kde-format
 msgid "Cancel"
 msgstr "取消"
@@ -32543,7 +32543,7 @@ msgstr "当前笔刷预设"
 #. i18n: context: string @ property (text), widget (QPushButton, updateBrushNameButton)
 #: libs/ui/forms/wdgpaintopsettings.ui:184
 #: plugins/dockers/gamutmask/forms/wdgGamutMaskChooser.ui:232
-#: plugins/generators/seexpr/wdgseexpr.ui:172 libs/ui/KisMainWindow.cpp:1136
+#: plugins/generators/seexpr/wdgseexpr.ui:172 libs/ui/KisMainWindow.cpp:1208
 #: libs/ui/lazytools/KisLazyToolsRenameDialog.cpp:90
 #: libs/ui/widgets/kis_workspace_chooser.cpp:134
 #: libs/ui/widgets/kis_workspace_chooser.cpp:209
@@ -35160,7 +35160,7 @@ msgstr "Brush Stroke Layer"
 msgid "New Filter Layer"
 msgstr "新建滤镜图层"
 
-#: libs/ui/kis_layer_manager.cc:831 libs/ui/kis_mimedata.cpp:489
+#: libs/ui/kis_layer_manager.cc:831 libs/ui/kis_mimedata.cpp:498
 #, kde-format
 msgid "Fill Layer"
 msgstr "填充图层"
@@ -35466,25 +35466,25 @@ msgctxt "(qtundo-format)"
 msgid "Quick Ungroup"
 msgstr "移出编组"
 
-#: libs/ui/kis_node_model.cpp:559
+#: libs/ui/kis_node_model.cpp:567
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Disabled: masks on pass-through groups are not supported!"
 msgstr "已禁用：不支持在穿透图层组上使用蒙版！"
 
-#: libs/ui/kis_node_model.cpp:561
+#: libs/ui/kis_node_model.cpp:569
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Disabled: cloning pass-through groups is not supported!"
 msgstr "已禁用：不支持对穿透图层组进行克隆！"
 
-#: libs/ui/kis_node_model.cpp:602
+#: libs/ui/kis_node_model.cpp:610
 #, kde-format
 msgctxt "%1 is the percent value, % is the percent sign"
 msgid "%1%"
 msgstr "%1%"
 
-#: libs/ui/kis_node_model.cpp:605
+#: libs/ui/kis_node_model.cpp:613
 #, kde-format
 msgctxt "%1 is the percent value, % is the percent sign"
 msgid "%1% %2"
@@ -42658,51 +42658,51 @@ msgstr "导出为动画"
 msgid "Insert Name"
 msgstr "输入新 Layer Comp 的名称"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:220
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:222
 #, kde-format
 msgid "Delete Layer Comps"
 msgstr "删除 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:221
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:223
 #, kde-format
 msgid "Delete the selected layer comp?"
 msgid_plural "Delete the %1 selected layer comps?"
 msgstr[0] "要删除选中的 %1 个 Layer Comp 吗？"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:303
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:420
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:311
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:428
 #, kde-format
 msgid "Select a Directory"
 msgstr "选择目录"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:332
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:340
 #, kde-format
 msgid "Exporting Compositions..."
 msgstr "正在导出 Layer Comp 为图像/动画..."
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:358
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:366
 #, kde-format
 msgid "Exporting composition: %1..."
 msgstr "正在导出 Layer Comp 为图像/动画：%1..."
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:527
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:535
 #, kde-format
 msgid "Overwrite Layer Comps"
 msgstr "覆盖 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:528
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:536
 #, kde-format
 msgid "Overwrite the selected layer comp?"
 msgid_plural ""
 "Overwrite the %1 selected layer comps with the current visibility?"
 msgstr[0] "要用当前的可见性覆盖选中的 %1 个 Layer Comp 吗？"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:551
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:559
 #, kde-format
 msgid "Rename Composition"
 msgstr "重命名 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:552
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:560
 #, kde-format
 msgid "New Name:"
 msgstr "新名称："
@@ -43207,7 +43207,7 @@ msgstr "隐藏/锁定/透明度(&T)"
 msgid "&Add"
 msgstr "新建(&A)"
 
-#: plugins/dockers/layerdocker/NodeDelegate.cpp:1431
+#: plugins/dockers/layerdocker/NodeDelegate.cpp:1400
 #, kde-format
 msgid "%1 %"
 msgstr "%1 %"
@@ -66450,6 +66450,34 @@ msgctxt "action"
 msgid "Freehand Path Tool"
 msgstr "手绘路径工具/自由钢笔"
 
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:35
+msgctxt "(qtundo-format)"
+msgid "Erase Through Layers"
+msgstr "穿透图层擦除"
+
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:57
+#, kde-format
+msgid "There are no visible, unlocked paint layers to erase."
+msgstr "没有可擦除的可见且未锁定的颜料图层。"
+
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:83
+#, kde-format
+msgctxt "@option:check"
+msgid "Selected layers only"
+msgstr "仅选中的图层"
+
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:86
+#, kde-format
+msgid ""
+"Erase only the selected layers and the layers in the selected groups. When "
+"unchecked, every visible layer is erased."
+msgstr "仅擦除选中的图层和选中图层组内的图层。未勾选时，擦除所有可见图层。"
+
+#: plugins/tools/basictools/KisToolThroughLayerEraser.h:46
+#, kde-format
+msgid "Through-Layer Eraser Tool"
+msgstr "Through-Layer Eraser 工具"
+
 #: plugins/tools/basictools/kis_tool_brush.cc:58
 msgctxt "(qtundo-format)"
 msgid "Freehand Brush Stroke"
@@ -70500,14 +70528,14 @@ msgctxt "floating message in transformation tool"
 msgid "Selections are not used when editing transform masks "
 msgstr "编辑变形蒙版时，选区不被使用"
 
-#: plugins/tools/tool_transform2/kis_tool_transform.cc:1129
-#: plugins/tools/tool_transform2/kis_tool_transform.cc:1168
+#: plugins/tools/tool_transform2/kis_tool_transform.cc:1131
+#: plugins/tools/tool_transform2/kis_tool_transform.cc:1170
 #, kde-format
 msgctxt "floating message in transformation tool"
 msgid "Cannot transform empty layer "
 msgstr "无法对空图层进行变形操作"
 
-#: plugins/tools/tool_transform2/kis_tool_transform.cc:1155
+#: plugins/tools/tool_transform2/kis_tool_transform.cc:1157
 #, kde-format
 msgctxt "floating message in transformation tool"
 msgid ""
@@ -70625,19 +70653,19 @@ msgctxt "@label:listbox Puppet Warp"
 msgid "Click pin:"
 msgstr "点击图钉："
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:367
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:368
 #, kde-format
 msgctxt "@item:inlistbox Puppet Warp click action"
 msgid "Select pin"
 msgstr "选择图钉"
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:368
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:369
 #, kde-format
 msgctxt "@item:inlistbox Puppet Warp click action"
 msgid "Delete pin"
 msgstr "删除图钉"
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:370
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:371
 #, kde-format
 msgid ""
 "What a click on a pin does. Ctrl+Alt-click always deletes a pin.\n"
@@ -70647,33 +70675,33 @@ msgstr ""
 "点击图钉时执行的操作。按住 Ctrl+Alt 点击总是删除图钉。\n"
 "按住 Shift 或 Ctrl 点击可将图钉加入选择；在画布上拖动可框选图钉。"
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:374
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:375
 #, kde-format
 msgctxt "@label Puppet Warp pin stacking order"
 msgid "Order:"
 msgstr "顺序："
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:381
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:384
 #, kde-format
 msgid "Bring the selected pins' parts to the front"
 msgstr "将选中图钉的部分置于最前"
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:383
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:388
 #, kde-format
 msgid "Bring the selected pins' parts forward"
 msgstr "将选中图钉的部分前移一层"
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:384
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:392
 #, kde-format
 msgid "Send the selected pins' parts backward"
 msgstr "将选中图钉的部分后移一层"
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:385
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:396
 #, kde-format
 msgid "Send the selected pins' parts to the back"
 msgstr "将选中图钉的部分置于最后"
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:705
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:718
 #, kde-format
 msgid ""
 "Click the canvas to add pins. Ctrl+Alt-click a pin to delete it. Shift-click "
@@ -70682,12 +70710,12 @@ msgstr ""
 "点击画布以添加图钉。按住 Ctrl+Alt 点击图钉可将其删除。按住 Shift 点击或拖出矩"
 "形可选择多个图钉并一起移动。"
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:719
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:732
 #, kde-format
 msgid "Switch between editing and deforming cage"
 msgstr "控制点模式："
 
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:781
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:794
 #, kde-format
 msgid "Unlock Points"
 msgstr "编辑点模式"
@@ -71001,7 +71029,7 @@ msgstr "清除全部点"
 
 #. i18n: context: string @ property (text), widget (QPushButton, lockUnlockPointsButton)
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:1654
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:779
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:792
 #, kde-format
 msgid "Lock Points"
 msgstr "变形模式"
@@ -71020,7 +71048,7 @@ msgstr "扩展："
 
 #. i18n: context: string @ property (text), widget (QLabel, cageTransformDirections)
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:1755
-#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:858
+#: plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp:871
 #, kde-format
 msgid "Create 3 points on the canvas to begin"
 msgstr "请先在画布上建立至少 3 个控制点"
@@ -71146,11 +71174,21 @@ msgctxt "action"
 msgid "Multibrush Tool"
 msgstr "多路笔刷工具"
 
+#. i18n: context: text @ Action (KritaShape/KisToolThroughLayerEraser), Actions (tool-shortcuts), ActionCollection (Tools)
+#. i18n: context: toolTip @ Action (KritaShape/KisToolThroughLayerEraser), Actions (tool-shortcuts), ActionCollection (Tools)
+#. i18n: context: iconText @ Action (KritaShape/KisToolThroughLayerEraser), Actions (tool-shortcuts), ActionCollection (Tools)
+#: plugins/tools/tools.action:37 plugins/tools/tools.action:39
+#: plugins/tools/tools.action:40
+#, kde-format
+msgctxt "action"
+msgid "Through-Layer Eraser Tool"
+msgstr "Through-Layer Eraser 工具"
+
 #. i18n: context: text @ Action (KritaShape/KisToolLazyBrush), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolLazyBrush), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolLazyBrush), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:37 plugins/tools/tools.action:39
-#: plugins/tools/tools.action:40
+#: plugins/tools/tools.action:47 plugins/tools/tools.action:49
+#: plugins/tools/tools.action:50
 #, kde-format
 msgctxt "action"
 msgid "Colorize Mask Tool"
@@ -71159,8 +71197,8 @@ msgstr "智能填色蒙版工具"
 #. i18n: context: text @ Action (KritaShape/KisToolSmartPatch), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolSmartPatch), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolSmartPatch), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:46 plugins/tools/tools.action:48
-#: plugins/tools/tools.action:49
+#: plugins/tools/tools.action:56 plugins/tools/tools.action:58
+#: plugins/tools/tools.action:59
 #, kde-format
 msgctxt "action"
 msgid "Smart Patch Tool"
@@ -71169,8 +71207,8 @@ msgstr "智能补丁工具/仿制图章/修复画笔"
 #. i18n: context: text @ Action (PanTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (PanTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (PanTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:55 plugins/tools/tools.action:57
-#: plugins/tools/tools.action:58
+#: plugins/tools/tools.action:65 plugins/tools/tools.action:67
+#: plugins/tools/tools.action:68
 #, kde-format
 msgctxt "action"
 msgid "Pan Tool"
@@ -71179,8 +71217,8 @@ msgstr "视图平移工具/抓手"
 #. i18n: context: text @ Action (InteractionTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (InteractionTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (InteractionTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:64 plugins/tools/tools.action:66
-#: plugins/tools/tools.action:67
+#: plugins/tools/tools.action:74 plugins/tools/tools.action:76
+#: plugins/tools/tools.action:77
 #, kde-format
 msgctxt "action"
 msgid "Select Shapes Tool"
@@ -71188,14 +71226,14 @@ msgstr "形状选择工具"
 
 #. i18n: context: text @ Action (KritaSelected/KisToolColorSampler), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaSelected/KisToolColorSampler), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:74 plugins/tools/tools.action:77
+#: plugins/tools/tools.action:84 plugins/tools/tools.action:87
 #, kde-format
 msgctxt "action"
 msgid "Color Sampler"
 msgstr "拾色器"
 
 #. i18n: context: toolTip @ Action (KritaSelected/KisToolColorSampler), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:76
+#: plugins/tools/tools.action:86
 #, kde-format
 msgctxt "action"
 msgid "Sample a color from the image or current layer"
@@ -71203,14 +71241,14 @@ msgstr "拾色器/滴管：拾取图像或当前图层颜色"
 
 #. i18n: context: text @ Action (KritaFill/KisToolFill), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaFill/KisToolFill), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:84 plugins/tools/tools.action:87
+#: plugins/tools/tools.action:94 plugins/tools/tools.action:97
 #, kde-format
 msgctxt "action"
 msgid "Fill Tool"
 msgstr "填充工具/油漆桶"
 
 #. i18n: context: toolTip @ Action (KritaFill/KisToolFill), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:86
+#: plugins/tools/tools.action:96
 #, kde-format
 msgctxt "action"
 msgid "Fill a contiguous area of color with a color, or fill a selection."
@@ -71219,8 +71257,8 @@ msgstr "填充工具/油漆桶：用一种颜色填充一片相连的颜色或�
 #. i18n: context: text @ Action (KritaShape/KisToolLine), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolLine), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolLine), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:94 plugins/tools/tools.action:96
-#: plugins/tools/tools.action:97
+#: plugins/tools/tools.action:104 plugins/tools/tools.action:106
+#: plugins/tools/tools.action:107
 #, kde-format
 msgctxt "action"
 msgid "Line Tool"
@@ -71229,8 +71267,8 @@ msgstr "直线工具"
 #. i18n: context: text @ Action (KritaShape/KisToolEllipse), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolEllipse), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolEllipse), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:104 plugins/tools/tools.action:106
-#: plugins/tools/tools.action:107
+#: plugins/tools/tools.action:114 plugins/tools/tools.action:116
+#: plugins/tools/tools.action:117
 #, kde-format
 msgctxt "action"
 msgid "Ellipse Tool"
@@ -71239,8 +71277,8 @@ msgstr "椭圆工具"
 #. i18n: context: text @ Action (KritaShape/KisToolBrush), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolBrush), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolBrush), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:114 plugins/tools/tools.action:116
-#: plugins/tools/tools.action:117
+#: plugins/tools/tools.action:124 plugins/tools/tools.action:126
+#: plugins/tools/tools.action:127
 #, kde-format
 msgctxt "action"
 msgid "Freehand Brush Tool"
@@ -71248,14 +71286,14 @@ msgstr "手绘笔刷工具"
 
 #. i18n: context: text @ Action (KritaFill/KisToolGradient), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaFill/KisToolGradient), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:124 plugins/tools/tools.action:127
+#: plugins/tools/tools.action:134 plugins/tools/tools.action:137
 #, kde-format
 msgctxt "action"
 msgid "Gradient Tool"
 msgstr "渐变工具"
 
 #. i18n: context: toolTip @ Action (KritaFill/KisToolGradient), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:126
+#: plugins/tools/tools.action:136
 #, kde-format
 msgctxt "action"
 msgid "Draw a gradient."
@@ -71263,14 +71301,14 @@ msgstr "渐变工具：拉出渐变"
 
 #. i18n: context: text @ Action (KritaShape/KisToolMeasure), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolMeasure), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:134 plugins/tools/tools.action:137
+#: plugins/tools/tools.action:144 plugins/tools/tools.action:147
 #, kde-format
 msgctxt "action"
 msgid "Measurement Tool"
 msgstr "测量工具"
 
 #. i18n: context: toolTip @ Action (KritaShape/KisToolMeasure), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:136
+#: plugins/tools/tools.action:146
 #, kde-format
 msgctxt "action"
 msgid "Measure the distance between two points"
@@ -71278,14 +71316,14 @@ msgstr "测量工具：测量两点间距离"
 
 #. i18n: context: text @ Action (KritaTransform/KisToolMove), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaTransform/KisToolMove), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:144 plugins/tools/tools.action:147
+#: plugins/tools/tools.action:154 plugins/tools/tools.action:157
 #, kde-format
 msgctxt "action"
 msgid "Move Tool"
 msgstr "移动工具"
 
 #. i18n: context: toolTip @ Action (KritaTransform/KisToolMove), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:146
+#: plugins/tools/tools.action:156
 #, kde-format
 msgctxt "action"
 msgid "Move a layer"
@@ -71294,8 +71332,8 @@ msgstr "移动图层"
 #. i18n: context: text @ Action (KarbonCalligraphyTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KarbonCalligraphyTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KarbonCalligraphyTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:154 plugins/tools/tools.action:156
-#: plugins/tools/tools.action:157
+#: plugins/tools/tools.action:164 plugins/tools/tools.action:166
+#: plugins/tools/tools.action:167
 #, kde-format
 msgctxt "action"
 msgid "Calligraphy"
@@ -71304,8 +71342,8 @@ msgstr "西文书法"
 #. i18n: context: text @ Action (PathTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (PathTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (PathTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:164 plugins/tools/tools.action:166
-#: plugins/tools/tools.action:167
+#: plugins/tools/tools.action:174 plugins/tools/tools.action:176
+#: plugins/tools/tools.action:177
 #, kde-format
 msgctxt "action"
 msgid "Edit Shapes Tool"
@@ -71314,8 +71352,8 @@ msgstr "锚点编辑工具：对矢量图形的锚点进行操作"
 #. i18n: context: text @ Action (ZoomTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (ZoomTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (ZoomTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:174 plugins/tools/tools.action:176
-#: plugins/tools/tools.action:177
+#: plugins/tools/tools.action:184 plugins/tools/tools.action:186
+#: plugins/tools/tools.action:187
 #, kde-format
 msgctxt "action"
 msgid "Zoom Tool"
@@ -71324,8 +71362,8 @@ msgstr "缩放工具"
 #. i18n: context: text @ Action (ToolReferenceImages), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (ToolReferenceImages), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (ToolReferenceImages), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:184 plugins/tools/tools.action:186
-#: plugins/tools/tools.action:187
+#: plugins/tools/tools.action:194 plugins/tools/tools.action:196
+#: plugins/tools/tools.action:197
 #, kde-format
 msgctxt "action"
 msgid "Reference Images Tool"
@@ -71334,8 +71372,8 @@ msgstr "参考图像工具"
 #. i18n: context: text @ Action (KritaShape/KisToolKnife), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolKnife), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolKnife), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:194 plugins/tools/tools.action:196
-#: plugins/tools/tools.action:197
+#: plugins/tools/tools.action:204 plugins/tools/tools.action:206
+#: plugins/tools/tools.action:207
 #, kde-format
 msgctxt "action"
 msgid "Comic Panel Editing Tool"

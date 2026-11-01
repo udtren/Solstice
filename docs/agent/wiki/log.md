@@ -2404,3 +2404,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: `krita.log` records every export's configuration and the running
   version. Read the sequence before trusting a reported correlation. See
   [Exported options are remembered](pitfalls/script-export-replaces-saved-options.md).
+
+## 2026-11-01: Through-Layer Eraser Tool
+
+- Added the tool for release 0.7.0. One brush stroke paints a shared
+  temporary target that every target layer composites with Erase, so the
+  brush cost does not grow with the layer count.
+- A forced indirect Build-up stroke changed the dabs: see
+  [Paint ops read the temporary target when created](pitfalls/paint-ops-read-temporary-target.md).
+- Updates use one graph refresh: see
+  [Updating many layers at once](concepts/updating-many-layers.md).
