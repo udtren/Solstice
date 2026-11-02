@@ -2430,3 +2430,34 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: Astro's image service keeps only the first frame of a GIF. The
   site loads an animated GIF with `?url` and shows it through
   `FeatureAnimation.astro`; see the website's `docs/solstice-site.md`.
+
+## 2026-11-02 intake: upstream 2026-W45
+
+- The user accepted the evaluation of the Hermes report 2026-W45 and asked
+  to adopt U-2026W45-01 to -05 (8 `krita/6.0` commits: GIMP palette
+  loading crash and version 1 support, invalid JPEG CFA pattern crash,
+  advanced color selector self-update flag, color triangle at document
+  creation, action XML for the Animation Curves docker and nine Python
+  plugins), with translations for the new action strings. Ledger in
+  [upstream-intake.md](../upstream-intake.md); the other items await the
+  user's decision.
+- Before adopting, the five items were read against `main` for side
+  effects: none found a new crash path; the small behavior changes (strict
+  `Name: `/`Columns: ` lines in `.gpl` files, earlier external color
+  updates in the advanced color selector, Python actions disabled without
+  an image, the `assing_profile_to_image` ID fixed to
+  `assign_profile_to_image`) are listed in the ledger notes.
+- First intake on Linux, from the share mounted at `/media/solarsea/share`
+  (procedure added to step 2 of the intake document). `a4fc11b936` added a
+  line with trailing whitespace; it was removed so `git diff --check`
+  stays clean.
+- Checked on Linux: full build and install; 19 tests (all `libs-pigment`,
+  including the expanded `TestKoColorSet`, `KisActionsSnapshotTest`,
+  `TestKisPaletteModel`, `kis_meta_data_test`); a JPEG whose CFAPattern
+  is ASCII imports with "Invalid CFA pattern type 2" logged. Not checked:
+  the color selector and triangle by hand, the Python plugin actions (the
+  Linux build has no Python plugins), Windows.
+- Lesson: on Linux, `update_translations.py` rewraps the catalogs, so the
+  new entries were added by hand; texts moved into `.action` files keep
+  their translation through the context-free fallback
+  ([pitfall](pitfalls/translation-extraction.md)).

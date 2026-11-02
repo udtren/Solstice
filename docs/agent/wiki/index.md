@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-01
+updated: 2026-11-02
 ---
 
 # Agent wiki
@@ -170,9 +170,11 @@ Document ownership and lifecycle are defined in
 - [Paint ops read the temporary target when created](pitfalls/paint-ops-read-temporary-target.md):
   `KisOpacityOption` moves opacity sensors to the flow if a temporary target
   exists, so a forced indirect Build-up stroke must attach it afterwards.
-- [Translation extraction on Windows](pitfalls/translation-extraction.md):
+- [Translation extraction on Windows and Linux](pitfalls/translation-extraction.md):
   `.ui` `comment=` contexts, CRLF resource names, missing `Archive::Zip`,
-  reference fix-up order, `QT_TRANSLATE_NOOP` not extracted.
+  reference fix-up order, `QT_TRANSLATE_NOOP` not extracted; Linux gettext
+  rewraps the catalogs; `.action` texts fall back to the context-free
+  translation.
 
 ### Benchmarks
 
