@@ -1334,6 +1334,9 @@ class ChannelsToLayers(Extension):
             if currentProcessedLayer is None:
                 return None
 
+            # A merge only changes colors: keep the alpha of the layer below,
+            # otherwise a fill layer makes transparent pixels opaque
+            currentProcessedLayer.setInheritAlpha(True)
             newLayer = currentProcessedLayer.mergeDown()
             # note:
             #   when layer is merged down:
@@ -1432,6 +1435,12 @@ class ChannelsToLayers(Extension):
 
         self.progressNext(pProgress)
 
+        # The group has to be in the document before layers are built in it:
+        # updates only reach nodes attached to the image, so outside of it a
+        # fill layer's projection stays empty and merging it down does nothing
+        originalLayer.parentNode().addChildNode(parentGroupLayer, originalLayer)
+        self.progressNext(pProgress)
+
         currentProcessedLayer = None
 
         for layer in OUTPUT_MODE_NFO[self.__outputOptions['outputMode']]['layers']:
@@ -1453,9 +1462,6 @@ class ChannelsToLayers(Extension):
             if not currentProcessedLayer is None:
                 # rename currentProcessedLayer
                 currentProcessedLayer.setName(parseLayerName(self.__outputOptions['layerColorName'], layer['color']))
-
-        document.rootNode().addChildNode(parentGroupLayer, originalLayer)
-        self.progressNext(pProgress)
 
         if self.__outputOptions['originalLayerAction'] == ORIGINAL_LAYER_KEEPVISIBLE:
             originalLayer.setVisible(True)
