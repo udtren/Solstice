@@ -43,6 +43,12 @@ in a `solstice-i18n-*` temporary directory), `--pot-only` (do not touch
 `--gettext-dir`. Perl defaults to `perl` on `PATH`, then Git for Windows'
 `usr\bin\perl.exe`. A run takes about 10 seconds.
 
+On Linux the script runs with the system gettext and Perl, but do not
+commit its merged catalogs: that `msgmerge` wraps long lines differently,
+so every entry with a long msgid or context changes. Use the run to find the
+new entries and add them to the catalog by hand
+([pitfall](wiki/pitfalls/translation-extraction.md)).
+
 What it does, in `Messages.sh` order:
 
 1. Sources are the **tracked** files (`git ls-files`); `git add` a new

@@ -74,6 +74,16 @@ reported as its own item to adopt now. The user still decides every item;
    belongs to another user, so it passes `safe.directory` per command. A
    persistent `upstream` remote stays forbidden by `AGENTS.md`.
 
+   On the Linux machine the share is mounted at
+   `/media/solarsea/share/upstream-krita-check` (first used for 2026-W45).
+   The helper's mirror path is the UNC path, so run the same steps with
+   `M=/media/solarsea/share/upstream-krita-check/krita.git`: import the
+   preimage blobs listed by `git diff-tree -r --diff-filter=MD`, write the
+   patch with `git format-patch -1 --binary --stdout`, run
+   `git am -3 --keep-non-patch`, then add the message lines and do step 4.
+   The checkout has no `user.name`/`user.email` there; pass the identity
+   per command (`GIT_CONFIG_COUNT` with `user.name` and `user.email`).
+
    Without the share (for example in a cloud session), do the same by hand
    (first used for 2026-W44): fetch the commits from the GitHub mirror
    `https://github.com/KDE/krita.git` into a separate bare repository in
@@ -249,3 +259,12 @@ the adopting commit (`-` otherwise). The 2026-W42 rows give the commits on
 | U-2026W44-18 | `c2142d5e1738f95857a506b4bd3fbde161cf2c82` | master | rejected | - | 2026-10-26 | Fix typo in svg-icons.qrc; user: not adopted; icons, same as U-2026W42-07 (recommendation reject) |
 | U-2026W44-18 | `ed72aaa35422ef2f89e31bc34eca976c150385f4` | master | rejected | - | 2026-10-26 | Fix typo in icon file name; user: not adopted; icons, same as U-2026W42-07 (recommendation reject) |
 | U-2026W44-19 | `cab187c0245bbd640de5221214046311012af63e` | krita/6.0 | rejected | - | 2026-10-26 | Fix horizontal scrolling with the second mouse wheel; user: not adopted; backport of adopted U-2026W42-05 (already in Solstice) (recommendation reject) |
+| U-2026W45-01 | `e685addc17238cf64e5d222692e256890d7b1de7` | krita/6.0 | adopted | `4bb25c42d3` | 2026-11-02 | More closely follow GIMP's standard when loading GIMP palettes; backport of master 88f48399e5; fixes the crash on a `Name`/`Columns` line without `:` and loads version 1 palettes. Behavior change: only `Name: ` and `Columns: ` (GIMP's spelling) are read; a nonstandard name line now leaves the name to the file name |
+| U-2026W45-01 | `331d257605692e2323979d6e00f2210c5fd9df1d` | krita/6.0 | adopted | `9fdcdb9757` | 2026-11-02 | Expand unittest for loading GIMP GPL palettes; backport of master fb15b19d0d |
+| U-2026W45-01 | `41370eaf4a755f0d960f3b628318595930e8b4d7` | krita/6.0 | adopted | `368bae4aae` | 2026-11-02 | Use QFileInfo::baseName() instead of manual path parsing; backport of master 17470387bc |
+| U-2026W45-01 | `38d3ce6c43f412bc98e1fb360ee59a51847c3c15` | krita/6.0 | adopted | `f88428d800` | 2026-11-02 | Delete now unused "gimp.gpl" test data; backport of master 6e8ff9b996 |
+| U-2026W45-02 | `751b541da8ae116048a890f6231dd2450881d886` | krita/6.0 | adopted | `742f94d555` | 2026-11-02 | Don't crash reading invalid CFA patterns; checked on Linux with a JPEG whose CFAPattern is ASCII (logged and ignored, import continues) |
+| U-2026W45-03 | `8fe1eae037024a8fdca8e22af9076d36ed76c23f` | krita/6.0 | adopted | `433539efe5` | 2026-11-02 | Properly reset color selector self set flag; external color changes now reach the advanced color selector right after a pick instead of after the pointer leaves it |
+| U-2026W45-03 | `3ec9c5b8fb6fcac9601717e93159c2db54a211d2` | master | adopted | `433539efe5` | 2026-11-02 | Same change on master; not applied: its preimage contains the rejected U-2026W42-13 commits, the krita/6.0 commit (row above) was applied instead |
+| U-2026W45-04 | `a4fc11b936d666c307385522eca5cdc845b8e6f2` | krita/6.0 | adopted | `441e5dccf3` | 2026-11-02 | fix improper color triangle rendering at document creation; adapted: trailing whitespace removed |
+| U-2026W45-05 | `6e88a87d03bc4171f2475e7da603cb138d80d2b4` | krita/6.0 | adopted | `f25abe818a` | 2026-11-02 | Add missing action XML data; the 23 new `action`-context strings translated in `9dd0e6ec09` (zh_CN, ja). Behavior changes: five Python plugin actions need an open image; the action ID `assing_profile_to_image` became `assign_profile_to_image` (a shortcut on the old ID is lost) |

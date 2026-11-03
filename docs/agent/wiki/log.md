@@ -2430,3 +2430,74 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: Astro's image service keeps only the first frame of a GIF. The
   site loads an animated GIF with `?url` and shows it through
   `FeatureAnimation.astro`; see the website's `docs/solstice-site.md`.
+
+## 2026-11-02 intake: upstream 2026-W45
+
+- The user accepted the evaluation of the Hermes report 2026-W45 and asked
+  to adopt U-2026W45-01 to -05 (8 `krita/6.0` commits: GIMP palette
+  loading crash and version 1 support, invalid JPEG CFA pattern crash,
+  advanced color selector self-update flag, color triangle at document
+  creation, action XML for the Animation Curves docker and nine Python
+  plugins), with translations for the new action strings. Ledger in
+  [upstream-intake.md](../upstream-intake.md); the other items await the
+  user's decision.
+- Before adopting, the five items were read against `main` for side
+  effects: none found a new crash path; the small behavior changes (strict
+  `Name: `/`Columns: ` lines in `.gpl` files, earlier external color
+  updates in the advanced color selector, Python actions disabled without
+  an image, the `assing_profile_to_image` ID fixed to
+  `assign_profile_to_image`) are listed in the ledger notes.
+- First intake on Linux, from the share mounted at `/media/solarsea/share`
+  (procedure added to step 2 of the intake document). `a4fc11b936` added a
+  line with trailing whitespace; it was removed so `git diff --check`
+  stays clean.
+- Checked on Linux: full build and install; 19 tests (all `libs-pigment`,
+  including the expanded `TestKoColorSet`, `KisActionsSnapshotTest`,
+  `TestKisPaletteModel`, `kis_meta_data_test`); a JPEG whose CFAPattern
+  is ASCII imports with "Invalid CFA pattern type 2" logged. Not checked:
+  the color selector and triangle by hand, the Python plugin actions (the
+  Linux build has no Python plugins), Windows.
+- Lesson: on Linux, `update_translations.py` rewraps the catalogs, so the
+  new entries were added by hand; texts moved into `.action` files keep
+  their translation through the context-free fallback
+  ([pitfall](pitfalls/translation-extraction.md)).
+
+## 2026-11-03 verification: upstream 2026-W45 on Windows
+
+- Checked `claude/upstream-2026w45` at `40f129a3df` on Windows 11 25H2
+  (Qt 6.8.0, RelWithDebInfo, `_install`). This covers what the Linux
+  entry above left open.
+- Full build and install; the same 19 tests pass; `git diff --check` is
+  clean.
+- Through test control, with a scratch profile, in English and Japanese:
+  the five Python actions with activation flag 1 are disabled without an
+  image and open their dialogs with one; Document Tools, Scripter and
+  Script Starter open without one; `assing_profile_to_image` is unknown
+  and `assign_profile_to_image` works. The Animation Curves docker shows
+  every tooltip moved into `krita.action`, translated in Japanese; the
+  icons match the removed code and their files exist.
+- A JPEG whose CFAPattern is ASCII opens in this build. The same file
+  crashes the 0.4.0 package in `kritaexif.dll` (`0xC0000005`), so the
+  crafted file reaches the fixed path. The "Invalid CFA pattern" line did
+  not appear on Windows with `QT_LOGGING_RULES=krita.metadata.*=true`.
+- A template extracted on Windows merges into `po/zh_CN` with no fuzzy or
+  untranslated entries.
+- All 27 scenarios in this tree pass (`pressure-stroke` unrecorded).
+  `--all --launch` also ran the 26 copies in a `.claude/worktrees/`
+  checkout first: 7 of those failed on the known narrow canvas and busy
+  image of a fresh profile ([Test control](../test-control.md#windows-phases-1-4-2026-10-28));
+  `lazy-rename-layer` is a new member of that busy image group.
+- The user checked by hand the advanced color selector's update after a
+  pick and the color triangle at document creation: both work. The `.gpl`
+  changes were checked by `TestKoColorSet` only, not in the running
+  application.
+- Found, not caused by this branch: Channels to Layers raises
+  `'NoneType' object has no attribute 'setsize'` on an empty layer and
+  works on a filled one; the branch adds only its `.action` file. Reported
+  as a separate task.
+- Lessons: a scratch profile needs `enable_<module>=true` under `[python]`
+  in `kritarc` before plugin actions exist. The Assign Profile and Script
+  Starter dialogs have no window title, so `ui_close` cannot reach them;
+  use `ui_click`, or a modal one blocks `file_quit`. A release package's
+  top-level `solstice.exe` starts `bin\solstice.exe` and returns at once
+  with 0, so a crash check has to watch the child.

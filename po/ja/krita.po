@@ -11343,6 +11343,186 @@ msgctxt "action"
 msgid "Removes the selected scalar keyframe"
 msgstr "選択したスカラーキーフレームを削除"
 
+#. i18n: context: text @ Action (interpolation_constant), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2517
+#, kde-format
+msgctxt "action"
+msgid "Interpolate Constant"
+msgstr "コンスタント補間"
+
+#. i18n: context: toolTip @ Action (interpolation_constant), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2519
+#, kde-format
+msgctxt "action"
+msgid "Hold constant value. No interpolation."
+msgstr "一定の値を保持。補間なし"
+
+#. i18n: context: text @ Action (interpolation_linear), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2529
+#, kde-format
+msgctxt "action"
+msgid "Interpolate Linear"
+msgstr "リニア補間"
+
+#. i18n: context: toolTip @ Action (interpolation_linear), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2531
+#, kde-format
+msgctxt "action"
+msgid "Linear interpolation."
+msgstr "リニア補間"
+
+#. i18n: context: text @ Action (interpolation_bezier), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2541
+#, kde-format
+msgctxt "action"
+msgid "Interpolate Bezier"
+msgstr "ベジェ補間"
+
+#. i18n: context: toolTip @ Action (interpolation_bezier), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2543
+#, kde-format
+msgctxt "action"
+msgid "Bezier curve interpolation."
+msgstr "ベジェ曲線補間"
+
+#. i18n: context: text @ Action (tangents_sharp), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2553
+#, kde-format
+msgctxt "action"
+msgid "Interpolate Sharp"
+msgstr "シャープなタンジェント"
+
+#. i18n: context: toolTip @ Action (tangents_sharp), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2555
+#, kde-format
+msgctxt "action"
+msgid "Sharp interpolation tangents."
+msgstr "タンジェント補間を鮮明にする"
+
+#. i18n: context: text @ Action (tangents_smooth), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2565
+#, kde-format
+msgctxt "action"
+msgid "Interpolate Smooth"
+msgstr "滑らかなタンジェント"
+
+#. i18n: context: toolTip @ Action (tangents_smooth), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2567
+#, kde-format
+msgctxt "action"
+msgid "Smooth interpolation tangents."
+msgstr "タンジェント補間を滑らかにする"
+
+#. i18n: context: text @ Action (zoom_to_fit_range), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2577
+#, kde-format
+msgctxt "action"
+msgid "Zoom to Fit Range"
+msgstr "範囲に合わせてズーム"
+
+#. i18n: context: toolTip @ Action (zoom_to_fit_range), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2579
+#, kde-format
+msgctxt "action"
+msgid "Zoom view to fit channel range."
+msgstr "表示をチャンネル範囲に合わせる"
+
+#. i18n: context: text @ Action (zoom_to_fit_curve), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2589
+#, kde-format
+msgctxt "action"
+msgid "Zoom to Fit Curve"
+msgstr "カーブに合わせてズーム"
+
+#. i18n: context: toolTip @ Action (zoom_to_fit_curve), Actions (Animation), ActionCollection (Krita)
+#: krita/krita.action:2591
+#, kde-format
+msgctxt "action"
+msgid "Zoom view to fit curve."
+msgstr "表示をカーブに合わせる"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (assign_profile_to_image), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/assignprofiledialog/assignprofiledialog.action:4
+#: plugins/python/assignprofiledialog/assignprofiledialog.action:8
+#, kde-format
+msgctxt "action"
+msgid "Assign Profile to Image"
+msgstr "プロファイルを画像に適用"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (pykrita_channels2layers), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/channels2layers/channels2layers.action:4
+#: plugins/python/channels2layers/channels2layers.action:8
+#, kde-format
+msgctxt "action"
+msgid "Channels to layers"
+msgstr "チャンネルをレイヤーに"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (color_space), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/colorspace/colorspace.action:4
+#: plugins/python/colorspace/colorspace.action:8
+#, kde-format
+msgctxt "action"
+msgid "Color Space"
+msgstr "色空間"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (document_tools), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/documenttools/documenttools.action:4
+#: plugins/python/documenttools/documenttools.action:8
+#, kde-format
+msgctxt "action"
+msgid "Document Tools"
+msgstr "ドキュメントツール"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (export_layers), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/exportlayers/exportlayers.action:4
+#: plugins/python/exportlayers/exportlayers.action:8
+#, kde-format
+msgctxt "action"
+msgid "Export Layers"
+msgstr "レイヤーをエクスポート"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (filter_manager), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/filtermanager/filtermanager.action:4
+#: plugins/python/filtermanager/filtermanager.action:8
+#, kde-format
+msgctxt "action"
+msgid "Filter Manager"
+msgstr "フィルタマネージャー"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (high_pass_filter), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/highpass/highpass.action:4
+#: plugins/python/highpass/highpass.action:8
+#, kde-format
+msgctxt "action"
+msgid "High Pass"
+msgstr "ハイパス"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (Krita Script Starter), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/krita_script_starter/krita_script_starter.action:4
+#: plugins/python/krita_script_starter/krita_script_starter.action:8
+#, kde-format
+msgctxt "action"
+msgid "Krita Script Starter"
+msgstr "Krita Script Starter"
+
+#. i18n: context: text @ Actions (Scripts), ActionCollection (Scripts)
+#. i18n: context: text @ Action (python_scripter), Actions (Scripts), ActionCollection (Scripts)
+#: plugins/python/scripter/scripter.action:4
+#: plugins/python/scripter/scripter.action:8
+#, kde-format
+msgctxt "action"
+msgid "Scripter"
+msgstr "スクリプター"
+
+
 #. i18n: context: text @ Action (mirror_frames), Actions (Animation), ActionCollection (Krita)
 #: krita/krita.action:2359
 #, kde-format

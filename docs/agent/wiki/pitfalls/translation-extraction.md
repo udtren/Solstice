@@ -1,6 +1,6 @@
 ---
 type: pitfall
-updated: 2026-10-16
+updated: 2026-11-02
 sources:
   - dev-tools/translations/update_translations.py
   - dev-tools/translations/perl/Archive/Zip.pm
@@ -9,11 +9,12 @@ sources:
   - Messages.sh
   - libs/global/KisSolsticeProfile.cpp
   - docs/agent/translations.md
+  - "libs/widgetutils/kis_action_registry.cpp (quietlyTranslate())"
 related:
   - ../decisions/translation-policy.md
 ---
 
-# Translation extraction on Windows
+# Translation extraction on Windows and Linux
 
 Found while writing `update_translations.py`
 ([translations.md](../../translations.md)). Measure a new extraction by
@@ -49,3 +50,21 @@ real new and removed strings differ (755 new, 276 gone on 2026-10-16).
   (`QString(const char *)` decodes it).
 - **`msgfmt -o nul` fails on Windows** ("Invalid argument"); write the check
   output to a temporary `.mo`.
+- **Linux gettext wraps differently** (found 2026-11-02, U-2026W45-05).
+  `update_translations.py` runs on Linux with the system tools, but its
+  `msgmerge` breaks long msgids at other points (`...bundle:brushes/` and
+  `3_flat-brush.png` on separate lines), so `po/zh_CN` got about 1,300
+  unrelated changed lines and `po/ja`, never merged by the tool, was
+  reordered completely (59,000 lines). Use the run only to see which
+  entries are new: take them from the template or the fuzzy entries of the
+  merged copy and add them to the committed catalog by hand, or run the
+  tool on Windows. The Linux extraction also kept a tab in the
+  `swatche.gpl` palette name ("Swatches\t") that the Windows run drops.
+- **Moving a text into an `.action` file keeps its translation.**
+  `quietlyTranslate()` in `kis_action_registry.cpp` looks the text up with
+  the `action` context first and falls back to `i18n()` without context, so
+  tooltips that upstream moved from code into `krita.action` (U-2026W45-05)
+  still show the old translation. Only texts that are new in the `.action`
+  file need entries; the template still lists every moved text with the
+  `action` context, and the next Windows run turns them into fuzzy entries,
+  so add them with the reused translation.
