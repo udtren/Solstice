@@ -928,6 +928,12 @@ class ChannelsToLayers(Extension):
         """
         srcRect = layerNode.bounds()
 
+        if srcRect.isEmpty():
+            # an empty layer has empty bounds, and a QImage made from no pixels is null
+            img = QImage(rect.width(), rect.height(), QImage.Format.Format_ARGB32)
+            img.fill(Qt.GlobalColor.transparent)
+            return img
+
         if len(layerNode.childNodes()) == 0:
             projectionMode = False
         else:

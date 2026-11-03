@@ -2502,6 +2502,33 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   top-level `solstice.exe` starts `bin\solstice.exe` and returns at once
   with 0, so a crash check has to watch the child.
 
+## 2026-11-03 ingest: Channels to Layers on an empty layer
+
+- Fixed the `Script error` from the entry above. `Node.bounds()` is empty
+  for an empty layer, so `toQImage()` made a 0x0 `QImage`; `scaled()` keeps
+  it null and `bits()` returns `None`. An empty source now gives a
+  transparent image of the preview size. Layers with pixels take the old
+  path.
+- Checked through test control on Windows 11 25H2 (Qt 6.8.0, `_install` at
+  `40f129a3df`, scratch profile). Before the fix: the error on an empty
+  layer. After it: the dialog opens with a blank Original preview, and OK
+  makes the group and its three layers with no error. On a filled and on a
+  partly painted layer, every layer hash and the image hash match the run
+  before the fix.
+- Found, not changed here (both also happen without this fix):
+  - A document more than 320 times taller than wide, or the reverse, raises
+    the same error on any layer: `openDialogOptions()` rounds the preview
+    rectangle to 0 pixels. Seen at 1x1000, empty and filled.
+  - RGB Colors does not split the channels: on a layer filled with
+    `#c83214`, the Red, Green and Blue layers all keep `#c83214`, in the
+    preview and in the document, so the group adds up to `#ff963c`. Cause
+    not investigated; checked only on that fill in RGB Colors mode.
+- Lesson: a scratch profile cannot override an installed Python plugin on
+  Windows. `pythonscripts` resolves through `QStandardPaths`, not the
+  profile's `resources` folder, and `PYTHONPATH` is not read there
+  (`Python::setPath()`). This check replaced the one file in `_install` for
+  the run and restored it, comparing SHA-256.
+
 ## 2026-11-03 ingest: Channels to Layers on an extreme aspect ratio
 
 - Fixed the `Script error` on a document more than 320 times taller than
