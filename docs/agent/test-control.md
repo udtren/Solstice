@@ -307,6 +307,12 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   block every later call. With `async`, `action_trigger` and `ui_click` reply
   first and trigger from a zero-delay timer; the dialog's own event loop then
   serves the next calls, which operate the dialog by its window title.
+  `action_trigger` `file_quit` while any modal dialog is open does nothing:
+  `KisPart::closeSession()` refuses it, as Qt refuses user input. Solstice
+  keeps running (the runner's `--launch` terminates it after 30 s), so
+  answer the dialog first. Before 2026-11-03 such a quit deleted the dialog
+  with its window and crashed (`0xC0000374` with the GPU conversion prompt;
+  [pitfall](wiki/pitfalls/closing-under-a-modal-dialog.md)).
 - **Documents.** `document_close` follows libkis `Document::close()`: clear
   the modified flag, `closePath(false)`, close and delete the document's
   views, then `KisPart::removeDocument()`. `document_open` uses
