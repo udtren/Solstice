@@ -2501,3 +2501,33 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   use `ui_click`, or a modal one blocks `file_quit`. A release package's
   top-level `solstice.exe` starts `bin\solstice.exe` and returns at once
   with 0, so a crash check has to watch the child.
+
+## 2026-11-03 fix: quit while a modal dialog is open
+
+- Cause of the `0xC0000374` exit seen while verifying Channels to Layers:
+  `file_quit` with the GPU conversion prompt open closed the main window.
+  Its deferred delete ran inside the prompt's `exec()`, and
+  `QObjectPrivate::deleteChildren()` freed the `QMessageBox` that lives on
+  the stack of `KisGpuEngineUi::offerConversion()` (lldb stack in
+  [the pitfall](pitfalls/closing-under-a-modal-dialog.md)). The prompt and
+  `file_quit` alone are enough: extra documents and `document_close` do not
+  matter, and answering the prompt first exits 0.
+- Not specific to the prompt: `file_quit` with Image Properties open crashed
+  too (`0xC0000005`). Users cannot close a window that a modal dialog blocks
+  (posted `WM_CLOSE`/`SC_CLOSE` and the quit shortcut did nothing; session
+  end exits 0), but with two main windows, File > Quit in the second one
+  while File > New (window-modal) is open in the first crashed
+  (`0xC0000005`).
+- Fix: `KisPart::closeSession()` refuses while a modal dialog is open,
+  unless it keeps the windows. New `KisPartCloseSessionTest` (fails without
+  the fix). Built out of tree from `_build`'s objects; the patched
+  `libkritaui.dll` ran from a linked copy of `_install`, which stayed
+  untouched. The crashing cases now keep Solstice running and exit 0 once
+  the dialog is answered; `KisGpuEngineUiTest` passes.
+- Not fixed, test control or scripts only: `document_close` under the GPU
+  prompt followed by Convert hangs the GUI thread (the prompt converts the
+  image of a closed document).
+- Lessons: a `KisMainWindow` cannot be created under `KISTEST_MAIN`
+  (`queryExtendedModifiers()` casts `qApp` to `KisApplication`). In a
+  response file for the mingw linker, write paths with forward slashes;
+  backslashes are escapes.

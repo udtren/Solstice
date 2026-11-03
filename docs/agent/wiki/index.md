@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-02
+updated: 2026-11-03
 ---
 
 # Agent wiki
@@ -153,6 +153,10 @@ Document ownership and lifecycle are defined in
   eats the next mouse press and blocks mouse input until proximity leaves;
   modifiers are resynced from the physical keyboard; modal dialogs block a
   serialized call queue; some combo boxes act only on `activated`.
+- [Closing a window under its modal dialog](pitfalls/closing-under-a-modal-dialog.md):
+  closing a main window deletes a dialog still in `exec()` on the stack
+  (heap corruption); Qt blocks user input but not code or a second window,
+  so `KisPart::closeSession()` refuses while a modal dialog is open.
 - [Closing on press moves the next tab under the cursor](pitfalls/close-on-press-shifts-tabs.md):
   `QMdiArea` closes a document tab on middle press, so a repeated press
   closed the next tab too; act on release over the same item.

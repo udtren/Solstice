@@ -219,6 +219,9 @@ target_link_libraries(KisBrushStrokePreviewTest kritamypaintop_static)
 kis_add_test(KisLayerThumbnailCacheTest.cpp
     TEST_NAME KisLayerThumbnailCacheTest LINK_LIBRARIES kritaui kritatestsdk)
 
+kis_add_test(KisPartCloseSessionTest.cpp
+    TEST_NAME KisPartCloseSessionTest LINK_LIBRARIES kritaui kritatestsdk)
+
 if(HAVE_KRITA_GPU_ENGINE AND WIN32)
     kis_add_tests(KisGpuEngineUiTest.cpp
         LINK_LIBRARIES kritaui kritatestsdk)

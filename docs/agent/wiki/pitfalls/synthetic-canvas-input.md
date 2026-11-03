@@ -1,6 +1,6 @@
 ---
 type: pitfall
-updated: 2026-10-28
+updated: 2026-11-03
 sources:
   - libs/ui/input/kis_input_manager.cpp (KisInputManager::eventFilter, eventFilterImpl, TabletPress/TabletRelease cases)
   - libs/ui/input/kis_input_manager_p.cpp (EventEater::eventFilter, ProximityNotifier::eventFilter, CanvasSwitcher::addCanvas, allowMouseEvents, fixShortcutMatcherModifiersState)
@@ -192,7 +192,9 @@ dialog in a development build without `HIDE_SAFE_ASSERTS`. After one of them
 every call times out. Keep them out of a test process instead: the profile
 setting `Solstice/GpuEngineConvertDocuments=2` (Keep) or
 `KRITA_GPU_PROJECTION=0`, and `KRITA_NO_ASSERT_MSG=1`, which logs safe
-asserts instead of asking.
+asserts instead of asking. A `file_quit` with such a dialog open is refused
+(since 2026-11-03; before, it crashed): see
+[Closing a window under its modal dialog](closing-under-a-modal-dialog.md).
 
 ## setCurrentIndex() is not a user's choice
 
