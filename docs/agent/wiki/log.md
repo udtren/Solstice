@@ -2528,3 +2528,34 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   profile's `resources` folder, and `PYTHONPATH` is not read there
   (`Python::setPath()`). This check replaced the one file in `_install` for
   the run and restored it, comparing SHA-256.
+
+## 2026-11-03 ingest: Channels to Layers on an extreme aspect ratio
+
+- Fixed the `Script error` on a document more than 320 times taller than
+  wide, or the reverse. `openDialogOptions()` rounded the preview rectangle
+  to 0 pixels on one side (`OUTPUT_PREVIEW_MAXSIZE` is 320), so `scaled()`
+  gave a null image and `bits()` returned `None`, on any layer. Each side
+  now stays at least 1 pixel. `max(1, n)` changes nothing where `n` was
+  already 1 or more, so ordinary documents take the old sizes.
+- An empty layer on such a document also needs the `toQImage()` fix of
+  udtren/Solstice#59, which was still open when this was checked. Without
+  it the empty cases keep the same error. Neither change covers the other.
+- Checked through test control on Windows 11 25H2 (Qt 6.8, scratch profile)
+  in three runs: `main`, this change alone, and this change with the #59
+  hunk. Filled layers in all six modes at 1x1000 and 1000x1, and filled
+  layers at 1x321 and 321x1, raise the error on `main` and open with this
+  change; OK then makes the group and its layers, with no error. Empty
+  layers at both shapes open with the #59 hunk and stay empty; `buildPreview()`
+  needed no change for the 1x320 and 320x1 documents. A brush stroke on
+  1000x1, which leaves pixels outside the image (y -5, height 9), opens too.
+  Every layer hash and the image hash match `main` at 800x600 (filled in
+  all six modes, partly painted), at 600x800 (filled, partly painted), and
+  at 1x320 and 320x1, the last shapes that already worked.
+- Found, not changed here: on a tall document the column labels are clipped
+  or disappear, because their fixed width is the preview width plus 4
+  pixels (5 pixels at 1x1000). This is cosmetic, and any tall document with
+  a thin preview shows it to some degree. Seen in a screenshot of the
+  dialog only at 1x1000.
+- Lesson: `_install` is one place shared by every session, and only one
+  Solstice can run at a time. Two sessions testing at once need to agree on
+  who holds it; here a lock folder in the shared notes folder did that.
