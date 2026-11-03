@@ -928,6 +928,12 @@ class ChannelsToLayers(Extension):
         """
         srcRect = layerNode.bounds()
 
+        if srcRect.isEmpty():
+            # an empty layer has empty bounds, and a QImage made from no pixels is null
+            img = QImage(rect.width(), rect.height(), QImage.Format.Format_ARGB32)
+            img.fill(Qt.GlobalColor.transparent)
+            return img
+
         if len(layerNode.childNodes()) == 0:
             projectionMode = False
         else:
@@ -1118,13 +1124,14 @@ class ChannelsToLayers(Extension):
         imageRatio = self.__sourceDocument.width() / self.__sourceDocument.height()
         rect = QRect(0, 0, OUTPUT_PREVIEW_MAXSIZE, OUTPUT_PREVIEW_MAXSIZE)
 
-        # always ensure that final preview width and/or height is lower or equal than OUTPUT_PREVIEW_MAXSIZE
+        # always ensure that final preview width and/or height is lower or equal than OUTPUT_PREVIEW_MAXSIZE,
+        # and never rounds down to 0 on an extreme aspect ratio: a 0 pixel preview image is null
         if imageRatio < 1:
             # width < height
-            rect.setWidth(int(imageRatio * OUTPUT_PREVIEW_MAXSIZE))
+            rect.setWidth(max(1, int(imageRatio * OUTPUT_PREVIEW_MAXSIZE)))
         else:
             # width >= height
-            rect.setHeight(int(OUTPUT_PREVIEW_MAXSIZE / imageRatio))
+            rect.setHeight(max(1, int(OUTPUT_PREVIEW_MAXSIZE / imageRatio)))
 
         imgThumbSrc = self.toQImage(self.__sourceLayer, rect)
 
