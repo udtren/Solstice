@@ -2501,3 +2501,64 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   use `ui_click`, or a modal one blocks `file_quit`. A release package's
   top-level `solstice.exe` starts `bin\solstice.exe` and returns at once
   with 0, so a crash check has to watch the child.
+
+## 2026-11-03 ingest: Channels to Layers splits channels again
+
+- Fixed the plugin not splitting channels, found during
+  udtren/Solstice#59. It built its layers in a group that was not in the
+  document yet. No update reaches a node outside the image's
+  graph, so the fill layer's projection stayed empty, and Merge Down
+  returned the layer below unchanged with no error. It was not a timing
+  problem: 0.4 s of events before the merge changed nothing, and neither
+  did attaching the group just before it. Any layer with its own projection
+  behaves this way; a paint layer with a transparency mask does too. See
+  [Nodes outside the image never render](pitfalls/nodes-outside-the-image.md).
+- Decided: this is a plugin defect, not a core or libkis one. Nodes render
+  when they are in the graph, and the `createFillLayer()` example adds the
+  node first. `process()` now attaches the group before building in it.
+  libkis still gives no error for `Node.mergeDown()` outside the image;
+  making it fail would change a public call and was not done.
+- Attaching first needed two more changes. The group now goes next to the
+  source in the source's parent: `rootNode()` refused a source inside a
+  group, and the whole output was lost. A merge now keeps the alpha of the
+  layer below (`setInheritAlpha(True)`): the empty fill had hidden that a
+  working one makes transparent pixels opaque, which gave a solid white or
+  black group on a layer with a transparent background.
+- All six modes were wrong, not only RGB Colors: the color layers kept the
+  original, CMYK's three were identical, and the grayscale layers all came
+  out as one value. Solstice 0.2.0-beta.8 and 0.4.0 give the same output
+  through `kritarunner`. No Krita release was run: none is installed here.
+  Krita 5.2.6, 5.2.14 and `master` still attach the group last.
+- Checked through test control on Windows 11 25H2 (Qt 6.8.0, `_install` at
+  `40f129a3df`, scratch profile, the plugin file swapped in and restored,
+  SHA-256 compared), driving the dialog, on an 800x600 layer of `#c83214`
+  and on a PNG with six opaque colors, a transparent patch and one of alpha
+  128, in all six modes. Before the fix all 12 runs fail; after it all 12
+  pass: each layer holds its channel within 3 per channel, transparent
+  stays transparent, alpha 128 stays 128 on each layer. In RGB, CMY and CMYK
+  the group gives the original within 3. The Red, Green and Blue previews
+  show the channels; RGB and CMYK screenshots were read. Undo goes back to
+  the source pixels. Original layer set to Remove passes in two modes.
+  Combined with udtren/Solstice#59, an empty layer stays empty in all six
+  modes. A source inside a group passes through `kritarunner` only.
+- `process()` on a 6000x4000 layer through `kritarunner`, three runs each:
+  RGB Colors from about 0.3 s to 1.1 s, CMYK Colors from about 1.0 s to
+  2.5 s. The merges now do real work and the attached group recomposes.
+- Limits, by design of the layer stack and not changed:
+  - The grayscale modes do not rebuild the original. Their layers hold
+    levels, and `add` or `multiply` of grays gives another gray.
+  - A partly transparent pixel is not rebuilt exactly. Three or four layers
+    of alpha 128 stack to 224 or 240, and in CMYK the `divide` step applies
+    at partial strength (at alpha 128, 228 instead of 255).
+  - Undo leaves the source hidden: `setVisible()` is not an undo step. Seen
+    with and without this change.
+- Found, not changed: a test Solstice exited with `0xC0000374` (heap
+  corruption) in two runs, with and without the fix, after the GPU
+  conversion prompt had stayed open and `document_close` and `file_quit`
+  were sent. Not investigated. The prompt appeared because a `[Solstice]`
+  group does not set `Solstice/GpuEngineConvertDocuments`; written at the
+  top of `kritarc` and under `[General]` together, it does.
+- Lessons: `ui_query` lists only named widgets unless `includeUnnamed` is
+  set, so a Python dialog looks absent while it is open; compare with
+  `EnumWindows`. Reading `projection()` in a probe can change what a later
+  step sees, because the first read clones `original()`.
