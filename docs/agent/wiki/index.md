@@ -164,6 +164,9 @@ Document ownership and lifecycle are defined in
   updates are cropped to the image bounds, so pixels a group or filter
   layer copied from another document left outside the canvas stayed in
   its thumbnail.
+- [Nodes outside the image never render](pitfalls/nodes-outside-the-image.md):
+  no update reaches a node that is not in the image's graph, so a script's
+  fill layer stays empty there and Merge Down silently does nothing.
 - [A node's color space can be GrayA](pitfalls/node-color-space-of-selections.md):
   filter and fill layers and masks report `nodeColorSpace()` as GrayA, which
   turns `KisVisualColorSelector` into one lightness bar (HueSVC).

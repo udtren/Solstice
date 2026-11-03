@@ -2502,6 +2502,125 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   top-level `solstice.exe` starts `bin\solstice.exe` and returns at once
   with 0, so a crash check has to watch the child.
 
+## 2026-11-03 ingest: Channels to Layers on an empty layer
+
+- Fixed the `Script error` from the entry above. `Node.bounds()` is empty
+  for an empty layer, so `toQImage()` made a 0x0 `QImage`; `scaled()` keeps
+  it null and `bits()` returns `None`. An empty source now gives a
+  transparent image of the preview size. Layers with pixels take the old
+  path.
+- Checked through test control on Windows 11 25H2 (Qt 6.8.0, `_install` at
+  `40f129a3df`, scratch profile). Before the fix: the error on an empty
+  layer. After it: the dialog opens with a blank Original preview, and OK
+  makes the group and its three layers with no error. On a filled and on a
+  partly painted layer, every layer hash and the image hash match the run
+  before the fix.
+- Found, not changed here (both also happen without this fix):
+  - A document more than 320 times taller than wide, or the reverse, raises
+    the same error on any layer: `openDialogOptions()` rounds the preview
+    rectangle to 0 pixels. Seen at 1x1000, empty and filled.
+  - RGB Colors does not split the channels: on a layer filled with
+    `#c83214`, the Red, Green and Blue layers all keep `#c83214`, in the
+    preview and in the document, so the group adds up to `#ff963c`. Cause
+    not investigated; checked only on that fill in RGB Colors mode.
+- Lesson: a scratch profile cannot override an installed Python plugin on
+  Windows. `pythonscripts` resolves through `QStandardPaths`, not the
+  profile's `resources` folder, and `PYTHONPATH` is not read there
+  (`Python::setPath()`). This check replaced the one file in `_install` for
+  the run and restored it, comparing SHA-256.
+
+## 2026-11-03 ingest: Channels to Layers on an extreme aspect ratio
+
+- Fixed the `Script error` on a document more than 320 times taller than
+  wide, or the reverse. `openDialogOptions()` rounded the preview rectangle
+  to 0 pixels on one side (`OUTPUT_PREVIEW_MAXSIZE` is 320), so `scaled()`
+  gave a null image and `bits()` returned `None`, on any layer. Each side
+  now stays at least 1 pixel. `max(1, n)` changes nothing where `n` was
+  already 1 or more, so ordinary documents take the old sizes.
+- An empty layer on such a document also needs the `toQImage()` fix of
+  udtren/Solstice#59, which was still open when this was checked. Without
+  it the empty cases keep the same error. Neither change covers the other.
+- Checked through test control on Windows 11 25H2 (Qt 6.8, scratch profile)
+  in three runs: `main`, this change alone, and this change with the #59
+  hunk. Filled layers in all six modes at 1x1000 and 1000x1, and filled
+  layers at 1x321 and 321x1, raise the error on `main` and open with this
+  change; OK then makes the group and its layers, with no error. Empty
+  layers at both shapes open with the #59 hunk and stay empty; `buildPreview()`
+  needed no change for the 1x320 and 320x1 documents. A brush stroke on
+  1000x1, which leaves pixels outside the image (y -5, height 9), opens too.
+  Every layer hash and the image hash match `main` at 800x600 (filled in
+  all six modes, partly painted), at 600x800 (filled, partly painted), and
+  at 1x320 and 320x1, the last shapes that already worked.
+- Found, not changed here: on a tall document the column labels are clipped
+  or disappear, because their fixed width is the preview width plus 4
+  pixels (5 pixels at 1x1000). This is cosmetic, and any tall document with
+  a thin preview shows it to some degree. Seen in a screenshot of the
+  dialog only at 1x1000.
+- Lesson: `_install` is one place shared by every session, and only one
+  Solstice can run at a time. Two sessions testing at once need to agree on
+  who holds it; here a lock folder in the shared notes folder did that.
+
+## 2026-11-03 ingest: Channels to Layers splits channels again
+
+- Fixed the plugin not splitting channels, found during
+  udtren/Solstice#59. It built its layers in a group that was not in the
+  document yet. No update reaches a node outside the image's
+  graph, so the fill layer's projection stayed empty, and Merge Down
+  returned the layer below unchanged with no error. It was not a timing
+  problem: 0.4 s of events before the merge changed nothing, and neither
+  did attaching the group just before it. Any layer with its own projection
+  behaves this way; a paint layer with a transparency mask does too. See
+  [Nodes outside the image never render](pitfalls/nodes-outside-the-image.md).
+- Decided: this is a plugin defect, not a core or libkis one. Nodes render
+  when they are in the graph, and the `createFillLayer()` example adds the
+  node first. `process()` now attaches the group before building in it.
+  libkis still gives no error for `Node.mergeDown()` outside the image;
+  making it fail would change a public call and was not done.
+- Attaching first needed two more changes. The group now goes next to the
+  source in the source's parent: `rootNode()` refused a source inside a
+  group, and the whole output was lost. A merge now keeps the alpha of the
+  layer below (`setInheritAlpha(True)`): the empty fill had hidden that a
+  working one makes transparent pixels opaque, which gave a solid white or
+  black group on a layer with a transparent background.
+- All six modes were wrong, not only RGB Colors: the color layers kept the
+  original, CMYK's three were identical, and the grayscale layers all came
+  out as one value. Solstice 0.2.0-beta.8 and 0.4.0 give the same output
+  through `kritarunner`. No Krita release was run: none is installed here.
+  Krita 5.2.6, 5.2.14 and `master` still attach the group last.
+- Checked through test control on Windows 11 25H2 (Qt 6.8.0, `_install` at
+  `40f129a3df`, scratch profile, the plugin file swapped in and restored,
+  SHA-256 compared), driving the dialog, on an 800x600 layer of `#c83214`
+  and on a PNG with six opaque colors, a transparent patch and one of alpha
+  128, in all six modes. Before the fix all 12 runs fail; after it all 12
+  pass: each layer holds its channel within 3 per channel, transparent
+  stays transparent, alpha 128 stays 128 on each layer. In RGB, CMY and CMYK
+  the group gives the original within 3. The Red, Green and Blue previews
+  show the channels; RGB and CMYK screenshots were read. Undo goes back to
+  the source pixels. Original layer set to Remove passes in two modes.
+  Combined with udtren/Solstice#59, an empty layer stays empty in all six
+  modes. A source inside a group passes through `kritarunner` only.
+- `process()` on a 6000x4000 layer through `kritarunner`, three runs each:
+  RGB Colors from about 0.3 s to 1.1 s, CMYK Colors from about 1.0 s to
+  2.5 s. The merges now do real work and the attached group recomposes.
+- Limits, by design of the layer stack and not changed:
+  - The grayscale modes do not rebuild the original. Their layers hold
+    levels, and `add` or `multiply` of grays gives another gray.
+  - A partly transparent pixel is not rebuilt exactly. Three or four layers
+    of alpha 128 stack to 224 or 240, and in CMYK the `divide` step applies
+    at partial strength (at alpha 128, 228 instead of 255).
+  - Undo leaves the source hidden: `setVisible()` is not an undo step. Seen
+    with and without this change.
+- Found, not changed: a test Solstice exited with `0xC0000374` (heap
+  corruption) in two runs, with and without the fix, after the GPU
+  conversion prompt had stayed open and `document_close` and `file_quit`
+  were sent. Not investigated. The prompt appeared because a `[Solstice]`
+  group does not set `Solstice/GpuEngineConvertDocuments`; written at the
+  top of `kritarc` and under `[General]` together, it does.
+- Lessons: `ui_query` lists only named widgets unless `includeUnnamed` is
+  set, so a Python dialog looks absent while it is open; compare with
+  `EnumWindows`. Reading `projection()` in a probe can change what a later
+  step sees, because the first read clones `original()`.
+
 ## 2026-11-03 fix: quit while a modal dialog is open
 
 - Cause of the `0xC0000374` exit seen while verifying Channels to Layers:
