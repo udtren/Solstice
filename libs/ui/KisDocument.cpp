@@ -398,6 +398,7 @@ public:
 
     QColor globalAssistantsColor;
     QList<KoColor> colorHistory;
+    QByteArray solsticeFastExportData;
 
     KisGridConfig gridConfig;
 
@@ -539,7 +540,8 @@ void KisDocument::Private::copyFromImpl(const Private &rhs, KisDocument *q, KisD
     // XXX: the display properties will be shared between different snapshots
     globalAssistantsColor = rhs.globalAssistantsColor;
     batchMode = rhs.batchMode;
-
+    // Saving works on a clone, which must keep the Fast Image Export settings.
+    solsticeFastExportData = rhs.solsticeFastExportData;
 
     if (rhs.linkedResourceStorage) {
         linkedResourceStorage = rhs.linkedResourceStorage->clone();
@@ -2910,4 +2912,14 @@ QRectF KisDocument::documentBounds() const
 void KisDocument::setColorHistory(const QList<KoColor> &colors)
 {
     d->colorHistory = colors;
+}
+
+QByteArray KisDocument::solsticeFastExportData() const
+{
+    return d->solsticeFastExportData;
+}
+
+void KisDocument::setSolsticeFastExportData(const QByteArray &data)
+{
+    d->solsticeFastExportData = data;
 }

@@ -21,6 +21,10 @@ and dialogs are owned by each `KisViewManager`.
   `plugins/dockers/layerdocker/WdgLayerBox.ui`
 - Action metadata: `krita/kritamenu.action`
 - Original Python reference: `<krita-plugin-root>/krita-lazy-tools/lazy_tools/`
+- Saved exports (2026-11-03): `libs/ui/lazytools/KisLazyToolsFastExportPresets.*`;
+  storage hooks in `libs/ui/KisDocument.*` and `plugins/impex/libkra/`
+  (`kis_kra_tags.h`, `kis_kra_saver.*`, `kis_kra_loader.*`,
+  `kra_converter.cpp`); scenario `libs/ui/tests/scenarios/lazy-fast-export-presets.json`.
 - Released in [0.5.1](wiki/history/release-0.5.1.md) (PR #33): Fast Image
   Export registered folders, Name, Export Region and icon, and the Rename
   Layer Presets editor. Remembered format options followed in
@@ -187,6 +191,70 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
   On a first export nothing is saved, so the PNG options dialog falls back
   to its own values; `forceSRGB` falls back to on, matching the exporter
   (fixed 2026-10-30, it showed off and saved that).
+- Saved exports (2026-11-03, user decisions in the proposal of the same day):
+  `KisLazyToolsFastExportPresets.*` owns the model (`Preset`: id, name,
+  enabled, format, PNG compression/alpha, JPEG quality, `formatOptions` XML,
+  destination same folder/folder, folder with `folderRelative`, name rule
+  document/fixed, area whole image/selection), the XML codec, path
+  resolution and `run()`. Storage:
+  - `KisDocument::solsticeFastExportData()` holds the XML; `copyFromImpl()`
+    copies it because saving and snapshots work on clones.
+  - The `.kra` keeps it in the root entry `solstice/fastexport.xml`
+    (`SOLSTICE_FAST_EXPORT_PATH`, `KisKraSaver::saveSolsticeFastExport()`,
+    `KisKraLoader::loadSolsticeFastExport()`, called from `KraConverter`),
+    not in `maindoc.xml`. No presets, no entry: such files are byte-for-byte
+    what the format was before. Krita and older Solstice ignore the entry
+    and drop it on save (compatibility contract approved by the user).
+  - XML root `<fastExport version="1">`, one `<preset>` per export with
+    attributes and an optional `<formatOptions>` text child. `fromXml()`
+    ignores unknown elements and attributes, drops presets whose format is
+    not `png`/`jpg`, regenerates missing or duplicate ids, clamps numbers and
+    treats unreadable XML as no presets.
+  - `canStore()`: unsaved documents and `.kra`/`.krz` paths. `setPresets()`
+    stores the XML, does nothing when it is unchanged, and marks storable
+    documents modified through `KisImage::setModifiedWithoutUndo()` (as
+    Layer Comps do); never an undo step. Other formats keep the presets for
+    the session only and are not marked.
+- Saved exports run (`KisLazyToolsFastExportPresets::run()`): unnamed, null,
+  preset-less and (for `Which::Checked`) unchecked documents are reported per
+  document; a preset whose folder or fixed name does not resolve is reported
+  per preset. Before writing, output paths are compared across the whole run
+  (`QDir::cleanPath`, case-insensitive on Windows); any shared path fills
+  `conflicts` and nothing is written. Each document is waited for once, then
+  whole-image presets export one `lockAndCreateSnapshot()` clone and
+  selection presets one `createRegionDocument()` result, both in batch mode,
+  so the format options dialog never appears and `ExportConfiguration-<mime>`
+  is not written back. The source document's batch mode, path, modified flag
+  and undo stack are untouched. Missing folders are not created; existing
+  files are replaced. `exportOptions(Preset)` starts from `formatOptions`
+  (or the remembered configuration when empty) and applies the preset's
+  compression/alpha or quality.
+- Saved exports UI: a group above the form in the existing dialog, bound to
+  the `presetDocument` passed to `KisLazyToolsFastExportDialog::create()`
+  (the view manager's document when the action fires; null disables the
+  group). Row 0, "One-off export (not saved)", is the previous dialog; its
+  form values are stashed while a preset is edited and restored on return.
+  Selecting a preset loads it into the form, and every form change writes it
+  back at once (an invalid name is not written). Edits read the document's
+  current list, change it by id and store it, and the list reloads when the
+  dialog is activated, so two open dialogs do not overwrite each other.
+  While a preset is selected, Export and Export Region are disabled, Area and
+  "Relative to the document" are enabled, and the "Choose a folder now"
+  destination is disabled. `readForm()` snapshots
+  `ExportConfiguration-<mime>` into `formatOptions` when a preset is created
+  or its format changes. Area and the relative check box are created after
+  the original widgets, so the existing combo boxes keep indexes 0-3 (Area
+  is 4) and `findChild<QCheckBox *>()` is still the alpha box. Export
+  Checked/All run the dialog's document, or every open document with "All
+  open documents", and close the dialog on success.
+- Actions `fast_image_export_run_all` and `fast_image_export_run_checked`
+  (`document-export` icon, no default shortcut) run the active document's
+  presets through `KisSolsticeLazyTools::runSavedExports()`; success shows a
+  floating message, conflicts and skips a warning.
+- `createRegionDocument()` (split from `exportRegion()`, 2026-11-03) builds
+  the masked, cropped region document with a given batch mode, or returns
+  null without a usable selection; `exportRegion()` still passes the source
+  document's batch mode.
 - Export execution keeps ordered `QPointer<KisDocument>` snapshots, skips null
   and unnamed documents, waits for each named document's image through the
   originating view manager, and calls `exportDocumentSync`. Source folder vs.
@@ -245,6 +313,17 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
 13. Export a PNG with Fast Image Export, check **Force convert to sRGB** in
     the PNG options dialog and press OK. Export again: the option must still
     be checked, and File > Export to PNG must show it checked too.
+14. Saved exports: in a `.kra`, add a PNG export to the document's folder and
+    a JPEG export to a folder with "Relative to the document" and a fixed
+    name; the title bar shows the document modified. Save, close, reopen:
+    both are listed with their settings. Uncheck one and use Run Checked
+    Saved Exports, then Run All Saved Exports, from shortcuts: no options
+    dialog, a canvas message, the right files. Add a Selection export and run
+    it with and without a selection. Give two exports the same output and
+    confirm nothing is written. Move the `.kra` together with the relative
+    folder and run again. Open the `.kra` in Krita, save, reopen in Solstice:
+    the exports are gone, the image is intact. In a PNG document the dialog
+    shows the session-only note and the document is not marked modified.
 
 Automated through [test control](test-control.md) scenarios (2026-10-27,
 Linux), as far as state decides them; run them with
@@ -254,6 +333,7 @@ Linux), as far as state decides them; run them with
 | --- | --- | --- |
 | 1 | `plugins/dockers/layerdocker/tests/scenarios/color-label-controls.json` | Labels go to the selected nodes only (a group, not its child; two selected layers); each choice of a visibility color toggles every matching layer, inside groups too |
 | 2 | `libs/ui/tests/scenarios/lazy-selection-masks.json` | Save, undo/redo, restore from the popup |
+| 14 (part) | `libs/ui/tests/scenarios/lazy-fast-export-presets.json` | Add two exports from the form (PNG, then JPEG by editing the second), Run All Saved Exports without a dialog, the PNG's pixels and the JPEG's size, a PNG document left unmodified |
 | 4, 11, 12 (part) | `libs/ui/tests/scenarios/lazy-fast-export.json` | Active document, same-folder destination, typed name, PNG and JPEG, Export Region against the selected area, the invalid-name and no-selection warnings, unchanged file name and modified state |
 | 5 (part) | `libs/ui/tests/scenarios/lazy-foreground-slots.json` | The nine actions with the default colors |
 | 8 (part) | `libs/ui/tests/scenarios/lazy-rename-layer.json` | Manual name and color, Save, a saved preset applied to another layer, undo of the rename |
@@ -262,7 +342,11 @@ Still manual: shortcuts and restarts (3), all-documents scope, configured and
 chosen folders, and unnamed documents (4), slots changed in Preferences (5),
 the hotkey (6), menus (7), screen edges and child layers (8), registered
 folders (9), the Preferences page (10), the Name field with all documents
-(11), the icon (12) and the format options dialog (13). Observed while
+(11), the icon (12), the format options dialog (13), and for saved exports
+(14) the `.kra` reopen, list check boxes and renaming, Run Checked,
+selection exports, conflicts, moved folders and Krita round trips (the
+test control endpoint can neither save a `.kra` nor edit list items; the
+unit tests cover these). Observed while
 writing the scenarios, unchanged: the color label set by Rename Alternative
 is not part of the undo step (undo restores only the name), restoring a
 saved selection adds an undo step without a name, and creating a mask makes
@@ -342,6 +426,25 @@ to the source, an unchanged source document and a failed path;
 no-selection warning and a named export from the dialog. Offscreen QtTest
 passed 20/20. The UI DLL was installed with matching hashes and
 `kritamenu.action` was copied to `_install/share/krita/actions`.
+
+Saved exports (2026-11-03): `presetXml` covers the round trip of every field
+(Unicode name, format options text), empty data, unreadable and foreign XML,
+a newer version with unknown parts, dropped formats, regenerated ids and
+clamped numbers; `presetPaths` the same-folder, absolute and relative
+folders (including a moved document), fixed names and invalid cases;
+`presetOptions` the remembered and preset format options;
+`presetDocumentStorage` the modified flag without an undo step, no change for
+an unchanged list, `clone()`, a real `.kra` round trip with and without the
+`solstice/fastexport.xml` entry, and a PNG document that is not marked;
+`presetRun` checked and all runs on a document out of batch mode (a timer
+fails the test if any modal dialog appears), a selection export with and
+without a selection, conflicts writing nothing, and every skip reason;
+`presetDialog` Add from the one-off form, editing, the invalid name, rename
+and check state in the list, Duplicate, Move, Remove, returning to the
+one-off settings, Export Checked and a dialog without a document. The
+existing dialog tests now expect five combo boxes. Offscreen QtTest passed
+27/27; `kritaui` and `kritalibkra` were installed with matching
+build/install SHA-256 hashes and `kritamenu.action` with the two actions.
 
 Remembered format options (2026-10-24): `exportOptionsKeepSavedFormatOptions`
 covers PNG and JPEG with and without a saved configuration: saved keys such as

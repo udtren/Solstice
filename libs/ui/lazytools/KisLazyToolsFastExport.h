@@ -81,6 +81,10 @@ KRITAUI_EXPORT RegionResult exportRegion(KisDocument *document,
                                          const Settings &settings,
                                          const WaitForImage &wait,
                                          const QString &baseName = QString());
+// Builds the temporary document exportRegion() writes: the projection inside
+// the global selection, masked and cropped. The caller has waited for the
+// image. Returns null when there is no selection or it is empty.
+KRITAUI_EXPORT KisDocument *createRegionDocument(KisDocument *document, bool batchMode);
 } // namespace KisLazyToolsFastExport
 
 #endif

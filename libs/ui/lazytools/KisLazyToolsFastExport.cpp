@@ -178,6 +178,27 @@ KisLazyToolsFastExport::RegionResult KisLazyToolsFastExport::exportRegion(KisDoc
     if (!sourceImage || !wait(sourceImage)) {
         return RegionResult::Failed;
     }
+    // Behave like run(): format options and warnings appear unless the source
+    // document is in batch mode.
+    QScopedPointer<KisDocument> regionDocument(createRegionDocument(document, document->fileBatchMode()));
+    if (!regionDocument) {
+        return RegionResult::NoSelection;
+    }
+    const QString path = outputPath(document->localFilePath(), extension, outputFolder, baseName);
+    return regionDocument->exportDocumentSync(path, exportMimeType(extension), exportOptions(extension, settings))
+        ? RegionResult::Exported
+        : RegionResult::Failed;
+}
+
+KisDocument *KisLazyToolsFastExport::createRegionDocument(KisDocument *document, bool batchMode)
+{
+    KisImageSP sourceImage;
+    if (document) {
+        sourceImage = document->image();
+    }
+    if (!sourceImage) {
+        return nullptr;
+    }
 
     // Same masking and cropping as KisMainWindow::slotExportRegion(), without
     // its fallback to the active layer: Fast Image Export needs a selection.
@@ -187,12 +208,12 @@ KisLazyToolsFastExport::RegionResult KisLazyToolsFastExport::exportRegion(KisDoc
         KisImageBarrierLock lock(sourceImage);
         KisSelectionSP selection = sourceImage->globalSelection();
         if (!selection) {
-            return RegionResult::NoSelection;
+            return nullptr;
         }
         KisPixelSelectionSP mask = selection->projection();
         bounds = mask->selectedExactRect() & sourceImage->bounds();
         if (bounds.isEmpty()) {
-            return RegionResult::NoSelection;
+            return nullptr;
         }
 
         device = new KisPaintDevice(*sourceImage->projection());
@@ -210,10 +231,8 @@ KisLazyToolsFastExport::RegionResult KisLazyToolsFastExport::exportRegion(KisDoc
         device->moveTo(device->offset() - bounds.topLeft());
     }
 
-    QScopedPointer<KisDocument> regionDocument(KisPart::instance()->createDocument());
-    // Behave like run(): format options and warnings appear unless the source
-    // document is in batch mode.
-    regionDocument->setFileBatchMode(document->fileBatchMode());
+    KisDocument *regionDocument = KisPart::instance()->createDocument();
+    regionDocument->setFileBatchMode(batchMode);
     KisImageSP regionImage = new KisImage(regionDocument->createUndoStore(),
                                           bounds.width(),
                                           bounds.height(),
@@ -226,9 +245,5 @@ KisLazyToolsFastExport::RegionResult KisLazyToolsFastExport::exportRegion(KisDoc
     regionDocument->documentInfo()->setAboutInfo("title", document->caption());
     regionImage->initialRefreshGraph();
     regionImage->waitForDone();
-
-    const QString path = outputPath(document->localFilePath(), extension, outputFolder, baseName);
-    return regionDocument->exportDocumentSync(path, exportMimeType(extension), exportOptions(extension, settings))
-        ? RegionResult::Exported
-        : RegionResult::Failed;
+    return regionDocument;
 }

@@ -671,6 +671,17 @@ void KisKraLoader::loadAudio(KoStore *store, KisDocument *kisDoc)
     }
 }
 
+void KisKraLoader::loadSolsticeFastExport(KoStore *store, KisDocument *doc)
+{
+    // Older files have no entry. The settings are read as they are; their
+    // owner (KisLazyToolsFastExportPresets) checks the content.
+    if (!store->hasFile(SOLSTICE_FAST_EXPORT_PATH) || !store->open(SOLSTICE_FAST_EXPORT_PATH)) {
+        return;
+    }
+    doc->setSolsticeFastExportData(store->read(store->size()));
+    store->close();
+}
+
 void KisKraLoader::backCompat_loadAudio(const QDomElement& elem, KisDocument *document)
 {
     QDomDocument dom;
