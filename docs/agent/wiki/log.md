@@ -2650,3 +2650,33 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   (`queryExtendedModifiers()` casts `qApp` to `KisApplication`). In a
   response file for the mingw linker, write paths with forward slashes;
   backslashes are escapes.
+
+## 2026-11-03 feature: Fast Image Export saved exports
+
+- The user approved every recommendation of the saved-exports proposal; the
+  storage choice and its reasons are in
+  [the decision](decisions/fast-export-saved-exports-in-kra.md), the
+  behavior in [Lazy Tools](../lazy-tools.md).
+- Saving and snapshots work on `KisDocument` clones, so document data that
+  must reach the `.kra` needs a line in `Private::copyFromImpl()`;
+  `presetDocumentStorage` checks `clone()` for this one.
+- `KisDocument::lockAndCreateSnapshot()` plus `setFileBatchMode(true)` on
+  the clone exports without the format options dialog and without writing
+  `ExportConfiguration-<mime>`, while the source document keeps its batch
+  mode. `presetRun` runs on a non-batch document with a timer that fails on
+  any modal dialog.
+- On Windows, `run_scenarios.py --launch` stops at the first-start question
+  "Krita settings and resources were found" when the machine has a Krita
+  profile: the scratch profile has no `SOLSTICE_PROFILE` marker. The user
+  answered No once; the rerun used a wrapper that pre-created the profile
+  folders and the `ready` marker. The runner itself is unchanged.
+- Under `--launch`, `query_pixels` right after `document_open` can report a
+  busy image; the new scenario waits with `wait_idle` after each open. The
+  existing `lazy-fast-export` scenario failed that way at step 45 in the
+  same run.
+- Running the translation update also marked seven `KisAnimCurvesDocker.cpp`
+  strings obsolete: their source was removed on `main` earlier without a
+  catalog refresh.
+- Lesson: in this Git Bash, quoted here-documents fed to Python still turned
+  `\n` into a real newline in two edits; check C++ string literals and
+  catalog keys written that way, or use the Edit tool.

@@ -5,6 +5,7 @@
 
 #include "lazytools/KisLazyToolsFastExport.h"
 #include "lazytools/KisLazyToolsFastExportDialog.h"
+#include "lazytools/KisLazyToolsFastExportPresets.h"
 #include "lazytools/KisLazyToolsRenameDialog.h"
 #include "lazytools/KisLazyToolsRenamePresets.h"
 
@@ -16,6 +17,7 @@
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPushButton>
@@ -26,11 +28,14 @@
 #include <kconfiggroup.h>
 #include <klocalizedstring.h>
 #include <KoColorSpaceRegistry.h>
+#include <KoStore.h>
+#include <kundo2stack.h>
 #include "KisDocument.h"
 #include "KisPart.h"
 #include "kis_config.h"
 #include "kis_paint_layer.h"
 #include "kis_paint_device.h"
+#include "kis_properties_configuration.h"
 #include "kis_default_bounds.h"
 #include "kis_selection.h"
 #include "kis_undo_adapter.h"
@@ -42,6 +47,7 @@ namespace
 {
 namespace Presets = KisLazyToolsRenamePresets;
 namespace Export = KisLazyToolsFastExport;
+namespace Saved = KisLazyToolsFastExportPresets;
 
 bool write(const QString &path, const QByteArray &data)
 {
@@ -304,7 +310,8 @@ private Q_SLOTS:
         QCOMPARE(dialog->parentWidget(), &parent);
         QVERIFY(dialog->testAttribute(Qt::WA_DeleteOnClose));
         const auto combos = dialog->findChildren<QComboBox *>();
-        QCOMPARE(combos.size(), 4);
+        // Format, documents, destination, registered folder, then area.
+        QCOMPARE(combos.size(), 5);
         QCOMPARE(combos[0]->currentData().toString(), QString("png"));
         combos[0]->setCurrentIndex(1);
         combos[1]->setCurrentIndex(all ? 1 : 0);
@@ -435,7 +442,7 @@ private Q_SLOTS:
         };
 
         QPointer<QDialog> empty = KisLazyToolsFastExportDialog::create(&parent, documents, wait);
-        QCOMPARE(empty->findChildren<QComboBox *>().size(), 4);
+        QCOMPARE(empty->findChildren<QComboBox *>().size(), 5);
         QVERIFY(!empty->findChildren<QComboBox *>()[3]->isEnabled());
         QVERIFY(button(empty, "Browse…")->isEnabled());
         QVERIFY(!button(empty, "Open in Explorer"));
@@ -756,6 +763,419 @@ private Q_SLOTS:
         });
         QCOMPARE(result.exported, 0);
         QCOMPARE(result.skipped, QStringList({named->caption()}));
+    }
+
+    void presetXml()
+    {
+        QCOMPARE(Saved::toXml({}), QByteArray());
+        QVERIFY(Saved::fromXml({}).isEmpty());
+        QVERIFY(Saved::fromXml("not xml").isEmpty());
+        QVERIFY(Saved::fromXml("<other><preset format=\"png\"/></other>").isEmpty());
+
+        Saved::Preset web = Saved::newPreset(QString::fromUtf8("Web \xe6\x9c\xac"));
+        web.enabled = false;
+        web.format = "jpg";
+        web.jpegQuality = 77;
+        web.formatOptions =
+            "<!DOCTYPE params>\n<params version=\"1\"><param name=\"progressive\" "
+            "type=\"bool\"><![CDATA[true]]></param></params>\n";
+        web.destination = Saved::Destination::Folder;
+        web.folder = "../web out";
+        web.folderRelative = true;
+        web.nameRule = Saved::NameRule::Fixed;
+        web.fixedName = "cover";
+        web.area = Saved::Area::Selection;
+        Saved::Preset png = Saved::newPreset("Godot");
+        png.pngCompression = 3;
+        png.pngAlpha = false;
+        QVERIFY(!web.id.isEmpty() && web.id != png.id);
+        const QByteArray data = Saved::toXml({web, png});
+        QCOMPARE(Saved::fromXml(data), QList<Saved::Preset>({web, png}));
+
+        // Newer or damaged data: unknown parts are ignored, unknown formats
+        // dropped, ids made unique and numbers clamped.
+        const auto read = Saved::fromXml(
+            "<fastExport version=\"7\"><future/>"
+            "<preset id=\"a\" name=\"One\" format=\"png\" pngCompression=\"42\" extra=\"x\"><more/></preset>"
+            "<preset id=\"a\" name=\"Two\" format=\"jpg\" jpegQuality=\"-5\"/>"
+            "<preset name=\"Three\" format=\"webp\"/>"
+            "<preset name=\"Four\" format=\"png\" enabled=\"0\"/></fastExport>");
+        QCOMPARE(read.size(), 3);
+        QCOMPARE(read[0].id, QString("a"));
+        QCOMPARE(read[0].pngCompression, 9);
+        QVERIFY(read[0].enabled);
+        QVERIFY(read[1].id != "a" && !read[1].id.isEmpty());
+        QCOMPARE(read[1].jpegQuality, 0);
+        QCOMPARE(read[2].name, QString("Four"));
+        QVERIFY(!read[2].enabled);
+        QVERIFY(!read[2].id.isEmpty());
+        QCOMPARE(read[2].destination, Saved::Destination::SameFolder);
+        QCOMPARE(read[2].nameRule, Saved::NameRule::DocumentName);
+        QCOMPARE(read[2].area, Saved::Area::WholeImage);
+    }
+
+    void presetPaths()
+    {
+        QTemporaryDir dir;
+        const QString source = dir.filePath("art/hero.v2.kra");
+        Saved::Preset preset = Saved::newPreset("p");
+        QCOMPARE(Saved::outputPath(preset, source), dir.filePath("art/hero.v2.png"));
+        QCOMPARE(Saved::outputPath(preset, {}), QString());
+
+        preset.destination = Saved::Destination::Folder;
+        QCOMPARE(Saved::outputPath(preset, source), QString());
+        preset.folder = dir.filePath("out");
+        preset.format = "jpg";
+        QCOMPARE(Saved::outputPath(preset, source), dir.filePath("out/hero.v2.jpg"));
+
+        preset.folderRelative = true;
+        preset.folder = Saved::storedFolder(dir.filePath("game/gfx"), true, source);
+        QCOMPARE(preset.folder, QString("../game/gfx"));
+        QCOMPARE(Saved::resolvedFolder(preset, source), dir.filePath("game/gfx"));
+        QCOMPARE(Saved::resolvedFolder(preset, {}), QString());
+        // The relative folder follows the document when both move.
+        QCOMPARE(Saved::resolvedFolder(preset, dir.filePath("moved/art/hero.kra")), dir.filePath("moved/game/gfx"));
+        QCOMPARE(Saved::storedFolder(dir.filePath("x"), false, source), dir.filePath("x"));
+        QCOMPARE(Saved::storedFolder(dir.filePath("x"), true, {}), dir.filePath("x"));
+
+        preset.nameRule = Saved::NameRule::Fixed;
+        preset.fixedName = "sprite.JPG";
+        QCOMPARE(Saved::outputPath(preset, source), dir.filePath("game/gfx/sprite.jpg"));
+        preset.fixedName = "bad/name";
+        QCOMPARE(Saved::outputPath(preset, source), QString());
+        preset.fixedName.clear();
+        QCOMPARE(Saved::outputPath(preset, source), QString());
+    }
+
+    void presetOptions()
+    {
+        auto root = KSharedConfig::openConfig()->group(QString());
+        root.writeEntry("ExportConfiguration-image/png",
+                        "<!DOCTYPE params>\n<params version=\"1\"><param name=\"forceSRGB\" "
+                        "type=\"bool\"><![CDATA[false]]></param></params>\n");
+        Saved::Preset preset = Saved::newPreset("p");
+        preset.pngCompression = 2;
+        preset.pngAlpha = false;
+        auto options = Saved::exportOptions(preset);
+        QCOMPARE(options->getInt("compression"), 2);
+        QCOMPARE(options->getBool("alpha"), false);
+        QCOMPARE(options->getBool("forceSRGB", true), false);
+
+        // The preset's own options win over the remembered ones.
+        preset.formatOptions =
+            "<!DOCTYPE params>\n<params version=\"1\"><param name=\"forceSRGB\" "
+            "type=\"bool\"><![CDATA[true]]></param></params>\n";
+        options = Saved::exportOptions(preset);
+        QCOMPARE(options->getBool("forceSRGB", false), true);
+        QCOMPARE(options->getInt("compression"), 2);
+        root.deleteEntry("ExportConfiguration-image/png");
+    }
+
+    void presetDocumentStorage()
+    {
+        QTemporaryDir dir;
+        const QString kra = dir.filePath("stored.kra");
+        QScopedPointer<KisDocument> doc(document(kra));
+        doc->setModified(false);
+        const int undoCount = doc->undoStack()->count();
+        QVERIFY(Saved::canStore(doc.data()));
+        Saved::Preset preset = Saved::newPreset("Godot");
+        preset.format = "jpg";
+        Saved::setPresets(doc.data(), {preset});
+        QTRY_VERIFY(doc->isModified());
+        QCOMPARE(doc->undoStack()->count(), undoCount);
+        QCOMPARE(Saved::presets(doc.data()), QList<Saved::Preset>({preset}));
+
+        // Saving works on a clone.
+        QScopedPointer<KisDocument> clone(doc->clone());
+        QCOMPARE(Saved::presets(clone.data()), QList<Saved::Preset>({preset}));
+
+        // An unchanged list does not mark the document modified.
+        doc->setModified(false);
+        Saved::setPresets(doc.data(), {preset});
+        QTest::qWait(50);
+        QVERIFY(!doc->isModified());
+
+        QVERIFY(doc->exportDocumentSync(kra, "application/x-krita"));
+        QScopedPointer<KisDocument> loaded(KisPart::instance()->createDocument());
+        loaded->setFileBatchMode(true);
+        QVERIFY(loaded->loadNativeFormat(kra));
+        QCOMPARE(Saved::presets(loaded.data()), QList<Saved::Preset>({preset}));
+        QVERIFY(!loaded->isModified());
+        {
+            QScopedPointer<KoStore> store(KoStore::createStore(kra, KoStore::Read));
+            QVERIFY(store && store->hasFile("solstice/fastexport.xml"));
+        }
+
+        // Without presets the file has no entry, like files saved before.
+        const QString plain = dir.filePath("plain.kra");
+        QScopedPointer<KisDocument> empty(document(plain));
+        QVERIFY(empty->exportDocumentSync(plain, "application/x-krita"));
+        {
+            QScopedPointer<KoStore> store(KoStore::createStore(plain, KoStore::Read));
+            QVERIFY(store && !store->hasFile("solstice/fastexport.xml"));
+        }
+        QScopedPointer<KisDocument> loadedPlain(KisPart::instance()->createDocument());
+        loadedPlain->setFileBatchMode(true);
+        QVERIFY(loadedPlain->loadNativeFormat(plain));
+        QVERIFY(Saved::presets(loadedPlain.data()).isEmpty());
+
+        // A PNG document keeps them only in memory, so it is not marked modified.
+        QScopedPointer<KisDocument> png(document(dir.filePath("flat.png")));
+        png->setModified(false);
+        QVERIFY(!Saved::canStore(png.data()));
+        Saved::setPresets(png.data(), {preset});
+        QTest::qWait(50);
+        QVERIFY(!png->isModified());
+        QCOMPARE(Saved::presets(png.data()).size(), 1);
+        QScopedPointer<KisDocument> unsaved(document({}));
+        QVERIFY(Saved::canStore(unsaved.data()));
+    }
+
+    void presetRun()
+    {
+        QTemporaryDir dir;
+        const QString source = dir.filePath("art/hero.kra");
+        QVERIFY(QDir().mkpath(dir.filePath("art")));
+        QVERIFY(QDir().mkpath(dir.filePath("game/gfx")));
+        QScopedPointer<KisDocument> doc(document(source));
+        // A document out of batch mode would show the format options dialog
+        // for every export; saved exports must not.
+        doc->setFileBatchMode(false);
+        doc->setModified(false);
+
+        Saved::Preset same = Saved::newPreset("Same");
+        Saved::Preset game = Saved::newPreset("Game");
+        game.format = "jpg";
+        game.destination = Saved::Destination::Folder;
+        game.folderRelative = true;
+        game.folder = "../game/gfx";
+        game.nameRule = Saved::NameRule::Fixed;
+        game.fixedName = "hero_web";
+        Saved::Preset crop = Saved::newPreset("Crop");
+        crop.area = Saved::Area::Selection;
+        crop.nameRule = Saved::NameRule::Fixed;
+        crop.fixedName = "crop";
+        crop.enabled = false;
+        doc->setSolsticeFastExportData(Saved::toXml({same, game, crop}));
+        const int undoCount = doc->undoStack()->count();
+
+        bool dialogSeen = false;
+        QTimer guard;
+        connect(&guard, &QTimer::timeout, &guard, [&] {
+            if (QWidget *modal = QApplication::activeModalWidget()) {
+                dialogSeen = true;
+                modal->close();
+            }
+        });
+        guard.start(100);
+        auto wait = [](KisImageSP image) {
+            image->waitForDone();
+            return true;
+        };
+
+        // Checked: the crop is skipped without being reported.
+        auto result = Saved::run({doc.data()}, Saved::Which::Checked, wait);
+        QCOMPARE(result.exported, 2);
+        QVERIFY(result.skipped.isEmpty());
+        QVERIFY(result.conflicts.isEmpty());
+        QCOMPARE(QImage(dir.filePath("art/hero.png")).size(), QSize(16, 12));
+        QCOMPARE(QImage(dir.filePath("game/gfx/hero_web.jpg")).size(), QSize(16, 12));
+        QVERIFY(!QFileInfo::exists(dir.filePath("art/crop.png")));
+
+        // All: without a selection only the crop is skipped.
+        QVERIFY(QFile::remove(dir.filePath("art/hero.png")));
+        result = Saved::run({doc.data()}, Saved::Which::All, wait);
+        QCOMPARE(result.exported, 2);
+        QCOMPARE(result.skipped, QStringList({doc->caption() + " / Crop: no selection"}));
+        QVERIFY(QFileInfo::exists(dir.filePath("art/hero.png")));
+
+        selectRect(doc.data(), QRect(2, 3, 5, 4));
+        doc->setModified(false);
+        const int selectedUndoCount = doc->undoStack()->count();
+        result = Saved::run({doc.data()}, Saved::Which::All, wait);
+        QCOMPARE(result.exported, 3);
+        QVERIFY(result.skipped.isEmpty());
+        QImage cropped(dir.filePath("art/crop.png"));
+        QCOMPARE(cropped.size(), QSize(5, 4));
+        QCOMPARE(cropped.pixelColor(0, 0).alpha(), 127);
+
+        QVERIFY(!dialogSeen);
+        QCOMPARE(doc->localFilePath(), source);
+        QVERIFY(!doc->isModified());
+        QVERIFY(!doc->fileBatchMode());
+        QCOMPARE(doc->undoStack()->count(), selectedUndoCount);
+        QVERIFY(selectedUndoCount > undoCount);
+        QCOMPARE(doc->image()->size(), QSize(16, 12));
+
+        // Two presets writing one file: nothing is written.
+        Saved::Preset twin = same;
+        twin.id = Saved::newPreset({}).id;
+        twin.name = "Twin";
+        doc->setSolsticeFastExportData(Saved::toXml({same, twin, game}));
+        QVERIFY(QFile::remove(dir.filePath("game/gfx/hero_web.jpg")));
+        result = Saved::run({doc.data()}, Saved::Which::All, wait);
+        QCOMPARE(result.exported, 0);
+        QCOMPARE(result.conflicts, QStringList({QDir::toNativeSeparators(dir.filePath("art/hero.png"))}));
+        QVERIFY(!QFileInfo::exists(dir.filePath("game/gfx/hero_web.jpg")));
+
+        // Documents that cannot run, a missing folder and an invalid name.
+        Saved::Preset missing = Saved::newPreset("Missing");
+        missing.destination = Saved::Destination::Folder;
+        missing.folder = dir.filePath("does/not/exist");
+        Saved::Preset invalid = Saved::newPreset("Invalid");
+        invalid.nameRule = Saved::NameRule::Fixed;
+        invalid.fixedName = "a:b";
+        Saved::Preset noFolder = Saved::newPreset("No folder");
+        noFolder.destination = Saved::Destination::Folder;
+        doc->setSolsticeFastExportData(Saved::toXml({missing, invalid, noFolder}));
+        QScopedPointer<KisDocument> unsaved(document({}));
+        unsaved->setSolsticeFastExportData(Saved::toXml({same}));
+        QScopedPointer<KisDocument> bare(document(dir.filePath("bare.kra")));
+        QScopedPointer<KisDocument> unchecked(document(dir.filePath("unchecked.kra")));
+        unchecked->setSolsticeFastExportData(Saved::toXml({crop}));
+        result = Saved::run({nullptr, unsaved.data(), bare.data(), unchecked.data(), doc.data()},
+                            Saved::Which::Checked,
+                            wait);
+        QCOMPARE(result.exported, 0);
+        QCOMPARE(result.skipped,
+                 QStringList({"Unknown document: not available",
+                              unsaved->caption() + ": not saved yet",
+                              bare->caption() + ": no saved exports",
+                              unchecked->caption() + ": no checked exports",
+                              doc->caption() + " / Invalid: invalid file name",
+                              doc->caption() + " / No folder: no export folder",
+                              doc->caption() + " / Missing: could not export"}));
+        QVERIFY(!dialogSeen);
+    }
+
+    void presetDialog()
+    {
+        QTemporaryDir dir;
+        const QString source = dir.filePath("dialog.kra");
+        QScopedPointer<KisDocument> doc(document(source));
+        doc->setModified(false);
+        Export::Settings().save();
+        QWidget parent;
+        QPointer<QDialog> dialog = KisLazyToolsFastExportDialog::create(
+            &parent,
+            [&](bool) {
+                return QList<QPointer<KisDocument>>({doc.data()});
+            },
+            [](KisImageSP image) {
+                image->waitForDone();
+                return true;
+            },
+            doc.data());
+        auto *list = dialog->findChild<QListWidget *>();
+        QVERIFY(list);
+        QCOMPARE(list->count(), 1);
+        auto *exportButton = button(dialog, "Export");
+        auto *exportAll = button(dialog, "Export All");
+        auto *exportChecked = button(dialog, "Export Checked");
+        QVERIFY(exportButton && exportAll && exportChecked);
+        QVERIFY(exportButton->isEnabled());
+        QVERIFY(!exportAll->isEnabled());
+        const auto combos = dialog->findChildren<QComboBox *>();
+        QCOMPARE(combos.size(), 5);
+        auto *format = combos[0];
+        auto *area = combos[4];
+        auto *folder = dialog->findChild<QLineEdit *>();
+        QLineEdit *name = nullptr;
+        for (auto *edit : dialog->findChildren<QLineEdit *>()) {
+            if (edit->placeholderText() == "Same as the document")
+                name = edit;
+        }
+        QVERIFY(name);
+        QVERIFY(!area->isEnabled());
+
+        // The one-off form becomes the new saved export.
+        format->setCurrentIndex(1);
+        name->setText("first");
+        button(dialog, "Add")->click();
+        QCOMPARE(list->count(), 2);
+        QCOMPARE(list->currentRow(), 1);
+        QTRY_VERIFY(doc->isModified());
+        auto presets = Saved::presets(doc.data());
+        QCOMPARE(presets.size(), 1);
+        QCOMPARE(presets[0].name, QString("Export 1"));
+        QCOMPARE(presets[0].format, QString("jpg"));
+        QCOMPARE(presets[0].fixedName, QString("first"));
+        QVERIFY(presets[0].enabled);
+        QVERIFY(!exportButton->isEnabled());
+        QVERIFY(area->isEnabled());
+        QVERIFY(exportAll->isEnabled());
+
+        // Editing the form changes the selected saved export.
+        format->setCurrentIndex(0);
+        area->setCurrentIndex(1);
+        name->setText("bad/name");
+        presets = Saved::presets(doc.data());
+        QCOMPARE(presets[0].format, QString("png"));
+        QCOMPARE(presets[0].area, Saved::Area::Selection);
+        QCOMPARE(presets[0].fixedName, QString("first"));
+        name->clear();
+        area->setCurrentIndex(0);
+        presets = Saved::presets(doc.data());
+        QCOMPARE(presets[0].nameRule, Saved::NameRule::DocumentName);
+        QCOMPARE(presets[0].area, Saved::Area::WholeImage);
+
+        // Rename and uncheck in the list.
+        list->item(1)->setText("Godot");
+        list->item(1)->setCheckState(Qt::Unchecked);
+        presets = Saved::presets(doc.data());
+        QCOMPARE(presets[0].name, QString("Godot"));
+        QVERIFY(!presets[0].enabled);
+
+        button(dialog, "Duplicate")->click();
+        QCOMPARE(list->count(), 3);
+        QCOMPARE(list->currentRow(), 2);
+        presets = Saved::presets(doc.data());
+        QCOMPARE(presets[1].name, QString("Godot copy"));
+        QVERIFY(presets[1].id != presets[0].id);
+        format->setCurrentIndex(1);
+        name->setText("copy");
+        QVERIFY(button(dialog, "Move Down") && !button(dialog, "Move Down")->isEnabled());
+        button(dialog, "Move Up")->click();
+        presets = Saved::presets(doc.data());
+        QCOMPARE(presets[0].name, QString("Godot copy"));
+        QCOMPARE(presets[0].format, QString("jpg"));
+        QCOMPARE(list->currentRow(), 1);
+
+        // Back to the one-off row: the one-off settings return.
+        list->setCurrentRow(0);
+        QCOMPARE(format->currentIndex(), 1);
+        QCOMPARE(name->text(), QString("first"));
+        QVERIFY(exportButton->isEnabled());
+        QVERIFY(!area->isEnabled());
+
+        list->setCurrentRow(2);
+        button(dialog, "Remove")->click();
+        QCOMPARE(Saved::presets(doc.data()).size(), 1);
+        QCOMPARE(list->count(), 2);
+        // The duplicate kept the original's unchecked state.
+        list->item(1)->setCheckState(Qt::Checked);
+
+        // Export Checked runs only the checked saved export and closes.
+        exportChecked->click();
+        QTRY_VERIFY(dialog.isNull());
+        QCOMPARE(QImage(dir.filePath("copy.jpg")).size(), QSize(16, 12));
+        QVERIFY(!QFileInfo::exists(dir.filePath("dialog.png")));
+        QCOMPARE(doc->localFilePath(), source);
+        Q_UNUSED(folder);
+
+        // Without a document the list cannot be used.
+        QPointer<QDialog> noDocument = KisLazyToolsFastExportDialog::create(
+            &parent,
+            [](bool) {
+                return QList<QPointer<KisDocument>>();
+            },
+            [](KisImageSP) {
+                return true;
+            });
+        QVERIFY(!noDocument->findChild<QListWidget *>()->isEnabled());
+        QVERIFY(!button(noDocument, "Add")->isEnabled());
+        delete noDocument;
     }
 };
 

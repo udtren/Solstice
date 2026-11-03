@@ -180,6 +180,7 @@ set(kritaui_LIB_SRCS
     lazytools/KisLazyToolsRenamePresets.cpp
     lazytools/KisLazyToolsRenameDialog.cpp
     lazytools/KisLazyToolsFastExport.cpp
+    lazytools/KisLazyToolsFastExportPresets.cpp
     lazytools/KisLazyToolsFastExportDialog.cpp
     utils/KisMenuMnemonicFilter.cpp
     KisGpuEngineUi.cpp

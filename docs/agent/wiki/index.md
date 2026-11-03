@@ -111,6 +111,8 @@ Document ownership and lifecycle are defined in
   why the public product version is separate from the internal compatibility version.
 - [Upstream: weekly review, selective cherry-picks](decisions/upstream-selective-intake.md):
   Hermes reports, the user decides, Claude cherry-picks; dry-run lessons.
+- [Fast Image Export: saved exports live in the `.kra`](decisions/fast-export-saved-exports-in-kra.md):
+  why per-document export settings use a `.kra` entry, and the user's choices.
 - [Translations: Solstice owns `krita.po`](decisions/translation-policy.md):
   direct catalog edits, AI translation stated in release notes, English
   feature names, no upstream translation updates.

@@ -49,6 +49,52 @@ used only for the active document: it is unavailable while **Documents** is
 **All open documents**. It is not remembered after the dialog closes. An
 existing file with the same name is replaced, as with the default name.
 
+### Saved exports
+
+A document can keep several export settings of its own, for example a PNG
+into a game project's sprite folder and a JPEG for the web. They appear at the
+top of the dialog under **Saved exports of** *document*. The first row,
+**One-off export (not saved)**, is the dialog as described above: select it to
+export once with **Export** or **Export Region**.
+
+- **Add** saves the settings below the list as a new saved export of the
+  document and lets you type its name. **Duplicate**, **Rename**, **Remove**,
+  **Move Up** and **Move Down** act on the selected one; double-click a name to
+  rename it too.
+- While a saved export is selected, the settings below edit it, and changes
+  are kept at once: **Format**, PNG compression, alpha and JPEG quality,
+  **Destination** (the document's folder or a folder; a folder cannot be
+  chosen each time), **Export folder**, **Name** (empty uses the document's
+  name), and **Area**: the whole image, or the area selected when the export
+  runs. **Relative to the document** stores the folder relative to the
+  document's folder, so it still works after you move the document together
+  with that folder, for example a whole game project.
+- The checkbox of each saved export marks it for **Export Checked**;
+  **Export All** runs every saved export. With **Documents** set to **All
+  open documents**, each open document runs its own saved exports, and
+  documents without them are listed as skipped.
+
+Saved exports run without the format's options dialog: each keeps the
+format's other options, such as **Force convert to sRGB**, as they were for
+that format when you added it or changed its format. Before writing, the run
+checks that no two saved exports write the same file; if they would, nothing
+is exported. As with **Export**, an existing file is replaced, a missing
+folder is not created, and a saved export of the selected area is skipped
+while nothing is selected; the others still run. Skipped exports are listed
+with the reason.
+
+Two actions run them without opening the dialog: **Run All Saved Exports**
+and **Run Checked Saved Exports**, for the active document. They have no
+default shortcut; assign one under **Settings > Configure Solstice >
+Keyboard Shortcuts**. A message on the canvas reports how many files were
+written.
+
+Saved exports are stored in the `.kra` file, so they move with it. Adding or
+changing them marks the document as modified, but they are not part of undo.
+Other formats, such as PNG or JPEG documents, cannot store them: they last
+until the document is closed, and the dialog says so. Opening and saving a
+`.kra` in Krita or an older Solstice version drops them.
+
 ### Export Region
 
 **Export Region**, next to **Export**, exports only the selected area of the

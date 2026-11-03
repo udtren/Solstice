@@ -5,6 +5,7 @@
 #include "KisSolsticeLazyTools.h"
 #include "lazytools/KisLazyToolsRenameDialog.h"
 #include "lazytools/KisLazyToolsFastExportDialog.h"
+#include "lazytools/KisLazyToolsFastExportPresets.h"
 
 #include <QAbstractNativeEventFilter>
 #include <QApplication>
@@ -16,6 +17,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QScreen>
 #include <QScopedPointer>
@@ -44,6 +46,7 @@
 #include "kis_config.h"
 #include "kis_config_notifier.h"
 #include "kis_group_layer.h"
+#include "kis_icon_utils.h"
 #include "kis_image.h"
 #include "kis_node.h"
 #include "kis_node_commands_adapter.h"
@@ -290,6 +293,14 @@ void KisSolsticeLazyTools::createActions()
     connect(action, &QAction::triggered, this, [this] {
         showFastExportDialog();
     });
+    action = m_viewManager->actionManager()->createAction("fast_image_export_run_all");
+    connect(action, &QAction::triggered, this, [this] {
+        runSavedExports(false);
+    });
+    action = m_viewManager->actionManager()->createAction("fast_image_export_run_checked");
+    connect(action, &QAction::triggered, this, [this] {
+        runSavedExports(true);
+    });
     action = m_viewManager->actionManager()->createAction("rename_alternative");
     connect(action, &QAction::triggered, this, [this] {
         showRenameDialog();
@@ -374,8 +385,40 @@ void KisSolsticeLazyTools::showFastExportDialog()
         },
         [viewManager = m_viewManager](KisImageSP image) {
             return viewManager->blockUntilOperationsFinished(image);
-        })
+        },
+        m_viewManager->document())
         ->show();
+}
+
+void KisSolsticeLazyTools::runSavedExports(bool checkedOnly)
+{
+    KisDocument *document = m_viewManager->document();
+    if (!document) {
+        return;
+    }
+    const auto result = KisLazyToolsFastExportPresets::run({document},
+                                                           checkedOnly ? KisLazyToolsFastExportPresets::Which::Checked
+                                                                       : KisLazyToolsFastExportPresets::Which::All,
+                                                           [viewManager = m_viewManager](KisImageSP image) {
+                                                               return viewManager->blockUntilOperationsFinished(image);
+                                                           });
+    QWidget *parent = m_viewManager->mainWindowAsQWidget();
+    if (!result.conflicts.isEmpty()) {
+        QMessageBox::warning(parent,
+                             i18n("Fast Image Export"),
+                             i18n("Nothing was exported. More than one saved export would write:\n%1",
+                                  result.conflicts.join(QLatin1Char('\n'))));
+    } else if (!result.skipped.isEmpty()) {
+        QMessageBox::warning(parent,
+                             i18n("Fast Image Export"),
+                             i18np("Exported %1 file. Skipped:\n%2",
+                                   "Exported %1 files. Skipped:\n%2",
+                                   result.exported,
+                                   result.skipped.join(QLatin1Char('\n'))));
+    } else {
+        m_viewManager->showFloatingMessage(i18np("Exported %1 file", "Exported %1 files", result.exported),
+                                           KisIconUtils::loadIcon(QStringLiteral("document-export")));
+    }
 }
 
 void KisSolsticeLazyTools::showRenameDialog()
