@@ -2680,3 +2680,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: in this Git Bash, quoted here-documents fed to Python still turned
   `\n` into a real newline in two edits; check C++ string literals and
   catalog keys written that way, or use the Edit tool.
+
+## 2026-11-05 release: Solstice 0.8.0
+
+- Released `v0.8.0` at `4b8b580a02a3` (run 41942109402) on 2026-11-05
+  11:16 JST and published the website the same day (tidalboxstudio-web #29,
+  #30). Evidence:
+  [0.8.0 release verification](history/release-0.8.0.md).
+- README, the guide index and the [version ledger](../versioning.md#history)
+  now describe 0.8.0 as released. The duplicate-on-the-same-layer image in
+  README and the Move Tool guide is the user's GIF; the old
+  `docs/images/duplicate_in_same_layer.png` stays in the tree, unused.
+- Lesson: the user's replacement screenshots were 1024x1024 with transparent
+  margins, while the site keeps its screenshots without margins. Cropping to
+  the alpha bounding box (Pillow, `getchannel('A').getbbox()`) restored that.
+  Pillow is installed for `py -3.12`, not for the default Python 3.13.
+- Lesson: working-tree text files here are CRLF (`core.autocrlf=true`). An
+  edit script that inserts LF-only text leaves mixed line endings; read
+  with `newline=''`, edit on LF, and write back CRLF. The here-document
+  escape problem of the 2026-11-03 entry above happened again in this log
+  entry; the Edit tool fixed it.
