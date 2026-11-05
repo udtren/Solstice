@@ -9,7 +9,7 @@ with one addition: duplicating a selection on the same layer.
 To copy part of a layer and place the copy somewhere else on the same
 layer, as Alt-drag does in Photoshop:
 
-![Three star shapes on one paint layer, Paint Layer 8: the lowest, inside a freehand selection, was copied with Ctrl-drag in the Move Tool, whose options are shown](images/duplicate_in_same_layer.png)
+![A four-pointed star on Paint Layer 1 is selected and Ctrl-dragged twice with the Move Tool; two copies are placed on the same layer, and the Layers docker still lists only Paint Layer 1 and Background](images/duplicate_in_same_layer.gif)
 
 1. Select the area on a paint layer with any selection tool.
 2. Choose the **Move Tool** and **Ctrl-drag** inside the canvas. The
