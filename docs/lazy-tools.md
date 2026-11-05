@@ -1,12 +1,12 @@
 # Lazy Tools
 
 Solstice includes native versions of the core productivity features from the
-Lazy Tools Python plugin: fast PNG/JPEG export, a preset-based rename dialog,
-layer color labels, saved selections, foreground color shortcuts and a
-system-wide color picker. No separate Lazy Tools docker or Python installation
-is required.
+Lazy Tools Python plugin: fast PNG/JPEG export with saved export settings per
+document, a preset-based rename dialog, layer color labels, saved selections,
+foreground color shortcuts and a system-wide color picker. No separate Lazy
+Tools docker or Python installation is required.
 
-![The Fast Image Export dialog, the General > Custom settings page, the Rename Layer dialog, the Selection Masks dialog and the Layers docker's color label menu](images/lazy_tool/cover.png)
+![The Fast Image Export dialog with a saved export, the Rename Layer dialog, the Selection Masks dialog and the General > Custom settings page](images/lazy_tool/cover.png)
 
 For the original, see the plugin repository, [Lazy
 Tools](https://github.com/udtren/krita-lazy-tools). This guide covers
@@ -19,10 +19,13 @@ Alternative**, **Create Selection Mask Popup** or **Set Foreground Color**.
 
 ## Fast Image Export
 
-![The Fast Image Export dialog with format, documents, destination, registered folder, export folder, name, PNG and JPEG options, and the Export, Export Region and Cancel buttons](images/lazy_tool/fast_image_export.png)
+![The Fast Image Export dialog for undead.kra: under Saved exports, the checked saved export undead_sword is selected below One-off export (not saved), beside Add, Duplicate, Rename, Remove, Move Up, Move Down, Export Checked and Export All; below the list are Format, Documents, Destination, Registered folder, Export folder, Relative to the document, Name, Area, the PNG and JPEG options, and the Export, Export Region and Cancel buttons](images/lazy_tool/fast_image_export.png)
 
 **Fast Image Export** saves PNG or JPEG copies without changing the document's
-file name or saved state.
+file name or saved state. Export once with the settings in the dialog, or
+keep several export settings in the document and run them together: see
+[Saved exports](#saved-exports). The settings below are those of a one-off
+export.
 
 - **Format:** PNG or JPEG.
 - **Documents:** the active document or all open documents.
@@ -55,7 +58,9 @@ A document can keep several export settings of its own, for example a PNG
 into a game project's sprite folder and a JPEG for the web. They appear at the
 top of the dialog under **Saved exports of** *document*. The first row,
 **One-off export (not saved)**, is the dialog as described above: select it to
-export once with **Export** or **Export Region**.
+export once with **Export** or **Export Region**. Those two buttons are
+unavailable while a saved export is selected; run saved exports with
+**Export Checked** or **Export All** instead.
 
 - **Add** saves the settings below the list as a new saved export of the
   document and lets you type its name. **Duplicate**, **Rename**, **Remove**,

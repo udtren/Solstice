@@ -115,7 +115,7 @@ document and middle-clicking a document tab, and on
 <p><b><a href="docs/effects-filters.md">Effects &amp; Color</a></b><br>New native filters such as Film Grain, Glow and Color Reference.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<a href="docs/move-tool.md#duplicating-a-selection"><img src="docs/images/duplicate_in_same_layer.png" alt="Three star shapes on one paint layer, Paint Layer 8: the lowest, inside a freehand selection, was copied with Ctrl-drag in the Move Tool, whose options are shown" width="100%"></a>
+<a href="docs/move-tool.md#duplicating-a-selection"><img src="docs/images/duplicate_in_same_layer.gif" alt="A four-pointed star on Paint Layer 1 is selected and Ctrl-dragged twice with the Move Tool; two copies are placed on the same layer, and the Layers docker still lists only Paint Layer 1 and Background" width="100%"></a>
 <p><b><a href="docs/move-tool.md#duplicating-a-selection">Duplicate on the same layer</a></b><br>Ctrl-drag a selection with the Move Tool to place a copy on the same layer.</p>
 </td>
 </tr>
@@ -153,8 +153,8 @@ required.
 <p><b><a href="docs/quick-access.md">Quick Access Manager</a></b><br>Brush and action palettes, a color selector, brush adjustments and gestures.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<a href="docs/lazy-tools.md"><img src="docs/images/lazy_tool/cover.png" alt="The Fast Image Export dialog, the General &gt; Custom settings page, the Rename Layer dialog, the Selection Masks dialog and the Layers docker's color label menu" width="100%"></a>
-<p><b><a href="docs/lazy-tools.md">Lazy Tools</a></b><br>Quick layer renaming, selection masks, fast image export and color shortcuts.</p>
+<a href="docs/lazy-tools.md"><img src="docs/images/lazy_tool/cover.png" alt="The Fast Image Export dialog with a saved export, the Rename Layer dialog, the Selection Masks dialog and the General &gt; Custom settings page" width="100%"></a>
+<p><b><a href="docs/lazy-tools.md">Lazy Tools</a></b><br>Quick layer renaming, selection masks, fast image export with saved exports and color shortcuts.</p>
 </td>
 </tr>
 <tr>
