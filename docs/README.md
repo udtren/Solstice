@@ -6,15 +6,12 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.7.0](https://github.com/udtren/Solstice/releases/tag/v0.7.0) adds the
-[Through-Layer Eraser](through-layer-eraser.md): erase through every visible
-layer, or only the selected layers, with one brush stroke. It builds on
-[0.6.1](https://github.com/udtren/Solstice/releases/tag/v0.6.1), which fixed
-the layer thumbnails of group and filter layers pasted from another document
-and middle-clicking a document tab, and on
-[0.6.0](https://github.com/udtren/Solstice/releases/tag/v0.6.0), which added
-[Clipping Mask](clipping-mask.md) and
-[duplicating a selection on the same layer](move-tool.md).
+[0.8.0](https://github.com/udtren/Solstice/releases/tag/v0.8.0) adds
+[saved exports](lazy-tools.md#saved-exports) to Fast Image Export: export
+settings kept in the document and run together. It builds on
+[0.7.0](https://github.com/udtren/Solstice/releases/tag/v0.7.0), which added
+the [Through-Layer Eraser](through-layer-eraser.md): erase through every
+visible layer, or only the selected layers, with one brush stroke.
 
 ## Getting started
 
@@ -83,7 +80,8 @@ and middle-clicking a document tab, and on
 - [Rest Note](rest-note.md): a work timer with eye-break and full-break
   reminders.
 - [Lazy Tools](lazy-tools.md): layer color labels, preset layer names,
-  saved selections, Fast Image Export and color shortcuts. Extended in 0.5.1.
+  saved selections, Fast Image Export and color shortcuts. Extended in 0.5.1;
+  saved exports added in 0.8.0.
 - [Docker locks](docker-locks.md): locking the size of docked dockers.
 - [Overview live update](overview-live-update.md): the Overview follows the
   canvas while you paint.
