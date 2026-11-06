@@ -66867,6 +66867,19 @@ msgid ""
 "unchecked, every visible layer is erased."
 msgstr "仅擦除选中的图层和选中图层组内的图层。未勾选时，擦除所有可见图层。"
 
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:96
+#, kde-format
+msgctxt "@option:check"
+msgid "Erase alpha locked layers"
+msgstr "擦除透明度已锁定的图层"
+
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:99
+#, kde-format
+msgid ""
+"Erase layers with Alpha Lock on as well, in spite of the lock. When "
+"unchecked, they are left alone."
+msgstr "同时擦除开启了透明度锁定的图层，无视该锁定。未勾选时，这些图层保持不变。"
+
 #: plugins/tools/basictools/KisToolThroughLayerEraser.h:46
 #, kde-format
 msgid "Through-Layer Eraser Tool"

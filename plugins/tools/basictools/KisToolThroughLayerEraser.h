@@ -30,11 +30,14 @@ protected:
 
 private Q_SLOTS:
     void setSelectedLayersOnly(bool value);
+    void setEraseAlphaLocked(bool value);
 
 private:
     KisToolFreehandHelper *m_helper{nullptr};
     QCheckBox *m_chkSelectedLayersOnly{nullptr};
+    QCheckBox *m_chkEraseAlphaLocked{nullptr};
     bool m_selectedLayersOnly{false};
+    bool m_eraseAlphaLocked{true};
 };
 
 class KisToolThroughLayerEraserFactory : public KisToolBrushFactory

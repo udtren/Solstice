@@ -2700,3 +2700,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   with `newline=''`, edit on LF, and write back CRLF. The here-document
   escape problem of the 2026-11-03 entry above happened again in this log
   entry; the Edit tool fixed it.
+
+## 2026-11-07 Through-Layer Eraser: alpha locked layers
+
+- The tool erases alpha locked layers while the new Tool Options check box
+  **Erase alpha locked layers** is checked (default on, user decision):
+  [decision](decisions/through-layer-eraser-alpha-locked.md),
+  [agent document](../through-layer-eraser.md#architecture-and-lifecycle).
+  `KisThroughLayerEraserTest` and the `through-layer-eraser` scenario cover it;
+  zh_CN strings added to `po/zh_CN/krita.po`.
+- Lesson: `KoCompositeOpErase` ignores channel flags (an upstream `XXX`
+  comment), and the GPU erase did not honor the alpha bit either. A test row
+  meant to prove the channel-flag change still passed with that change
+  removed; check that a new test fails without the fix before relying on it.
+- Lesson: `sed -i` in this Git Bash rewrote a CRLF file as LF. Restore CRLF
+  afterwards, or edit with Python reading `newline=''`.

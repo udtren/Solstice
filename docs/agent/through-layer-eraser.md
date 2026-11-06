@@ -15,6 +15,11 @@ Verification (2026-11-01, Windows 11, `_install`):
   rest of that function was not run, and the three functions after it pass.
 - Scenarios `through-layer-eraser`, `eraser-stroke` and `brush-stroke-undo` pass
   through test control (key `windows-cpu`).
+- Alpha locked layers (2026-11-07, Windows 11, `_install`): `KisThroughLayerEraserTest`
+  passes (16 cases, including the alpha locked rows on the CPU and the GPU),
+  and `run_scenarios.py --strict --launch` passes the three scenarios above,
+  with the new alpha lock steps in `through-layer-eraser`. The user tried
+  it in the application and approved it for release.
 - The user tried the tool in the application and approved its release; the
   guide's animation is from that session. Pressure with a tablet has not been
   checked separately.
@@ -51,8 +56,10 @@ installed with `plugins/tools`.
 
 ## Configuration and compatibility
 
-`Selected layers only` is stored as `selectedLayersOnly` in the kritarc group
-named after the tool id, `KritaShape/KisToolThroughLayerEraser`. A saved
+`Selected layers only` is stored as `selectedLayersOnly` and `Erase alpha
+locked layers` as `eraseAlphaLocked` (default true; user decision,
+2026-11-07) in the kritarc group named after the tool id,
+`KritaShape/KisToolThroughLayerEraser`. A saved
 document holds nothing of the tool. The shape of a stroke's undo command is
 the usual one, with one transaction per layer.
 
@@ -101,6 +108,13 @@ interfere.
   whose color space differs from the shared device's, or whose tiles are not
   aligned with it, is refused by `KisGpuProjectionCompositor::composite()` and
   falls back to the CPU path in `KisPaintLayer`.
+- **Alpha locked layers.** With `eraseAlphaLocked`, `collect()` lists them and
+  `attachThroughLayerTarget()` turns the alpha bit back on in the layer's
+  temporary channel flags; color channel locks stay. The Erase blend mode
+  ignores channel flags today on the CPU (`KoCompositeOpErase`) and the GPU,
+  so a locked layer was erased even before that (checked 2026-11-07 by
+  removing it: the test still passed). The flags keep the erase independent
+  of that detail. The layer's own lock is never changed.
 - **Animation.** Each layer gets its own auto-keyframe command, collected into
   `m_autokeyCommand`.
 - **Brush Stroke Layer.** The stroke is not recorded
@@ -115,8 +129,10 @@ interfere.
 - Unchecked means every visible paint layer; checked means the selected layers
   and the layers in selected groups. Hidden layers are never targets, and a
   layer inside a hidden group is hidden (user request, 2026-11-01).
-- Locked and alpha locked layers are not targets. A layer inside a locked group
-  is locked.
+- Locked layers are not targets. A layer inside a locked group is locked.
+- Alpha locked layers are targets only while `Erase alpha locked layers` is
+  checked (default checked; user decision, 2026-11-07). Then they are
+  erased in spite of the lock.
 - Targets are `KisPaintLayer`s only, listed from the top of the stack.
 - In isolated mode the walk starts at the isolation root.
 - The tool never changes Eraser Mode or the preset.
@@ -136,6 +152,9 @@ interfere.
    animated target, and undo removes them.
 8. Erase with a layer selected that is hidden, locked, vector or a group: the
    tool still erases the others.
+9. Turn on Alpha Lock on one layer. With **Erase alpha locked layers** checked
+   it is erased with the others and keeps its lock; unchecked, it is left
+   alone. Repeat with a GPU and a CPU color space.
 
 ## Known limitations and pending work
 

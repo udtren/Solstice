@@ -116,6 +116,8 @@ Document ownership and lifecycle are defined in
 - [Translations: Solstice owns `krita.po`](decisions/translation-policy.md):
   direct catalog edits, AI translation stated in release notes, English
   feature names, no upstream translation updates.
+- [Through-Layer Eraser: alpha locked layers](decisions/through-layer-eraser-alpha-locked.md):
+  why they are erased by default, behind an option.
 
 ### Pitfalls
 
