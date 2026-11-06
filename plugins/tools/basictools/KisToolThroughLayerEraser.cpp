@@ -23,7 +23,8 @@
 namespace
 {
 const char *const SelectedLayersOnlyKey = "selectedLayersOnly";
-}
+const char *const EraseAlphaLockedKey = "eraseAlphaLocked";
+} // namespace
 
 KisToolThroughLayerEraser::KisToolThroughLayerEraser(KoCanvasBase *canvas)
     : KisToolBrush(canvas)
@@ -49,7 +50,8 @@ void KisToolThroughLayerEraser::beginPrimaryAction(KoPointerEvent *event)
     const KisNodeList targets =
         KisThroughLayerEraserTargets::collect(isolatedRoot ? isolatedRoot : currentImage->root(),
                                               selectedNodes(),
-                                              m_selectedLayersOnly);
+                                              m_selectedLayersOnly,
+                                              m_eraseAlphaLocked);
 
     KisCanvas2 *canvas2 = dynamic_cast<KisCanvas2 *>(canvas());
     if (targets.isEmpty()) {
@@ -89,6 +91,16 @@ QWidget *KisToolThroughLayerEraser::createOptionWidget()
     connect(m_chkSelectedLayersOnly, SIGNAL(toggled(bool)), this, SLOT(setSelectedLayersOnly(bool)));
     addOptionWidgetOption(m_chkSelectedLayersOnly);
 
+    m_eraseAlphaLocked = config.readEntry(EraseAlphaLockedKey, true);
+
+    m_chkEraseAlphaLocked = new QCheckBox(i18nc("@option:check", "Erase alpha locked layers"), widget);
+    m_chkEraseAlphaLocked->setObjectName("chkEraseAlphaLocked");
+    m_chkEraseAlphaLocked->setToolTip(
+        i18n("Erase layers with Alpha Lock on as well, in spite of the lock. When unchecked, they are left alone."));
+    m_chkEraseAlphaLocked->setChecked(m_eraseAlphaLocked);
+    connect(m_chkEraseAlphaLocked, SIGNAL(toggled(bool)), this, SLOT(setEraseAlphaLocked(bool)));
+    addOptionWidgetOption(m_chkEraseAlphaLocked);
+
     return widget;
 }
 
@@ -98,4 +110,12 @@ void KisToolThroughLayerEraser::setSelectedLayersOnly(bool value)
 
     KConfigGroup config = KSharedConfig::openConfig()->group(toolId());
     config.writeEntry(SelectedLayersOnlyKey, value);
+}
+
+void KisToolThroughLayerEraser::setEraseAlphaLocked(bool value)
+{
+    m_eraseAlphaLocked = value;
+
+    KConfigGroup config = KSharedConfig::openConfig()->group(toolId());
+    config.writeEntry(EraseAlphaLockedKey, value);
 }

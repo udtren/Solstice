@@ -221,7 +221,22 @@ private Q_SLOTS:
     {
         Scene scene(KoColorSpaceRegistry::instance()->rgb8());
         // nothing selected matters: hidden, locked and alpha locked layers stay out
-        QCOMPARE(KisThroughLayerEraserTargets::collect(scene.image->root(), {scene.hidden}, false), scene.allTargets());
+        QCOMPARE(KisThroughLayerEraserTargets::collect(scene.image->root(), {scene.hidden}, false, false),
+                 scene.allTargets());
+    }
+
+    void testCollectAlphaLockedLayers()
+    {
+        Scene scene(KoColorSpaceRegistry::instance()->rgb8());
+        KisNodeSP root = scene.image->root();
+
+        QCOMPARE(KisThroughLayerEraserTargets::collect(root, {}, false, true),
+                 KisNodeList({scene.top, scene.inGroup, scene.alphaLocked, scene.bottom}));
+        QCOMPARE(KisThroughLayerEraserTargets::collect(root, {scene.alphaLocked}, true, true),
+                 KisNodeList({scene.alphaLocked}));
+        QVERIFY(KisThroughLayerEraserTargets::collect(root, {scene.alphaLocked}, true, false).isEmpty());
+        // the option does not reach a locked layer
+        QVERIFY(KisThroughLayerEraserTargets::collect(root, {scene.locked}, true, true).isEmpty());
     }
 
     void testCollectSelectedLayers()
@@ -229,23 +244,23 @@ private Q_SLOTS:
         Scene scene(KoColorSpaceRegistry::instance()->rgb8());
         KisNodeSP root = scene.image->root();
 
-        QVERIFY(KisThroughLayerEraserTargets::collect(root, {}, true).isEmpty());
-        QCOMPARE(KisThroughLayerEraserTargets::collect(root, {scene.bottom, scene.top}, true),
+        QVERIFY(KisThroughLayerEraserTargets::collect(root, {}, true, false).isEmpty());
+        QCOMPARE(KisThroughLayerEraserTargets::collect(root, {scene.bottom, scene.top}, true, false),
                  KisNodeList({scene.top, scene.bottom}));
         // a group stands for its layers, and a layer selected with its group counts once
-        QCOMPARE(KisThroughLayerEraserTargets::collect(root, {scene.group, scene.inGroup}, true),
+        QCOMPARE(KisThroughLayerEraserTargets::collect(root, {scene.group, scene.inGroup}, true, false),
                  KisNodeList({scene.inGroup}));
         // selecting what cannot be erased does not make it a target
-        QVERIFY(KisThroughLayerEraserTargets::collect(root, scene.untouched(), true).isEmpty());
-        QVERIFY(KisThroughLayerEraserTargets::collect(root, {scene.hiddenGroup}, true).isEmpty());
+        QVERIFY(KisThroughLayerEraserTargets::collect(root, scene.untouched(), true, false).isEmpty());
+        QVERIFY(KisThroughLayerEraserTargets::collect(root, {scene.hiddenGroup}, true, false).isEmpty());
     }
 
     void testCollectInsideAGroup()
     {
         Scene scene(KoColorSpaceRegistry::instance()->rgb8());
         // the root of the isolated mode shows even when it is hidden
-        QCOMPARE(KisThroughLayerEraserTargets::collect(scene.group, {}, false), KisNodeList({scene.inGroup}));
-        QCOMPARE(KisThroughLayerEraserTargets::collect(scene.hiddenGroup, {}, false),
+        QCOMPARE(KisThroughLayerEraserTargets::collect(scene.group, {}, false, false), KisNodeList({scene.inGroup}));
+        QCOMPARE(KisThroughLayerEraserTargets::collect(scene.hiddenGroup, {}, false, false),
                  KisNodeList({scene.inHiddenGroup}));
     }
 
@@ -253,12 +268,15 @@ private Q_SLOTS:
     {
         QTest::addColumn<bool>("wash");
         QTest::addColumn<bool>("gpu");
-        QTest::addRow("wash, cpu") << true << false;
-        QTest::addRow("build-up, cpu") << false << false;
+        QTest::addColumn<bool>("alphaLocked");
+        QTest::addRow("wash, cpu") << true << false << false;
+        QTest::addRow("build-up, cpu") << false << false << false;
+        QTest::addRow("wash, cpu, alpha locked") << true << false << true;
 #ifdef HAVE_KRITA_GPU_ENGINE
         if (KisGpuTileBackend::instance()) {
-            QTest::addRow("wash, gpu") << true << true;
-            QTest::addRow("build-up, gpu") << false << true;
+            QTest::addRow("wash, gpu") << true << true << false;
+            QTest::addRow("build-up, gpu") << false << true << false;
+            QTest::addRow("wash, gpu, alpha locked") << true << true << true;
         }
 #endif
     }
@@ -267,6 +285,7 @@ private Q_SLOTS:
     {
         QFETCH(bool, wash);
         QFETCH(bool, gpu);
+        QFETCH(bool, alphaLocked);
 
         const auto previousBrush = qgetenv("KRITA_GPU_BRUSH");
         const auto restore = qScopeGuard([&]() {
@@ -303,19 +322,29 @@ private Q_SLOTS:
         Scene scene(cs);
         const QVector<qreal> before = alphas(scene.top->paintDevice());
 
+        KisNodeList targets = scene.allTargets();
+        KisNodeList untouched = scene.untouched();
+        if (alphaLocked) {
+            // the tool lists an alpha locked layer only when told to erase it
+            targets = {scene.top, scene.inGroup, scene.alphaLocked, scene.bottom};
+            untouched.removeAll(KisNodeSP(scene.alphaLocked));
+        }
+
         KisResourcesSnapshotSP snapshot = scene.resources(preset, scene.top);
-        snapshot->setThroughLayerTargets(scene.allTargets());
+        snapshot->setThroughLayerTargets(targets);
         scene.stroke(snapshot);
 
         // Build-up accumulates its dabs in eight bits on the CPU
         const qreal fuzziness = gpu ? 1.0 / 255 : 3.0 / 255;
-        for (KisNodeSP node : scene.allTargets()) {
+        for (KisNodeSP node : targets) {
             QVERIFY2(largestDifference(alphas(node->paintDevice()), reference) <= fuzziness, qPrintable(node->name()));
             QVERIFY(!dynamic_cast<KisPaintLayer *>(node.data())->hasTemporaryTarget());
         }
-        for (KisNodeSP node : scene.untouched()) {
+        for (KisNodeSP node : untouched) {
             QVERIFY2(largestDifference(alphas(node->paintDevice()), before) == 0, qPrintable(node->name()));
         }
+        // the stroke leaves the lock as it was
+        QVERIFY(scene.alphaLocked->alphaLocked());
 
         // the updates during the stroke already showed the final state
         const QVector<qreal> projection = alphas(scene.image->projection());
@@ -326,13 +355,13 @@ private Q_SLOTS:
         // one undo step for all the layers
         scene.undoStore->undo();
         scene.finish();
-        for (KisNodeSP node : scene.allTargets()) {
+        for (KisNodeSP node : targets) {
             QVERIFY2(largestDifference(alphas(node->paintDevice()), before) == 0, qPrintable(node->name()));
         }
 
         scene.undoStore->redo();
         scene.finish();
-        for (KisNodeSP node : scene.allTargets()) {
+        for (KisNodeSP node : targets) {
             QVERIFY2(largestDifference(alphas(node->paintDevice()), reference) <= fuzziness, qPrintable(node->name()));
         }
     }

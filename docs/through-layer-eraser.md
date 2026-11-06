@@ -28,9 +28,13 @@ These layers are always left alone:
 
 - hidden layers, and everything in a hidden group;
 - locked layers, and everything in a locked group;
-- alpha locked layers;
 - layers that are not paint layers, such as vector, filter, fill, clone and
   file layers, and masks.
+
+Layers with **Alpha Lock** on are erased too while **Erase alpha locked
+layers** is checked in Tool Options (the default). The tool then erases them
+in spite of the lock, and the lock stays on. Uncheck the option to leave alpha
+locked layers alone, for example when the lock protects their shape.
 
 If nothing can be erased, a message says so and the stroke does not start. In
 isolated mode, only the isolated layer or group is erased.

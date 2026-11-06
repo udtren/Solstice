@@ -12,7 +12,12 @@
 
 namespace
 {
-void collectFrom(KisNodeSP node, const KisNodeList &selectedNodes, bool included, bool isRoot, KisNodeList *targets)
+void collectFrom(KisNodeSP node,
+                 const KisNodeList &selectedNodes,
+                 bool included,
+                 bool isRoot,
+                 bool includeAlphaLocked,
+                 KisNodeList *targets)
 {
     if ((!node->visible(false) && !isRoot) || node->userLocked()) {
         return;
@@ -21,22 +26,25 @@ void collectFrom(KisNodeSP node, const KisNodeList &selectedNodes, bool included
     included = included || selectedNodes.contains(node);
 
     if (KisPaintLayer *layer = dynamic_cast<KisPaintLayer *>(node.data())) {
-        if (included && layer->paintDevice() && !layer->alphaLocked()) {
+        if (included && layer->paintDevice() && (includeAlphaLocked || !layer->alphaLocked())) {
             *targets << node;
         }
     } else if (dynamic_cast<KisGroupLayer *>(node.data())) {
         for (KisNodeSP child = node->lastChild(); child; child = child->prevSibling()) {
-            collectFrom(child, selectedNodes, included, false, targets);
+            collectFrom(child, selectedNodes, included, false, includeAlphaLocked, targets);
         }
     }
 }
 } // namespace
 
-KisNodeList KisThroughLayerEraserTargets::collect(KisNodeSP root, const KisNodeList &selectedNodes, bool selectedOnly)
+KisNodeList KisThroughLayerEraserTargets::collect(KisNodeSP root,
+                                                  const KisNodeList &selectedNodes,
+                                                  bool selectedOnly,
+                                                  bool includeAlphaLocked)
 {
     KisNodeList targets;
     if (root) {
-        collectFrom(root, selectedNodes, !selectedOnly, true, &targets);
+        collectFrom(root, selectedNodes, !selectedOnly, true, includeAlphaLocked, &targets);
     }
     return targets;
 }

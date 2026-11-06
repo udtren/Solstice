@@ -2,8 +2,8 @@
   "format": "solstice-test-control-scenario",
   "version": 1,
   "name": "through-layer-eraser",
-  "description": "The Through-Layer Eraser Tool erases every visible layer with one undo step and leaves a hidden layer; with Selected layers only it erases the selected layers.",
-  "covers": "Through-Layer Eraser Tool: the tool activation, the option check box, multiple selected layers, undo",
+  "description": "The Through-Layer Eraser Tool erases every visible layer with one undo step and leaves a hidden layer; it erases an alpha locked layer only with Erase alpha locked layers checked; with Selected layers only it erases the selected layers.",
+  "covers": "Through-Layer Eraser Tool: the tool activation, the option check boxes, alpha locked layers, multiple selected layers, undo",
   "steps": [
     {
       "call": "document_new",
@@ -436,6 +436,189 @@
         "sha256": {
           "equals": "$bottomFilled"
         }
+      }
+    },
+    {
+      "call": "layer_activate",
+      "args": {
+        "name": "$middle"
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "toggle_layer_alpha_lock"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "layer_activate",
+      "args": {
+        "name": "$top"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "chkEraseAlphaLocked",
+        "value": true
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 100,
+          "y": 200
+        },
+        "to": {
+          "x": 300,
+          "y": 200
+        },
+        "steps": 40,
+        "durationMs": 400
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "layer_activate",
+      "args": {
+        "name": "$middle"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "x": 120,
+        "y": 195,
+        "width": 160,
+        "height": 10
+      },
+      "expect": {
+        "nonTransparentPixels": 0
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "expect": {
+        "sha256": {
+          "equals": "$middleFilled"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "chkEraseAlphaLocked",
+        "value": false
+      }
+    },
+    {
+      "call": "layer_activate",
+      "args": {
+        "name": "$top"
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 100,
+          "y": 200
+        },
+        "to": {
+          "x": 300,
+          "y": 200
+        },
+        "steps": 40,
+        "durationMs": 400
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "x": 120,
+        "y": 195,
+        "width": 160,
+        "height": 10
+      },
+      "expect": {
+        "nonTransparentPixels": 0
+      }
+    },
+    {
+      "call": "layer_activate",
+      "args": {
+        "name": "$middle"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "expect": {
+        "sha256": {
+          "equals": "$middleFilled"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "layer_activate",
+      "args": {
+        "name": "$top"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "expect": {
+        "sha256": {
+          "equals": "$topFilled"
+        }
+      }
+    },
+    {
+      "call": "layer_activate",
+      "args": {
+        "name": "$middle"
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "toggle_layer_alpha_lock"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "chkEraseAlphaLocked",
+        "value": true
       }
     },
     {

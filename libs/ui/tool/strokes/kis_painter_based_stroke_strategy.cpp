@@ -337,7 +337,16 @@ void KisPainterBasedStrokeStrategy::attachThroughLayerTarget(KisNodeSP node, Kis
     layer->setTemporaryCompositeOp(m_resources->compositeOpId());
     layer->setTemporaryOpacity(m_throughLayerBuildUp ? OPACITY_OPAQUE_F : m_resources->opacity());
     layer->setTemporarySelection(layer->selection());
-    layer->setTemporaryChannelFlags(layer->channelLockFlags());
+
+    // an alpha locked layer is a target only when the tool is told to erase
+    // it, and erasing changes nothing but alpha. The Erase blend mode ignores
+    // the alpha lock today on the CPU and the GPU; unlock alpha explicitly so
+    // that the erase does not depend on that.
+    QBitArray channelFlags = layer->channelLockFlags();
+    if (layer->alphaLocked()) {
+        channelFlags |= layer->colorSpace()->channelFlags(false, true);
+    }
+    layer->setTemporaryChannelFlags(channelFlags);
 }
 
 void KisPainterBasedStrokeStrategy::updateStrokeNodes(const QVector<QRect> &rects)
