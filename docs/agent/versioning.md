@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.8.0` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.8.1` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -107,6 +107,7 @@ appears in the version strings.
 
 | Version | Date | Reason |
 | --- | --- | --- |
+| `0.8.1` | 2026-11-07 | The Through-Layer Eraser erases alpha locked layers, behind the new Erase alpha locked layers option (on by default); requested by the user, who tried it in the application (`PATCH`: an existing feature extended, as for 0.5.1). Krita compatibility version is unchanged. |
 | `0.8.0` | 2026-11-05 | Lazy Tools Fast Image Export saved exports per document, stored in the `.kra`, with the Run All Saved Exports and Run Checked Saved Exports actions (PR #63); requested by the user (`MINOR`). The duplicate-on-the-same-layer guide and README card now show an animated GIF, and the Lazy Tools screenshots show saved exports. Regular GitHub Release `v0.8.0` at `4b8b580a02a3` (PR #64, run 41942109402); [package verification](wiki/history/release-0.8.0.md). Krita compatibility version is unchanged. |
 | `0.7.0` | 2026-11-01 | The Through-Layer Eraser Tool, with the Force convert to sRGB fix in the PNG export dialog (PR #55) and the test control paint trace series (PR #50); requested by the user, who tried the tool in the application (`MINOR`). Regular GitHub Release `v0.7.0` at `51d2d0c6f9d7` (PR #56, run 41300851395); [package verification](wiki/history/release-0.7.0.md). Krita compatibility version is unchanged. |
 | `0.6.1` | 2026-10-30 | The group and filter layer thumbnail fix after a cross-document paste (PR #52) and the middle-click document tab fix (PR #51), both confirmed by the user in the application; requested by the user (`PATCH`: fixes only). Regular GitHub Release `v0.6.1` at `88fecab57e31` (PR #52, run 40882283677); [package verification](wiki/history/release-0.6.1.md). Krita compatibility version is unchanged. |
