@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 0.8.0](#whats-new-in-080)
+- [What's new in 0.8.1](#whats-new-in-081)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,16 +59,17 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 0.8.0
+## What's new in 0.8.1
 
-[Solstice 0.8.0](https://github.com/udtren/Solstice/releases/tag/v0.8.0) adds
-[saved exports](docs/lazy-tools.md#saved-exports) to Fast Image Export: a
-document keeps several export settings of its own in the `.kra` file, each
-with its format, folder, name and area, and runs them all at once.
+[Solstice 0.8.1](https://github.com/udtren/Solstice/releases/tag/v0.8.1) lets
+the [Through-Layer Eraser](docs/through-layer-eraser.md) erase layers with
+Alpha Lock on, through the new **Erase alpha locked layers** option (on by
+default).
 
-It builds on [0.7.0](https://github.com/udtren/Solstice/releases/tag/v0.7.0),
-which added the [Through-Layer Eraser](docs/through-layer-eraser.md): erase
-through every visible layer, or only the selected layers, with one stroke.
+It builds on [0.8.0](https://github.com/udtren/Solstice/releases/tag/v0.8.0),
+which added [saved exports](docs/lazy-tools.md#saved-exports) to Fast Image
+Export: a document keeps several export settings of its own in the `.kra`
+file, each with its format, folder, name and area, and runs them all at once.
 
 ## Highlights
 
