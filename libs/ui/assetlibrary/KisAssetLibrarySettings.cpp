@@ -13,6 +13,29 @@
 #include <kconfiggroup.h>
 #include <ksharedconfig.h>
 
+Q_GLOBAL_STATIC(KisAssetLibrarySettingsNotifier, s_notifier)
+
+namespace
+{
+QJsonObject readObject(const QString &path, bool *readable)
+{
+    QFile file(path);
+    *readable = file.open(QIODevice::ReadOnly);
+    return *readable ? QJsonDocument::fromJson(file.readAll()).object() : QJsonObject();
+}
+} // namespace
+
+bool KisAssetLibraryPathEntry::operator==(const KisAssetLibraryPathEntry &other) const
+{
+    return alias == other.alias && path == other.path && includeSubfolders == other.includeSubfolders
+        && extensions == other.extensions;
+}
+
+KisAssetLibrarySettingsNotifier *KisAssetLibrarySettingsNotifier::instance()
+{
+    return s_notifier;
+}
+
 KisAssetLibrarySettings::KisAssetLibrarySettings(Usage usage)
     : m_usage(usage)
 {
@@ -85,6 +108,14 @@ void KisAssetLibrarySettings::fromJson(const QJsonObject &object)
 QJsonObject KisAssetLibrarySettings::toJson() const
 {
     QJsonObject object = m_usage == Usage::Welcome ? m_raw : QJsonObject();
+    writeSharedValues(object);
+    if (m_usage == Usage::Docker)
+        writeLayoutValues(object);
+    return object;
+}
+
+void KisAssetLibrarySettings::writeSharedValues(QJsonObject &object) const
+{
     QJsonArray pathArray;
     for (const KisAssetLibraryPathEntry &entry : paths) {
         pathArray.append(QJsonObject{{QStringLiteral("alias"), entry.alias},
@@ -100,18 +131,19 @@ QJsonObject KisAssetLibrarySettings::toJson() const
     object.insert(QStringLiteral("header_font_size"), headerFontSize);
     object.insert(QStringLiteral("asset_name_font_size"), assetNameFontSize);
     object.remove(QStringLiteral("font_size"));
-    if (m_usage == Usage::Docker) {
-        QJsonArray sizes;
-        for (int value : splitterSizes)
-            sizes.append(value);
-        object.insert(QStringLiteral("window_width"), windowWidth);
-        object.insert(QStringLiteral("window_height"), windowHeight);
-        object.insert(QStringLiteral("splitter_sizes"), sizes);
-        object.insert(QStringLiteral("right_panel_hidden"), rightPanelHidden);
-        object.insert(QStringLiteral("expanded_window_width"), expandedWindowWidth);
-        object.insert(QStringLiteral("collapsed_window_width"), collapsedWindowWidth);
-    }
-    return object;
+}
+
+void KisAssetLibrarySettings::writeLayoutValues(QJsonObject &object) const
+{
+    QJsonArray sizes;
+    for (int value : splitterSizes)
+        sizes.append(value);
+    object.insert(QStringLiteral("window_width"), windowWidth);
+    object.insert(QStringLiteral("window_height"), windowHeight);
+    object.insert(QStringLiteral("splitter_sizes"), sizes);
+    object.insert(QStringLiteral("right_panel_hidden"), rightPanelHidden);
+    object.insert(QStringLiteral("expanded_window_width"), expandedWindowWidth);
+    object.insert(QStringLiteral("collapsed_window_width"), collapsedWindowWidth);
 }
 
 bool KisAssetLibrarySettings::save() const
@@ -121,6 +153,57 @@ bool KisAssetLibrarySettings::save() const
 
 bool KisAssetLibrarySettings::save(const QString &path) const
 {
+    if (m_usage == Usage::Docker)
+        return write(path, toJson());
+
+    // Another view may have saved since this one loaded; start from the file.
+    bool readable = false;
+    QJsonObject object = readObject(path, &readable);
+    if (!readable)
+        object = m_raw;
+    writeSharedValues(object);
+    return write(path, object);
+}
+
+bool KisAssetLibrarySettings::saveLayout() const
+{
+    return saveLayout(filePath());
+}
+
+bool KisAssetLibrarySettings::saveLayout(const QString &path) const
+{
+    bool readable = false;
+    QJsonObject object = readObject(path, &readable);
+    if (!readable)
+        object = toJson();
+    writeLayoutValues(object);
+    return write(path, object);
+}
+
+bool KisAssetLibrarySettings::write(const QString &path, const QJsonObject &object) const
+{
     QFile file(path);
-    return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(QJsonDocument(toJson()).toJson()) >= 0;
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(QJsonDocument(object).toJson()) < 0)
+        return false;
+    file.close();
+    Q_EMIT KisAssetLibrarySettingsNotifier::instance()->sigSaved();
+    return true;
+}
+
+bool KisAssetLibrarySettings::hasSameSharedValues(const KisAssetLibrarySettings &other) const
+{
+    return paths == other.paths && autoColumns == other.autoColumns && columns == other.columns
+        && thumbnailSize == other.thumbnailSize && uiFontSize == other.uiFontSize
+        && headerFontSize == other.headerFontSize && assetNameFontSize == other.assetNameFontSize;
+}
+
+void KisAssetLibrarySettings::copySharedValues(const KisAssetLibrarySettings &other)
+{
+    paths = other.paths;
+    autoColumns = other.autoColumns;
+    columns = other.columns;
+    thumbnailSize = other.thumbnailSize;
+    uiFontSize = other.uiFontSize;
+    headerFontSize = other.headerFontSize;
+    assetNameFontSize = other.assetNameFontSize;
 }

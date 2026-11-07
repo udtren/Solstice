@@ -17,6 +17,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QMessageBox>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimer>
@@ -155,6 +156,67 @@ private Q_SLOTS:
         welcome.load(path, {});
         QCOMPARE(welcome.toJson().value("collapsed_window_width").toInt(), 210);
         QCOMPARE(welcome.toJson(), dock.toJson());
+    }
+
+    void testViewsDoNotOverwriteEachOther()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath("config.json");
+        QVERIFY(writeFile(path, R"({"paths":[{"path":"first"}],"window_width":700,"unknown":"retain"})"));
+        Settings dock;
+        dock.load(path, {});
+        Settings welcome(Settings::Usage::Welcome);
+        welcome.load(path, {});
+        QSignalSpy saved(KisAssetLibrarySettingsNotifier::instance(), &KisAssetLibrarySettingsNotifier::sigSaved);
+
+        // Welcome adds a folder while the docker still holds the old list.
+        welcome.paths.append({"", "second", false, "png"});
+        welcome.columns = 5;
+        QVERIFY(welcome.save(path));
+        Settings stale;
+        stale.load(path, {});
+        QVERIFY(!stale.hasSameSharedValues(dock));
+
+        // A docker resize stores only its layout.
+        dock.windowWidth = 900;
+        QVERIFY(dock.saveLayout(path));
+        Settings reloaded;
+        reloaded.load(path, {});
+        QCOMPARE(reloaded.paths.size(), 2);
+        QCOMPARE(reloaded.paths[1].path, QStringLiteral("second"));
+        QCOMPARE(reloaded.columns, 5);
+        QCOMPARE(reloaded.windowWidth, 900);
+
+        // Welcome's later save keeps the docker layout written after it loaded.
+        welcome.thumbnailSize = 200;
+        QVERIFY(welcome.save(path));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto object = QJsonDocument::fromJson(file.readAll()).object();
+        QCOMPARE(object.value("window_width").toInt(), 900);
+        QCOMPARE(object.value("thumbnail_size").toInt(), 200);
+        QCOMPARE(object.value("unknown").toString(), QStringLiteral("retain"));
+        file.close();
+        QCOMPARE(saved.count(), 3);
+
+        // The docker adopts the shared values and keeps its own layout.
+        dock.windowWidth = 640;
+        reloaded.load(path, {});
+        dock.copySharedValues(reloaded);
+        QVERIFY(dock.hasSameSharedValues(reloaded));
+        QCOMPARE(dock.thumbnailSize, 200);
+        QCOMPARE(dock.windowWidth, 640);
+
+        // Without a file, a layout save writes the docker's complete settings.
+        const QString missing = dir.filePath("new.json");
+        QVERIFY(dock.saveLayout(missing));
+        Settings created;
+        created.load(missing, {});
+        QVERIFY(created.hasSameSharedValues(dock));
+        QCOMPARE(created.windowWidth, 640);
+        QVERIFY(!dock.saveLayout(dir.filePath("missing/config.json")));
+        QCOMPARE(saved.count(), 4);
     }
 
     void testFileAndLegacyPrecedence()
