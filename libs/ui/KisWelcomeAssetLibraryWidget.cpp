@@ -358,6 +358,7 @@ struct KisWelcomeAssetLibraryWidget::Private {
                 return;
             settings = dialog.values();
             settings.save();
+            settingsModified = QFileInfo(Settings::filePath()).lastModified();
             thumbnailCache.clear();
             applyFont();
             loadFolders();
@@ -580,6 +581,16 @@ KisWelcomeAssetLibraryWidget::KisWelcomeAssetLibraryWidget(QWidget *parent)
     , d(new Private(this))
 {
     d->buildUi();
+    // A hidden page catches up through reloadSettings() when it is shown.
+    connect(
+        KisAssetLibrarySettingsNotifier::instance(),
+        &KisAssetLibrarySettingsNotifier::sigSaved,
+        this,
+        [this]() {
+            if (d->loaded && isVisible())
+                reloadSettings();
+        },
+        Qt::QueuedConnection);
 }
 
 KisWelcomeAssetLibraryWidget::~KisWelcomeAssetLibraryWidget() = default;
@@ -594,8 +605,14 @@ void KisWelcomeAssetLibraryWidget::reloadSettings()
     const QDateTime modified = QFileInfo(Settings::filePath()).lastModified();
     if (d->loaded && modified == d->settingsModified)
         return;
-    d->settings.load();
+    Settings latest(Settings::Usage::Welcome);
+    latest.load();
     d->settingsModified = modified;
+    // A docker layout save changes the file but not what this page shows.
+    const bool unchanged = d->loaded && latest.hasSameSharedValues(d->settings);
+    d->settings = latest;
+    if (unchanged)
+        return;
     d->loaded = true;
     d->applyFont();
     d->loadFolders();

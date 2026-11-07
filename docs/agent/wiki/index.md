@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-03
+updated: 2026-11-07
 ---
 
 # Agent wiki
@@ -186,6 +186,9 @@ Document ownership and lifecycle are defined in
   reference fix-up order, `QT_TRANSLATE_NOOP` not extracted; Linux gettext
   rewraps the catalogs; `.action` texts fall back to the context-free
   translation.
+- [Two views writing one settings file](pitfalls/shared-settings-file-stale-writes.md):
+  a view that saves its whole in-memory copy overwrites the other view's
+  changes; save only owned keys over the current file and notify the others.
 
 ### Benchmarks
 

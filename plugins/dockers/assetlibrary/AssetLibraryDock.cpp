@@ -239,6 +239,12 @@ void AssetLibraryDock::buildUi()
     });
     connect(refresh, &QPushButton::clicked, this, &AssetLibraryDock::refreshAssets);
     connect(settings, &QPushButton::clicked, this, &AssetLibraryDock::showSettings);
+    // Queued, so that a save never reloads views inside the saving view's handler.
+    connect(KisAssetLibrarySettingsNotifier::instance(),
+            &KisAssetLibrarySettingsNotifier::sigSaved,
+            this,
+            &AssetLibraryDock::reloadSharedSettings,
+            Qt::QueuedConnection);
     connect(m_hideButton, &QPushButton::clicked, this, [this]() {
         setAssetPanelHidden(!m_assetPanel->isHidden(), true);
     });
@@ -265,6 +271,8 @@ void AssetLibraryDock::applySettings()
 
 void AssetLibraryDock::loadFolders()
 {
+    const QString preferredPath = m_currentPath;
+    int preferredRow = 0;
     m_folderList->clear();
     for (int index = 0; index < m_settings.paths.size(); ++index) {
         const AssetPathEntry &entry = m_settings.paths.at(index);
@@ -273,9 +281,11 @@ void AssetLibraryDock::loadFolders()
         auto *item = new QListWidgetItem(label.isEmpty() ? entry.path : label, m_folderList);
         item->setToolTip(entry.path);
         item->setData(Qt::UserRole, index);
+        if (!preferredPath.isEmpty() && entry.path == preferredPath)
+            preferredRow = index;
     }
     if (m_folderList->count())
-        m_folderList->setCurrentRow(0);
+        m_folderList->setCurrentRow(preferredRow);
     else
         clearAssets(i18n("Add asset paths from Settings."));
 
@@ -626,7 +636,22 @@ void AssetLibraryDock::saveRuntimeSettings()
             m_settings.splitterSizes = sizes;
     }
     m_settings.rightPanelHidden = m_assetPanel->isHidden();
-    m_settings.save();
+    m_settings.saveLayout();
+}
+
+void AssetLibraryDock::reloadSharedSettings()
+{
+    // The welcome page or a docker in another window saved: adopt its folders
+    // and display settings, but keep this docker's own layout.
+    AssetLibrarySettings latest;
+    latest.load();
+    if (latest.hasSameSharedValues(m_settings))
+        return;
+    m_settings.copySharedValues(latest);
+    QFont f = font();
+    f.setPointSize(m_settings.uiFontSize);
+    setFont(f);
+    loadFolders();
 }
 
 bool AssetLibraryDock::eventFilter(QObject *watched, QEvent *event)

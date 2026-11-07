@@ -2728,3 +2728,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   top-level file, not the subfolders; extract the whole ZIP with `-d`.
   Python printing CJK text to this console fails with cp932; write the
   needles as escapes or set `PYTHONIOENCODING=utf-8`.
+
+## 2026-11-07 fix: Asset Library settings sync between docker and welcome page
+
+- The docker read `config.json` only at construction and saved its whole
+  settings on every resize, so folders added from the welcome page did not
+  appear in the docker and were later overwritten. Docker runtime saves now
+  use `KisAssetLibrarySettings::saveLayout()` (layout keys over the current
+  file), Welcome saves start from the current file, and
+  `KisAssetLibrarySettingsNotifier::sigSaved()` makes every docker and the
+  visible welcome page adopt changed folders/display settings.
+  [Asset Library](../asset-library.md#architecture-and-behavior).
+- `KisAssetLibraryTest` passed (15 incl. new
+  `testViewsDoNotOverwriteEachOther`); `kritaui` and the docker installed.
+  Interactive check in the app is pending.
+- New pitfall: [Two views writing one settings file](pitfalls/shared-settings-file-stale-writes.md).

@@ -70,6 +70,7 @@ private:
     void showSettings();
     void setAssetPanelHidden(bool hidden, bool save);
     void saveRuntimeSettings();
+    void reloadSharedSettings();
 
     AssetLibrarySettings m_settings;
     QPointer<KisViewManager> m_viewManager;

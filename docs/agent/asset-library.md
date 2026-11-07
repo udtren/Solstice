@@ -49,9 +49,16 @@ retains the two pre-refactor consumers' edge cases:
   values for absent layout/column fields on reload. Welcome clamps column/font
   values and reloads display defaults for absent fields. Thumbnail sizes clamp
   to 48-512 in both views.
-- Docker writes its complete known schema. Welcome updates only path/display
-  fields in its loaded JSON, preserving docker layout and unknown fields. Both
+- Docker's Settings dialog writes its complete known schema. Docker resize,
+  splitter, Hide/Show and close use `saveLayout()`, which rereads the file and
+  replaces only the six layout keys. Welcome rereads the file on save and
+  replaces only path/display fields, preserving docker layout and unknown
+  fields (its loaded JSON is used only when the file is unreadable). Both
   retain the old `nested`/`font_size` read aliases and write modern keys.
+- Before 2026-11-07 the docker read the file only at construction and wrote
+  everything on each resize, so folders added from Welcome were not shown in
+  the docker and were later overwritten by its stale list. Do not reintroduce
+  full-schema runtime saves.
 - An unreadable/missing JSON file uses the KConfig fallback. A readable invalid
   JSON file becomes an empty object, without importing stale fallback data.
 - Explicit-path I/O and JSON conversion are available to tests; tests use
@@ -65,6 +72,15 @@ retains the two pre-refactor consumers' edge cases:
 - The welcome page's Asset Library tab is independent. Do not embed the docker
   widget there. It shares JSON/KConfig settings and user-visible asset
   operations and loads configuration and thumbnails lazily when selected.
+- Live sync: every successful save emits
+  `KisAssetLibrarySettingsNotifier::sigSaved()` (process-wide, GUI thread).
+  Each docker and the welcome page connect to it with a queued connection,
+  reload the file, and act only when `hasSameSharedValues()` reports a change
+  in folders or display settings. The docker adopts them with
+  `copySharedValues()` and keeps its own layout; a hidden or not-yet-loaded
+  welcome page catches up on the next show through the mtime check. Folder
+  reloads keep the selected folder when it still exists. Edits made outside
+  Solstice are not watched.
 - Preserve the horizontal split layout: folder list and
   Refresh/Settings/Hide buttons on the left; status and scrollable thumbnail
   sections on the right.
@@ -110,7 +126,8 @@ Run `ctest --test-dir <krita-dev-root>\_build -R ^libs-ui-KisAssetLibraryTest$
 `QT_QPA_PLATFORM=offscreen` and `QT_QPA_FONTDIR=C:\Windows\Fonts`.
 
 The focused test covers legacy settings, per-view bounds/reload behavior,
-Welcome save scope and docker round trips, JSON/fallback precedence, recursive
+Welcome save scope and docker round trips, the two views not overwriting each
+other's changes (layout-only saves, save notifications), JSON/fallback precedence, recursive
 listing and extension filters, preview/thumbnail/merged-image fallback order,
 HiDPI caching and invalidation, missing-document dialogs, and filename extension
 and cancellation handling.
@@ -121,6 +138,9 @@ After installing and restarting, check in both views:
 2. Resize automatic columns; thumbnails remain correct. Docker Hide/Show and
    splitter sizes survive restart. Welcome stays lazy until selected.
 3. Change display settings from Welcome; saved docker layout is retained.
+   With the docker visible next to the welcome page, add a folder from
+   Welcome: the docker lists it at once and still has it after resizing the
+   docker and restarting. Add one from the docker: Welcome lists it.
 4. Open an asset; insert PNG/SVG and file layers, then undo/redo insertion.
 5. Duplicate, rename and delete a disposable asset; cancel each dialog once.
 6. Open a second window and close views after resizing, checking that deferred

@@ -17,6 +17,12 @@ insertion code. Their existing layouts and controls remain independent. Existing
 JSON settings and older plugin settings continue to load without conversion by
 the user; changing settings on the welcome page retains the saved docker layout.
 
+Folders and display settings are one shared list. A folder added or removed in
+either view appears in the other at once, including the docker in every open
+window; each docker keeps its own size, splitter position and Hide state.
+Changes made to the settings file outside Solstice are picked up after a
+restart.
+
 Native implementations:
 
 - [`../plugins/dockers/assetlibrary`](../plugins/dockers/assetlibrary/)
