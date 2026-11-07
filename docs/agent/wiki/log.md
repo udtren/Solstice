@@ -2715,3 +2715,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   removed; check that a new test fails without the fix before relying on it.
 - Lesson: `sed -i` in this Git Bash rewrote a CRLF file as LF. Restore CRLF
   afterwards, or edit with Python reading `newline=''`.
+
+## 2026-11-07 release: Solstice 0.8.1
+
+- Released `v0.8.1` at `8ec846b94750` (run 42314221895) on 2026-11-07
+  10:29 JST and published the website the same day (tidalboxstudio-web #31,
+  #32). Evidence:
+  [0.8.1 release verification](history/release-0.8.1.md).
+- README, the guide index and the [version ledger](../versioning.md#history)
+  now describe 0.8.1 as released.
+- Lesson: `unzip -q file.zip 'dir/*'` in this Git Bash extracted only the
+  top-level file, not the subfolders; extract the whole ZIP with `-d`.
+  Python printing CJK text to this console fails with cp932; write the
+  needles as escapes or set `PYTHONIOENCODING=utf-8`.

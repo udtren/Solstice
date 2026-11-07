@@ -277,6 +277,8 @@ Document ownership and lifecycle are defined in
 - [0.8.0 release verification](history/release-0.8.0.md): Fast Image Export
   saved exports release, package integrity, website publication with the
   duplicate GIF.
+- [0.8.1 release verification](history/release-0.8.1.md): Through-Layer
+  Eraser alpha lock option release, package integrity, website publication.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):
