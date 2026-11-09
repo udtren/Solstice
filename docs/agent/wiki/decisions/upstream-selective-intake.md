@@ -1,6 +1,6 @@
 ---
 type: decision
-updated: 2026-10-30
+updated: 2026-11-09
 sources:
   - AGENTS.md ("Branch policy")
   - docs/agent/upstream-intake.md
@@ -58,6 +58,18 @@ still fixes crashes and file-format issues that Solstice shares.
   `<sha>~1` the parent).
 - A clean or clean-3way dry run says nothing about compiling against
   Solstice; see step 5 of [upstream-intake.md](../../upstream-intake.md).
+- A soak with no follow-ups is not proof that a commit works. Upstream
+  `ec6a328c80` (U-2026W44-11) reached its soak date with no revert or fix,
+  yet it uses `QString::compare()` as a boolean without `== 0`, so every
+  font-family lookup returns the first font in the database. The tests that
+  cover it (`TestSvgText`) are registered as broken upstream, so upstream
+  CI never ran them. Build and run the tests of the touched file even when
+  they are "broken", and compare each case with a run on `main`: on Linux
+  `TestSvgText` already fails 69 render comparisons on `main` (2026-11-09).
+- Hermes can miss a master-only prerequisite in the same file: for
+  U-2026W44-11 it named `a62eacc82f`, but `e4059e83` (2026-08-25) sits
+  between the snapshot and that commit. `git diff <snapshot> <first>^ --
+  <file>` shows any remaining gap.
 
 ## Weekly review, staged adoption (2026-10-26)
 

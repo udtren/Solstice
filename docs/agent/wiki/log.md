@@ -2743,3 +2743,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `testViewsDoNotOverwriteEachOther`); `kritaui` and the docker installed.
   Interactive check in the app is pending.
 - New pitfall: [Two views writing one settings file](pitfalls/shared-settings-file-stale-writes.md).
+
+## 2026-11-09 intake: upstream 2026-W46 and held U-2026W44-11
+
+- Reviewed the 2026-W46 report against `main` b7455e411a. Ledger: W46-01
+  and W46-02 (theme colors, links) held until their soak date 2026-11-23;
+  W46-09 (icons) rejected. W46-03 to -08 wait for an upstream release and
+  are not recorded yet (no user decision).
+- U-2026W44-11 (font search) was approved, applied, then stopped before
+  pushing: the chain `e4059e83` -> `a62eacc82f` -> `ec6a328c80` breaks font
+  selection. `TestSvgText` on Linux: `main` 158 passed / 69 failed, chain
+  140 / 87 (every lookup returns "Noto Sans Adlam"; "Ahem" not found),
+  chain plus `compare(...) == 0` 148 / 79 (width and oblique selection).
+  Upstream master is unchanged. The user kept it held until 2026-11-23,
+  then reject unless upstream fixes it. The local commits were dropped.
+- Not checked: nothing was installed; no app run.
+- Lessons: [upstream decision page](decisions/upstream-selective-intake.md)
+  (soak is not proof; run "broken" tests against a `main` baseline;
+  Hermes missed `e4059e83`). Running `TestSvgText` deletes the tracked
+  `libs/flake/tests/data/fonts/{CSSTest,testFontsCozens}/.uuid` files;
+  restore them with `git checkout --` afterwards.
