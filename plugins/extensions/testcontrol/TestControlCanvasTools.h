@@ -50,6 +50,7 @@ private:
     void canvasCapture(const Arguments &arguments, const Reply &reply);
     void queryPixels(const Arguments &arguments, const Reply &reply);
     void canvasFrames(const Arguments &arguments, const Reply &reply);
+    void gpuFault(const Arguments &arguments, const Reply &reply);
 
     /// Options shared by the input tools.
     struct StrokeOptions {
