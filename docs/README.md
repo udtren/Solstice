@@ -42,6 +42,8 @@ Export: export settings kept in the document and run together.
 - [Brush Stroke Layer](brush-stroke-layer.md): a layer that redraws its
   strokes when scaled.
 - [Photoshop brushes](photoshop-brushes.md): importing `.abr` files.
+- [At least 1 pixel](brush-minimum-one-pixel.md): thin, pressure-tapered
+  brush lines keep at least 1 pixel instead of fading out.
 
 ## Editing
 

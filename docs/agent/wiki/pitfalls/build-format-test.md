@@ -1,6 +1,6 @@
 ---
 type: pitfall
-updated: 2026-10-27
+updated: 2026-11-11
 sources:
   - docs/agent/duplicate-selection-in-layer.md (2026-10-27, out-of-tree build of libkritaimage, libkritaui, libkritalibkra and the Move Tool while another session rebuilt _build)
   - "docs/agent/quick-access.md (\"Icon item span regression checks\", 2026-10-24)"
@@ -75,7 +75,10 @@ wrong anyway.
   its lines changed. Formatting only the changed lines of an upstream file
   can reorder that file's includes. Compare with `git diff` after
   formatting. Restore the original order and keep the new include at the
-  end of the block, matching the file's style.
+  end of the block, matching the file's style. Passing
+  `--sort-includes=false` together with `--lines` avoids the reordering
+  (2026-11-11), but it can still remove blank lines next to a changed line;
+  check the diff.
 - **Shells drop empty arguments.** A helper called as
   `script "" "a.cpp,b.cpp"` from PowerShell lost the empty first argument,
   and whole upstream files were formatted. Call such helpers from bash, or

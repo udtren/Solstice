@@ -182,6 +182,9 @@ required.
 - **Native Export Region**: the export feature of the Export Region plugin is
   now built in as **File > Export Region...** (`Alt+Shift+E`), which exports
   the selection or the active layer's bounds.
+- **[At least 1 pixel](docs/brush-minimum-one-pixel.md)**: a Freehand Brush
+  option, on by default, that keeps thin, pressure-tapered lines at least
+  1 pixel wide.
 - **Performance improvements and bug fixes** across the application.
 
 See the [user guides](docs/README.md) for every Solstice feature.

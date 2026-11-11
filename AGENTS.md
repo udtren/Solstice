@@ -181,6 +181,7 @@ maintained references, plans and historical records.
 - Visual branding: [checklist](docs/agent/solstice-visual-branding-todo.md).
 - Brush option shared model: [maintenance reference](docs/agent/brush-option-shared-model.md).
 - Brush options in Tool Options: [development notes](docs/agent/tool-options-brush.md).
+- At least 1 pixel (minimum brush dab size): [development notes](docs/agent/brush-minimum-one-pixel.md).
 - UI modernization: [maintenance reference](docs/agent/ui-modernization.md).
 - GitHub Actions Windows builds: [development notes](docs/agent/github-actions.md).
 - Explorer thumbnails: [development notes](docs/agent/windows-shell-thumbnails.md).

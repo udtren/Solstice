@@ -23,6 +23,8 @@
 #include "kis_selection_mask.h"
 #include "kis_algebra_2d.h"
 #include "KisGlobalResourcesInterface.h"
+#include "kis_config.h"
+#include <brushengine/KisMinimumDabSize.h>
 
 struct KisResourcesSnapshot::Private {
     Private()
@@ -112,6 +114,18 @@ KisResourcesSnapshot::KisResourcesSnapshot(KisImageSP image, KisNodeSP currentNo
                     p->cloneWithResourcesSnapshot(KisGlobalResourcesInterface::instance(),
                                                   m_d->globalCanvasResourcesInterface,
                                                   cacheInterface);
+
+            // Solstice: the tool option "At least 1 pixel" travels with the
+            // stroke's own preset clone (docs/agent/brush-minimum-one-pixel.md).
+            // The base class setter keeps the clone's brush and resource
+            // caches, which a notifying KisPaintOpSettings::setProperty()
+            // would clear. Presets passed as presetOverride (Brush Stroke
+            // Layer replay, stroke previews) keep the value they carry.
+            const bool minimumOnePixel =
+                KisConfig(true).readEntry<bool>(KisMinimumDabSize::configKey(), KisMinimumDabSize::defaultEnabled());
+            m_d->currentPaintOpPreset->settings()->KisPropertiesConfiguration::setProperty(
+                KisMinimumDabSize::settingsKey(),
+                minimumOnePixel);
         }
     }
 

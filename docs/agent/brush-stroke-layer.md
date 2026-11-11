@@ -57,7 +57,11 @@ it introduced no settings or file migration.
 Record post-smoothing `FreehandStrokeStrategy::Data` jobs (POINT, LINE and
 CURVE with control points), not raw tablet input. Each record retains:
 
-- A cloned preset with its stroke-resource snapshot; foreground/background
+- A cloned preset with its stroke-resource snapshot (including the
+  "At least 1 pixel" property, `Solstice/MinimumOnePixelDab`, so replay
+  keeps the value the stroke was drawn with;
+  [At least 1 pixel](brush-minimum-one-pixel.md#presets-passed-in-presetoverride));
+  foreground/background
   colors, effective composite operation (including erase), opacity, zoom,
   pattern and gradient.
 - Random seed, painter/copy count, each job's painter index, paint information
