@@ -95,6 +95,7 @@ many undo steps there are."
 | `ui_close` | Closes a dialog or popup window by its title |
 | `query_layers`, `layer_activate` | Lists the layers with their names, visibility, opacity and color labels, or selects layers by name |
 | `docker_show` | Shows or hides a docker, for example Tool Options |
+| `gpu_fault` | For developers: makes the GPU engine fail to read image data back from the graphics card, to check Solstice's warning and save protection after lost GPU data; `reset` returns to normal |
 
 Input tools accept modifier keys (Shift, Ctrl, Alt), and `input_click` can
 double-click. For keys, test control brings Solstice to the front and gives
@@ -203,6 +204,9 @@ from hand-drawn measurements and must not be mixed with them.
   with: they add a brush to Quick Access, a rename preset, export settings,
   and exported images in the test folder. Run them with `--launch`, which
   uses a temporary profile, not with your everyday Solstice.
+- `gpu_fault` really loses the latest changes in the affected areas of every
+  open document, and `reset` does not bring them back. Use it only with
+  scratch documents, and restart Solstice before normal work.
 
 ## Security
 

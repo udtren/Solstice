@@ -44,7 +44,8 @@ the linked benchmark page.
    records automated coverage but leaves interactive dialog acceptance pending.
    Use the [manual checklist](gpu-engine.md#manual-regression-checklist) and
    record the tested build and result. A documentation extraction does not
-   establish acceptance.
+   establish acceptance. Test Control's `gpu_fault` (2026-11-11) provides
+   the reproducible fault; the check itself is still pending.
 2. **Continue priority 4 when requested.** Measure remaining filters before
    choosing the next target (levels/curves were in the original scope, but their
    4.93 baseline configuration was questioned and must be corrected first).
