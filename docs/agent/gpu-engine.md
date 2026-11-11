@@ -28,8 +28,9 @@ merged; documentation changes alone do not establish interactive acceptance.
 - The former priority diary is preserved in the
   [work-order snapshot](wiki/history/gpu-work-priorities-development.md).
   Old next steps, PIDs and opt-in defaults there are historical.
-- Manual failure-warning/save-dialog acceptance was still pending in the
-  archived phase plan. Retain that outstanding check; automated save tests
+- Manual failure-warning/save-dialog acceptance, pending in the archived
+  phase plan, passed on 2026-11-11 except the autosave exemption
+  ([checklist item 16](#manual-regression-checklist)); automated save tests
   do not establish interactive acceptance.
 
 ## Decisions approved by the user
@@ -1295,22 +1296,45 @@ Record the build, format, workload and result separately from earlier acceptance
     Hard Overlay, Penumbra A, Easy Dodge, Modulo Shift, Lambert Lighting,
     Behind, Greater, Luminosity SAI and Copy Red; each looks like the CPU;
     Destination In still works (CPU); Undo/Redo.
-16. Outstanding failure UI acceptance: with a reproducible test fault, confirm
-    that content loss produces one non-modal warning and stops GPU use. Check
+16. Failure UI: with a reproducible test fault, confirm that content loss
+    produces one non-modal warning and stops GPU use. Check
     Save/Save As/export/save-on-close choices (Save as New File default,
     Save Anyway, Cancel), a later loss during export preserving the existing
     target, and the documented autosave/`supportsIO() == false` exclusions.
     Do not induce a real driver reset or use valuable documents to exercise
     this check. Record acceptance separately from `KisGpuSaveTest`.
     The test fault is Test Control's
-    [`gpu_fault`](test-control.md#tools-phases-0-4) (2026-11-11): paint on a
-    scratch RGBA float document, call it with `downloadFailures` 1000000,
-    then save, export or read the layer (`query_pixels`); `reset` returns to
-    normal in the same process (lost tiles stay lost). For the
-    loss-during-export case, export once without a fault, then inject and
-    export to the same target. Known when the tool was first run: the
-    warning reports the tiles lost when it is shown (1 of 5 in that run),
-    not later losses.
+    [`gpu_fault`](test-control.md#tools-phases-0-4): paint on a scratch RGBA
+    float document, call it with `downloadFailures` 1000000, then save or
+    export without painting first (a stroke reads back the tiles it touches,
+    so the loss would happen before the save). For a loss during a save or
+    export, GPU-only tiles must still exist when it runs: the Layers docker's
+    thumbnails and the Overview docker read new strokes back within about
+    three seconds (212 tiles after one stroke), so hide both, and use a
+    format that reads the layers (`.kra`, PSD): PNG reads only the
+    projection, which is already on the CPU. Use a fresh Solstice per
+    attempt rather than `reset`: strokes painted after a reset were not left
+    on the GPU.
+    Acceptance (2026-11-11, user-operated, Windows 11, NVIDIA RTX PRO 6000
+    Blackwell, driver 596.86, installed 0.7.0 `317907b` libraries with the
+    `gpu_fault` plugin from PR #70; no save-guard source changed between
+    `317907b` and `main`; Japanese UI; scratch profiles; RGBA F32
+    1200x900): passed except autosave, which was not checked.
+    `supportsIO() == false` filters were not exercised.
+
+    | Check | Result |
+    | --- | --- |
+    | Loss during Ctrl+S over an existing `.kra` | Pass: "save failed / error while writing", the target byte-identical, one non-modal "GPU Engine Stopped" warning, engine failed |
+    | Ctrl+S after the loss | Pass: the pre-save warning; Cancel saved nothing; Save Anyway wrote the target; Save as New File opened Save As and wrote a new `.kra` |
+    | Save As, Export (PNG), save on close | Pass: the pre-save warning each time; Cancel on close kept the document open |
+    | Later loss during export (fresh process, Layers and Overview dockers hidden, PSD) | Pass: the export failed with the write error, the existing PSD byte-identical, the warning shown |
+    | Autosave exemption | Not checked |
+
+    Findings, not fixed: the warning reports the tiles lost when it is
+    shown, not later losses (256 of 285, 45 of 56; 1 of 5 in the first tool
+    run); the warning and pre-save texts are untranslated (English in the
+    Japanese UI); a refused save still replaced the `~` backup with a copy
+    of the intact target, so the older backup is gone.
 17. Clone Layer offsets (phase 4.110): the
     [Clone Layer manual checks](clone-layer.md#manual-checks).
 18. Partial-tile projection clears (phase 4.111): on an RGBA 32-bit and a

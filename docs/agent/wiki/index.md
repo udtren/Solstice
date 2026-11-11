@@ -121,6 +121,10 @@ Document ownership and lifecycle are defined in
 
 ### Pitfalls
 
+- [GPU tiles are read back soon after every stroke](pitfalls/gpu-tiles-read-back-after-strokes.md):
+  the Layers and Overview dockers read new GPU strokes back within seconds
+  and PNG export reads only the projection, so a GPU loss during a save
+  needs hidden dockers and a layer format to reproduce.
 - [Build, format and test pitfalls](pitfalls/build-format-test.md):
   building a worktree out of tree (`_build` compiles the main checkout),
   clang-format include sorting, shells, shader and struct layout mistakes,
