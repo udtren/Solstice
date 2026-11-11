@@ -66128,6 +66128,21 @@ msgctxt "@info:tooltip"
 msgid "Enable snapping when using erasers"
 msgstr "消しゴムを使用する際にスナップを有効にします"
 
+#: plugins/tools/basictools/kis_tool_brush.cc:617
+#, kde-format
+msgid "At least 1 pixel"
+msgstr "最低限1pxを描画する"
+
+#: plugins/tools/basictools/kis_tool_brush.cc:621
+#, kde-format
+msgctxt "@info:tooltip"
+msgid ""
+"Keep the brush at least 1 pixel large when pen pressure or another sensor "
+"makes it smaller, so that thin, tapered lines do not fade out"
+msgstr ""
+"筆圧などでブラシが1pxより小さくなるときも1px以上で描画し、細い入り抜きの線"
+"が消えないようにします"
+
 #: plugins/tools/basictools/kis_tool_brush.h:146
 #, kde-format
 msgid "Freehand Brush Tool"
