@@ -1302,6 +1302,15 @@ Record the build, format, workload and result separately from earlier acceptance
     target, and the documented autosave/`supportsIO() == false` exclusions.
     Do not induce a real driver reset or use valuable documents to exercise
     this check. Record acceptance separately from `KisGpuSaveTest`.
+    The test fault is Test Control's
+    [`gpu_fault`](test-control.md#tools-phases-0-4) (2026-11-11): paint on a
+    scratch RGBA float document, call it with `downloadFailures` 1000000,
+    then save, export or read the layer (`query_pixels`); `reset` returns to
+    normal in the same process (lost tiles stay lost). For the
+    loss-during-export case, export once without a fault, then inject and
+    export to the same target. Known when the tool was first run: the
+    warning reports the tiles lost when it is shown (1 of 5 in that run),
+    not later losses.
 17. Clone Layer offsets (phase 4.110): the
     [Clone Layer manual checks](clone-layer.md#manual-checks).
 18. Partial-tile projection clears (phase 4.111): on an RGBA 32-bit and a

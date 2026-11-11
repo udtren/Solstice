@@ -119,6 +119,19 @@ Verification (2026-10-26, cloud session, no Krita build available):
   with `--launch` six fail and the paint trace series cannot start, because
   a fresh profile leaves a narrow canvas. Details and the other findings in
   [Windows, phases 1-4](#windows-phases-1-4-2026-10-28).
+- `gpu_fault` (2026-11-11, Windows 11, NVIDIA RTX PRO 6000 Blackwell, driver
+  596.86, branch `claude/test-control-gpu-fault`, `kritatestcontrol` rebuilt
+  and installed into an existing `_install`): `TestControlProtocolTest`,
+  `ImageCompareTest`, `TimingTest` and (on rerun) `InputInjectorTest` pass;
+  `PathsTest` fails only the known `testSymbolicLinkOutOfRoot`. Live, on an
+  RGBA F32 document with GPU brush strokes: -1, 1.5 and `"3"` are rejected;
+  1 failure followed by `query_pixels` recovered (no loss, 67 tiles read
+  back); 1000000 then `query_pixels` lost 5 tiles, set `failed` and opened
+  the "GPU Engine Stopped" message box; `reset` cleared `failed`, and the
+  next stroke and read worked (52 tiles read back, `lostTiles` stayed 5).
+  The message box said "1 tile(s)": it counts the tiles lost when it is
+  shown, and tiles lost later are not added (see
+  [GPU checklist item 16](gpu-engine.md#manual-regression-checklist)).
 
 ## Source locations
 
@@ -185,7 +198,7 @@ tested in the cloud session.
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
-| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables, `gpuEngine`: the device, driver and failed state once the GPU engine has started (null before, or without it), and `process`: the process's CPU time so far (`cpuUserMs`, `cpuSystemMs`, all threads; `getrusage`/`GetProcessTimes`) and the current time (`clockMs`) |
+| `session_info` | none | Solstice/Krita/Qt versions, platform, UI languages (`uiLanguages`), window count, active tool, document, canvas widget (class, size, focus), GPU/trace environment variables, `gpuEngine`: the device, driver, failed state, lost tiles (`lostTiles`, `contentLossCount()`) and tiles read back so far (`downloadedTiles`) once the GPU engine has started (null before, or without it), and `process`: the process's CPU time so far (`cpuUserMs`, `cpuSystemMs`, all threads; `getrusage`/`GetProcessTimes`) and the current time (`clockMs`) |
 | `document_new` | `width`, `height` (1-16384, default 800x600), `colorDepth` (`U8`/`U16`/`F16`/`F32`) | Document and canvas once the new view is active (RGBA, one transparent paint layer, white canvas color, 300 ppi). Every `document` result has size, color model, depth and profile, the file name (`fileName`, without the folder, empty for an unsaved document) and `modified` |
 | `tool_activate` | `id` (factory ID) | Active tool ID and `restarted`; a tool that is already active is switched away (to the rectangle selection, or from it to the brush) and back, so it starts fresh; an unknown ID lists all IDs |
 | `input_stroke` | `points` (`x`, `y`, optional `pressure`, `xTilt`, `yTilt`, `t` from 0 to 120000 ms), `device` (`mouse`/`tablet`), `coordinates` (`image`/`widget`), `button`, `realtime`, `releaseDelayMs` (0-1000, default 50), `keyAfterRelease` (one key in `QKeySequence` portable text, sent with canvas focus right after the release), `modifiers` (`shift`, `ctrl`, `alt`, `meta`) | Events sent, press/release accepted flags, duration, when the first press and the last release were sent (`pressedAtMs`, `releasedAtMs`, on the `canvas_frames` clock; null without one), points outside the canvas widget, modifiers, active tool |
@@ -210,6 +223,7 @@ tested in the cloud session.
 | `ui_set` | selectors `objectName`, `toolTip`, `className`; `value`, `within`, `window`, `index` | Combo box (index or item text, then `activated` and `textActivated`), spin box (number, then `editingFinished`), check box or checkable button (bool), line edit (text, then `editingFinished`); the new state |
 | `ui_close` | `window` (title) | Closes every visible window with that title (`QWidget::close()`), for modeless dialogs and popups; how many closed |
 | `docker_show` | `id` (docker object name, e.g. `sharedtooldocker`), `visible` | Shows or hides the docker; an unknown ID lists the IDs |
+| `gpu_fault` | `reset`, then `downloadFailures` (integer 0-1000000) | Development only (2026-11-11): `KisGpuTileBackend::injectDownloadFailuresForTesting()` makes that many of the next read-back submissions fail; 0 clears pending ones. `reset` clears pending failures, leaves the failed state (`resetFailureForTesting()`) and sets `KisGpuEngineUi`'s acknowledged loss to the current count, so later saves are not refused for the loss so far. Without arguments it only reports. Result: `gpuEngine` as in `session_info`. Fails when the engine has not started or the build has no GPU engine |
 
 Tool failures are MCP tool results with `isError: true` and an `error`
 field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
@@ -326,6 +340,15 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
 - **Coordinates.** Image coordinates are converted with
   `KisCoordinatesConverter::imageToWidget()` of the current canvas; points
   outside the widget are still sent and counted.
+- **GPU faults.** `gpu_fault` exists for the GPU engine's failure UI check
+  ([checklist item 16](gpu-engine.md#manual-regression-checklist)); there is
+  no other way to lose GPU content on purpose in a running Solstice. A
+  read-back runs when the CPU needs tiles the GPU wrote: `query_pixels`, a
+  save or export, a CPU filter. A failed batch is retried tile by tile, and
+  every retry is one more submission, so `downloadFailures` 1 recovers (no
+  loss) and 1000000 stands for a lost device. The failure listener runs once
+  per process; `reset` re-arms it. Lost tiles stay marked lost: `reset`
+  only lets the engine accept GPU work again in the same process.
 - **Reads.** `query_state` takes `KisImage::tryBarrierLock(true)` and fails
   instead of blocking when the image is busy. Undo commands reach the stack
   before the image reports idle (`KisDocument`'s undo stack pushes from
@@ -342,6 +365,8 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   filters, not directly to tools or strokes, so tests exercise the real
   input path.
 - No user-visible strings, settings, actions or persisted formats.
+- `gpu_fault` changes only the running process's GPU engine state; it
+  persists nothing and is unreachable without the port and token.
 
 ## Manual regression checklist
 

@@ -48,6 +48,7 @@
 
 #ifdef HAVE_KRITA_GPU_ENGINE
 #include <KisGpuContext.h>
+#include <KisGpuEngineUi.h>
 #include <gpu/KisGpuTileBackend.h>
 #endif
 
@@ -76,6 +77,9 @@ constexpr int MaxFullResolutionPng = 2048;
 // such gap each, so the wait adds twice the longest gap seen.
 constexpr int IdlePolls = 3;
 constexpr qint64 ShapeSelectionSettleMs = 600;
+// gpu_fault: enough failed read-backs to stand for a lost device for the rest
+// of a session (a failed batch is retried tile by tile, each retry one more).
+constexpr int MaxInjectedDownloadFailures = 1000000;
 
 QJsonObject environmentInfo()
 {
@@ -101,6 +105,8 @@ QJsonValue gpuEngineInfo()
             {"driver", device.driverName},
             {"driverInfo", device.driverInfo},
             {"failed", backend->hasFailed()},
+            {"lostTiles", double(backend->contentLossCount())},
+            {"downloadedTiles", double(backend->downloadedTileCount())},
         };
     }
 #endif
@@ -351,6 +357,23 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
                     "Return a PNG image of the canvas widget as displayed (diagnostic; not a pixel reference).",
                     objectSchema({{"maxSize", schemaProperty("integer", "Longest side in pixels (default 1024).")}}),
                     std::bind(&TestControlCanvasTools::canvasCapture, this, _1, _2));
+
+    server->addTool(
+        "gpu_fault",
+        "Development only: make the GPU engine's next read-backs of image data fail, to check how Solstice "
+        "handles lost GPU content (the warning, the stopped engine, the save and export guards). A failed batch "
+        "is retried tile by tile and each retry counts, so a small count tests recovery and 1000000 stands for a "
+        "lost device. Read-backs happen when the CPU reads painted pixels: query_pixels, a save or export, a CPU "
+        "filter. Lost tiles stay lost; use a scratch document. reset leaves the failed state, clears pending "
+        "failures and accepts the loss so far for saving. Without arguments it only reports.",
+        objectSchema({
+            {"downloadFailures",
+             schemaProperty("integer",
+                            "How many of the next read-back submissions fail (0-1000000); 0 clears pending "
+                            "failures. Applied after reset.")},
+            {"reset", schemaProperty("boolean", "Leave the failed state first (default false).")},
+        }),
+        std::bind(&TestControlCanvasTools::gpuFault, this, _1, _2));
 }
 
 void TestControlCanvasTools::sessionInfo(const Arguments &, const Reply &reply)
@@ -370,6 +393,38 @@ void TestControlCanvasTools::sessionInfo(const Arguments &, const Reply &reply)
         {"gpuEngine", gpuEngineInfo()},
         {"process", processInfo()},
     }));
+}
+
+void TestControlCanvasTools::gpuFault(const Arguments &arguments, const Reply &reply)
+{
+#ifdef HAVE_KRITA_GPU_ENGINE
+    const QJsonValue failures = arguments.value("downloadFailures");
+    const double count = failures.toDouble(-1);
+    if (!failures.isUndefined()
+        && (!failures.isDouble() || count < 0 || count > MaxInjectedDownloadFailures || count != qint64(count))) {
+        reply(TestControlMcpServer::ToolResult::failure("downloadFailures must be an integer from 0 to 1000000"));
+        return;
+    }
+    KisGpuTileBackend *backend = KisGpuTileBackend::existingInstance();
+    if (!backend) {
+        reply(TestControlMcpServer::ToolResult::failure(
+            "The GPU engine has not started; it starts with the first RGBA float document while it is enabled"));
+        return;
+    }
+    if (arguments.value("reset").toBool(false)) {
+        backend->injectDownloadFailuresForTesting(0);
+        backend->resetFailureForTesting();
+        // Otherwise every later save would be refused for the loss so far.
+        KisGpuEngineUi::setAcknowledgedLossCountForTesting(backend->contentLossCount());
+    }
+    if (!failures.isUndefined()) {
+        backend->injectDownloadFailuresForTesting(int(count));
+    }
+    reply(TestControlMcpServer::ToolResult::success({{"gpuEngine", gpuEngineInfo()}}));
+#else
+    Q_UNUSED(arguments);
+    reply(TestControlMcpServer::ToolResult::failure("This build has no GPU engine"));
+#endif
 }
 
 void TestControlCanvasTools::documentNew(const Arguments &arguments, const Reply &reply)

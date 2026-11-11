@@ -2764,6 +2764,24 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `libs/flake/tests/data/fonts/{CSSTest,testFontsCozens}/.uuid` files;
   restore them with `git checkout --` afterwards.
 
+## 2026-11-11 feature: Test Control `gpu_fault` for the GPU failure UI check
+
+- The GPU engine's failure warning and save guards (GPU checklist item 16)
+  had no way to be triggered in a running Solstice: the backend's fault
+  injection was reachable only from `KisGpuPaintDeviceTest` and
+  `KisGpuSaveTest`. Test Control now exposes it as `gpu_fault`
+  (`downloadFailures`, `reset`), and `session_info` reports `lostTiles` and
+  `downloadedTiles`. [Test control](../test-control.md#tools-phases-0-4).
+- Live run on Windows (RGBA F32, GPU brush): 1 injected failure recovers
+  through the tile-by-tile retry; 1000000 loses tiles, stops the engine and
+  shows the warning; `reset` resumes GPU work. The warning counted 1 tile
+  while 5 were lost (it counts when shown).
+- Not done: the item 16 acceptance itself (dialogs, Save As, export,
+  save-on-close, autosave) is still pending.
+- Lesson: an injected failure count is per read-back submission, retries
+  included, so a count of 1 never loses content; simulate a lost device with
+  a large count.
+
 ## 2026-11-11 ingest: white rectangle while painting (not reproduced)
 
 - Report: with an RGBA float document, a white rectangle the shape of an
