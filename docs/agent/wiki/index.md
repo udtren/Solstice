@@ -290,6 +290,9 @@ Document ownership and lifecycle are defined in
   duplicate GIF.
 - [0.8.1 release verification](history/release-0.8.1.md): Through-Layer
   Eraser alpha lock option release, package integrity, website publication.
+- [0.9.0 release verification](history/release-0.9.0.md): At least 1 pixel
+  release, open pull requests merged first, package integrity, website
+  publication.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

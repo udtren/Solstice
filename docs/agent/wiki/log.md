@@ -2842,3 +2842,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   dockers had already read the strokes back, and PNG reads only the
   projection. `gpu_fault reset` does not give a clean repeat: strokes after
   it were not left on the GPU, so the test docs now say to restart.
+
+## 2026-11-11 release: Solstice 0.9.0
+
+- Merged the open pull requests #72 and #73, then released `v0.9.0` at
+  `eb169f073da7` (PR #74, run 43022003263) on 2026-11-11 23:18 JST and
+  published the website the same day (tidalboxstudio-web #33, #34).
+  Evidence: [0.9.0 release verification](history/release-0.9.0.md).
+- README, the guide index and the [version ledger](../versioning.md#history)
+  now describe 0.9.0 as released.
+- Lessons: a pull request whose branch is checked out in another session's
+  worktree can be fixed from a detached HEAD here and pushed with
+  `git push origin HEAD:<branch>`, without touching that worktree. Wiki
+  `related` takes wiki pages only; feature documents go under `sources`.
