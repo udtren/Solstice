@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-11-03 12:36+0900\n"
+"POT-Creation-Date: 2026-11-11 20:51+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -25382,135 +25382,135 @@ msgid "Anonymous"
 msgstr "匿名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:75
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:456
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:466
 #, kde-format
 msgid "Asset Library Settings"
 msgstr "Asset Library 设置"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:473
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
 #, kde-format
 msgid "Alias"
 msgstr "别名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:473
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
 #, kde-format
 msgid "Extensions"
 msgstr "扩展名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:473
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
 #, kde-format
 msgid "Include Subfolders"
 msgstr "包含子文件夹"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:473
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
 #, kde-format
 msgid "Path"
 msgstr "路径"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:106
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:492
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:502
 #, kde-format
 msgid "Select Asset Folder"
 msgstr "选择素材文件夹"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:111
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:497
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:507
 #, kde-format
 msgid "Folder Alias"
 msgstr "文件夹别名"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:112
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:497
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:507
 #, kde-format
 msgid "Alias (optional)"
 msgstr "别名 (可选)"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:129
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:528
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:538
 #, kde-format
 msgid "Asset Paths"
 msgstr "素材路径"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:134
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:533
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:543
 #, kde-format
 msgid "Auto columns"
 msgstr "自动列数"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:143
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:550
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:560
 #, kde-format
 msgid "Thumbnail columns"
 msgstr "缩略图列数"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:144
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:551
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:561
 #, kde-format
 msgid "Fixed thumbnail columns"
 msgstr "固定缩略图列数"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:145
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:552
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:562
 #, kde-format
 msgid "Thumbnail size"
 msgstr "缩略图大小"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:146
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:553
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:563
 #, kde-format
 msgid "Folder button font size"
 msgstr "文件夹按钮字体大小"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:147
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:554
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:564
 #, kde-format
 msgid "Header font size"
 msgstr "标题字体大小"
 
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:148
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:555
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:565
 #, kde-format
 msgid "Asset filename font size"
 msgstr "素材文件名字体大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:396
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:280
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:397
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:290
 #, kde-format
 msgid "Add asset paths from Settings."
 msgstr "请在设置中添加素材路径。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:422
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:290
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:307
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:423
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:300
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:317
 #, kde-format
 msgid "No asset path is selected."
 msgstr "未选择素材路径。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:427
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:311
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:428
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:321
 #, kde-format
 msgid "Folder not found: %1"
 msgstr "找不到文件夹：%1"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:458
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:345
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:459
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:355
 #, kde-format
 msgid "1 asset"
 msgid_plural "%1 assets"
 msgstr[0] "%1 个素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:519
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:520
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:106
 #: plugins/python/scripter/ui_scripter/actions/openaction/openaction.py:28
 #, kde-format
 msgid "Open"
 msgstr "打开"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:520
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:521
 #: libs/ui/assetlibrary/KisAssetLibraryOperations.cpp:24
 #: libs/ui/widgets/kis_canvas_drop.cpp:33
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:107
@@ -25518,7 +25518,7 @@ msgstr "打开"
 msgid "Insert as New Layer"
 msgstr "插入为 - 新图层"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:521
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:522
 #: libs/ui/assetlibrary/KisAssetLibraryOperations.cpp:37
 #: libs/ui/widgets/kis_canvas_drop.cpp:34
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:108
@@ -25526,44 +25526,44 @@ msgstr "插入为 - 新图层"
 msgid "Insert as New File Layer"
 msgstr "插入为 - 新文件图层"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:536
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:538
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:420
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:424
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:537
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:539
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:430
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:434
 #, kde-format
 msgid "Duplicate Asset"
 msgstr "复制素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:538
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:424
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:539
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:434
 #, kde-format
 msgid "Could not copy the file."
 msgstr "无法复制文件。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:541
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:543
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:430
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:434
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:542
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:544
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:440
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:444
 #, kde-format
 msgid "Rename Asset"
 msgstr "重命名素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:543
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:434
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:544
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:444
 #, kde-format
 msgid "Could not rename the file."
 msgstr "无法重命名文件。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:547
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:553
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:441
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:449
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:548
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:554
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:451
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:459
 #, kde-format
 msgid "Delete Asset"
 msgstr "删除素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:548
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:442
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:549
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:452
 #, kde-format
 msgid ""
 "Delete this file?\n"
@@ -25572,8 +25572,8 @@ msgstr ""
 "要删除此文件吗？\n"
 "%1"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:553
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:449
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:554
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:459
 #, kde-format
 msgid "Could not delete the file."
 msgstr "无法删除文件。"
@@ -26674,7 +26674,7 @@ msgstr "主显示器："
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:151
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2458
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2460
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:559
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:569
 #: plugins/dockers/svgcollectiondocker/SvgSymbolCollectionDocker.cpp:234
 #, kde-format
 msgid "Display"
@@ -27509,7 +27509,7 @@ msgstr "导出为视频"
 #: plugins/paintops/spray/KisSprayShapeOptionModel.cpp:88
 #: plugins/paintops/spray/KisSprayShapeOptionWidget.cpp:36
 #: plugins/paintops/spray/KisSprayShapeOptionWidget.cpp:40
-#: plugins/tools/basictools/kis_tool_brush.cc:498
+#: plugins/tools/basictools/kis_tool_brush.cc:513
 #: plugins/tools/basictools/kis_tool_fill.cc:582
 #: plugins/tools/basictools/kis_tool_fill.cc:598
 #: plugins/tools/basictools/kis_tool_fill.cc:610
@@ -30047,7 +30047,7 @@ msgstr "添加当前预设为书签"
 
 #. i18n: context: string @ property (text), widget (QPushButton, pushButtonDelete)
 #: libs/ui/forms/wdgbookmarkedconfigurationseditor.ui:55
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:524
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:525
 #: libs/widgetutils/xmlgui/kshortcutschemeseditor.cpp:64
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:111
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:66
@@ -31771,7 +31771,7 @@ msgstr "添加…"
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:85
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:262
 #: libs/widgetutils/xmlgui/kswitchlanguagedialog_p.cpp:430
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:464
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:474
 #: plugins/python/channels2layers/channels2layers.py:106
 #, kde-format
 msgid "Remove"
@@ -34261,7 +34261,7 @@ msgstr "所有方案中的已更改设置都将被重置。您确定要继续吗
 
 #. i18n: context: string @ property (text), widget (QPushButton, duplicateButton)
 #: libs/ui/input/config/kis_edit_profiles_dialog.ui:24
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:522
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:523
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:260
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:109
 #, kde-format
@@ -34276,7 +34276,7 @@ msgstr "全部重置"
 
 #. i18n: context: string @ property (text), widget (QPushButton, renameButton)
 #: libs/ui/input/config/kis_edit_profiles_dialog.ui:51
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:523
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:524
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:261
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:110
 #, kde-format
@@ -37835,7 +37835,7 @@ msgstr "随机化"
 #. i18n: context: string @ property (text), widget (QPushButton, btnUp)
 #: libs/ui/widgets/KisDlgListPicker.ui:98
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:86
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:465
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:475
 #, kde-format
 msgid "Up"
 msgstr "上移"
@@ -37843,7 +37843,7 @@ msgstr "上移"
 #. i18n: context: string @ property (text), widget (QPushButton, btnDown)
 #: libs/ui/widgets/KisDlgListPicker.ui:105
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:87
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:466
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:476
 #, kde-format
 msgid "Down"
 msgstr "下移"
@@ -42899,12 +42899,12 @@ msgid "Reset to default"
 msgstr "重置为默认值"
 
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:203
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:608
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:618
 #, kde-format
 msgid "Hide"
 msgstr "隐藏"
 
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:601
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:611
 #, kde-format
 msgid "Show"
 msgstr "显示"
@@ -66844,23 +66844,23 @@ msgctxt "action"
 msgid "Freehand Path Tool"
 msgstr "手绘路径工具/自由钢笔"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:35
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:36
 msgctxt "(qtundo-format)"
 msgid "Erase Through Layers"
 msgstr "穿透图层擦除"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:57
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:59
 #, kde-format
 msgid "There are no visible, unlocked paint layers to erase."
 msgstr "没有可擦除的可见且未锁定的颜料图层。"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:83
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:85
 #, kde-format
 msgctxt "@option:check"
 msgid "Selected layers only"
 msgstr "仅选中的图层"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:86
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:88
 #, kde-format
 msgid ""
 "Erase only the selected layers and the layers in the selected groups. When "
@@ -66878,109 +66878,110 @@ msgstr "擦除透明度已锁定的图层"
 msgid ""
 "Erase layers with Alpha Lock on as well, in spite of the lock. When "
 "unchecked, they are left alone."
-msgstr "同时擦除开启了透明度锁定的图层，无视该锁定。未勾选时，这些图层保持不变。"
+msgstr ""
+"同时擦除开启了透明度锁定的图层，无视该锁定。未勾选时，这些图层保持不变。"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.h:46
+#: plugins/tools/basictools/KisToolThroughLayerEraser.h:49
 #, kde-format
 msgid "Through-Layer Eraser Tool"
 msgstr "Through-Layer Eraser 工具"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:58
+#: plugins/tools/basictools/kis_tool_brush.cc:60
 msgctxt "(qtundo-format)"
 msgid "Freehand Brush Stroke"
 msgstr "手绘笔刷笔画"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:216
+#: plugins/tools/basictools/kis_tool_brush.cc:225
 #, kde-format
 msgid "Sample Count at Max Speed:"
 msgstr "最大速度下的采样次数："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:226
+#: plugins/tools/basictools/kis_tool_brush.cc:235
 #, kde-format
 msgid "Sample Count at Min Speed:"
 msgstr "最小速度下的采样次数："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:236
+#: plugins/tools/basictools/kis_tool_brush.cc:245
 #, kde-format
 msgid "Distance at Max Speed:"
 msgstr "最大速度下的距离："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:246
+#: plugins/tools/basictools/kis_tool_brush.cc:255
 #, kde-format
 msgid "Distance at Min Speed:"
 msgstr "最小速度下的距离："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:415
+#: plugins/tools/basictools/kis_tool_brush.cc:430
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "None"
 msgstr "关闭"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:416
+#: plugins/tools/basictools/kis_tool_brush.cc:431
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "Basic"
 msgstr "基本 - 只平滑笔画棱角"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:417
+#: plugins/tools/basictools/kis_tool_brush.cc:432
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "Weighted"
 msgstr "高级 - 自定义平滑参数"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:418
+#: plugins/tools/basictools/kis_tool_brush.cc:433
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "Stabilizer"
 msgstr "最强 - 延迟并平均化处理"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:419
+#: plugins/tools/basictools/kis_tool_brush.cc:434
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "Pixel"
 msgstr "像素画"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:421
+#: plugins/tools/basictools/kis_tool_brush.cc:436
 #, kde-format
 msgid "Brush Smoothing:"
 msgstr "防抖和笔画平滑"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:486
+#: plugins/tools/basictools/kis_tool_brush.cc:501
 #, kde-format
 msgid "Delay:"
 msgstr "延迟："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:491
+#: plugins/tools/basictools/kis_tool_brush.cc:506
 #, kde-format
 msgid "Delay the brush stroke to make the line smoother"
 msgstr "延迟笔画响应以平滑线条"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:495
+#: plugins/tools/basictools/kis_tool_brush.cc:510
 #, kde-format
 msgid "Radius where the brush is blocked"
 msgstr "笔刷延迟的半径大小"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:502
+#: plugins/tools/basictools/kis_tool_brush.cc:517
 #, kde-format
 msgid "Finish line:"
 msgstr "笔末挑尖："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:514
+#: plugins/tools/basictools/kis_tool_brush.cc:529
 #, kde-format
 msgid "Stabilize Sensors:"
 msgstr "稳定各种传感器："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:522
+#: plugins/tools/basictools/kis_tool_brush.cc:537
 #, kde-format
 msgid "Stroke Ending:"
 msgstr "笔末挑尖："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:528
+#: plugins/tools/basictools/kis_tool_brush.cc:543
 #, kde-format
 msgid "Smooth Pressure"
 msgstr "平滑压力值"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:534
+#: plugins/tools/basictools/kis_tool_brush.cc:549
 #, kde-format
 msgctxt "@info:tooltip"
 msgid ""
@@ -66989,38 +66990,38 @@ msgid ""
 msgstr ""
 "勾选后，距离数值将按照视图缩放比例自动缩放，使距离的效果在感官上保持一致。"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:539
+#: plugins/tools/basictools/kis_tool_brush.cc:554
 #, kde-format
 msgid "Scalable Distance"
 msgstr "距离与视图缩放成比例"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:554
+#: plugins/tools/basictools/kis_tool_brush.cc:569
 #: plugins/tools/basictools/kis_tool_line.cc:111
 #, kde-format
 msgid "Snap to Assistants"
 msgstr "吸附到辅助尺"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:556
+#: plugins/tools/basictools/kis_tool_brush.cc:571
 #, kde-format
 msgid "You need to add Assistants before this tool will work."
 msgstr "此工具在添加辅助尺后才能工作。"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:561
+#: plugins/tools/basictools/kis_tool_brush.cc:576
 #, kde-format
 msgid "Assistant Magnetism"
 msgstr "辅助尺磁性"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:567
+#: plugins/tools/basictools/kis_tool_brush.cc:582
 #, kde-format
 msgid "Magnetism:"
 msgstr "吸附力度："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:570
+#: plugins/tools/basictools/kis_tool_brush.cc:585
 #, kde-format
 msgid "Snap to Single Line"
 msgstr "吸附到单一辅助尺"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:573
+#: plugins/tools/basictools/kis_tool_brush.cc:588
 #, kde-format
 msgctxt "@info:tooltip"
 msgid ""
@@ -67028,19 +67029,34 @@ msgid ""
 "using the infinite assistants."
 msgstr "只吸附到单一辅助尺，避免在使用多个辅助尺时吸附失控。"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:578
+#: plugins/tools/basictools/kis_tool_brush.cc:593
 #: plugins/tools/basictools/kis_tool_line.cc:114
 #, kde-format
 msgid "Snap Eraser"
 msgstr "吸附橡皮擦"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:581
+#: plugins/tools/basictools/kis_tool_brush.cc:596
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Enable snapping when using erasers"
 msgstr "启用橡皮擦的吸附功能"
 
-#: plugins/tools/basictools/kis_tool_brush.h:146
+#: plugins/tools/basictools/kis_tool_brush.cc:617
+#, kde-format
+msgid "At least 1 pixel"
+msgstr "至少 1 像素"
+
+#: plugins/tools/basictools/kis_tool_brush.cc:621
+#, kde-format
+msgctxt "@info:tooltip"
+msgid ""
+"Keep the brush at least 1 pixel large when pen pressure or another sensor "
+"makes it smaller, so that thin, tapered lines do not fade out"
+msgstr ""
+"当压感或其他传感器使笔刷变小时，让笔刷保持至少 1 像素大小，以免细的渐细线条淡"
+"出消失"
+
+#: plugins/tools/basictools/kis_tool_brush.h:149
 #, kde-format
 msgid "Freehand Brush Tool"
 msgstr "手绘笔刷工具/画笔"
@@ -67845,7 +67861,7 @@ msgstr "轴心："
 #: plugins/tools/basictools/wdgmultihandtool.ui:228
 #: libs/ui/KisWelcomeAssetLibraryWidget.cpp:84
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:258
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:463
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:473
 #: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:572
 #, kde-format
 msgid "Add"

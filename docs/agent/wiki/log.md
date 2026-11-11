@@ -2808,3 +2808,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   minutes per image; compare the bytes first and decode with .NET or a
   native library. `refreshGraphAsync()` then `waitForDone()` is the
   in-process stand-in for the Undo/Redo that removes such artifacts.
+
+## 2026-11-11 ingest: At least 1 pixel
+
+- New Freehand Brush option **At least 1 pixel** (kritarc
+  `Solstice/BrushMinimumOnePixel`, on by default): brush-based engines and
+  Quick Brush raise dabs below 1 px to 1 px, at the level-of-detail 0
+  scale. The value travels in the stroke's preset clone
+  (`Solstice/MinimumOnePixelDab`, written by `KisResourcesSnapshot`).
+  Feature reference: [At least 1 pixel](../brush-minimum-one-pixel.md).
+- New pitfall: [writing a paint op setting clears the brush caches](pitfalls/paintop-settings-setproperty-clears-caches.md).
+- Updated [build, format and test pitfalls](pitfalls/build-format-test.md):
+  `clang-format --lines --sort-includes=false` keeps include order.
+- Lesson: a 1 px antialiased auto tip line holds about 0.62 alpha per
+  column (RGBA8), not 1.0; compare a raised line against a real 1 px brush
+  instead of a fixed threshold (`KisBrushMinimumOnePixelTest`).
