@@ -6,9 +6,9 @@ sources:
   - libs/ui/KisGpuEngineUi.cpp (showFailureMessage, confirmSave, mayFinishExport)
   - libs/ui/KisImportExportManager.cpp (mayFinishExport before the target is replaced)
   - plugins/extensions/testcontrol/TestControlCanvasTools.cpp (gpu_fault)
-related:
-  - ../../gpu-engine.md
-  - ../../test-control.md
+  - docs/agent/gpu-engine.md
+  - docs/agent/test-control.md
+related: []
 ---
 
 # GPU tiles are read back soon after every stroke
