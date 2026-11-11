@@ -1061,6 +1061,15 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   `kis_async_merger_test`, `kis_projection_test`, `kis_update_scheduler_test`,
   `kis_walkers_test`, `kis_*layer*_test`, and `kis_filter_mask_test`, both
   without and with `KRITA_GPU_PROJECTION=1`.
+- Projection stress test: target `KisGpuProjectionStressTest`, ctest name
+  `plugins-paintops-defaultpaintops-brush-KisGpuProjectionStressTest`
+  (2026-11-11). Many freehand strokes on a pass-through group, a 39%
+  Multiply layer with inherited alpha and a transparency mask, and plain
+  layers, with update jobs between segments so merges run while painting;
+  after each stroke the projection must equal a full `refreshGraphAsync()`.
+  F32/F16, GPU/CPU brush, and instant preview (LOD 1/2) rows.
+  `KRITA_GPU_STRESS_STROKES` sets strokes per row (default 60). It has no
+  canvas, so it does not cover the canvas upload.
 - Phase 1 test: target `KisGpuPaintDeviceTest`, ctest name
   `libs-image-KisGpuPaintDeviceTest`. Changes to the tile engine must also
   pass `libs-image-tiles3-*`, `kis_paint_device_test`,
@@ -1418,6 +1427,15 @@ Section index:
 - [Partial-tile projection clears (phase 4.111)](wiki/history/gpu-phases-4.93-.md#partial-tile-projection-clears-phase-4111)
 
 ## Risks and open questions
+
+- Unreproduced report (2026-11-11): while painting an RGBA float document,
+  a rectangle the shape of an update rect (not the tile grid) sometimes
+  shows plain white; Undo and Redo paint it correctly. Not reproduced by
+  `KisGpuProjectionStressTest` (7,500 strokes including LOD) or live through
+  Test Control (760 strokes: canvas captures before and after a soft
+  proofing refetch, projection before and after Undo/Redo). Next evidence
+  needed: whether toggling soft proofing twice (Ctrl+Y) removes it. If it
+  does, the canvas upload is wrong; otherwise the projection is.
 
 - Interop requires desktop OpenGL. With the engine on, "Auto" picks it on
   Windows unless the driver is blacklisted; an explicit ANGLE choice still

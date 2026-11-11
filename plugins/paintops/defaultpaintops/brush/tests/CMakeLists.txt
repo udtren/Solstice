@@ -59,6 +59,11 @@ if(HAVE_KRITA_GPU_ENGINE)
         TEST_NAME KisGpuStrokeTest
         LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
         )
+    # projection after concurrent strokes and updates vs. a full refresh
+    kis_add_test(KisGpuProjectionStressTest.cpp
+        TEST_NAME KisGpuProjectionStressTest
+        LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
+        )
 endif()
 
 
