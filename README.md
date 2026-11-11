@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 0.8.1](#whats-new-in-081)
+- [What's new in 0.9.0](#whats-new-in-090)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,17 +59,17 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 0.8.1
+## What's new in 0.9.0
 
-[Solstice 0.8.1](https://github.com/udtren/Solstice/releases/tag/v0.8.1) lets
-the [Through-Layer Eraser](docs/through-layer-eraser.md) erase layers with
-Alpha Lock on, through the new **Erase alpha locked layers** option (on by
-default).
+[Solstice 0.9.0](https://github.com/udtren/Solstice/releases/tag/v0.9.0) adds
+[At least 1 pixel](docs/brush-minimum-one-pixel.md), a Freehand Brush option
+(on by default) that keeps thin, pressure-tapered lines at least 1 pixel wide
+instead of letting them fade out. The Asset Library docker and welcome page
+now share their folders and settings without overwriting each other.
 
-It builds on [0.8.0](https://github.com/udtren/Solstice/releases/tag/v0.8.0),
-which added [saved exports](docs/lazy-tools.md#saved-exports) to Fast Image
-Export: a document keeps several export settings of its own in the `.kra`
-file, each with its format, folder, name and area, and runs them all at once.
+It builds on [0.8.1](https://github.com/udtren/Solstice/releases/tag/v0.8.1),
+which lets the [Through-Layer Eraser](docs/through-layer-eraser.md) erase
+layers with Alpha Lock on, through the **Erase alpha locked layers** option.
 
 ## Highlights
 
