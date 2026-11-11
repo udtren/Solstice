@@ -2808,3 +2808,22 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   minutes per image; compare the bytes first and decode with .NET or a
   native library. `refreshGraphAsync()` then `waitForDone()` is the
   in-process stand-in for the Undo/Redo that removes such artifacts.
+
+## 2026-11-11 acceptance: GPU failure UI (checklist item 16)
+
+- User-operated with Test Control's `gpu_fault` on scratch profiles
+  (installed 0.7.0 `317907b` libraries plus the PR #70 plugin; no
+  save-guard source changed since). Passed: a loss during Ctrl+S kept the
+  `.kra` target intact with one non-modal warning; the pre-save warning's
+  Cancel, Save Anyway and Save as New File; the warning on Save As, Export
+  and save on close; a later loss during a PSD export kept the target
+  intact. Not checked: the autosave exemption, `supportsIO() == false`
+  filters. [GPU Engine item 16](../gpu-engine.md#manual-regression-checklist).
+- Findings left for the user: the warning counts only the tiles lost when
+  it appears (256 of 285, 45 of 56); its texts are untranslated; a refused
+  save replaces the `~` backup.
+- New pitfall: [GPU tiles are read back soon after every stroke](pitfalls/gpu-tiles-read-back-after-strokes.md).
+  The first export attempts succeeded because the Layers and Overview
+  dockers had already read the strokes back, and PNG reads only the
+  projection. `gpu_fault reset` does not give a clean repeat: strokes after
+  it were not left on the GPU, so the test docs now say to restart.

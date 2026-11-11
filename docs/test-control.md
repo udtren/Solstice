@@ -95,7 +95,7 @@ many undo steps there are."
 | `ui_close` | Closes a dialog or popup window by its title |
 | `query_layers`, `layer_activate` | Lists the layers with their names, visibility, opacity and color labels, or selects layers by name |
 | `docker_show` | Shows or hides a docker, for example Tool Options |
-| `gpu_fault` | For developers: makes the GPU engine fail to read image data back from the graphics card, to check Solstice's warning and save protection after lost GPU data; `reset` returns to normal |
+| `gpu_fault` | For developers: makes the GPU engine fail to read image data back from the graphics card, to check Solstice's warning and save protection after lost GPU data; `reset` lets the engine run again, but restart Solstice for a clean repeat |
 
 Input tools accept modifier keys (Shift, Ctrl, Alt), and `input_click` can
 double-click. For keys, test control brings Solstice to the front and gives

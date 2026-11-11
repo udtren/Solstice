@@ -132,6 +132,10 @@ Verification (2026-10-26, cloud session, no Krita build available):
   The message box said "1 tile(s)": it counts the tiles lost when it is
   shown, and tiles lost later are not added (see
   [GPU checklist item 16](gpu-engine.md#manual-regression-checklist)).
+  "Worked" after `reset` meant the stroke and read succeeded, not that the
+  stroke stayed on the GPU; the acceptance run later found it did not.
+- `gpu_fault` drove the GPU failure UI acceptance (2026-11-11), recorded in
+  [GPU checklist item 16](gpu-engine.md#manual-regression-checklist).
 
 ## Source locations
 
@@ -344,11 +348,15 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   ([checklist item 16](gpu-engine.md#manual-regression-checklist)); there is
   no other way to lose GPU content on purpose in a running Solstice. A
   read-back runs when the CPU needs tiles the GPU wrote: `query_pixels`, a
-  save or export, a CPU filter. A failed batch is retried tile by tile, and
-  every retry is one more submission, so `downloadFailures` 1 recovers (no
-  loss) and 1000000 stands for a lost device. The failure listener runs once
-  per process; `reset` re-arms it. Lost tiles stay marked lost: `reset`
-  only lets the engine accept GPU work again in the same process.
+  save or export, a CPU filter, a stroke over them, and the Layers and
+  Overview dockers within about three seconds of every stroke. A failed
+  batch is retried tile by tile, and every retry is one more submission, so
+  `downloadFailures` 1 recovers (no loss) and 1000000 stands for a lost
+  device. The failure listener runs once per process; `reset` re-arms it.
+  Lost tiles stay marked lost, and `reset` restores less than a new
+  process: read-backs resume, but in the 2026-11-11 acceptance strokes
+  painted after a reset were not left on the GPU (cause not investigated).
+  Start a fresh Solstice for each check that needs GPU-only tiles.
 - **Reads.** `query_state` takes `KisImage::tryBarrierLock(true)` and fails
   instead of blocking when the image is busy. Undo commands reach the stack
   before the image reports idle (`KisDocument`'s undo stack pushes from

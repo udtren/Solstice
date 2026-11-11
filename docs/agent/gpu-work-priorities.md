@@ -40,12 +40,12 @@ candidates; [projection clears](gpu-engine.md#partial-tile-projection-clears-pha
 owns deferred-clear and CPU-reader behavior. Detailed measurements stay in
 the linked benchmark page.
 
-1. **Close outstanding failure/save UI verification.** The archived phase plan
-   records automated coverage but leaves interactive dialog acceptance pending.
-   Use the [manual checklist](gpu-engine.md#manual-regression-checklist) and
-   record the tested build and result. A documentation extraction does not
-   establish acceptance. Test Control's `gpu_fault` (2026-11-11) provides
-   the reproducible fault; the check itself is still pending.
+1. **Failure/save UI verification: done except autosave.** Accepted on
+   2026-11-11 with Test Control's `gpu_fault` (results in
+   [checklist item 16](gpu-engine.md#manual-regression-checklist)). Still
+   open: the autosave exemption check. Findings left for a user decision:
+   the warning's lost-tile count stops at the first report, its texts are
+   untranslated, and a refused save replaces the `~` backup.
 2. **Continue priority 4 when requested.** Measure remaining filters before
    choosing the next target (levels/curves were in the original scope, but their
    4.93 baseline configuration was questioned and must be corrected first).
