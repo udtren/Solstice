@@ -2781,3 +2781,30 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: an injected failure count is per read-back submission, retries
   included, so a count of 1 never loses content; simulate a lost device with
   a large count.
+
+## 2026-11-11 ingest: white rectangle while painting (not reproduced)
+
+- Report: with an RGBA float document, a white rectangle the shape of an
+  update rect sometimes appears while painting (on a transparency mask and
+  on plain layers); Undo/Redo repaints it. The user's profile keeps
+  documents unconverted (`Solstice/GpuEngineConvertDocuments=2`), but this
+  document is RGBA float, so the GPU engine is used.
+- Added `KisGpuProjectionStressTest` (see the
+  [GPU engine build/test notes](../gpu-engine.md#build-test-and-install)):
+  7,500 strokes over 15 rows (F32/F16, pass-through or normal group,
+  GPU/CPU brush, LOD 1/2) with merges running during painting; the
+  projection always equalled a full refresh.
+- Live through Test Control (scratch profile, `_install` of 2026-11-07,
+  RTX PRO 6000 Blackwell, driver 596.86, zoom 50 %): 400 F32 and 300 F16
+  strokes plus a 60-stroke trial, one transparent layer. Canvas captures
+  were byte-identical before and after toggling `softProof` twice
+  (textures refetched without a merge); projection hashes after Undo/Redo
+  changed in a few strokes but stayed within 2/255 (float rounding).
+- Not covered: the reported layer stack in the live run, real tablet input,
+  whether the canvas used the GPU upload path (the
+  `KRITA_GPU_CANVAS_DEBUG` output did not reach the log). Open question
+  recorded in [GPU engine risks](../gpu-engine.md#risks-and-open-questions).
+- Lessons: comparing canvas captures in pure Python (PNG decode) takes
+  minutes per image; compare the bytes first and decode with .NET or a
+  native library. `refreshGraphAsync()` then `waitForDone()` is the
+  in-process stand-in for the Undo/Redo that removes such artifacts.
