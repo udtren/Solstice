@@ -1034,6 +1034,66 @@ kept their pixels.
   `KisMoveDocumentBenchmark` for a real `.kra`).
 - Manual check: checklist item 19.
 
+### Transparency masks (phase 4.113)
+
+2026-11-12, user request (the remaining CPU-only items, masks and filter
+layers first).
+
+- Before: effect masks ran on the CPU. For a layer with a mask,
+  `KisLayer::applyMasks()` copied the original into the layer's projection
+  on the CPU (`copyOriginalToProjection()`), which read the GPU-written
+  tiles back, applied the masks on the CPU, and the GPU composite uploaded
+  the projection again: about 25 tile downloads per 256 px dab.
+- `KisLayer::gpuAppliesEffectMasks()`: the layer has visible effect masks,
+  all of them transparency masks, in an image the GPU composites
+  (`KisGpuMergeBatch::mayCompositeOnGpu()`). Then:
+  - `KisLayer::copyOriginalToProjection()` (also groups, generator and
+    other layers that use the base implementation),
+    `KisPaintLayer::copyOriginalToProjection()` and
+    `KisCloneLayer::copyOriginalToProjection()` copy on the GPU with
+    `KisGpuProjectionCompositor::copyShifted()`. With a mask that runs on
+    the CPU they keep the CPU copy (a GPU copy would be read back at once;
+    see `clone-layer.md`).
+  - `KisMask::mergeInMaskInternal()` applies a transparency mask with
+    `KisGpuProjectionCompositor::applyCoverage()`: the selection's bytes
+    of the rect are read on the CPU (the selection is an 8-bit CPU device)
+    and `KisGpuCoveragePass` (`shaders/apply_coverage.comp`) changes the
+    projection's tiles in place.
+- What the pass computes is what the CPU's Copy composite op yields when
+  `mergeInMaskInternal()` copies the pixels through the selection onto the
+  cleared projection: coverage 255 keeps a pixel, 0 clears it, anything
+  between multiplies the alpha and recomputes the color from the
+  premultiplied values (F32: `KoOptimizedCompositeOpCopy128`, including
+  its clamp of such colors to 1; F16: `KoCompositeOpCopy2` with a rounding
+  to half after each step). Not reproduced: the CPU's SIMD batches also
+  clamp neighbouring pixels with coverage 255 to 1 when a pixel of the
+  batch is partly covered (`wiki/concepts/krita-copy-semantics.md`), so
+  colors above 1 next to a soft mask edge can differ. Alpha-0 colors are
+  unspecified as everywhere.
+- CPU fallbacks: any other effect mask on the layer (filter, colorize,
+  transform), a projection whose offset is not a multiple of 64, rects
+  above 4096 x 4096 pixels, a
+  device that is not RGBA F32/F16, the engine off or failed. A failed
+  `applyCoverage()` leaves the device unchanged and the CPU mask runs.
+- Open: a layer's projection device is created as a copy of its original
+  (`KisSafeNodeProjectionStore::getDeviceLazy()`) and keeps the offset the
+  original had at that moment. A masked layer that was loaded or given its
+  mask at an offset that is not a multiple of 64 therefore stays on the
+  CPU mask path (and its Wash previews too, which composite into the same
+  projection). Not measured yet; aligning the projection needs care,
+  because it is created again for every stroke on an unmasked layer.
+- Editing the mask (painting on it, its temporary target) changes the
+  selection on the CPU as before; only the application moved.
+- Tests (`KisGpuProjectionTest`): `testTransparencyMaskMatchesCpu` (F32 and
+  F16; a paint layer, a group and an offset Clone Layer; one and two masks
+  with every coverage value; full refresh, three GPU dabs that download
+  nothing, an edit of the mask; CPU parity).
+  `testCloneLayerMatchesCpu` now expects the GPU copy with a transparency
+  mask.
+- Measurements: [Masked layer updates](wiki/benchmarks/masked-layer-updates.md)
+  (`KisMaskedLayerBenchmark`, opt-in with `KRITA_MASK_BENCHMARK=1`).
+- Manual check: checklist item 20.
+
 ## Technology and device requirements
 
 | Topic | Decision | Reason |
@@ -1171,6 +1231,10 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   `VK_LAYER_PATH=<krita-dev-root>\VulkanSDK\1.4.357.0\Bin`.
 - Benchmark size: `KRITA_GPU_BENCH_SIZE` (pixels per side, default 4096) and
   `KRITA_GPU_BENCH_LAYERS` (default 8).
+- Masked layer benchmark: target `KisMaskedLayerBenchmark` (skips unless
+  `KRITA_MASK_BENCHMARK=1`; `KRITA_MASK_BENCHMARK_GPU_ONLY=1` leaves out the
+  CPU rows): dabs on a layer with 0, 1 or 2 transparency masks, then full
+  refreshes.
 - Move Tool benchmark: target `KisMoveLayerBenchmark` (skips unless
   `KRITA_MOVE_BENCHMARK=1`; `KRITA_MOVE_BENCHMARK_GPU_ONLY=1` leaves out the
   CPU rows). It repeats the Move Tool's update step for a full-canvas
@@ -1207,6 +1271,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `KisGpuGLInterop_p.h` (private) | GL_EXT_memory_object / GL_EXT_semaphore entry points and the device-UUID check shared by the interop classes. |
 | `KisGpuSeparableConvolutionPass.*` + `shaders/separable_convolution.comp` | Phase-4.98 separable convolution in bands: horizontal pass into a double intermediate, vertical pass with the FFT worker's write rules. |
 | `KisGpuShiftedCopyPass.*` + `shaders/copy_shifted.comp` | Phase-4.110 copy between tile grids with any pixel shift (Clone Layer offsets); the default pixel where the source has no tile. |
+| `KisGpuCoveragePass.*` + `shaders/apply_coverage.comp` | Phase-4.113 coverage mask applied to tiles in place (transparency masks), like the CPU Copy op through a selection onto a cleared pixel. |
 | `KisGpuMaskingCompositePass.*` + `shaders/masking_composite.comp` | Phase-4.101 masking brush composite: stroke pixels into the target with the mask composited into alpha, ten modes, CPU-exact. |
 
 ## Source map (`libs/image`)
@@ -1222,7 +1287,8 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `gpu/KisGpuMergeBatch.*` | Batches composites inside `KisAsyncMerger`; eligibility checks; CPU fallback; deferred projection clears (`deferClear()`, phase 4.111). Always compiled; inert without `HAVE_KRITA_GPU_ENGINE`. |
 | `gpu/KisGpuEngineSettings.*` | kritarc keys, the convert policy, GPU color spaces and the conversion target. Always compiled. |
 | `gpu/KisGpuProjectionCompositor.*` | Composites batches in place into GPU-authoritative projection tiles; layer accesses and reusable work contexts. |
-| `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks. |
+| `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks, or with transparency masks only (phase 4.113). |
+| `kis_layer.{h,cc}`, `kis_paint_layer.cc`, `kis_mask.cc` | Phase 4.113: `KisLayer::gpuAppliesEffectMasks()`, the GPU copy of the original, and the GPU application of transparency masks in `KisMask::mergeInMaskInternal()`. |
 | `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points, `deferClear` in `setupProjection` (phase 4.111). |
 | `kis_updater_context.cpp` | Tile-aligned job exclusivity when `KisGpuMergeBatch::mayCompositeOnGpu`. |
 | `gpu/KisGpuConvolutionWorker.*` | Phase-4.98 Gaussian convolution: old-data snapshot, one GPU submission into a temporary device, CPU copy into the rect. Called by `KisGaussianKernel::applyGaussian()`. |
@@ -1460,6 +1526,14 @@ Record the build, format, workload and result separately from earlier acceptance
     (GPU brush) and across its edges. Repeat the drag with Instant Preview
     on at a zoom below 50 %, and with a selection (the selected pixels
     move). Save, reopen: the layers and the group are where they were left.
+20. Transparency masks (phase 4.113): on an RGBA float image, add a
+    transparency mask to a paint layer, to a group and to a Clone Layer;
+    paint soft and hard strokes on the masks (black, white, gray), and
+    paint on the masked layers with the GPU brush (Buildup and Wash) across
+    the mask's edges; add a second transparency mask; hide and show a mask;
+    move the masked layer; Undo/Redo. The masked areas look like the GPU
+    Engine turned off, nothing lags or is left behind at tile borders.
+    Repeat with Instant Preview at a zoom below 50 %.
 
 ## Phase history
 
@@ -1574,6 +1648,7 @@ Section index:
 - [Clone Layer offsets (phase 4.110)](wiki/history/gpu-phases-4.93-.md#clone-layer-offsets-phase-4110)
 - [Partial-tile projection clears (phase 4.111)](wiki/history/gpu-phases-4.93-.md#partial-tile-projection-clears-phase-4111)
 - [Moved layers and groups (phase 4.112)](wiki/history/gpu-phases-4.93-.md#moved-layers-and-groups-phase-4112)
+- [Transparency masks (phase 4.113)](wiki/history/gpu-phases-4.93-.md#transparency-masks-phase-4113)
 
 ## Risks and open questions
 

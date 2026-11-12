@@ -47,6 +47,24 @@ manual check (checklist item 19) is pending. Open, not requested: a group
 step still costs more than a layer step, and the final merge of a temporary
 target off the tile grid stays on the CPU.
 
+Remaining CPU-only items (user request, 2026-11-12): work through the
+"What stays on the CPU" list of the [user guide](../gpu-engine.md), one
+measured step and pull request at a time. Order chosen by the user: masks
+and filter layers first; then filters, transforms and brushes (not yet
+ordered). Excluded by design: integer layers, filter areas below about
+180 x 180 pixels, wrap-around mode.
+
+- Done: moved layers (4.112), transparency masks (4.113, manual check
+  pending: checklist item 20).
+- Open from 4.113: a masked layer whose projection device is off the
+  64 px grid (the layer was loaded or masked at such an offset) keeps the
+  CPU mask path; measure painting on moved layers before changing
+  `KisSafeNodeProjectionStore`.
+- Next: filter masks and filter (adjustment) layers with color adjustment
+  filters (HSV, Levels, Curves and similar point filters). They are split
+  points of the GPU merge today: the projection is read back for the CPU
+  filter and uploaded again.
+
 1. **Failure/save UI verification: done except autosave.** Accepted on
    2026-11-11 with Test Control's `gpu_fault` (results in
    [checklist item 16](gpu-engine.md#manual-regression-checklist)). Still

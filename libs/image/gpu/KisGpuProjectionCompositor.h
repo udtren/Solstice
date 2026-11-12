@@ -102,6 +102,26 @@ public:
                             QString *errorMessage = nullptr);
     /// Successful copyShifted() calls since startup (tests and measurements).
     static quint64 shiftedCopyCount();
+
+    /**
+     * Solstice: transparency masks (docs/agent/gpu-engine.md, phase 4.113).
+     * Applies @p coverage (tightly packed bytes of @p rect, in image
+     * coordinates) to @p device in place, as the Copy composite op does
+     * when KisMask::mergeInMaskInternal() copies the pixels through the
+     * mask's selection onto the cleared projection: coverage 255 keeps a
+     * pixel, 0 clears it, anything between multiplies its alpha.
+     *
+     * The device must be RGBA F32/F16 with a transparent default pixel and
+     * an offset that is a multiple of 64 (the same exclusivity rule as
+     * composite()); @p rect at most 4096 x 4096 pixels. Only the device's
+     * existing tiles are touched. Does not wait.
+     *
+     * @return false when unsupported or on failure; @p device is then unchanged
+     */
+    static bool
+    applyCoverage(KisPaintDeviceSP device, const QRect &rect, const quint8 *coverage, QString *errorMessage = nullptr);
+    /// Successful applyCoverage() calls since startup (tests and measurements).
+    static quint64 coverageCount();
 };
 
 #endif // KISGPUPROJECTIONCOMPOSITOR_H

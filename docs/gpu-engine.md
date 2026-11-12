@@ -34,9 +34,12 @@ On RGBA 32-bit and 16-bit float layers:
   so the Move Tool follows the pointer without reading the image back.
   (Up to Solstice 0.9.1, a layer moved by a distance that was not a
   multiple of 64 pixels was composited on the CPU, also after the move.)
-- **Clone Layers moved away from their source** (without masks) copy the
-  source on the GPU, so they follow GPU brush strokes without reading the
-  source back.
+- **Transparency masks** are applied on the GPU, on paint layers, groups
+  and Clone Layers, so painting on a masked layer does not read the layer
+  back. Filter masks still run on the CPU.
+- **Clone Layers moved away from their source** (without masks, or with
+  transparency masks only) copy the source on the GPU, so they follow GPU
+  brush strokes without reading the source back.
 - **Gaussian Blur**, also inside Unsharp Mask and Gaussian High Pass, for
   filter applications, filter layers and filter masks that update large
   areas. The result matches the CPU within one rounding step.
@@ -62,8 +65,8 @@ long without AVX2).
 - Painting with brush engines other than the pixel brush (Color Smudge,
   Sketch and so on). The layers they paint on are still composited on the
   GPU.
-- Copying the source of a Clone Layer that has transparency or filter
-  masks (the masks themselves run on the CPU).
+- Filter masks, and with them the copy of a layer or of a Clone Layer's
+  source that has a filter mask.
 - Soft proofing, channel selection in the Channels docker, and some display
   color profiles (LUT-based profiles, absolute colorimetric intent) use the
   CPU for the canvas display.

@@ -761,3 +761,23 @@ and groups (phase 4.112)"; numbers:
   `KisPaintDevice::moveTo()` now translates the cached bounds. The same
   run showed the layer style reading about 2200 tiles per step one by one
   on the GPU engine; the merger now reads them back in batches.
+
+## Transparency masks (phase 4.113)
+
+2026-11-12, user request: work through the remaining CPU-only items of the
+user guide; the user chose masks and filter layers first. Transparency
+masks are applied on the GPU, and the copy of the original into the masked
+layer's projection stays there. Details: `docs/agent/gpu-engine.md`,
+"Transparency masks (phase 4.113)"; numbers:
+[Masked layer updates](../benchmarks/masked-layer-updates.md).
+
+- Measured first (`KisMaskedLayerBenchmark`): one transparency mask raised
+  a GPU dab update from 0.20 to 2.19 ms with 24.6 tile downloads; the CPU
+  paths paid 0.1 ms for the mask.
+- The mask is applied in place by a new pass. Reusing the layer compositor
+  (Over with coverage onto a cleared projection) would have needed a second
+  device for the copy, as the CPU code has.
+- Left on the CPU by the user's scope decision for this step: filter masks
+  and filter (adjustment) layers come next. Not planned: integer layers,
+  filter areas below about 180 x 180 pixels and wrap-around mode stay on
+  the CPU by design.

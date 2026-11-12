@@ -241,7 +241,7 @@ GPU column applies to RGBA 32-bit and 16-bit float layers only.
 | Area | On the GPU | CPU only |
 | --- | --- | --- |
 | Color spaces | RGBA 32-bit and 16-bit float | Every other color space and depth (8/16-bit integer, CMYK, Lab, grayscale), also as single layers in a float document; file layers |
-| Layer compositing | Layer projection, including alpha lock and individual channel locks, of layers and groups at any position | Layer styles, Colorize Mask |
+| Layer compositing | Layer projection, including alpha lock and individual channel locks, of layers and groups at any position; transparency masks | Layer styles, Colorize Mask, filter masks (except their Gaussian blur) |
 | Canvas display | Handing the projection to the OpenGL canvas | ANGLE/Direct3D renderer, soft proofing, channel selection in the Channels docker, LUT-based display profiles, absolute colorimetric intent |
 | Blend modes | Every mode not listed as CPU only | Dissolve, Marker, Destination In, Destination Atop, Divisive Modulo and its Continuous variants |
 | Brush strokes | Pixel brush in Buildup and Wash, with Erase, Alpha Darken, selections, alpha lock and mirror painting | Painting with other brush engines (Color Smudge, Sketch and so on); Alpha Darken with some channels turned off; a single oversized dab |

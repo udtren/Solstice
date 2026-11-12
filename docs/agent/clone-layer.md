@@ -59,12 +59,15 @@ every source tile under the dirty rect on every update.
   some alpha-0 pixels depending on SIMD batches; the GPU keeps the source's
   color (see `wiki/concepts/krita-copy-semantics.md`). Alpha-0 colors are
   unspecified in Krita and ignored by the parity tests.
-- **Why not with masks.** Effect masks run on the CPU and read the copy. A
-  GPU copy only moved the download from the source tiles to the copied
+- **Why not with masks that run on the CPU.** Such a mask reads the copy.
+  A GPU copy only moved the download from the source tiles to the copied
   tiles and added a submission: transparency masks became up to 1.4 ms per
   dab slower and downloads rose (measured before the restriction; numbers
-  in the benchmark page below). A mask that ran on the GPU (e.g. a future
-  GPU path for filter masks) would make the GPU copy worthwhile there too.
+  in the benchmark page below). Since phase 4.113 transparency masks are
+  applied on the GPU (`docs/agent/gpu-engine.md`, "Transparency masks
+  (phase 4.113)"), so a clone with transparency masks only copies on the
+  GPU too (`KisLayer::gpuAppliesEffectMasks()`); a clone with a filter
+  mask keeps the CPU copy.
 
 ## Measurements
 

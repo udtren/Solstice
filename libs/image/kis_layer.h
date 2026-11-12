@@ -302,6 +302,16 @@ public:
     bool hasEffectMasks() const;
 
     /**
+     * Solstice (GPU engine, phase 4.113): true when the GPU engine applies
+     * all effect masks of this layer, i.e. the layer has visible effect
+     * masks, all of them are transparency masks, and the image is
+     * composited on the GPU. The copy of the original into the projection
+     * then stays on the GPU too (copyOriginalToProjection()); with a mask
+     * that runs on the CPU it would be read back at once.
+     */
+    bool gpuAppliesEffectMasks() const;
+
+    /**
      * @return the list of effect masks
      */
     QList<KisEffectMaskSP> effectMasks() const;
