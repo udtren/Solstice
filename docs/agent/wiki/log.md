@@ -3009,3 +3009,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   and 19 (no tolerance comparison through a nonlinear filter); item 16
   extended (`toFloat()`, `roundToHalf()`).
 - Not verified: the manual check (GPU engine checklist item 23).
+
+## 2026-11-12 GPU engine: projection status brought up to date
+
+- `docs/agent/gpu-engine.md` still described the projection as of phase
+  4.111 in two places written before today's phases: "Projection
+  (implemented in phase 2)" (layer styles, adjustment layers and filter
+  masks as split points) and the "Unsupported in the GPU projection" risk
+  (layer styles, layers off the 64 px grid). Both now name what phases
+  4.112 to 4.116 changed.
+- Lesson: a phase adds its own section, but the older summary sections
+  that state "unsupported" or "split point" need the same edit. Search
+  the document for the feature's name before closing a phase.
