@@ -55,7 +55,14 @@ ordered). Excluded by design: integer layers, filter areas below about
 180 x 180 pixels, wrap-around mode.
 
 - Done: moved layers (4.112), transparency masks (4.113, manual check
-  pending: checklist item 20).
+  pending: checklist item 20), the Stroke layer style, outside with a
+  solid color (4.114, manual check pending: checklist item 21). The user
+  moved the stroke ahead of the filter layers on 2026-11-12, after a count
+  of their documents (73 strokes against 7 filter layers in float
+  documents).
+- Open from 4.114: Inside and Center strokes, gradient and pattern fills,
+  the other style effects, and styles during Instant Preview stay on the
+  CPU. The user's documents use none of them except one Outer Glow.
 - Open from 4.113: a masked layer whose projection device is off the
   64 px grid (the layer was loaded or masked at such an offset) keeps the
   CPU mask path; measure painting on moved layers before changing

@@ -2951,3 +2951,21 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   [Masked layer updates](benchmarks/masked-layer-updates.md): a dab update
   on a masked layer 2.19 → 0.31 ms, 24.6 → 0 downloads.
 - Not verified: the manual check (GPU engine checklist item 20).
+
+## 2026-11-12 GPU engine: Stroke layer style (phase 4.114)
+
+- Before starting the filter layers, the user's documents were counted
+  (79 `.kra` files, metadata only): 73 Stroke styles and 7 filter layers
+  in float documents; every stroke is Outside with a solid color. The
+  user chose the stroke first.
+- A layer or group whose only style effect is such a stroke is composited
+  with it on the GPU (`KisGpuStrokeStylePass`,
+  `KisLayerStyleProjectionPlane::gpuCompositesStyles()`/`applyOnGpu()`).
+  The merger's temporary projection is copied on the GPU. Reference:
+  `docs/agent/gpu-engine.md`, "Stroke layer style (phase 4.114)".
+- New benchmark page:
+  [Layer style updates](benchmarks/layer-style-updates.md).
+- Lesson: count what the user's documents contain before choosing the
+  next target. The first plan (filter layers) would have covered 7
+  places; the stroke covers 73.
+- Not verified: the manual check (GPU engine checklist item 21).

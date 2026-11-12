@@ -67,15 +67,26 @@ kis_gpu_add_shader(kritagpu_SHADERS copy_shifted_rgba16f shaders/copy_shifted.co
 kis_gpu_add_shader(kritagpu_SHADERS apply_coverage_rgba32f shaders/apply_coverage.comp)
 kis_gpu_add_shader(kritagpu_SHADERS apply_coverage_rgba16f shaders/apply_coverage.comp DEFINES TILE_F16)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba32f shaders/composite_layers.comp DEFINES BASIC_BLEND_ONLY
-    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_over.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba16f shaders/composite_layers.comp DEFINES TILE_F16 BASIC_BLEND_ONLY
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_over.glsl
              ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_half_brush.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_extended_rgba32f shaders/composite_layers.comp
-    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_over.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_extended_rgba16f shaders/composite_layers.comp DEFINES TILE_F16
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_over.glsl
              ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_half_brush.glsl)
+# Solstice: Stroke layer style (docs/agent/gpu-engine.md, phase 4.114)
+kis_gpu_add_shader(kritagpu_SHADERS composite_stroke_style_rgba32f shaders/composite_stroke_style.comp DEFINES BASIC_BLEND_ONLY
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_over.glsl)
+kis_gpu_add_shader(kritagpu_SHADERS composite_stroke_style_rgba16f shaders/composite_stroke_style.comp DEFINES TILE_F16 BASIC_BLEND_ONLY
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
+             ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_over.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f32 shaders/canvas_patches.comp)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f16 shaders/canvas_patches.comp DEFINES DST_F16)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f16_f32 shaders/canvas_patches.comp DEFINES SRC_F16)
@@ -111,6 +122,7 @@ set(kritagpu_LIB_SRCS
     KisGpuMaskingCompositePass.cpp
     KisGpuShiftedCopyPass.cpp
     KisGpuCoveragePass.cpp
+    KisGpuStrokeStylePass.cpp
 )
 
 if(WIN32)
