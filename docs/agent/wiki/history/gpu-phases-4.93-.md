@@ -852,3 +852,34 @@ numbers: [Filter layer updates](../benchmarks/filter-layer-updates.md).
 - Not done: filter masks (that Color Reference mask included), the other
   color adjustment filters, RGBA F32 tables, the Copy mode at reduced
   opacity, the Filter dialog.
+
+## Filter masks and Color Reference (phase 4.116)
+
+2026-11-12, user request. Filter masks whose filter has a GPU form are
+applied on the GPU, and the Color Reference filter has such a form in RGBA
+F16. Details: `docs/agent/gpu-engine.md`, "Filter masks and Color Reference
+(phase 4.116)"; numbers:
+[Filter layer updates](../benchmarks/filter-layer-updates.md).
+
+- Why: the real-document benchmark of phase 4.115 showed a Color Reference
+  filter mask on a group costing 330 ms per full-image update, far more
+  than the filter layers that phase was about.
+- The filter converts to a working space and back with LittleCMS. The
+  conversion to it is a table per channel (the input is a half); the
+  conversion back takes floats, so it is inverted through its thresholds:
+  it is monotonic, and bisection finds where its result changes. The
+  check against the converter passed at the first run for the default
+  profiles (sRGB-elle-V2-g10 to sRGB-elle-V2-srgbtrc).
+- The hook moved from `KisColorTransformationFilter` to `KisFilter`,
+  because Color Reference is not a color transformation filter.
+- The wiki was read first this time: `toFloat()` and `roundToHalf()` from
+  `transform_pass.comp` replaced the conversions phase 4.115 had left to
+  the GPU, and the partly selected RGBA F16 pixels became bit-identical.
+- The first version of the mask test failed for reasons of the test: a
+  group with two children gives the filter different input in the GPU
+  and the CPU run (compositing tolerance), which the tone mapping
+  magnifies beyond the tolerance; and the CPU's vectorized Copy op blends
+  and clamps whole batches at any selection edge in RGBA F32, also a hard
+  one.
+- Not done: Color Reference in RGBA F32; batching the CPU filter's
+  conversions (it would speed up the CPU paths that remain).

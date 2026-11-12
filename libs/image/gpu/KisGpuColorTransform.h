@@ -11,14 +11,17 @@
 
 #include "kritaimage_export.h"
 
+#include "kis_default_bounds_base.h"
+#include "kis_types.h"
+
 class KoColorSpace;
 class KoColorTransformation;
 
 /**
- * Solstice (GPU engine, phase 4.115, docs/agent/gpu-engine.md): a color
- * transformation filter in a form the GPU engine can compute, with the
- * CPU's result. KisColorTransformationFilter::createGpuColorTransform()
- * returns one for the filters and configurations that have such a form.
+ * Solstice (GPU engine, phases 4.115 and 4.116, docs/agent/gpu-engine.md):
+ * a filter in a form the GPU engine can compute, with the CPU's result.
+ * KisFilter::gpuColorTransform() returns one for the filters and
+ * configurations that have such a form.
  *
  * Always compiled; it only describes the transformation.
  */
@@ -31,10 +34,35 @@ public:
         /// One table per channel, indexed by the bit pattern of the half
         /// value (RGBA F16 only): the output channel depends on nothing but
         /// the same input channel.
-        ChannelTables
+        ChannelTables,
+        /// The Color Reference filter (RGBA F16 only): its arithmetic
+        /// between two color conversions that are measured into tables.
+        ColorReference
     };
 
     static constexpr int ChannelTableSize = 65536;
+    /// Entries of the Color Reference filter's reference table.
+    static constexpr int ColorReferenceTableSize = 1024;
+
+    /// What KisColorReferenceFilter::processImpl() reads from its configuration.
+    struct ColorReferenceParameters {
+        QVector<float> table; ///< ColorReferenceTableSize RGB triples in the working space
+        double amount = 1.0; ///< 0..1
+        bool keepBrightness = true;
+        quint32 channelMask = 7; ///< enabled color channels: bit 0 red, 1 green, 2 blue
+    };
+
+    /**
+     * The GPU form of the filter of @p config for a filter layer or filter
+     * mask of @p node's image, on devices in @p cs with the bounds
+     * @p bounds. Null when the node is filtered on the CPU: the GPU
+     * projection is off for the image, the filter or its configuration has
+     * no GPU form, the update runs at a reduced level of detail or in
+     * wrap-around mode, the GPU lacks 64-bit float shaders, or
+     * KRITA_GPU_FILTER_LAYER=0 is set (a development switch).
+     */
+    static QSharedPointer<const KisGpuColorTransform>
+    forNode(KisNodeSP node, KisFilterConfigurationSP config, const KoColorSpace *cs, KisDefaultBoundsBaseSP bounds);
 
     /**
      * The desaturate filter of @p type (0 lightness, 1 BT.709, 2 BT.601,
@@ -55,6 +83,27 @@ public:
     static QSharedPointer<const KisGpuColorTransform> channelTables(const KoColorSpace *cs,
                                                                     const KoColorTransformation *transformation);
 
+    /**
+     * The Color Reference filter (plugins/filters/solsticeeffects) on a
+     * device in @p cs: every pixel is converted to @p workingSpace (RGBA
+     * F32), recolored there, and converted back.
+     *
+     * Both conversions come from the CPU's converters: the one to the
+     * working space as a table per channel over all 65536 half values, the
+     * one back as a sorted table per channel that holds, for every half
+     * value, the smallest working value converted to it (found by
+     * bisection; the conversion is monotonic). The tables are built once
+     * per pair of color spaces and kept.
+     *
+     * Null unless @p cs is RGBA F16 and @p workingSpace RGBA F32, or when
+     * the conversions do not treat every channel on its own (profiles with
+     * different primaries) or the measured tables fail their check
+     * against the converters.
+     */
+    static QSharedPointer<const KisGpuColorTransform> colorReference(const KoColorSpace *cs,
+                                                                     const KoColorSpace *workingSpace,
+                                                                     const ColorReferenceParameters &parameters);
+
     Kind kind() const
     {
         return m_kind;
@@ -71,6 +120,11 @@ public:
         return m_tables.constData();
     }
 
+    /// The tables as the GPU pass takes them: the channel tables, or the
+    /// Color Reference block of 32-bit words (shaders/color_transform.comp).
+    const void *tableData() const;
+    qint64 tableBytes() const;
+
     /// Unique for every set of tables in this process.
     quint64 tablesId() const
     {
@@ -86,7 +140,10 @@ private:
     Kind m_kind = Desaturate;
     int m_desaturateType = 0;
     QVector<quint16> m_tables;
+    QVector<quint32> m_words;
     quint64 m_tablesId = 0;
+
+    static quint64 nextTablesId();
 };
 
 using KisGpuColorTransformSP = QSharedPointer<const KisGpuColorTransform>;

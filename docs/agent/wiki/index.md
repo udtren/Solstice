@@ -219,8 +219,9 @@ Document ownership and lifecycle are defined in
   GPU downloads per dab for clone offsets, masks, RGBA8/F32 and nesting,
   before and after phases 4.110 and 4.111.
 - [Filter layer updates](benchmarks/filter-layer-updates.md): update time
-  and GPU downloads per dab below Desaturate, Posterize and curves filter
-  layers, before and after phase 4.115.
+  and GPU downloads per dab below Desaturate, Posterize, curves and Color
+  Reference filter layers and with filter masks, before and after phases
+  4.115 and 4.116.
 - [Layer style updates](benchmarks/layer-style-updates.md): update time
   and GPU downloads per dab on a layer with a Stroke style, before and
   after phase 4.114.

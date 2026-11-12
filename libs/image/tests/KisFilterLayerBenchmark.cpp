@@ -27,6 +27,8 @@
 #include "gpu/KisGpuTileBackend.h"
 #include "kis_adjustment_layer.h"
 #include "kis_default_bounds.h"
+#include "kis_filter_mask.h"
+#include "kis_group_layer.h"
 #include "kis_image.h"
 #include "kis_paint_device.h"
 #include "kis_paint_layer.h"
@@ -159,7 +161,10 @@ enum class Stack {
     Desaturate,
     Posterize,
     Curves,
-    DesaturatePosterizeSelected
+    DesaturatePosterizeSelected,
+    ColorReference,
+    DesaturateMask,
+    ColorReferenceGroupMask
 };
 
 const char *stackName(Stack stack)
@@ -175,6 +180,12 @@ const char *stackName(Stack stack)
         return "curves";
     case Stack::DesaturatePosterizeSelected:
         return "desaturate+posterize, selection";
+    case Stack::ColorReference:
+        return "color reference";
+    case Stack::DesaturateMask:
+        return "desaturate mask";
+    case Stack::ColorReferenceGroupMask:
+        return "color reference mask on the group";
     }
     return "?";
 }
@@ -235,6 +246,14 @@ KisFilterConfigurationSP curvesConfig()
     return filterConfig("perchannel", xml);
 }
 
+KisFilterConfigurationSP colorReferenceConfig()
+{
+    // The filter's defaults: the Amber preset, Amount 100, Keep brightness.
+    KisFilterSP filter = KisFilterRegistry::instance()->value("solstice_color_reference");
+    KIS_ASSERT(filter);
+    return filter->defaultConfiguration(KisGlobalResourcesInterface::instance())->cloneWithResourcesSnapshot();
+}
+
 /// A painted selection: a selected block with a soft band at its right edge.
 KisSelectionSP paintedSelection(KisImageSP image)
 {
@@ -268,9 +287,24 @@ Result run(const Scenario &s)
     background->paintDevice()->fill(bounds, KoColor(Qt::white, cs));
     image->addNode(background, image->root());
 
+    // The mask scenarios paint inside a group, like the user's document
+    // whose main group has a Color Reference filter mask.
+    const bool grouped = s.stack == Stack::ColorReferenceGroupMask;
+    KisGroupLayerSP group;
+    if (grouped) {
+        group = new KisGroupLayer(image, "group", 255);
+        image->addNode(group, image->root());
+    }
     KisPaintLayerSP painted = new KisPaintLayer(image, "painted", 255);
     fillRandom(painted->paintDevice(), LayerContent, 1);
-    image->addNode(painted, image->root());
+    image->addNode(painted, grouped ? KisNodeSP(group) : image->root());
+
+    auto addFilterMask = [&](KisNodeSP parent, KisFilterConfigurationSP config) {
+        KisFilterMaskSP mask = new KisFilterMask(image, "filter mask");
+        mask->initSelection(qobject_cast<KisLayer *>(parent.data()));
+        mask->setFilter(config);
+        image->addNode(mask, parent);
+    };
 
     auto addFilter = [&](const QString &name, KisFilterConfigurationSP config, KisSelectionSP selection) {
         KisAdjustmentLayerSP layer = new KisAdjustmentLayer(image, name, config, selection);
@@ -292,6 +326,15 @@ Result run(const Scenario &s)
         // What the user's documents have: both layers with the same painted selection.
         addFilter("desaturate", desaturateConfig(), paintedSelection(image));
         addFilter("posterize", posterizeConfig(), paintedSelection(image));
+        break;
+    case Stack::ColorReference:
+        addFilter("color reference", colorReferenceConfig(), nullptr);
+        break;
+    case Stack::DesaturateMask:
+        addFilterMask(painted, desaturateConfig());
+        break;
+    case Stack::ColorReferenceGroupMask:
+        addFilterMask(group, colorReferenceConfig());
         break;
     }
 
@@ -395,8 +438,14 @@ void KisFilterLayerBenchmark::benchmarkPaintedLayer()
                          "downloads/refresh\tmaxDiff";
 
     for (Mode mode : modes) {
-        for (Stack stack :
-             {Stack::None, Stack::Desaturate, Stack::Posterize, Stack::Curves, Stack::DesaturatePosterizeSelected}) {
+        for (Stack stack : {Stack::None,
+                            Stack::Desaturate,
+                            Stack::Posterize,
+                            Stack::Curves,
+                            Stack::DesaturatePosterizeSelected,
+                            Stack::ColorReference,
+                            Stack::DesaturateMask,
+                            Stack::ColorReferenceGroupMask}) {
             Scenario s;
             s.mode = mode;
             s.stack = stack;

@@ -16,6 +16,9 @@ The examples on this page apply each effect to this portrait:
 
 Choose **Filter > Adjust > Color Reference** to recolor a layer from an
 image or gradient. Selections, filter masks and filter layers are supported.
+In RGBA 16-bit float documents the [GPU Engine](gpu-engine.md) computes
+Color Reference filter layers and filter masks on the graphics card, with
+the same result.
 
 - **Image** offers eight original palettes and **Load Image...** for your
   own references. You can also drag image files from your file manager onto

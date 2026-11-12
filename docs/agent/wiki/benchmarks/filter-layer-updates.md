@@ -8,7 +8,9 @@ sources:
   - libs/image/gpu/KisGpuColorTransform.cpp (channelTables)
   - libs/image/gpu/KisGpuProjectionCompositor.cpp (transformColors)
   - libs/image/gpu/KisGpuMergeBatch.cpp (tryAdd, the Copy mode)
-  - docs/agent/gpu-engine.md ("Filter layers (phase 4.115)")
+  - libs/image/kis_filter_mask.cpp (applyOnGpu)
+  - libs/image/gpu/KisGpuColorReferenceTables.cpp (conversion tables)
+  - docs/agent/gpu-engine.md ("Filter layers (phase 4.115)", "Filter masks and Color Reference (phase 4.116)")
 related:
   - layer-style-updates.md
   - masked-layer-updates.md
@@ -104,6 +106,48 @@ In the last row the group's Color Reference filter mask
 group's projection back (about 330 ms and 1050 tiles of the step, with the
 GPU engine on or off). The filter layers add 5 ms to it on the GPU and
 73 ms on the CPU.
+
+## Filter masks and Color Reference: before → after phase 4.116
+
+The same benchmark and image, measured before and after phase 4.116
+(2026-11-12, one run per column). "Color Reference" is a filter layer with
+the filter's defaults (the Amber preset, Amount 100, Keep brightness);
+"Desaturate mask" a filter mask on the painted layer; "Color Reference
+mask" a filter mask on a group that holds the painted layer, as in the
+user's document.
+
+GPU engine:
+
+| Scenario | F16 dab (downloads) | F16 refresh (downloads) | F32 dab (downloads) | F32 refresh |
+| --- | --- | --- | --- | --- |
+| Color Reference | 24.49 → 0.44 (24.8 → 0) | 340.71 → 7.17 (1092 → 0) | 24.06 → 24.22 (24.8 → 24.8) | 336.97 → 346.37 |
+| Desaturate mask | 2.33 → 0.26 (24.8 → 0) | 11.63 → 5.33 (0 → 0) | 2.12 → 0.26 (24.8 → 0) | 19.57 → 5.18 |
+| Color Reference mask | 25.73 → 0.49 (24.8 → 0) | 297.35 → 5.56 (0 → 0) | 24.61 → 25.15 (24.8 → 24.8) | 290.99 → 284.53 |
+
+Color Reference has no GPU form in RGBA F32: those columns show noise.
+
+CPU paths (unchanged code; the run before / the run after):
+
+| Scenario | RGBA8 dab | RGBA8 refresh | F16 dab, engine off | F16 refresh, engine off | F32 dab, engine off | F32 refresh, engine off |
+| --- | --- | --- | --- | --- | --- | --- |
+| Color Reference | 33.94 / 33.94 | 587.35 / 580.22 | 24.92 / 24.87 | 366.13 / 346.33 | 24.24 / 23.87 | 341.06 / 336.29 |
+| Desaturate mask | 0.70 / 0.70 | 5.60 / 5.91 | 1.83 / 1.89 | 14.53 / 13.96 | 0.88 / 0.88 | 16.87 / 16.48 |
+| Color Reference mask | 34.27 / 33.91 | 509.92 / 507.63 | 25.37 / 24.82 | 298.36 / 315.77 | 23.69 / 23.34 | 308.15 / 299.04 |
+
+Real document (the third row of the table above: 1754x2480 RGBA F16, a
+paint layer inside the group with the Color Reference filter mask, the
+filter group hidden, dirty rect 1691x2326), `KisMoveDocumentBenchmark`
+with `KRITA_GPU_FILTER_LAYER=0` and without: **333.21 → 10.40 ms** per
+Move Tool step, 1050 → 0 tiles read back; GPU engine off 330-338 ms.
+
+One-time costs (`KisGpuProjectionTest::testColorReferenceTables`): the
+first Color Reference update of a session builds the conversion tables of
+the document's color space, 220 ms; a changed setting builds a new block
+in 2 ms.
+
+The Color Reference filter is slow on the CPU in every color space
+(24-34 ms per dab, 300-590 ms per refresh): it converts every pixel to
+and from its working space with single-pixel LittleCMS calls.
 
 ## Reading
 

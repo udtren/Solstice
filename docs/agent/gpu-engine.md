@@ -1239,8 +1239,8 @@ and one Color Adjustment curve (the RGBA curve).
     (`lerpHalf()`, `divideHalf()`: each float operation goes through
     double so that the driver cannot fuse the multiplication and the
     addition; a pixel with a tiny alpha magnifies any other rounding).
-    Rounding to half still differs in rare ties: partly selected pixels
-    match within the usual 4 half ULPs, the others exactly.
+    With the rounding helpers of phase 4.116 (`toFloat()`,
+    `roundToHalf()`) partly selected pixels are exact too.
   - RGBA F32 follows `KoOptimizedCompositeOpCopy128` within 2e-5; colors
     above 1 next to a partly selected pixel can differ (the CPU clamps
     whole SIMD batches), as with transparency masks.
@@ -1269,13 +1269,15 @@ and one Color Adjustment curve (the RGBA curve).
 - Result: 0.28, 0.30 and 0.27 ms per dab and no
   downloads; the user's stack (Desaturate and Posterize with a painted
   selection) 12.44 → 0.36 ms.
-- CPU fallbacks: other filters; filter masks; Posterize and curves in RGBA
+- CPU fallbacks: other filters; filter masks (until phase 4.116);
+  Posterize and curves in RGBA
   F32; Posterize with a profile that mixes the channels; hue, saturation
   and lightness curves; Instant Preview; wrap-around mode; a selection
   rect above 4096 x 4096 pixels; no 64-bit float shaders. The Filter
   dialog and filter strokes are unchanged (CPU).
-- `KRITA_GPU_FILTER_LAYER=0` keeps the filters of filter layers on the CPU
-  (development switch; read once per process).
+- `KRITA_GPU_FILTER_LAYER=0` keeps the filters of filter layers (and, from
+  phase 4.116, of filter masks) on the CPU (development switch; read once
+  per process).
 - Filter plugins are loaded from the installed tree, also by the tests:
   after changing `KisColorTransformationFilter` or another plugin
   interface, rebuild everything and install before running tests (a stale
@@ -1293,6 +1295,92 @@ and one Color Adjustment curve (the RGBA curve).
 - Measurements: [Filter layer updates](wiki/benchmarks/filter-layer-updates.md)
   (`KisFilterLayerBenchmark`, opt-in with `KRITA_FILTER_BENCHMARK=1`).
 - Manual check: checklist item 22.
+
+### Filter masks and Color Reference (phase 4.116)
+
+2026-11-12, user request, after phase 4.115 found a Color Reference filter
+mask on the main group of one of the user's RGBA F16 documents: about
+330 ms per full-image update, GPU engine on or off.
+
+- Before: a filter mask ran on the CPU. `KisLayer::gpuAppliesEffectMasks()`
+  was false with one, so the layer copied its original to its projection
+  on the CPU (a readback), and `KisMask::mergeInMaskInternal()` filtered
+  through a cache device. The Color Reference filter itself costs about
+  25 ms per 256 px dab and 300-340 ms per 1754x2480 refresh on the CPU:
+  two LittleCMS conversions per pixel, one pixel at a time.
+- `KisFilter::gpuColorTransform(cs, config)` (virtual, null by default) is
+  now the hook for every filter; `KisColorTransformationFilter` implements
+  it with the cached `createGpuColorTransform()` of phase 4.115.
+  `KisGpuColorTransform::forNode()` is the one decision for filter layers
+  and filter masks (the image is composited on the GPU, full resolution,
+  no wrap-around, 64-bit float shaders, `KRITA_GPU_FILTER_LAYER` not 0).
+- Filter masks: `KisFilterMask::gpuAppliesFilter()` makes
+  `gpuAppliesEffectMasks()` accept the mask next to transparency masks, so
+  the layer's copy stays on the GPU (paint layers, groups, Clone Layers).
+  `KisFilterMask::applyOnGpu()` then filters the projection in place:
+  `transformColors()` accepts the same device as source and destination
+  (every pixel is read and written by one shader invocation), with the
+  mask's selection as coverage when not everything is selected. A mask
+  without a selection is handled when its need rect equals its apply rect.
+- Color Reference (`KisColorReferenceFilter::gpuColorTransform()`, RGBA F16
+  only): `KisGpuColorTransform::colorReference()` builds a block of 32-bit
+  words (`color_transform.comp`, kind 7; layout in the shader):
+  - the amount, Keep brightness, the enabled color channels and the
+    filter's 1024-entry reference table;
+  - **forward tables**: the working-space value (RGBA F32, encoded sRGB)
+    of every half bit pattern, per channel, from the filter's own
+    converter. Refused when a channel's result depends on the other
+    channels or on alpha (every value is converted with the others at 0,
+    1, 0.25 and 4 and alpha at 1 and 0.5);
+  - **backward thresholds**: the conversion back takes a float, so it has
+    no table over its inputs. It is monotonic per channel, and its result
+    is one of 63489 half values: for every half value the smallest working
+    value converted to it or to a larger one is found by bisection over
+    the float values (32 rounds, all half values and the three channels
+    at once), stored ascending, and searched by the shader (16 steps per
+    channel). Refused when 131072 sample values with unrelated channels
+    and alpha, a third of them right at a threshold, do not convert to
+    what the thresholds say.
+  The conversion tables are built once per pair of color spaces and kept
+  for the session (about 220 ms the first time); the filter keeps the
+  transforms of its last eight configurations (2 ms for a changed
+  setting, a 1.5 MiB block each).
+- The shader repeats `KisColorReferenceFilter::processImpl()` in double:
+  pixels with an alpha that is not above 0, or a non-finite working value,
+  are left alone; brightness, `ColorReference::lookup()`,
+  `keepBrightness()` and the Amount blend in the CPU's order; `toFloat()`
+  rounds to float like C++; disabled color channels keep their bits. The
+  double divisions and any fused multiply-add can differ in the last
+  double bit, which the rounding to float hides except by chance.
+- Rounding helpers: `color_transform.comp` now uses `toFloat()` and
+  `roundToHalf()` (copied from `transform_pass.comp`) for every rounding
+  the CPU does. With them the partly selected RGBA F16 pixels of phase
+  4.115 are exact too, not only within 4 half ULPs.
+- Parity: RGBA F16 filter layers and masks equal the CPU bit for bit in
+  the tests (colors of fully transparent pixels aside), Color Reference
+  included; RGBA F32 Desaturate equals it except for partly selected
+  pixels (the CPU's vectorized Copy op, within 2e-5, HDR colors next to a
+  selection edge clamped by the CPU).
+- Result (1754x2480 RGBA F16, 256 px dab): Color Reference filter layer
+  24.5 → 0.44 ms, Color Reference mask on a group 25.7 → 0.49 ms,
+  Desaturate mask 2.33 → 0.26 ms; no tiles read back. The user's document:
+  a Move Tool step inside the masked group 333 → 10.4 ms.
+- CPU fallbacks: Color Reference in RGBA F32 and other color spaces, with
+  profiles of other primaries than sRGB, at Amount 0 or with an unreadable
+  table (the CPU does nothing then); filter masks with other filters;
+  Instant Preview; wrap-around mode; a selection rect above 4096 x 4096
+  pixels. The Filter dialog and filter strokes are unchanged (CPU).
+- Tests (`KisGpuProjectionTest`): `testFilterMaskMatchesCpu` (F32 and F16;
+  Desaturate, Posterize, curves, a lightness curve on the CPU and two
+  Color Reference configurations; on a paint layer and on a group; with
+  and without a painted selection; full refresh, three GPU dabs that
+  download nothing, painting on the mask), `testFilterLayerMatchesCpu`
+  with the Color Reference rows, `testColorReferenceTables` (the GPU form
+  exists for RGBA F16 only, is cached, and is absent at Amount 0 or with a
+  broken table). `KisColorReferenceFilterTest` covers the unchanged CPU
+  filter.
+- Measurements: [Filter layer updates](wiki/benchmarks/filter-layer-updates.md).
+- Manual check: checklist item 23.
 
 ## Technology and device requirements
 
@@ -1433,10 +1521,11 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   `KRITA_GPU_BENCH_LAYERS` (default 8).
 - Filter layer benchmark: target `KisFilterLayerBenchmark` (skips unless
   `KRITA_FILTER_BENCHMARK=1`; `KRITA_FILTER_BENCHMARK_GPU_ONLY=1` leaves
-  out the CPU rows): dabs below a Desaturate, a Posterize or a curves
-  filter layer, and below the user's stack (Desaturate and Posterize with
-  a painted selection), then full refreshes. It needs the filter plugins
-  of the installed tree.
+  out the CPU rows): dabs below a Desaturate, a Posterize, a curves or a
+  Color Reference filter layer, below the user's stack (Desaturate and
+  Posterize with a painted selection), on a layer with a Desaturate
+  filter mask and inside a group with a Color Reference filter mask, then
+  full refreshes. It needs the filter plugins of the installed tree.
 - Layer style benchmark: target `KisLayerStyleBenchmark` (skips unless
   `KRITA_STYLE_BENCHMARK=1`; `KRITA_STYLE_BENCHMARK_GPU_ONLY=1` leaves out
   the CPU rows): dabs on a layer with an outside Stroke style of size 0
@@ -1485,7 +1574,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `KisGpuShiftedCopyPass.*` + `shaders/copy_shifted.comp` | Phase-4.110 copy between tile grids with any pixel shift (Clone Layer offsets); the default pixel where the source has no tile. |
 | `KisGpuCoveragePass.*` + `shaders/apply_coverage.comp` | Phase-4.113 coverage mask applied to tiles in place (transparency masks), like the CPU Copy op through a selection onto a cleared pixel. |
 | `KisGpuStrokeStylePass.*` + `shaders/composite_stroke_style.comp` | Phase-4.114 layer with an outside, solid color Stroke layer style: thresholded layer, dilated alpha in double, knockout copy. `shaders/composite_over.glsl` is the Normal blend shared with `composite_layers.comp`. |
-| `KisGpuColorTransformPass.*` + `shaders/color_transform.comp` | Phase-4.115 color transformation between tile grids (filter layers): Desaturate arithmetic or per-channel tables of half bit patterns, optionally through a coverage mask like the CPU Copy op. |
+| `KisGpuColorTransformPass.*` + `shaders/color_transform.comp` | Phase-4.115 color transformation between tile grids or in place (filter layers and masks): Desaturate arithmetic, per-channel tables of half bit patterns, or Color Reference (phase 4.116), optionally through a coverage mask like the CPU Copy op. |
 | `KisGpuMaskingCompositePass.*` + `shaders/masking_composite.comp` | Phase-4.101 masking brush composite: stroke pixels into the target with the mask composited into alpha, ten modes, CPU-exact. |
 
 ## Source map (`libs/image`)
@@ -1499,13 +1588,14 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `gpu/KisGpuTileBackend.*` | Process-wide context, RGBA32F/RGBA16F pools, downloads, deferred slot release, retired resources. Never destroyed. |
 | `gpu/KisGpuTileAccess.*` | Public GPU access to device tiles (see above). |
 | `gpu/KisGpuMergeBatch.*` | Batches composites inside `KisAsyncMerger`; eligibility checks; CPU fallback; deferred projection clears (`deferClear()`, phase 4.111); the Copy mode at full opacity as a replace entry (phase 4.115). Always compiled; inert without `HAVE_KRITA_GPU_ENGINE`. |
-| `gpu/KisGpuColorTransform.*` | Phase 4.115: a color transformation filter in a GPU form (Desaturate, or channel tables built from the CPU transformation). Always compiled. |
-| `filter/kis_color_transformation_filter.{h,cc}`, `filter/kis_color_transformation_configuration.{h,cc}` | Phase 4.115: `createGpuColorTransform()` (virtual, overridden by the Desaturate, Color Adjustment and Posterize plugins) and its cache in the configuration. |
+| `gpu/KisGpuColorTransform.*`, `gpu/KisGpuColorReferenceTables.cpp` | Phases 4.115 and 4.116: a filter in a GPU form (Desaturate; channel tables built from the CPU transformation; Color Reference with measured conversion tables) and `forNode()`, the decision for filter layers and masks. Always compiled. |
+| `filter/kis_filter.{h,cc}`, `filter/kis_color_transformation_filter.{h,cc}`, `filter/kis_color_transformation_configuration.{h,cc}` | `KisFilter::gpuColorTransform()` (phase 4.116, virtual, null by default); for color transformation filters `createGpuColorTransform()` (phase 4.115, overridden by the Desaturate, Color Adjustment and Posterize plugins) and its cache in the configuration. |
+| `kis_filter_mask.{h,cpp}` | Phase 4.116: `gpuAppliesFilter()`, `applyOnGpu()`. |
 | `kis_selection_based_layer.cpp` | Phase 4.115: `copyOriginalToProjection()` tries `copyShifted()` for filter layers. |
 | `gpu/KisGpuEngineSettings.*` | kritarc keys, the convert policy, GPU color spaces and the conversion target. Always compiled. |
 | `gpu/KisGpuProjectionCompositor.*` | Composites batches in place into GPU-authoritative projection tiles; layer accesses and reusable work contexts. |
 | `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks, or with transparency masks only (phase 4.113). |
-| `kis_layer.{h,cc}`, `kis_paint_layer.cc`, `kis_mask.cc` | Phase 4.113: `KisLayer::gpuAppliesEffectMasks()`, the GPU copy of the original, and the GPU application of transparency masks in `KisMask::mergeInMaskInternal()`. |
+| `kis_layer.{h,cc}`, `kis_paint_layer.cc`, `kis_mask.cc` | Phase 4.113: `KisLayer::gpuAppliesEffectMasks()`, the GPU copy of the original, and the GPU application of transparency masks in `KisMask::mergeInMaskInternal()`; filter masks with a GPU form since phase 4.116. |
 | `layerstyles/kis_layer_style_projection_plane.{h,cpp}` | Phase 4.114: `gpuCompositesStyles()`, `applyOnGpu()`; `recalculate()` skips the style planes then, `apply()` recalculates them when the GPU did not composite. |
 | `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points, `deferClear` in `setupProjection` (phase 4.111); batched readback before CPU composites (4.112); the GPU Stroke style and the GPU copy of temporary projections in `writeProjection` (4.114); `KisUpdateOriginalVisitor::filterOnGpu()` for adjustment layers (4.115). |
 | `kis_updater_context.cpp` | Tile-aligned job exclusivity when `KisGpuMergeBatch::mayCompositeOnGpu`. |
@@ -1554,8 +1644,8 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   alone and the Gaussian convolution on the CPU (development switches).
   `KRITA_GPU_LAYER_STYLE=0` keeps the Stroke layer style on the CPU
   (phase 4.114; read once per process). `KRITA_GPU_FILTER_LAYER=0` keeps
-  the filters of filter layers on the CPU (phase 4.115; read once per
-  process).
+  the filters of filter layers and filter masks on the CPU (phases 4.115
+  and 4.116; read once per process).
 - No `.kra` changes or persisted ids: `.kra` files stay readable by the CPU
   path and upstream Krita; GPU mode stores RGBA F32/F16 layers with the
   normal Krita color space ids. Saving works through the CPU path: the tile
@@ -1777,6 +1867,18 @@ Record the build, format, workload and result separately from earlier acceptance
     off; nothing lags or is left behind at tile borders. Repeat the
     Desaturate layer in an RGBA 32-bit float image, and with Instant
     Preview at a zoom below 50 %.
+23. Filter masks and Color Reference (phase 4.116): in an RGBA 16-bit
+    float image, add a Color Reference filter mask to a group (a preset,
+    then a gradient; Keep brightness on and off; Amount 100 and 50) and a
+    Desaturate filter mask to a paint layer. Paint inside the group and on
+    the masked layer with the GPU brush, move layers inside the group,
+    paint black and gray on the masks, hide and show them, change the
+    settings in the mask's properties dialog, Undo/Redo, save and reopen.
+    Everything looks like the GPU Engine turned off and follows without
+    lagging; the first update after opening may pause for a moment (the
+    conversion tables). Repeat the Color Reference mask as a filter layer,
+    in an RGBA 32-bit float image (CPU path), and with Instant Preview at
+    a zoom below 50 %.
 
 ## Phase history
 
@@ -1894,6 +1996,7 @@ Section index:
 - [Transparency masks (phase 4.113)](wiki/history/gpu-phases-4.93-.md#transparency-masks-phase-4113)
 - [Stroke layer style (phase 4.114)](wiki/history/gpu-phases-4.93-.md#stroke-layer-style-phase-4114)
 - [Filter layers (phase 4.115)](wiki/history/gpu-phases-4.93-.md#filter-layers-phase-4115)
+- [Filter masks and Color Reference (phase 4.116)](wiki/history/gpu-phases-4.93-.md#filter-masks-and-color-reference-phase-4116)
 
 ## Risks and open questions
 

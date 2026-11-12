@@ -165,11 +165,29 @@ related:
    is exact, and the conversion between the two operations keeps the
    driver from fusing them (see 10). A pixel with an alpha of a few
    millionths turned one differing subnormal half step into 1 % of color.
+   Phase 4.116 added `toFloat()` and `roundToHalf()` (see 4) for the
+   roundings in between, which made these pixels bit-identical; the GPU's
+   own conversions had left one-step differences at ties.
 17. **GPU float division.** `x / 3.0` differed from the CPU by one float
    ULP in the Desaturate average (phase 4.115), `precise` or not. The
    quotient of the doubles, converted to float, is the correctly rounded
    float quotient here: an exact quotient of floats is never close enough
    to a float rounding boundary for the double error to matter.
+
+18. **Invert a monotonic conversion by its thresholds.** A conversion
+   whose input is a float has no table over its inputs, but when its
+   result is a half and it is monotonic per channel, the result changes at
+   no more than 63488 input values. Phase 4.116 finds, for every half
+   value, the smallest float the CPU converts to it or above (bisection
+   over the float values in ascending bit order, all values in one batch
+   per round), and the shader searches the sorted thresholds. Check the
+   thresholds against the CPU on samples that sit right at them, with
+   unrelated other channels, and refuse the GPU path when one differs
+   (`KisGpuColorReferenceTables.cpp`).
+19. **Do not compare through a nonlinear filter with a tolerance.** A
+   tone mapping magnifies a 1e-7 difference of its input. To test such a
+   filter exactly, give it the same input in both runs: one layer below a
+   filter layer, or a group with one child under a filter mask.
 
 ## Test pattern
 

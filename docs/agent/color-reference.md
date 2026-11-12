@@ -16,8 +16,11 @@ Photo-library/camera import were excluded by the user; .clip is unsupported.
 
 ## Decisions under implementation authorization
 
-- CPU-only native filter, ID `solstice_color_reference`, configuration version
-  1, **Filter > Adjust > Color Reference**.
+- Native filter, ID `solstice_color_reference`, configuration version
+  1, **Filter > Adjust > Color Reference**. CPU-only until 2026-11-12;
+  filter layers and filter masks in RGBA F16 documents have a GPU path
+  since then (see [GPU path](#gpu-path)). The Filter dialog and filter
+  strokes use the CPU.
 - Image mode is a tone-to-color mapping using the reference's distribution.
   The original absolute-bin proposal was rejected because it largely preserves
   brightness even with Keep brightness off. Weighted quantile positions allow
@@ -140,6 +143,36 @@ QColor conversion), a device-extent-dependent cache and gradient-limited
 alpha. Neutral sRGB input with an opaque smooth gradient is compared within
 0.005. Colored input need not match. Direct smooth two-stop gradient sampling
 is checked within 0.00004, allowing KoStopGradient's 15-bit mixing weights.
+
+## GPU path
+
+GPU engine phase 4.116 (2026-11-12, user request;
+[contract](gpu-engine.md#filter-masks-and-color-reference-phase-4116)).
+`KisColorReferenceFilter::gpuColorTransform()` describes `processImpl()`
+for the GPU engine, which uses it for filter layers and filter masks of
+RGBA F16 images.
+
+- It reads the same properties as `processImpl()` (`amount`, `lut`,
+  `keepBrightness`, the channel flags) and returns null where
+  `processImpl()` returns early (Amount 0, an unreadable table, no enabled
+  color channel): the CPU then does nothing, as before.
+- The two color conversions are not repeated but measured from the same
+  converters (`KisGpuColorTransform::colorReference()`): a table per
+  channel for the conversion to the working space, sorted thresholds per
+  channel for the conversion back. They need profiles that share their
+  primaries with the working space (sRGB); others stay on the CPU.
+- The arithmetic between them (`brightness()`, `lookup()`,
+  `keepBrightness()`, the Amount blend) is repeated in
+  `libs/gpu/shaders/color_transform.comp` (`colorReference()`). **Change
+  the two together**: a change to `ColorReference::lookup()` or
+  `keepBrightness()`, to the working space or to the skipped pixels needs
+  the same change in the shader, and
+  `KisGpuProjectionTest::testFilterLayerMatchesCpu` /
+  `testFilterMaskMatchesCpu` (Color Reference rows) compare the two bit
+  for bit.
+- The filter keeps the transforms of its last eight configurations
+  (`m_gpuCache`); a transform holds 1.5 MiB of tables.
+- `KRITA_GPU_FILTER_LAYER=0` keeps it on the CPU.
 
 ## Library and widget lifecycle
 

@@ -1005,7 +1005,12 @@ bool KisLayer::gpuAppliesEffectMasks() const
         return false;
     }
     Q_FOREACH (const KisEffectMaskSP &mask, masks) {
-        if (!mask->inherits("KisTransparencyMask")) {
+        if (mask->inherits("KisTransparencyMask")) {
+            continue;
+        }
+        // phase 4.116: a filter mask whose filter has a GPU form
+        const KisFilterMask *filterMask = qobject_cast<const KisFilterMask *>(mask.data());
+        if (!filterMask || !filterMask->gpuAppliesFilter()) {
             return false;
         }
     }

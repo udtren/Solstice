@@ -28,6 +28,7 @@
 #include "kis_layer.h"
 
 #include "kis_cached_paint_device.h"
+#include "kis_filter_mask.h"
 #include "kis_mask_projection_plane.h"
 
 #include "kis_raster_keyframe_channel.h"
@@ -363,6 +364,18 @@ void KisMask::mergeInMaskInternal(KisPaintDeviceSP projection,
             if (KisGpuProjectionCompositor::applyCoverage(projection, applyRect, coverage.data())) {
                 return;
             }
+        }
+    }
+#endif
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // Solstice (GPU engine, phase 4.116): a filter mask whose filter has a
+    // GPU form filters the projection's GPU tiles in place.
+    if (const KisFilterMask *filterMask = qobject_cast<const KisFilterMask *>(this)) {
+        KisLayer *layer = qobject_cast<KisLayer *>(parent().data());
+        if (layer && layer->gpuAppliesEffectMasks()
+            && filterMask->applyOnGpu(projection, effectiveSelection, applyRect, preparedNeedRect)) {
+            return;
         }
     }
 #endif

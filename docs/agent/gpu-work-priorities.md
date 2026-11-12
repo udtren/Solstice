@@ -61,20 +61,25 @@ ordered). Excluded by design: integer layers, filter areas below about
   of their documents (73 strokes against 7 filter layers in float
   documents). Filter layers with Desaturate, and in RGBA F16 with
   Posterize or channel curves, and the Copy blend mode at full opacity
-  (4.115, manual check pending: checklist item 22).
-- Open from 4.115: filter masks; Posterize and curves in RGBA F32 (no
+  (4.115, manual check pending: checklist item 22). Filter masks with
+  those filters, and Color Reference filter layers and masks in RGBA F16
+  (4.116, manual check pending: checklist item 23).
+- Open from 4.116: Color Reference in RGBA F32 (the conversion to the
+  working space has no table there) and with profiles of other primaries;
+  the first Color Reference update of a session pauses about 0.2 s for
+  the conversion tables. The CPU filter itself is slow (two single-pixel
+  LittleCMS conversions per pixel) and is still used by the Filter dialog,
+  RGBA8 documents and Instant Preview: batching its conversions would
+  help those.
+- Open from 4.115: Posterize and curves in RGBA F32 (no
   tables there; they would need LittleCMS's arithmetic); the other color
   adjustment filters (HSV, Levels, Color Balance and others: each needs a
   GPU form, tables where the channels are independent); hue, saturation
   and lightness curves; the Copy mode at reduced opacity; the Filter
   dialog and filter strokes. The user's documents use none of them.
-- Found in 4.115, not requested: one of the user's RGBA F16 documents has
-  a Color Reference filter mask (`solstice_color_reference`) on its main
-  group. It runs on the CPU and reads the group's projection back at
-  every update: about 330 ms per full-image Move Tool step with the GPU
-  engine on or off (`KisMoveDocumentBenchmark`), 19 ms for a 512 px rect.
-  A GPU path needs filter masks on the GPU and a GPU form of that filter
-  ([Color Reference](color-reference.md)).
+- Found in 4.115 and done in 4.116: the Color Reference filter mask on
+  the main group of one of the user's RGBA F16 documents (about 330 ms
+  per full-image Move Tool step; 10 ms now).
 - Open from 4.114: Inside and Center strokes, gradient and pattern fills,
   the other style effects, and styles during Instant Preview stay on the
   CPU. The user's documents use none of them except one Outer Glow.

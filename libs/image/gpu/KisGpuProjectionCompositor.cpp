@@ -960,9 +960,12 @@ bool KisGpuProjectionCompositor::transformColors(KisPaintDeviceSP dst,
     if (rect.isEmpty()) {
         return true;
     }
-    if (!src || !dst || src == dst) {
-        return fail(QStringLiteral("the source must be another device"));
+    if (!src || !dst) {
+        return fail(QStringLiteral("no source or destination"));
     }
+    // In place (a filter mask on its layer's projection): every pixel is
+    // read and written by the same shader invocation.
+    const bool inPlace = src == dst;
     if (!KisGpuTileAccess::isSupported(dst, errorMessage) || !KisGpuTileAccess::isSupported(src, errorMessage)) {
         return false;
     }
@@ -973,8 +976,8 @@ bool KisGpuProjectionCompositor::transformColors(KisPaintDeviceSP dst,
         return fail(QStringLiteral("source color space differs from the destination"));
     }
     const qint32 pixelSize = dst->pixelSize();
-    if (transform.kind() == KisGpuColorTransform::ChannelTables && pixelSize != 8) {
-        return fail(QStringLiteral("channel tables need RGBA F16"));
+    if (transform.kind() != KisGpuColorTransform::Desaturate && pixelSize != 8) {
+        return fail(QStringLiteral("color transform tables need RGBA F16"));
     }
     if (coverage && qint64(rect.width()) * rect.height() > KisGpuColorTransformPass::MaxMaskBytes) {
         return fail(QStringLiteral("coverage rect is too large"));
@@ -1024,7 +1027,12 @@ bool KisGpuProjectionCompositor::transformColors(KisPaintDeviceSP dst,
 
         // Without source tiles the grid is empty and every pixel reads the fill.
         QPoint srcOrigin = dstOrigin;
-        if (!srcSample.isEmpty()) {
+        if (inPlace) {
+            const QRect grid = target.tileGrid();
+            transformPass.srcTiles = transformPass.dstTiles;
+            transformPass.srcGridWidth = grid.width();
+            transformPass.srcGridHeight = grid.height();
+        } else if (!srcSample.isEmpty()) {
             source.reset(new KisGpuTileAccess(src, srcSample, KisGpuTileAccess::ReadOnly));
             if (source->tileCount()) {
                 ok = source->prepare(commands, uploads, errorMessage);
@@ -1037,9 +1045,12 @@ bool KisGpuProjectionCompositor::transformColors(KisPaintDeviceSP dst,
         }
         transformPass.shift = dstOrigin - srcOrigin;
 
-        if (transform.kind() == KisGpuColorTransform::ChannelTables) {
-            transformPass.kind = KisGpuColorTransformPass::ChannelTables;
-            transformPass.tables = transform.tables();
+        if (transform.kind() != KisGpuColorTransform::Desaturate) {
+            transformPass.kind = transform.kind() == KisGpuColorTransform::ChannelTables
+                ? KisGpuColorTransformPass::ChannelTables
+                : KisGpuColorTransformPass::ColorReference;
+            transformPass.tables = transform.tableData();
+            transformPass.tableBytes = transform.tableBytes();
             transformPass.tablesId = transform.tablesId();
         } else {
             transformPass.kind = KisGpuColorTransformPass::Desaturate + quint32(transform.desaturateType());
