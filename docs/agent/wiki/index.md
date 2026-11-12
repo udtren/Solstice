@@ -326,6 +326,9 @@ Document ownership and lifecycle are defined in
   publication.
 - [0.9.1 release verification](history/release-0.9.1.md): device extent fix
   release, merges done by the user, package integrity, website publication.
+- [1.0.0 release preparation and handoff](history/release-1.0.0.md): what
+  was prepared locally, what the release session still has to do, draft
+  notes. Becomes the verification record after the release.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

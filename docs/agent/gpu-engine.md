@@ -476,6 +476,9 @@ Continuous and Modulo Continuous ("All other blend modes").
     themselves (`libs/gpu/tests`) are not affected. The ones that go
     through `KisGpuTileBackend` skip on an unverified GPU; set
     `KRITA_GPU_ALLOW_UNVERIFIED_DEVICE=1` to run them there.
+  - Manual check (checklist item 24): reported OK by the user on
+    2026-11-13, on the Blackwell machine with the device treated as
+    unverified. No other GPU was tried.
 - Opening a document (`KisMainWindow::slotLoadCompleted()`, deferred until
   the view is shown) calls `KisGpuEngineUi::offerConversion()`: if the
   engine is enabled and usable (Vulkan context created, not failed) and the

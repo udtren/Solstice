@@ -4,8 +4,11 @@ Solstice has its own version number, starting at 0.1.0-alpha. See the
 [project overview](../README.md) for the latest-release summary and
 [GitHub Releases](https://github.com/udtren/Solstice/releases) for published builds.
 
-- **0.x** is pre-1.0 development: features and behavior can change between
-  versions. It does not by itself mark a GitHub release as a prerelease.
+- **1.0.0** is the first version after the 0.x series. It does not change
+  what a feature supports: limits stay as each guide describes them, and
+  the [GPU Engine](gpu-engine.md) remains experimental.
+- **0.x** was pre-1.0 development: features and behavior could change
+  between versions.
 - The second number increases for a set of new features, the third for
   fixes only.
 - A label such as `alpha`, `beta.8` or `rc.1` marks a prerelease.

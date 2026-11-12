@@ -1,9 +1,10 @@
 ---
 type: decision
-updated: 2026-10-16
+updated: 2026-11-13
 sources:
   - docs/agent/versioning.md
   - User decision 2026-10-16 (release 0.3.0 without Beta)
+  - User decision 2026-11-13 (release 1.0.0)
   - plugins/impex/libkra/kra_converter.cpp ("kritaVersion" written and read)
   - libs/resources/KisResourceLocator.cpp (KRITA_RESOURCE_VERSION comparison)
 related:
@@ -20,6 +21,13 @@ related:
   GitHub Release, superseding the earlier expectation that unlabeled releases
   would begin at 1.0.0. This does not expand hardware support or remove
   feature-specific experimental limitations.
+- On 2026-11-13 the user asked for the release after 0.9.1 to be `1.0.0`,
+  after the GPU engine phases 4.112 to 4.116, the verified-device rule and
+  their manual checks. No meaning beyond "the first version outside 0.x"
+  was stated, so the documents claim none: feature limits stay as each
+  guide describes them, and the GPU Engine guide keeps "(experimental)"
+  until the user decides otherwise. `MAJOR` changes only at the user's
+  request.
 - The upstream-derived `KRITA_VERSION_STRING` (`6.0.5-prealpha`) stays as an
   internal compatibility version.
 
