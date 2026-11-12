@@ -597,6 +597,7 @@ void KisTileGpuHooks::prepareCpuRead(KisTiledDataManager *manager, const QRect &
         backend->downloadToCpu(data);
         for (KisTileData *td : data) {
             td->unblockSwapping();
+            td->deref();
         }
         data.clear();
         seen.clear();
@@ -609,9 +610,12 @@ void KisTileGpuHooks::prepareCpuRead(KisTiledDataManager *manager, const QRect &
             if (!existing) {
                 continue;
             }
-            KisTileData *td = tile->tileData();
+            // A CPU writer in another thread may replace the tile's data and
+            // free it (copy-on-write): hold a reference while it is used.
+            KisTileData *td = tile->referencedTileData();
             KisTileGpuState *state = td->gpuState();
             if (!state || state->cpuValid() || seen.contains(td)) {
+                td->deref();
                 continue;
             }
             // Keep both the tile and its CPU allocation alive while downloading.

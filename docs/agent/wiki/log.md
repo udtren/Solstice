@@ -3021,3 +3021,21 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: a phase adds its own section, but the older summary sections
   that state "unsupported" or "split point" need the same edit. Search
   the document for the feature's name before closing a phase.
+
+## 2026-11-12 GPU engine: crash when a filter mask was added (tile data lifetime)
+
+- Found by the user's manual check of phase 4.116: adding a Desaturate
+  filter mask to a paint layer at x = -10 crashed in
+  `KisGpuTileAccess::prepareImpl()`. A read-only GPU access kept a raw
+  `KisTileData *`; another merge job's CPU mask freed it. Fixed with
+  `KisTile::referencedTileData()` in the access and in the batched
+  download.
+- New pitfall:
+  [GPU readers need a tile data reference](pitfalls/gpu-readers-need-a-tile-data-reference.md).
+  Reference: `docs/agent/gpu-engine.md`, "GPU access API".
+- The crash log (`%APPDATA%\Solstice\logs\kritacrash.log`) had the stack
+  with source lines; it named the function, and reading which states leave
+  a tile data without a buffer named the cause.
+- A stress test did not reproduce the race; a single-threaded replay that
+  counts tile data in the store fails without the fix.
+- Not verified: the user's scenario in the application after the fix.

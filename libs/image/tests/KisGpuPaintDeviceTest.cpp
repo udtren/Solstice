@@ -53,6 +53,7 @@
 #include "testing_timed_default_bounds.h"
 #include "tiles3/kis_tile.h"
 #include "tiles3/kis_tile_data_pooler.h"
+#include "tiles3/kis_tile_data_store.h"
 #include "tiles3/kis_tile_data_store_iterators.h"
 
 #include <algorithm>
@@ -80,6 +81,7 @@ private Q_SLOTS:
     void testSharedUploadArena_data();
     void testSharedUploadArena();
     void testRetiredResourcesReleasedOutsideLock();
+    void testReadOnlyAccessKeepsTileDataAlive();
     void testTileAllocationBoundsResourceReclamation();
     void testGpuFillVisibleOnCpu();
     void testBulkReadback_data();
@@ -2297,6 +2299,57 @@ std::vector<float> solidPixels(const QRect &rect, const float color[4])
     return pixels;
 }
 } // namespace
+
+void KisGpuPaintDeviceTest::testReadOnlyAccessKeepsTileDataAlive()
+{
+    // A read-only access looks a tile's data up without locking the tile.
+    // A CPU writer in another thread may replace that data (copy-on-write)
+    // and the last other owner may drop it: the access has to hold a
+    // reference of its own (KisTile::referencedTileData()). Two merge jobs
+    // share tiles of a layer that is off the image's tile grid, and one
+    // applying a mask on the CPU did exactly this to the tile data the other
+    // was uploading: a crash in KisTileData::blockSwapping() (2026-11-12).
+    REQUIRE_GPU();
+    const QRect rect(0, 0, 64, 64);
+    KisPaintDeviceSP device = new KisPaintDevice(rgbaFloat());
+    fillRandom(device, rect, 31);
+    m_backend->flush();
+
+    KisGpuCommandList commands(m_backend->context());
+    KisGpuTileAccess access(device, rect, KisGpuTileAccess::ReadOnly);
+    commands.begin();
+    QVERIFY(access.prepare(commands));
+    const qint32 tilesBefore = KisTileDataStore::instance()->numTiles();
+
+    // What KisFilter::process() does in the other job: a temporary device
+    // shares the tile's data...
+    KisPaintDeviceSP temporary = new KisPaintDevice(rgbaFloat());
+    temporary->makeCloneFromRough(device, rect);
+    // ...the device's tile is written (copy-on-write: it gets new data, and
+    // the data the access reads belongs to the temporary device alone)...
+    const float red[4] = {1.0f, 0.0f, 0.0f, 1.0f};
+    const std::vector<float> redPixel = solidPixels(QRect(0, 0, 1, 1), red);
+    device->writeBytes(reinterpret_cast<const quint8 *>(redPixel.data()), QRect(0, 0, 1, 1));
+    // ...and the temporary device goes away.
+    temporary = nullptr;
+    // One tile data more than before: the tile's new one. The one the
+    // access still reads must not have been freed.
+    QCOMPARE(KisTileDataStore::instance()->numTiles(), tilesBefore + 1);
+
+    QVERIFY(KisGpuTileAccess::submitAndFinish(commands, {&access}));
+    commands.wait();
+    // Finished: the access dropped its reference, and the old data is freed.
+    QCOMPARE(KisTileDataStore::instance()->numTiles(), tilesBefore);
+
+    // The same for the batched download of stale tiles (syncToCpu()): it
+    // must leave no reference behind.
+    QVERIFY(gpuFill(device, rect, {0.25f, 0.5f, 0.75f, 1.0f}));
+    const qint32 tilesResident = KisTileDataStore::instance()->numTiles();
+    KisGpuTileAccess::syncToCpu(device, rect);
+    QCOMPARE(KisTileDataStore::instance()->numTiles(), tilesResident);
+    device->clear();
+    QCOMPARE(KisTileDataStore::instance()->numTiles(), tilesResident - 1);
+}
 
 void KisGpuPaintDeviceTest::testOlderUploadDoesNotOverwriteNewer()
 {

@@ -171,6 +171,33 @@ Failure handling:
 `KisGpuTileAccess::syncToCpu(device, rect)` downloads stale tiles in batches
 of 256 per submission (use before bulk CPU reads such as saving).
 
+**Tile data lifetime of readers** (fix of 2026-11-12). A read-only access
+and `syncToCpu()` look a tile's data up without locking the tile. A CPU
+writer in another thread can replace that data at any time (copy-on-write
+in `KisTile::lockForWrite()`), and when the last other owner lets go, the
+old data is freed. CPU readers are protected by the tile's lock counter;
+the GPU readers were not and used a freed `KisTileData`: a crash in
+`KisTileData::blockSwapping()` inside `KisGpuTileAccess::prepare()`.
+
+- Both now take the data with `KisTile::referencedTileData()`: a `ref()`
+  under the lock that guards the release of replaced data, dropped with
+  `deref()` when the access completes or the batch is downloaded. Write
+  accesses do not need it: merge jobs never share a projection tile, and
+  the tile is detached for them.
+- How it happened: a paint layer at x = -10 got a filter mask. Its
+  projection device is off the image's tile grid, so its masks run on the
+  CPU and merge jobs of neighbouring image tiles share its tiles. One job
+  filtered through a temporary device (`KisFilter::process()` clones the
+  tiles, the write copies them, the temporary device is destroyed and
+  frees the data) while another job was uploading the same tile for its
+  composite. Phase 4.112 made such layers GPU-readable; a stroke writing a
+  layer that a merge reads has the same shape at any offset.
+- Tests: `KisGpuPaintDeviceTest::testReadOnlyAccessKeepsTileDataAlive`
+  (the sequence in one thread, counting tile data: fails without the fix),
+  `KisGpuProjectionTest::testOffGridMaskedLayerConcurrentUpdates` (the
+  result of concurrent updates of such a layer; it did not hit the race
+  without the fix in three runs).
+
 ### Undo
 
 GPU writes reuse `KisMementoManager` unchanged: `detachForExternalWrite`
@@ -1588,7 +1615,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | --- | --- |
 | `tiles3/KisTileGpuState.h` | Per-tile-data GPU state and the `KisTileGpuHooks` entry points. |
 | `tiles3/kis_tile_data*.{h,cc}` | `gpuState()`, `installGpuState()`, `notifyCpuWrite()`, `dropClones()`; download hook in `blockSwapping()`; state release in the destructor. |
-| `tiles3/kis_tile.{h,cc}` | `detachForExternalWrite()`; `lockForWrite()` calls `notifyCpuWrite()`. |
+| `tiles3/kis_tile.{h,cc}` | `detachForExternalWrite()`; `lockForWrite()` calls `notifyCpuWrite()`; `referencedTileData()` for GPU readers. |
 | `tiles3/kis_tile_data_store.cc` | The swapper downloads and evicts idle GPU slots before disk swapping; prepared/in-flight slots are skipped. |
 | `gpu/KisGpuTileBackend.*` | Process-wide context, RGBA32F/RGBA16F pools, downloads, deferred slot release, retired resources. Never destroyed. |
 | `gpu/KisGpuTileAccess.*` | Public GPU access to device tiles (see above). |
