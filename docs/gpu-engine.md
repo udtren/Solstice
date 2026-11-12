@@ -52,8 +52,8 @@ On RGBA 32-bit and 16-bit float layers:
   - A selection painted on the filter layer or the mask is applied on the
     GPU too.
 - **Clone Layers moved away from their source** (without masks, or with
-  transparency masks only) copy the source on the GPU, so they follow GPU
-  brush strokes without reading the source back.
+  masks that are applied on the GPU) copy the source on the GPU, so they
+  follow GPU brush strokes without reading the source back.
 - **Gaussian Blur**, also inside Unsharp Mask and Gaussian High Pass, for
   filter applications, filter layers and filter masks that update large
   areas. The result matches the CPU within one rounding step.

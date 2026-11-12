@@ -193,7 +193,8 @@ testing undo/redo.
 composites:
 
 - `KisGpuMergeBatch::tryAdd()` defers a leaf when it is GPU-composable: plain
-  `KisLayerProjectionPlane` (no layer style), a supported blend mode, channel
+  `KisLayerProjectionPlane` (no layer style), a supported blend mode (Copy
+  at full opacity as a replace entry since phase 4.115), channel
   flags empty (all channels) or any four-channel RGBA mask, the same RGBA
   F32/F16 color space as the projection, a projection whose own offset is a
   multiple of 64 pixels, inside an image whose own color space is RGBA
@@ -201,12 +202,15 @@ composites:
   CPU because the scheduler below would not keep its jobs apart). The
   layer's device may sit at any offset since phase 4.112 ("Moved layers and
   groups" below). Anything else flushes the batch and is composited on the
-  CPU exactly as before.
+  CPU exactly as before, except a layer whose style is an outside, solid
+  color Stroke, which the merger composites on the GPU itself (phase
+  4.114).
 - The merger flushes before every step that reads the projection composited
   so far: root and `N_EXTRA` leaves, leaves that depend on lower nodes
   (adjustment layers), `writeProjection()`, and the end of `startMerge()`.
-  Adjustment layers and filter masks are therefore split points, and the
-  result equals immediate compositing.
+  The result equals immediate compositing. Adjustment layers and filter
+  masks were split points (the CPU filter read the projection back); since
+  phases 4.115 and 4.116 they are only when their filter has no GPU form.
 - Since phase 4.111 `KisAsyncMerger::setupProjection()` hands its clear of
   an unaligned dirty rect to the batch (`KisGpuMergeBatch::deferClear()`):
   the next composite on that projection and rect starts with a replace
@@ -223,8 +227,9 @@ composites:
 - **Since 3.1 the projection is GPU-authoritative.** The batch composites
   in place into the projection's tiles (`KisGpuTileAccess` read-write, clip
   rect), which become GPU-valid and CPU-stale; nothing is read back by the
-  merge. CPU readers (writeProjection's partial copies, adjustment layers,
-  the canvas, thumbnails, saving) download on demand, ordered after the
+  merge. CPU readers (writeProjection's partial copies, adjustment layers
+  with a CPU filter, the canvas, thumbnails, saving) download on demand,
+  ordered after the
   merge's submission. (Phase 2 composited into scratch tiles and wrote the
   result back with `writeBytes()`.)
 - Concurrent merge jobs used to be allowed when their rects were disjoint,
@@ -1594,7 +1599,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `kis_selection_based_layer.cpp` | Phase 4.115: `copyOriginalToProjection()` tries `copyShifted()` for filter layers. |
 | `gpu/KisGpuEngineSettings.*` | kritarc keys, the convert policy, GPU color spaces and the conversion target. Always compiled. |
 | `gpu/KisGpuProjectionCompositor.*` | Composites batches in place into GPU-authoritative projection tiles; layer accesses and reusable work contexts. |
-| `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks, or with transparency masks only (phase 4.113). |
+| `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks, or with masks the GPU applies (transparency masks since phase 4.113, filter masks with a GPU form since 4.116). |
 | `kis_layer.{h,cc}`, `kis_paint_layer.cc`, `kis_mask.cc` | Phase 4.113: `KisLayer::gpuAppliesEffectMasks()`, the GPU copy of the original, and the GPU application of transparency masks in `KisMask::mergeInMaskInternal()`; filter masks with a GPU form since phase 4.116. |
 | `layerstyles/kis_layer_style_projection_plane.{h,cpp}` | Phase 4.114: `gpuCompositesStyles()`, `applyOnGpu()`; `recalculate()` skips the style planes then, `apply()` recalculates them when the GPU did not composite. |
 | `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points, `deferClear` in `setupProjection` (phase 4.111); batched readback before CPU composites (4.112); the GPU Stroke style and the GPU copy of temporary projections in `writeProjection` (4.114); `KisUpdateOriginalVisitor::filterOnGpu()` for adjustment layers (4.115). |
@@ -2047,9 +2052,13 @@ Section index:
   serial submissions; they still wait under pressure before reusing busy
   command/table buffers. Successful submissions return without an end wait.
   The separate bounded upload ring added in 4.23-4.25 is specific to brushes.
-- Unsupported in the GPU projection (CPU fallback): layer styles, blend modes
-  outside the list above, layers whose offset is
-  not a multiple of 64 relative to the projection, color space mismatches.
+- Unsupported in the GPU projection (CPU fallback): layer styles other
+  than an outside, solid color Stroke (phase 4.114); blend modes outside
+  the list above, and Copy below full opacity; filter layers and filter
+  masks whose filter has no GPU form (phases 4.115 and 4.116); other
+  masks than transparency and those filter masks; a projection whose own
+  offset is not a multiple of 64 (layers may sit at any offset since
+  phase 4.112); color space mismatches.
 - The whole-stack upload measured 55 GB/s with one `vkCmdCopyBuffer` region per
   tile; evaluate a compute scatter from ReBAR memory for document load.
 - Every GPU blend mode has F16 brush and layer parity coverage since phase
