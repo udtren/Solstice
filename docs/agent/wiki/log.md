@@ -2894,3 +2894,44 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   after each "merged" reply; one reply referred to the earlier of two open
   website PRs. The release notes state that the fix is not shown to remove
   the reported white rectangle.
+
+## 2026-11-12 GPU engine: moved layers and groups (phase 4.112)
+
+- Request: find out whether moving an image with the Move Tool can be made
+  faster, then start with a benchmark. Cause: the GPU merge refused layers
+  whose offset was not a multiple of 64 pixels (CPU fallback with a
+  tile-by-tile readback of the projection on every step).
+- `composite_layers.comp` reads every layer through its own tile table
+  with a pixel shift; `tryAdd()` and `composite()` accept any layer offset.
+  A group's projection stays at 0,0 (`KisGroupLayer::setX()`, position in a
+  `KisLodCapableLayerOffset`); the Move Tool uses loose bounds for groups.
+  Reference: `docs/agent/gpu-engine.md`, "Moved layers and groups (phase
+  4.112)"; record in
+  [the phase history](history/gpu-phases-4.93-.md#moved-layers-and-groups-phase-4112).
+- New benchmark page: [Move Tool updates](benchmarks/move-layer-updates.md)
+  (`KisMoveLayerBenchmark`): an unaligned step of a full-canvas layer
+  166 → 9 ms, a group step 70-110 → 16 ms, no downloads.
+- Lessons: (1) clang-format on the changed lines of an upstream file still
+  sorted its whole include block and rewrote the constructors
+  (`kis_group_layer.cc`), as
+  [the format pitfalls](pitfalls/build-format-test.md) warn; check the diff
+  and restore. (2) `kritarunner`
+  uses the user's real profile and stalled in resource synchronization
+  while the user's Solstice was running; use a test binary for
+  measurements. (3) A paint device's offset has a level-of-detail value of
+  its own; replacing it with plain integers would have broken Instant
+  Preview moves.
+- The user's first try was still slow (a group with a layer style in an
+  RGBA F16 document of 68 layers). A benchmark on that `.kra`
+  (`KisMoveDocumentBenchmark`) showed about 330 ms per step for the exact
+  bounds of the moved layers, engine on or off: `KisPaintDevice::moveTo()`
+  dropped the cached bounds. They are now translated; the step went from
+  364 to 29 ms (GPU engine on: 522 to 31 ms, where the layer style's
+  readback is now batched). New pitfall:
+  [Exact bounds after a move](pitfalls/exact-bounds-after-move.md).
+- Lesson (4): a synthetic benchmark measured 0.6 ms where the user's
+  document needed 330 ms. Measure a real document before handing off a
+  performance change.
+- Not verified: the manual check (GPU engine checklist item 19), and a
+  Move Tool stroke with Instant Preview in an automated test
+  (`move_stroke_test` is registered as broken upstream).

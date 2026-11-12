@@ -61,9 +61,10 @@ public:
      * Composites @p layers (bottom to top) onto @p projection inside @p rect.
      *
      * Every layer device must have the projection's color space (RGBA F32 or
-     * F16) and an offset that differs from the projection's by a multiple of
-     * 64 pixels in both directions. Only tiles inside a layer's extent are
-     * read, matching KisLayerProjectionPlane (which clips to the extent).
+     * F16); its offset may differ from the projection's by any distance
+     * (phase 4.112). The projection's own offset must be a multiple of 64
+     * pixels. Only tiles inside a layer's extent are read, matching
+     * KisLayerProjectionPlane (which clips to the extent).
      *
      * Successful submissions return without waiting. Reusing a busy context
      * may wait when all cached contexts are in flight.

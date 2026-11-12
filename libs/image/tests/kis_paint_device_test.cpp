@@ -2480,4 +2480,61 @@ void KisPaintDeviceTest::stressTestMemoryFragmentation()
     undoStack.clear();
 }
 
+void KisPaintDeviceTest::testMoveKeepsCachedBounds()
+{
+    // Solstice: KisPaintDevice::moveTo() translates the cached bounds
+    // instead of dropping them.
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisPaintDeviceSP dev = new KisPaintDevice(cs);
+
+    // Content much smaller than its tiles: the extent is 384x256 at -64,0.
+    dev->fill(QRect(-10, 20, 300, 200), KoColor(Qt::red, cs));
+    const QRect content(-10, 20, 300, 200);
+    QVERIFY(dev->extent() != content);
+
+    // No cached bounds yet: nothing to keep, the amortized bounds fall back
+    // to the extent.
+    dev->moveTo(5, 7);
+    QCOMPARE(dev->exactBoundsAmortized(), dev->extent());
+    QCOMPARE(dev->exactBounds(), content.translated(5, 7));
+    QCOMPARE(dev->nonDefaultPixelArea(), content.translated(5, 7));
+
+    // Cached bounds follow the device (the amortized bounds return the
+    // exact ones only from the cache) and equal a new calculation.
+    dev->moveTo(-131, 1000);
+    QCOMPARE(dev->exactBoundsAmortized(), content.translated(-131, 1000));
+    QCOMPARE(dev->exactBounds(), content.translated(-131, 1000));
+    QCOMPARE(dev->nonDefaultPixelArea(), content.translated(-131, 1000));
+    QCOMPARE(dev->exactBounds(), dev->calculateExactBounds(false));
+    QCOMPARE(dev->nonDefaultPixelArea(), dev->calculateExactBounds(true));
+
+    dev->setX(0);
+    dev->setY(0);
+    QCOMPARE(dev->exactBoundsAmortized(), content);
+
+    // A write still drops them.
+    dev->fill(QRect(400, 20, 10, 10), KoColor(Qt::red, cs));
+    QCOMPARE(dev->exactBoundsAmortized(), dev->extent());
+    QCOMPARE(dev->exactBounds(), QRect(-10, 20, 420, 200));
+
+    // An empty device stays empty.
+    KisPaintDeviceSP empty = new KisPaintDevice(cs);
+    QVERIFY(empty->exactBounds().isEmpty());
+    empty->moveTo(40, 50);
+    QVERIFY(empty->exactBounds().isEmpty());
+    QCOMPARE(empty->exactBounds(), empty->calculateExactBounds(false));
+
+    // A visible default pixel: the bounds include the image bounds, which
+    // do not move, so they are calculated again.
+    TestUtil::TestingTimedDefaultBounds *bounds = new TestUtil::TestingTimedDefaultBounds(QRect(0, 0, 500, 400));
+    KisPaintDeviceSP opaque = new KisPaintDevice(cs);
+    opaque->setDefaultBounds(bounds);
+    opaque->setDefaultPixel(KoColor(Qt::blue, cs));
+    opaque->fill(QRect(480, 20, 100, 50), KoColor(Qt::red, cs));
+    QCOMPARE(opaque->exactBounds(), QRect(0, 0, 580, 400));
+    opaque->moveTo(100, 0);
+    QCOMPARE(opaque->exactBounds(), QRect(0, 0, 680, 400));
+    QCOMPARE(opaque->exactBounds(), opaque->calculateExactBounds(false));
+}
+
 KISTEST_MAIN(KisPaintDeviceTest)

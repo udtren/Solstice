@@ -40,6 +40,13 @@ candidates; [projection clears](gpu-engine.md#partial-tile-projection-clears-pha
 owns deferred-clear and CPU-reader behavior. Detailed measurements stay in
 the linked benchmark page.
 
+GPU compositing of moved layers and groups (4.112, 2026-11-12) is
+implemented; [the contract](gpu-engine.md#moved-layers-and-groups-phase-4112)
+and [measurements](wiki/benchmarks/move-layer-updates.md) are linked. Its
+manual check (checklist item 19) is pending. Open, not requested: a group
+step still costs more than a layer step, and the final merge of a temporary
+target off the tile grid stays on the CPU.
+
 1. **Failure/save UI verification: done except autosave.** Accepted on
    2026-11-11 with Test Control's `gpu_fault` (results in
    [checklist item 16](gpu-engine.md#manual-regression-checklist)). Still

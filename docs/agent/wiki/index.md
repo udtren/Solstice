@@ -202,6 +202,11 @@ Document ownership and lifecycle are defined in
   store" let an older extent win. A test that compares two results reading
   the same cache cannot see it.
 
+- [Exact bounds after a move](pitfalls/exact-bounds-after-move.md):
+  `exactBounds()` scans a device's whole tile extent, and a move dropped
+  the cache, so the Move Tool spent 330 ms per step in a real document; a
+  synthetic benchmark did not show it.
+
 ### Benchmarks
 
 - [Transform and filter costs](benchmarks/transform-and-filter-costs.md):
@@ -210,6 +215,9 @@ Document ownership and lifecycle are defined in
 - [Clone Layer updates](benchmarks/clone-layer-updates.md): update time and
   GPU downloads per dab for clone offsets, masks, RGBA8/F32 and nesting,
   before and after phases 4.110 and 4.111.
+- [Move Tool updates](benchmarks/move-layer-updates.md): time and GPU
+  downloads per Move Tool step for a full-canvas layer, an object layer
+  and a group, aligned and unaligned offsets, before and after phase 4.112.
 - [Paint trace overhead](benchmarks/paint-trace-overhead.md): what
   `KRITA_PAINT_TRACE` costs in the GUI (CPU time and frame cadence
   unchanged, a few ms of stroke tail for projection Build-up), measured

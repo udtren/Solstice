@@ -328,9 +328,6 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
         if (!(*layer.device->colorSpace() == *projection->colorSpace())) {
             return fail(QStringLiteral("layer color space differs from the projection"));
         }
-        if ((layer.device->x() - projection->x()) % TileSize || (layer.device->y() - projection->y()) % TileSize) {
-            return fail(QStringLiteral("layer tiles are not aligned with the projection tiles"));
-        }
     }
 
     std::unique_ptr<WorkContext> work = [&] {
@@ -424,21 +421,30 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
         }
 
         // Place the layer's tiles in the projection grid; tiles outside the
-        // layer's extent stay 0 (skipped), like KisLayerProjectionPlane.
+        // layer's extent stay 0 (skipped), like KisLayerProjectionPlane. A
+        // layer moved by a distance that is not a multiple of 64 (phase 4.112)
+        // has its own grid, one column and row larger: its tile at
+        // 64 * (c - 1) + shift from the grid origin is tile c of that grid.
+        const QPoint delta = layer.device->offset() - projection->offset();
+        const QPoint shift(((delta.x() % TileSize) + TileSize) % TileSize,
+                           ((delta.y() % TileSize) + TileSize) % TileSize);
+        const bool shifted = !shift.isNull();
+        const int tableWidth = grid.width() + (shifted ? 1 : 0);
+        const int tableHeight = grid.height() + (shifted ? 1 : 0);
         const QVector<VkDeviceAddress> addresses = access->addresses();
         const QRect layerGrid = access->tileGrid();
-        QVector<VkDeviceAddress> placed(tileCount, 0);
+        QVector<VkDeviceAddress> placed(tableWidth * tableHeight, 0);
         for (int row = 0; row < layerGrid.height(); row++) {
             for (int col = 0; col < layerGrid.width(); col++) {
                 const QPoint origin = access->tileOrigin(layerGrid.left() + col, layerGrid.top() + row) - gridOrigin;
-                const int gridCol = origin.x() / TileSize;
-                const int gridRow = origin.y() / TileSize;
-                KIS_SAFE_ASSERT_RECOVER(gridCol >= 0 && gridRow >= 0 && gridCol < grid.width()
-                                        && gridRow < grid.height())
+                const int tableCol = shifted ? (origin.x() - shift.x()) / TileSize + 1 : origin.x() / TileSize;
+                const int tableRow = shifted ? (origin.y() - shift.y()) / TileSize + 1 : origin.y() / TileSize;
+                KIS_SAFE_ASSERT_RECOVER(tableCol >= 0 && tableRow >= 0 && tableCol < tableWidth
+                                        && tableRow < tableHeight)
                 {
                     continue;
                 }
-                placed[gridRow * grid.width() + gridCol] = addresses[row * layerGrid.width() + col];
+                placed[tableRow * tableWidth + tableCol] = addresses[row * layerGrid.width() + col];
             }
         }
         layerTiles += placed;
@@ -449,6 +455,7 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
                                             layer.halfBrush,
                                             layer.explicitChannelFlags,
                                             layer.replace};
+        params.shift = shift;
         if (layer.replace)
             defaultPixelAsFloat(layer.device, params.fill);
         layerParams << params;

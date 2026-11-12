@@ -153,8 +153,10 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
         alphaLocked = !flags.testBit(3);
     }
 
-    if (!(*device->colorSpace() == *projection->colorSpace()) || (device->x() - projection->x()) % TileSize
-        || (device->y() - projection->y()) % TileSize) {
+    // The layer may sit at any offset (phase 4.112); the projection is
+    // written in place, so only its tiles must be on the 64 px image grid.
+    if (!(*device->colorSpace() == *projection->colorSpace()) || projection->x() % TileSize
+        || projection->y() % TileSize) {
         return false;
     }
 

@@ -1216,8 +1216,29 @@ KisDefaultBoundsBaseSP KisPaintDevice::defaultBounds() const
 
 void KisPaintDevice::moveTo(const QPoint &pt)
 {
+    /**
+     * Solstice: a move only translates the exact bounds, so keep the cached
+     * ones instead of scanning the pixels again. The Move Tool asks for the
+     * bounds of every moved layer at every pointer position; a layer whose
+     * tiles cover much more than its content took tens of milliseconds
+     * each time. Not with a visible default pixel (the bounds then include
+     * the image bounds) and not in wrap-around mode (the move rewrites
+     * pixels there).
+     */
+    const QPoint offset = pt - this->offset();
+    const bool keepBounds =
+        !defaultBounds()->wrapAroundMode() && defaultPixel().opacityU8() == OPACITY_TRANSPARENT_U8;
+    KisPaintDeviceCache::TranslatableBounds bounds;
+    if (keepBounds) {
+        bounds = m_d->cache()->validBounds();
+    }
+
     m_d->currentStrategy()->move(pt);
     m_d->cache()->invalidate();
+
+    if (keepBounds) {
+        m_d->cache()->setTranslatedBounds(bounds, offset);
+    }
 }
 
 QPoint KisPaintDevice::offset() const

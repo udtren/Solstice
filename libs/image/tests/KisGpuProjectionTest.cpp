@@ -27,6 +27,7 @@
 #include "gpu/KisGpuProjectionCompositor.h"
 #include "gpu/KisGpuTileAccess.h"
 #include "gpu/KisGpuTileBackend.h"
+#include "kis_abstract_projection_plane.h"
 #include "kis_adjustment_layer.h"
 #include "kis_clone_layer.h"
 #include "kis_datamanager.h"
@@ -83,6 +84,10 @@ private Q_SLOTS:
     void testShiftedCopyMatchesCpu();
     void testCloneLayerMatchesCpu_data();
     void testCloneLayerMatchesCpu();
+    void testMovedLayersMatchCpu_data();
+    void testMovedLayersMatchCpu();
+    void testMovedGroupMatchesCpu_data();
+    void testMovedGroupMatchesCpu();
     void benchmarkRefresh();
 };
 
@@ -230,7 +235,7 @@ KisPaintLayerSP addPaintLayer(KisImageSP image,
  *      paint overlay, alpha locked
  *      paint add (HDR values)
  *    paint hard light, moved by (128, 64)  (tile aligned)
- *    paint exclusion, moved by (10, 7)     (unaligned: CPU)
+ *    paint exclusion, moved by (10, 7)     (unaligned: GPU since phase 4.112)
  *    blur adjustment layer                 (split point)
  *    paint over with a blur filter mask
  *    paint difference 80%
@@ -1369,6 +1374,202 @@ void KisGpuProjectionTest::testCloneLayerMatchesCpu()
         }
     }
     compare("partial updates");
+}
+
+void KisGpuProjectionTest::testMovedLayersMatchCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QPoint>("offset");
+    for (bool f16 : {false, true}) {
+        for (const QPoint &offset :
+             {QPoint(37, 23), QPoint(-50, -71), QPoint(1, 0), QPoint(0, 63), QPoint(-1, -1), QPoint(300, -200)}) {
+            QTest::newRow(qPrintable(QString("f16%1-offset%2,%3").arg(f16).arg(offset.x()).arg(offset.y())))
+                << f16 << offset;
+        }
+    }
+}
+
+void KisGpuProjectionTest::testMovedLayersMatchCpu()
+{
+    // Phase 4.112: layers moved by a distance that is not a multiple of 64
+    // are composited on the GPU (they went to the CPU before, which read the
+    // projection back).
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QPoint, offset);
+    const QRect bounds(0, 0, 700, 500);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "moved layers");
+    KisNodeSP root = image->root();
+    addPaintLayer(image, root, COMPOSITE_OVER, 255, 91, bounds);
+    // Basic, extended and alpha-locked composites; one layer covers the
+    // image, the others leave tiles without data inside it.
+    QVector<KisPaintLayerSP> moved;
+    moved << addPaintLayer(image, root, COMPOSITE_OVER, 200, 92, QRect(40, 30, 500, 380));
+    moved << addPaintLayer(image, root, COMPOSITE_MULT, 255, 93, bounds);
+    moved << addPaintLayer(image, root, COMPOSITE_SOFT_LIGHT_SVG, 230, 94, QRect(100, 100, 300, 300), true);
+    KisPaintLayerSP locked = addPaintLayer(image, root, COMPOSITE_OVERLAY, 230, 95, QRect(0, 0, 640, 480));
+    QBitArray alphaLocked(4, true);
+    alphaLocked.clearBit(3);
+    locked->setChannelFlags(alphaLocked);
+    moved << locked;
+    addPaintLayer(image, root, COMPOSITE_SCREEN, 128, 96, QRect(200, 50, 400, 400));
+
+    auto moveLayers = [&](const QPoint &by) {
+        for (int i = 0; i < moved.size(); ++i) {
+            // different shifts in one composite
+            const QPoint layerOffset = by + QPoint(i * 5, -i * 3);
+            moved[i]->setX(layerOffset.x());
+            moved[i]->setY(layerOffset.y());
+        }
+    };
+    auto compare = [&](const char *stage) {
+        const std::vector<float> gpu = readFloats(image->projection(), bounds);
+        const std::vector<float> cpu = render(image, false);
+        QPoint where;
+        const float error = f16 ? maxHalfUlpDifference(cpu, gpu, &where, bounds.width())
+                                : maxDifference(cpu, gpu, &where, bounds.width());
+        QVERIFY2(error <= (f16 ? 4.0f : 2e-5f),
+                 qPrintable(QString("%1: difference %2 at %3,%4, %5")
+                                .arg(stage)
+                                .arg(error)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(cpu, gpu, where, bounds.width()))));
+    };
+
+    moveLayers(offset);
+    {
+        // The moved layers themselves are accepted, not only the others.
+        // (This composites them once more; the refresh below starts over.)
+        KisGpuMergeBatch::setEnabled(true);
+        KisGpuMergeBatch batch;
+        for (KisPaintLayerSP layer : moved) {
+            QVERIFY(batch.tryAdd(layer->projectionLeaf(), image->projection(), QRect(17, 29, 283, 171)));
+        }
+        batch.flush();
+    }
+    render(image, true);
+    compare("full refresh");
+
+    // What the Move Tool does for every pointer position, on a projection
+    // that only the GPU holds: nothing may be read back.
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    render(image, true);
+    backend->context().waitIdle();
+    const quint64 downloadsBefore = backend->downloadedTileCount();
+    const quint64 compositesBefore = KisGpuMergeBatch::gpuCompositeCount();
+    for (int step = 1; step <= 3; ++step) {
+        const QPoint by = offset + QPoint(11 * step, 7 * step);
+        QRect dirtyRect;
+        for (KisPaintLayerSP layer : moved) {
+            dirtyRect |= layer->paintDevice()->extent();
+        }
+        moveLayers(by);
+        for (KisPaintLayerSP layer : moved) {
+            dirtyRect |= layer->paintDevice()->extent();
+        }
+        for (KisPaintLayerSP layer : moved) {
+            image->refreshGraphAsync(layer, dirtyRect);
+        }
+        image->waitForDone();
+    }
+    backend->context().waitIdle();
+    QCOMPARE(backend->downloadedTileCount(), downloadsBefore);
+    QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > compositesBefore);
+    compare("move steps");
+}
+
+void KisGpuProjectionTest::testMovedGroupMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QPoint>("offset");
+    for (bool f16 : {false, true}) {
+        for (const QPoint &offset : {QPoint(37, 23), QPoint(-50, -71), QPoint(64, 128)}) {
+            QTest::newRow(qPrintable(QString("f16%1-offset%2,%3").arg(f16).arg(offset.x()).arg(offset.y())))
+                << f16 << offset;
+        }
+    }
+}
+
+void KisGpuProjectionTest::testMovedGroupMatchesCpu()
+{
+    // Phase 4.112: a moved group keeps its projection on the image grid
+    // (KisGroupLayer::setX()), so the group and its children stay on the GPU.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QPoint, offset);
+    const QRect bounds(0, 0, 700, 500);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "moved group");
+    KisNodeSP root = image->root();
+    addPaintLayer(image, root, COMPOSITE_OVER, 255, 101, bounds);
+    KisGroupLayerSP group = new KisGroupLayer(image, "group", 200);
+    group->setCompositeOpId(COMPOSITE_MULT);
+    image->addNode(group, root);
+    QVector<KisNodeSP> moved;
+    moved << group;
+    moved << addPaintLayer(image, group, COMPOSITE_OVER, 255, 102, QRect(60, 40, 300, 260));
+    moved << addPaintLayer(image, group, COMPOSITE_SCREEN, 180, 103, QRect(200, 150, 280, 220));
+    addPaintLayer(image, root, COMPOSITE_OVERLAY, 128, 104, QRect(100, 0, 500, 500));
+
+    // The Move Tool's step (MoveStrokeStrategy::doCanvasUpdate()).
+    auto moveStep = [&](const QPoint &to) {
+        QRect dirtyRect;
+        for (KisNodeSP node : moved) {
+            QRect rect = node.data() == group.data() ? node->projectionPlane()->looseUserVisibleBounds()
+                                                     : node->projectionPlane()->tightUserVisibleBounds();
+            rect |= rect.translated(to - QPoint(node->x(), node->y()));
+            node->setX(to.x());
+            node->setY(to.y());
+            dirtyRect |= rect;
+        }
+        image->refreshGraphAsync(group, dirtyRect);
+        image->waitForDone();
+    };
+    auto compareWithFullRefresh = [&](const char *stage, bool cpuOnly) {
+        const std::vector<float> incremental = readFloats(image->projection(), bounds);
+        const std::vector<float> full = render(image, false);
+        QPoint where;
+        const float error = f16 ? maxHalfUlpDifference(full, incremental, &where, bounds.width())
+                                : maxDifference(full, incremental, &where, bounds.width());
+        QVERIFY2(error <= (cpuOnly ? 0.0f : (f16 ? 4.0f : 2e-5f)),
+                 qPrintable(QString("%1: difference %2 at %3,%4, %5")
+                                .arg(stage)
+                                .arg(error)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(full, incremental, where, bounds.width()))));
+    };
+
+    // On the CPU: the group's old pixels are replaced where the children
+    // were and where they are now, although its projection did not move.
+    render(image, false);
+    moveStep(offset);
+    QCOMPARE(QPoint(group->x(), group->y()), offset);
+    QCOMPARE(group->projection()->offset(), QPoint());
+    compareWithFullRefresh("CPU move", true);
+    moveStep(offset * 2 + QPoint(5, -3));
+    compareWithFullRefresh("CPU second move", true);
+
+    // On the GPU: the children composite into the group's projection, and
+    // the steps read nothing back.
+    render(image, true);
+    {
+        KisGpuMergeBatch batch;
+        QVERIFY(batch.tryAdd(moved[1]->projectionLeaf(), group->projection(), QRect(17, 29, 283, 171)));
+        batch.flush();
+    }
+    render(image, true);
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    backend->context().waitIdle();
+    const quint64 downloadsBefore = backend->downloadedTileCount();
+    const quint64 compositesBefore = KisGpuMergeBatch::gpuCompositeCount();
+    for (int step = 1; step <= 3; ++step) {
+        moveStep(offset + QPoint(13 * step, 9 * step));
+    }
+    backend->context().waitIdle();
+    QCOMPARE(backend->downloadedTileCount(), downloadsBefore);
+    QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > compositesBefore);
+    compareWithFullRefresh("GPU moves", false);
 }
 
 void KisGpuProjectionTest::benchmarkRefresh()

@@ -63,12 +63,20 @@ layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer Add
     uint64_t addr[];
 };
 
+// A layer has its own tile table: tableWidth tiles per row, starting at
+// layerTiles[tableOffset]. The pixel at grid position p is pixel (p + bias) of
+// that table. bias is 0 for a layer on the destination grid; a layer shifted
+// by s (1..63 per axis, phase 4.112) has one more column and row, and
+// bias = 64 - s.
 struct LayerParams {
     float opacity;
     uint op;
     uint flags;
     uint channelMask;
     vec4 fill;
+    ivec2 bias;
+    uint tableOffset;
+    uint tableWidth;
 };
 
 layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer LayerTable
@@ -78,7 +86,7 @@ layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer La
 
 layout(push_constant) uniform Params
 {
-    AddressTable layerTiles; // layerCount * tileCount, layer-major; 0 = transparent tile
+    AddressTable layerTiles; // every layer's tile table (LayerParams); 0 = transparent tile
     AddressTable dstTiles; // tileCount
     LayerTable layers; // layerCount
     uint tileCount;
@@ -167,16 +175,19 @@ void main()
         }
         vec4 result = LOAD_PIXEL(dstTile.px[index]);
         for (uint layer = 0; layer < params.layerCount; layer++) {
-            const uint64_t address = params.layerTiles.addr[layer * params.tileCount + tile];
             const LayerParams info = params.layers.layers[layer];
+            const ivec2 source = position + info.bias;
+            const uint64_t address =
+                params.layerTiles.addr[info.tableOffset + uint(source.y >> 6) * info.tableWidth + uint(source.x >> 6)];
+            const uint sourceIndex = uint((source.y & 63) * 64 + (source.x & 63));
             if ((info.flags & FlagReplace) != 0) {
-                result = address == 0 ? info.fill : LOAD_PIXEL(TilePixels(address).px[index]);
+                result = address == 0 ? info.fill : LOAD_PIXEL(TilePixels(address).px[sourceIndex]);
                 continue;
             }
             if (address == 0 || outsideMask) {
                 continue;
             }
-            const vec4 src = LOAD_PIXEL(TilePixels(address).px[index]);
+            const vec4 src = LOAD_PIXEL(TilePixels(address).px[sourceIndex]);
             const bool alphaLocked = (info.flags & FlagAlphaLocked) != 0;
 #ifdef TILE_F16
             if ((info.flags & 2) != 0) {
