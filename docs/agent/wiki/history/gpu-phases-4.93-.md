@@ -807,3 +807,48 @@ GPU. Details: `docs/agent/gpu-engine.md`, "Stroke layer style (phase
 - Not done: Inside and Center strokes (the same pass could compute them),
   gradient and pattern fills, the other effects (Drop Shadow, Glow and
   others use the Gaussian blur, which has a GPU path), Instant Preview.
+
+## Filter layers (phase 4.115)
+
+2026-11-12, user request. Filter layers with Desaturate, and in RGBA F16
+with Posterize or channel curves, are filtered and composited on the GPU.
+Details: `docs/agent/gpu-engine.md`, "Filter layers (phase 4.115)";
+numbers: [Filter layer updates](../benchmarks/filter-layer-updates.md).
+
+- The configurations were read from the user's documents first (metadata
+  only): Desaturate type Lightness, Posterize with 6 or 8 steps, one RGBA
+  curve; all in RGBA F16, the first two with a painted selection in a
+  hidden "value check" group at the top of the stack.
+- Posterize and curves go through LittleCMS (with the fast float plug-in),
+  whose arithmetic cannot be repeated in a shader. Both treat every
+  channel on its own, and RGBA F16 has 65536 values per channel: the CPU
+  transformation fills four tables and the shader looks pixels up. Exact
+  by construction; RGBA F32 has no such tables and stays on the CPU.
+- The first measurement after the filter moved to the GPU showed twice the
+  downloads: the Copy blend mode of filter layers had never been
+  composited on the GPU (the user guide listed it as supported). It is a
+  replace entry now. The CPU ignores a Copy layer's channel flags when the
+  devices share their offset (`fastBitBlt`), found by the new test.
+- Posterize's independence check failed at first: 16-bit integer RGBA is
+  stored B, G, R, A, so the red channel arrives at index 2.
+- A stale installed plugin crashed in the new virtual function: tests load
+  plugins from the installed tree
+  ([pitfall](../pitfalls/tests-load-installed-plugins.md)).
+- The partly selected pixels took three attempts. A throwaway test that
+  ran the real Copy op against candidate formulas settled the rounding
+  steps (plain float, no fma); the shader routes each operation through
+  double. The Stroke style's copy of the same code was left as merged: its
+  test sits near its tolerance for other reasons and moved across it with
+  the stricter arithmetic.
+- The wiki already had the fma and division lessons (parity page, items 3
+  and 10) and the Copy fast path (copy semantics page). They were not
+  re-read after the conversation was compacted, and were found again the
+  slow way.
+- The real-document benchmark first moved a layer inside a group with a
+  Color Reference filter mask: 334 ms per step with the filter group
+  hidden, engine on or off. `KRITA_PAINT_TRACE` showed where
+  (`merge.recalculate_filthy` of the group). The filter layers were then
+  measured by moving a layer outside that group.
+- Not done: filter masks (that Color Reference mask included), the other
+  color adjustment filters, RGBA F32 tables, the Copy mode at reduced
+  opacity, the Filter dialog.

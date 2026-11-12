@@ -1,6 +1,6 @@
 ---
 type: concept
-updated: 2026-10-07
+updated: 2026-11-12
 sources:
   - libs/image/kis_painter.cc (copyAreaOptimizedImpl, bitBltImpl COMPOSITE_COPY branch)
   - libs/image/kis_paint_device.cc (fastBitBltPossibleImpl)
@@ -104,3 +104,20 @@ A later cell overwrites an earlier one where they overlap: folds, and the
 1-pixel overlap created by `adjustAlignedPolygon()`'s 1e-5 offsets.
 `KisGpuGridWarpWorker::Recorder` mirrors these decisions step by step; keep
 the two in sync if either changes.
+
+## The Copy blend mode of a layer (phase 4.115)
+
+`KisLayerProjectionPlane::applyImpl()` blits a layer in Copy mode over the
+whole update rect, not only its extent: where the layer has no data the
+projection becomes the layer's default pixel.
+
+- At full opacity and with the layer's projection device at the
+  projection's offset, the fast path above runs: whole pixels are copied
+  and **the layer's channel flags are ignored** (a filter layer with its
+  alpha channel disabled still replaces alpha).
+- At another offset the composite op runs and honors the flags: enabled
+  channels are replaced; with alpha disabled a transparent layer pixel
+  changes nothing; with alpha enabled and some color channel disabled a
+  transparent destination pixel is cleared first.
+- `KisGpuMergeBatch::tryAdd()` reproduces both cases as a replace entry;
+  reduced opacity stays on the CPU (the SIMD blend above).

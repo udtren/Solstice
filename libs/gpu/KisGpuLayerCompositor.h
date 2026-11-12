@@ -181,6 +181,10 @@ public:
         /// Copy the layer's pixels (@p fill where it has no tile) instead of
         /// blending, ignoring the other fields and coverage (COMPOSITE_COPY base copy).
         bool replace = false;
+        /// With @p replace and a @p channelMask other than 0xf: the Copy
+        /// composite op at full opacity with channel flags. Only the enabled
+        /// channels are replaced; with alpha disabled, transparent layer
+        /// pixels change nothing.
         float fill[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // tile memory order, as float
         /**
          * Phase 4.112: the layer's tiles are shifted against the destination

@@ -202,6 +202,9 @@ Document ownership and lifecycle are defined in
   store" let an older extent win. A test that compares two results reading
   the same cache cannot see it.
 
+- [Tests load the installed plugins](pitfalls/tests-load-installed-plugins.md):
+  a new virtual function in a plugin base class crashes in stale installed
+  plugins; build everything and install first.
 - [Exact bounds after a move](pitfalls/exact-bounds-after-move.md):
   `exactBounds()` scans a device's whole tile extent, and a move dropped
   the cache, so the Move Tool spent 330 ms per step in a real document; a
@@ -215,6 +218,9 @@ Document ownership and lifecycle are defined in
 - [Clone Layer updates](benchmarks/clone-layer-updates.md): update time and
   GPU downloads per dab for clone offsets, masks, RGBA8/F32 and nesting,
   before and after phases 4.110 and 4.111.
+- [Filter layer updates](benchmarks/filter-layer-updates.md): update time
+  and GPU downloads per dab below Desaturate, Posterize and curves filter
+  layers, before and after phase 4.115.
 - [Layer style updates](benchmarks/layer-style-updates.md): update time
   and GPU downloads per dab on a layer with a Stroke style, before and
   after phase 4.114.

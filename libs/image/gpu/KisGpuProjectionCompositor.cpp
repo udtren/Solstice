@@ -9,6 +9,7 @@
 #include "KisGpuTileAccess.h"
 #include "KisGpuTileBackend.h"
 
+#include <KisGpuColorTransformPass.h>
 #include <KisGpuCommandList.h>
 #include <KisGpuContext.h>
 #include <KisGpuCoveragePass.h>
@@ -57,6 +58,8 @@ struct WorkContext {
     std::unique_ptr<KisGpuCoveragePass> coverage16;
     std::unique_ptr<KisGpuStrokeStylePass> strokeStyle32;
     std::unique_ptr<KisGpuStrokeStylePass> strokeStyle16;
+    std::unique_ptr<KisGpuColorTransformPass> colorTransform32;
+    std::unique_ptr<KisGpuColorTransformPass> colorTransform16;
     quint64 lastUse = 0;
 };
 
@@ -71,6 +74,7 @@ size_t s_contextCount = 0;
 std::atomic<quint64> s_shiftedCopyCount{0};
 std::atomic<quint64> s_coverageCount{0};
 std::atomic<quint64> s_strokeStyleCount{0};
+std::atomic<quint64> s_colorTransformCount{0};
 constexpr size_t MinimumContexts = 3;
 
 std::unique_ptr<WorkContext> acquireContext(KisGpuContext &context)
@@ -411,6 +415,8 @@ bool KisGpuProjectionCompositor::composite(KisPaintDeviceSP projection,
                 layerTiles += QVector<VkDeviceAddress>(tileCount, 0);
                 KisGpuLayerCompositor::Layer params;
                 params.replace = true;
+                params.alphaLocked = layer.alphaLocked;
+                params.channelMask = layer.channelMask;
                 defaultPixelAsFloat(layer.device, params.fill);
                 layerParams << params;
             }
@@ -919,4 +925,152 @@ bool KisGpuProjectionCompositor::compositeStrokeStyle(KisPaintDeviceSP projectio
 quint64 KisGpuProjectionCompositor::strokeStyleCount()
 {
     return s_strokeStyleCount.load();
+}
+
+bool KisGpuProjectionCompositor::supportsColorTransform()
+{
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    return backend && !backend->hasFailed() && backend->context().deviceInfo().supportsFloat64;
+}
+
+qint64 KisGpuProjectionCompositor::maxColorTransformCoveragePixels()
+{
+    return KisGpuColorTransformPass::MaxMaskBytes;
+}
+
+quint64 KisGpuProjectionCompositor::colorTransformCount()
+{
+    return s_colorTransformCount.load();
+}
+
+bool KisGpuProjectionCompositor::transformColors(KisPaintDeviceSP dst,
+                                                 const QRect &rect,
+                                                 KisPaintDeviceSP src,
+                                                 const KisGpuColorTransform &transform,
+                                                 const quint8 *coverage,
+                                                 QString *errorMessage)
+{
+    auto fail = [errorMessage](const QString &message) {
+        if (errorMessage) {
+            *errorMessage = message;
+        }
+        return false;
+    };
+
+    if (rect.isEmpty()) {
+        return true;
+    }
+    if (!src || !dst || src == dst) {
+        return fail(QStringLiteral("the source must be another device"));
+    }
+    if (!KisGpuTileAccess::isSupported(dst, errorMessage) || !KisGpuTileAccess::isSupported(src, errorMessage)) {
+        return false;
+    }
+    if (!supportsColorTransform()) {
+        return fail(QStringLiteral("the GPU has no 64-bit float shaders"));
+    }
+    if (!(*src->colorSpace() == *dst->colorSpace())) {
+        return fail(QStringLiteral("source color space differs from the destination"));
+    }
+    const qint32 pixelSize = dst->pixelSize();
+    if (transform.kind() == KisGpuColorTransform::ChannelTables && pixelSize != 8) {
+        return fail(QStringLiteral("channel tables need RGBA F16"));
+    }
+    if (coverage && qint64(rect.width()) * rect.height() > KisGpuColorTransformPass::MaxMaskBytes) {
+        return fail(QStringLiteral("coverage rect is too large"));
+    }
+    // The same exclusivity rule as composite(): merge jobs never share a
+    // tile of the image grid.
+    if (dst->x() % TileSize || dst->y() % TileSize) {
+        return fail(QStringLiteral("destination offset is not a multiple of 64"));
+    }
+
+    KisGpuContext &context = KisGpuTileBackend::instance()->context();
+    std::unique_ptr<WorkContext> work = acquireContext(context);
+    if (!work->commands.isValid() || !work->commands.wait()) {
+        releaseContext(std::move(work));
+        return fail(QStringLiteral("GPU work context is unavailable"));
+    }
+    work->lastUse = 0;
+    std::unique_ptr<KisGpuColorTransformPass> &pass = pixelSize == 8 ? work->colorTransform16 : work->colorTransform32;
+    if (!pass) {
+        pass = KisGpuColorTransformPass::create(context,
+                                                pixelSize == 8 ? KisGpuTileFormat::RGBA16F : KisGpuTileFormat::RGBA32F,
+                                                errorMessage);
+    }
+    if (!pass) {
+        releaseContext(std::move(work));
+        return false;
+    }
+
+    KisGpuCommandList &commands = work->commands;
+    commands.begin();
+
+    const QRect srcSample = src->extent() & rect;
+    KisGpuTileAccess target(dst, rect, KisGpuTileAccess::ReadWrite);
+    KisGpuTileAccess::UploadArena uploads(
+        qMin<VkDeviceSize>(16 * 1024 * 1024, VkDeviceSize(target.tileCount()) * pixelSize * TileSize * TileSize * 3));
+    std::unique_ptr<KisGpuTileAccess> source;
+    KisGpuColorTransformPass::Pass transformPass;
+
+    bool ok = target.prepare(commands, uploads, errorMessage);
+    if (ok) {
+        const QRect grid = target.tileGrid();
+        const QPoint dstOrigin = target.tileOrigin(grid.left(), grid.top());
+        transformPass.dstTiles = target.addresses();
+        transformPass.dstGridWidth = grid.width();
+        transformPass.clip = rect.translated(-dstOrigin);
+        defaultPixelAsFloat(src, transformPass.fill);
+
+        // Without source tiles the grid is empty and every pixel reads the fill.
+        QPoint srcOrigin = dstOrigin;
+        if (!srcSample.isEmpty()) {
+            source.reset(new KisGpuTileAccess(src, srcSample, KisGpuTileAccess::ReadOnly));
+            if (source->tileCount()) {
+                ok = source->prepare(commands, uploads, errorMessage);
+                const QRect srcGrid = source->tileGrid();
+                srcOrigin = source->tileOrigin(srcGrid.left(), srcGrid.top());
+                transformPass.srcTiles = source->addresses();
+                transformPass.srcGridWidth = srcGrid.width();
+                transformPass.srcGridHeight = srcGrid.height();
+            }
+        }
+        transformPass.shift = dstOrigin - srcOrigin;
+
+        if (transform.kind() == KisGpuColorTransform::ChannelTables) {
+            transformPass.kind = KisGpuColorTransformPass::ChannelTables;
+            transformPass.tables = transform.tables();
+            transformPass.tablesId = transform.tablesId();
+        } else {
+            transformPass.kind = KisGpuColorTransformPass::Desaturate + quint32(transform.desaturateType());
+        }
+        if (coverage) {
+            transformPass.mask = coverage;
+            transformPass.maskBounds = rect.translated(-dstOrigin);
+        }
+    }
+    if (ok) {
+        commands.computeBarrier();
+        ok = pass->record(commands, transformPass, errorMessage);
+    }
+
+    QVector<KisGpuTileAccess *> accessList;
+    accessList << &target;
+    if (source) {
+        accessList << source.get();
+    }
+    if (ok) {
+        work->lastUse = KisGpuTileAccess::submitAndFinish(commands, accessList);
+        ok = work->lastUse != 0;
+        if (!ok && errorMessage && errorMessage->isEmpty()) {
+            *errorMessage = QStringLiteral("GPU submission refused or failed");
+        }
+    } else {
+        KisGpuTileAccess::finishUnsubmitted(commands, accessList);
+    }
+    releaseContext(std::move(work));
+    if (ok) {
+        ++s_colorTransformCount;
+    }
+    return ok;
 }

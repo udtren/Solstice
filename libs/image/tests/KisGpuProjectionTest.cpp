@@ -17,11 +17,15 @@
 #include <KoColorProfile.h>
 #include <KoColorSpace.h>
 #include <KoColorSpaceRegistry.h>
+#include <KoColorTransformation.h>
 #include <KoCompositeOpRegistry.h>
 
+#include "KisImageResolutionProxy.h"
+#include "filter/kis_color_transformation_filter.h"
 #include "filter/kis_filter.h"
 #include "filter/kis_filter_configuration.h"
 #include "filter/kis_filter_registry.h"
+#include "gpu/KisGpuColorTransform.h"
 #include "gpu/KisGpuEngineSettings.h"
 #include "gpu/KisGpuMergeBatch.h"
 #include "gpu/KisGpuProjectionCompositor.h"
@@ -31,6 +35,7 @@
 #include "kis_adjustment_layer.h"
 #include "kis_clone_layer.h"
 #include "kis_datamanager.h"
+#include "kis_default_bounds.h"
 #include "kis_filter_mask.h"
 #include "kis_group_layer.h"
 #include "kis_image.h"
@@ -94,6 +99,11 @@ private Q_SLOTS:
     void testTransparencyMaskMatchesCpu();
     void testStrokeStyleMatchesCpu_data();
     void testStrokeStyleMatchesCpu();
+    void testFilterLayerMatchesCpu_data();
+    void testFilterLayerMatchesCpu();
+    void testCopyModeMatchesCpu_data();
+    void testCopyModeMatchesCpu();
+    void testColorTransformTables();
     void benchmarkRefresh();
 };
 
@@ -1864,6 +1874,342 @@ void KisGpuProjectionTest::testStrokeStyleMatchesCpu()
     QVERIFY(stylePlane && !stylePlane->gpuCompositesStyles());
     render(image, true);
     compare("inside stroke on the CPU");
+}
+
+namespace
+{
+KisFilterConfigurationSP filterLayerConfig(const QString &id, const QString &params)
+{
+    KisFilterSP filter = KisFilterRegistry::instance()->value(id);
+    KIS_ASSERT(filter);
+    KisFilterConfigurationSP config = filter->factoryConfiguration(KisGlobalResourcesInterface::instance());
+    config->fromXML(QString("<!DOCTYPE params>\n<params version=\"1\">\n%1</params>\n").arg(params));
+    return config->cloneWithResourcesSnapshot();
+}
+
+/// Per-channel curves in the current layout: RGBA, R, G, B, A, hue, saturation, lightness.
+KisFilterConfigurationSP curvesConfig(const QVector<int> &curvedChannels)
+{
+    QString params = " <param name=\"nTransfers\">8</param>\n";
+    for (int i = 0; i < 8; ++i) {
+        const QString curve = curvedChannels.contains(i) ? QString("0,0;0.551807,0.415686;1,1;") : QString("0,0;1,1;");
+        params += QString(" <param name=\"curve%1\">%2</param>\n").arg(i).arg(curve);
+    }
+    return filterLayerConfig("perchannel", params);
+}
+
+KisFilterConfigurationSP namedFilterConfig(const QString &name)
+{
+    if (name.startsWith("desaturate")) {
+        return filterLayerConfig(
+            "desaturate",
+            QString(" <param name=\"type\" type=\"string\"><![CDATA[%1]]></param>\n").arg(name.mid(10).toInt()));
+    }
+    if (name.startsWith("posterize")) {
+        return filterLayerConfig(
+            "posterize",
+            QString(" <param name=\"steps\" type=\"string\"><![CDATA[%1]]></param>\n").arg(name.mid(9).toInt()));
+    }
+    if (name == "curves-all") {
+        return curvesConfig({0});
+    }
+    if (name == "curves-channels") {
+        return curvesConfig({1, 4});
+    }
+    KIS_ASSERT(name == "curves-lightness");
+    return curvesConfig({7});
+}
+} // namespace
+
+void KisGpuProjectionTest::testFilterLayerMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("filter");
+    QTest::addColumn<bool>("selection");
+    for (bool f16 : {false, true}) {
+        for (const QString &filter : {QString("desaturate0"),
+                                      QString("desaturate1"),
+                                      QString("desaturate2"),
+                                      QString("desaturate3"),
+                                      QString("desaturate4"),
+                                      QString("desaturate5"),
+                                      QString("posterize6"),
+                                      QString("posterize16"),
+                                      QString("curves-all"),
+                                      QString("curves-channels"),
+                                      QString("curves-lightness")}) {
+            for (bool selection : {false, true}) {
+                QTest::newRow(qPrintable(QString("f16%1-%2%3").arg(f16).arg(filter).arg(selection ? "-selection" : "")))
+                    << f16 << filter << selection;
+            }
+        }
+    }
+}
+
+void KisGpuProjectionTest::testFilterLayerMatchesCpu()
+{
+    // Phase 4.115: filter layers whose filter has a GPU form are filtered
+    // and composited without reading the projection back.
+    REQUIRE_GPU();
+    if (!KisGpuProjectionCompositor::supportsColorTransform()) {
+        QSKIP("the GPU has no 64-bit float shaders");
+    }
+    QFETCH(bool, f16);
+    QFETCH(QString, filter);
+    QFETCH(bool, selection);
+    // The tables hold what the CPU transformation computes for every half
+    // value; RGBA F32 has too many values for that.
+    const bool expectGpu = filter.startsWith("desaturate") || (f16 && filter != "curves-lightness");
+
+    const QRect bounds(0, 0, 512, 384);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "filter layer");
+    KisNodeSP root = image->root();
+    // HDR colors next to a partly selected pixel are clamped by the CPU's
+    // vectorized Copy op (docs/agent/gpu-engine.md): keep them out of the
+    // selection rows.
+    // One layer below the filter: the filter then reads the same pixels in
+    // the GPU and the CPU run, and its result can be compared exactly.
+    KisPaintLayerSP painted = addPaintLayer(image, root, COMPOSITE_OVER, 255, 131, QRect(0, 0, 450, 384), !selection);
+
+    KisSelectionSP layerSelection;
+    if (selection) {
+        // A selected block, a soft band on its right, the rest unselected.
+        layerSelection = new KisSelection(new KisDefaultBounds(image), toQShared(new KisImageResolutionProxy(image)));
+        KisPixelSelectionSP pixels = layerSelection->pixelSelection();
+        pixels->select(QRect(70, 40, 200, 250), MAX_SELECTED);
+        for (int i = 0; i < 127; ++i) {
+            pixels->select(QRect(270 + i, 40, 1, 250), quint8(254 - 2 * i));
+        }
+        layerSelection->updateProjection();
+    }
+    KisAdjustmentLayerSP adjustment = new KisAdjustmentLayer(image, filter, namedFilterConfig(filter), layerSelection);
+    image->addNode(adjustment, root);
+
+    addPaintLayer(image, root, COMPOSITE_MULT, 200, 132, QRect(100, 50, 300, 200));
+    addPaintLayer(image, root, COMPOSITE_SCREEN, 128, 133, QRect(200, 0, 300, 384));
+
+    auto compare = [&](const char *stage) {
+        // The filtered pixels themselves, then the image.
+        const std::vector<float> gpuOriginal = readFloats(adjustment->original(), bounds);
+        const std::vector<float> gpu = readFloats(image->projection(), bounds);
+        const std::vector<float> cpu = render(image, false);
+        const std::vector<float> cpuOriginal = readFloats(adjustment->original(), bounds);
+        QPoint where;
+        float error = f16 ? maxHalfUlpDifference(cpuOriginal, gpuOriginal, &where, bounds.width())
+                          : maxDifference(cpuOriginal, gpuOriginal, &where, bounds.width());
+        // The GPU repeats the CPU exactly, except where pixels are partly
+        // selected: the Copy op through the selection is matched within
+        // the engine's usual tolerances.
+        const float originalTolerance = !selection ? 0.0f : (f16 ? 4.0f : 2e-5f);
+        QVERIFY2(error <= originalTolerance,
+                 qPrintable(QString("%1, filtered pixels: difference %2 at %3,%4, %5")
+                                .arg(stage)
+                                .arg(error)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(cpuOriginal, gpuOriginal, where, bounds.width()))));
+        error = f16 ? maxHalfUlpDifference(cpu, gpu, &where, bounds.width())
+                    : maxDifference(cpu, gpu, &where, bounds.width());
+        QVERIFY2(error <= (f16 ? 4.0f : 2e-5f),
+                 qPrintable(QString("%1: difference %2 at %3,%4, %5")
+                                .arg(stage)
+                                .arg(error)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(cpu, gpu, where, bounds.width()))));
+    };
+
+    quint64 transforms = KisGpuProjectionCompositor::colorTransformCount();
+    render(image, true);
+    QCOMPARE(KisGpuProjectionCompositor::colorTransformCount() > transforms, expectGpu);
+    compare("full refresh");
+
+    // GPU strokes below the filter layer: nothing may be read back.
+    render(image, true);
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    KisGpuMergeBatch::setEnabled(true);
+    for (int i = 0; i < 3; ++i) {
+        const QRect dab(40 + i * 110, 30 + i * 70, 128, 128);
+        KisPaintDeviceSP dabDevice = new KisPaintDevice(rgbaFloat(f16));
+        fillRandom(dabDevice, dab, 290 + i);
+        KisGpuProjectionCompositor::Layer layer;
+        layer.device = dabDevice;
+        layer.opacity = 0.7f;
+        QString error;
+        QVERIFY2(KisGpuProjectionCompositor::composite(painted->paintDevice(), dab, {layer}, &error),
+                 qPrintable(error));
+        backend->context().waitIdle();
+        const quint64 downloads = backend->downloadedTileCount();
+        transforms = KisGpuProjectionCompositor::colorTransformCount();
+        painted->setDirty(dab);
+        image->waitForDone();
+        backend->context().waitIdle();
+        if (expectGpu) {
+            QCOMPARE(backend->downloadedTileCount(), downloads);
+            QVERIFY(KisGpuProjectionCompositor::colorTransformCount() > transforms);
+        }
+    }
+    compare("partial updates");
+}
+
+void KisGpuProjectionTest::testCopyModeMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("variant");
+    QTest::addColumn<bool>("moved");
+    for (bool f16 : {false, true}) {
+        for (const QString &variant : {QString("plain"),
+                                       QString("alpha-off"),
+                                       QString("red-off"),
+                                       QString("green-and-alpha-off"),
+                                       QString("opacity")}) {
+            for (bool moved : {false, true}) {
+                QTest::newRow(qPrintable(QString("f16%1-%2%3").arg(f16).arg(variant).arg(moved ? "-moved" : "")))
+                    << f16 << variant << moved;
+            }
+        }
+    }
+}
+
+void KisGpuProjectionTest::testCopyModeMatchesCpu()
+{
+    // Phase 4.115: the Copy blend mode at full opacity replaces the rect
+    // with the layer (its default pixel where it has no data). The CPU
+    // honors channel flags only for a layer at another offset than the
+    // projection (KisPainter copies whole pixels otherwise); then only the
+    // enabled channels are replaced. Reduced opacity stays on the CPU.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QString, variant);
+    QFETCH(bool, moved);
+    // With reduced opacity the CPU's vectorized Copy op clamps HDR colors
+    // depending on the neighbours (docs/agent/gpu-engine.md).
+    const bool hdr = variant != "opacity";
+    const QRect bounds(0, 0, 384, 256);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "copy mode");
+    KisNodeSP root = image->root();
+    addPaintLayer(image, root, COMPOSITE_OVER, 255, 141, QRect(0, 0, 300, 256), hdr);
+    addPaintLayer(image, root, COMPOSITE_MULT, 220, 142, QRect(40, 30, 250, 150));
+    // It leaves part of the image and of its own tiles empty.
+    KisPaintLayerSP copied = addPaintLayer(image, root, COMPOSITE_COPY, 255, 143, QRect(90, 20, 200, 190), hdr);
+    if (moved) {
+        copied->paintDevice()->moveTo(QPoint(7, 5));
+    }
+    if (variant == "opacity") {
+        copied->setOpacity(128);
+    } else if (variant != "plain") {
+        QBitArray flags(4, true);
+        flags.setBit(3, variant != "alpha-off" && variant != "green-and-alpha-off");
+        flags.setBit(0, variant != "red-off");
+        flags.setBit(1, variant != "green-and-alpha-off");
+        copied->setChannelFlags(flags);
+    }
+    addPaintLayer(image, root, COMPOSITE_SCREEN, 128, 144, QRect(150, 0, 230, 256));
+
+    auto compare = [&](const char *stage) {
+        const std::vector<float> gpu = readFloats(image->projection(), bounds);
+        const std::vector<float> cpu = render(image, false);
+        QPoint where;
+        const float error = f16 ? maxHalfUlpDifference(cpu, gpu, &where, bounds.width())
+                                : maxDifference(cpu, gpu, &where, bounds.width());
+        QVERIFY2(error <= (f16 ? 4.0f : 2e-5f),
+                 qPrintable(QString("%1: difference %2 at %3,%4, %5")
+                                .arg(stage)
+                                .arg(error)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(cpu, gpu, where, bounds.width()))));
+    };
+
+    render(image, true);
+    compare("full refresh");
+
+    render(image, true);
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    KisGpuMergeBatch::setEnabled(true);
+    for (int i = 0; i < 3; ++i) {
+        const QRect dab(30 + i * 90, 20 + i * 50, 128, 128);
+        KisPaintDeviceSP dabDevice = new KisPaintDevice(rgbaFloat(f16));
+        fillRandom(dabDevice, dab, 390 + i);
+        if (moved) {
+            // a GPU dab needs the layer on the tile grid
+            KisPainter gc(copied->paintDevice());
+            gc.setOpacityF(0.7);
+            gc.bitBlt(dab.topLeft(), dabDevice, dab);
+        } else {
+            KisGpuProjectionCompositor::Layer layer;
+            layer.device = dabDevice;
+            layer.opacity = 0.7f;
+            QString error;
+            QVERIFY2(KisGpuProjectionCompositor::composite(copied->paintDevice(), dab, {layer}, &error),
+                     qPrintable(error));
+        }
+        backend->context().waitIdle();
+        const quint64 downloads = backend->downloadedTileCount();
+        copied->setDirty(dab);
+        image->waitForDone();
+        backend->context().waitIdle();
+        if (variant != "opacity") {
+            QCOMPARE(backend->downloadedTileCount(), downloads);
+        }
+    }
+    compare("partial updates");
+}
+
+void KisGpuProjectionTest::testColorTransformTables()
+{
+    // Phase 4.115: channel tables exist only for RGBA F16 and only for
+    // transformations that treat every channel on its own.
+    const KoColorSpace *f16 = rgbaFloat(true);
+    const KoColorSpace *f32 = rgbaFloat(false);
+
+    KisFilterSP curves = KisFilterRegistry::instance()->value("perchannel");
+    QVERIFY(curves);
+    const KisColorTransformationFilter *curvesFilter =
+        dynamic_cast<const KisColorTransformationFilter *>(curves.data());
+    QVERIFY(curvesFilter);
+
+    KisFilterConfigurationSP allColors = curvesConfig({0});
+    const KisGpuColorTransformSP tables = curvesFilter->gpuColorTransform(f16, allColors);
+    QVERIFY(tables);
+    QCOMPARE(tables->kind(), KisGpuColorTransform::ChannelTables);
+    QVERIFY(tables->tablesId() != 0);
+    // cached in the configuration
+    QCOMPARE(curvesFilter->gpuColorTransform(f16, allColors).data(), tables.data());
+    QVERIFY(!curvesFilter->gpuColorTransform(f32, allColors));
+    QVERIFY(!curvesFilter->gpuColorTransform(f16, curvesConfig({7}))); // lightness
+    QVERIFY(!curvesFilter->gpuColorTransform(f16, curvesConfig({0, 5}))); // hue
+
+    // The tables repeat the transformation, also for values outside 0..1.
+    QScopedPointer<KoColorTransformation> transformation(curvesFilter->createTransformation(f16, allColors));
+    QVERIFY(transformation);
+    std::mt19937 random(7);
+    QVector<quint16> src(4 * 8192);
+    for (quint16 &bits : src) {
+        bits = quint16(random());
+        if ((bits & 0x7c00) == 0x7c00) {
+            bits &= quint16(~0x0400); // finite
+        }
+    }
+    QVector<quint16> expected(src.size());
+    QVector<quint16> looked(src.size());
+    transformation->transform(reinterpret_cast<const quint8 *>(src.constData()),
+                              reinterpret_cast<quint8 *>(expected.data()),
+                              src.size() / 4);
+    tables->applyTables(src.constData(), looked.data(), src.size() / 4);
+    QCOMPARE(looked, expected);
+
+    // A transformation that mixes the channels is refused.
+    QHash<QString, QVariant> params;
+    params["type"] = 1;
+    QScopedPointer<KoColorTransformation> desaturate(f16->createColorTransformation("desaturate_adjustment", params));
+    QVERIFY(desaturate);
+    QVERIFY(!KisGpuColorTransform::channelTables(f16, desaturate.data()));
+    QVERIFY(!KisGpuColorTransform::channelTables(f32, transformation.data()));
+
+    QVERIFY(KisGpuColorTransform::desaturate(f32, 5));
+    QVERIFY(!KisGpuColorTransform::desaturate(f32, 6));
+    QVERIFY(!KisGpuColorTransform::desaturate(KoColorSpaceRegistry::instance()->rgb8(), 0));
 }
 
 void KisGpuProjectionTest::benchmarkRefresh()
