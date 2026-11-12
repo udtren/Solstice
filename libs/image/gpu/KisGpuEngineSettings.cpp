@@ -26,6 +26,26 @@ QString KisGpuEngineSettings::brushKey()
     return QStringLiteral("Solstice/GpuBrush");
 }
 
+QString KisGpuEngineSettings::unverifiedDeviceKey()
+{
+    return QStringLiteral("Solstice/GpuEngineUnverifiedDevice");
+}
+
+bool KisGpuEngineSettings::unverifiedDeviceAllowedInConfig()
+{
+    return KisImageConfig(true).readEntry<bool>(unverifiedDeviceKey(), false);
+}
+
+void KisGpuEngineSettings::setUnverifiedDeviceAllowedInConfig(bool allowed)
+{
+    KisImageConfig(false).writeEntry<bool>(unverifiedDeviceKey(), allowed);
+}
+
+bool KisGpuEngineSettings::unverifiedDeviceAllowed()
+{
+    return qEnvironmentVariableIntValue("KRITA_GPU_ALLOW_UNVERIFIED_DEVICE") == 1 || unverifiedDeviceAllowedInConfig();
+}
+
 bool KisGpuEngineSettings::enabledInConfig()
 {
     return KisImageConfig(true).readEntry<bool>(enabledKey(), false);

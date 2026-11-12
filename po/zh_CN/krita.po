@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-11-11 20:51+0900\n"
+"POT-Creation-Date: 2026-11-12 23:21+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -20164,7 +20164,7 @@ msgid "Set Image Resolution"
 msgstr "设置图像分辨率"
 
 #: libs/image/commands_new/kis_move_command_common.h:28
-#: libs/ui/tool/strokes/move_stroke_strategy.cpp:214
+#: libs/ui/tool/strokes/move_stroke_strategy.cpp:222
 msgctxt "(qtundo-format)"
 msgid "Move"
 msgstr "移动"
@@ -20279,7 +20279,7 @@ msgstr "柔和"
 msgid "Gaussian"
 msgstr "高斯"
 
-#: libs/image/kis_clone_layer.cpp:349
+#: libs/image/kis_clone_layer.cpp:351
 #, kde-format
 msgid "Copy From"
 msgstr "复制自"
@@ -20348,7 +20348,7 @@ msgstr ""
 msgid "Mitchell"
 msgstr "Mitchell"
 
-#: libs/image/kis_group_layer.cc:361
+#: libs/image/kis_group_layer.cc:362
 #: libs/image/kis_layer_properties_icons.cpp:29
 #, kde-format
 msgid "Pass Through"
@@ -20524,7 +20524,7 @@ msgstr "旋转 (Y)"
 msgid "Rotation (Z)"
 msgstr "旋转 (Z)"
 
-#: libs/image/kis_layer.cc:285 libs/widgets/KoZoomActionState.cpp:20
+#: libs/image/kis_layer.cc:289 libs/widgets/KoZoomActionState.cpp:20
 #, kde-format
 msgid "%1%"
 msgstr "%1%"
@@ -20556,13 +20556,13 @@ msgid "Inherit Alpha"
 msgstr "继承透明度"
 
 #: libs/image/kis_layer_properties_icons.cpp:27
-#: libs/image/kis_paint_layer.cc:273
+#: libs/image/kis_paint_layer.cc:282
 #, kde-format
 msgid "Alpha Locked"
 msgstr "锁定透明度"
 
 #: libs/image/kis_layer_properties_icons.cpp:28
-#: libs/image/kis_paint_layer.cc:276
+#: libs/image/kis_paint_layer.cc:285
 #: plugins/dockers/animation/KisOnionSkinsDocker.cpp:30
 #, kde-format
 msgid "Onion Skins"
@@ -23935,12 +23935,12 @@ msgstr ""
 "\n"
 "未转换的图像照常工作，只是没有 GPU 加速。"
 
-#: libs/ui/KisGpuEngineUi.cpp:180 libs/ui/KisGpuEngineUi.cpp:268
+#: libs/ui/KisGpuEngineUi.cpp:180 libs/ui/KisGpuEngineUi.cpp:269
 #, kde-format
 msgid "Convert to RGBA 16-bit float"
 msgstr "转换为 RGBA 16 位浮点"
 
-#: libs/ui/KisGpuEngineUi.cpp:182 libs/ui/KisGpuEngineUi.cpp:270
+#: libs/ui/KisGpuEngineUi.cpp:182 libs/ui/KisGpuEngineUi.cpp:271
 #, kde-format
 msgid "Convert to RGBA 32-bit float"
 msgstr "转换为 RGBA 32 位浮点"
@@ -23985,47 +23985,74 @@ msgstr "为 RGBA 浮点图像使用 GPU 引擎"
 msgid "Paint brush strokes on the GPU"
 msgstr "在 GPU 上绘制笔画"
 
-#: libs/ui/KisGpuEngineUi.cpp:265
+#: libs/ui/KisGpuEngineUi.cpp:262
+#, kde-format
+msgid "Also use it with graphics cards it was not verified with"
+msgstr "也在未经验证的显卡上使用"
+
+#: libs/ui/KisGpuEngineUi.cpp:266
 #, kde-format
 msgid "Ask"
 msgstr "询问"
 
-#: libs/ui/KisGpuEngineUi.cpp:271
+#: libs/ui/KisGpuEngineUi.cpp:272
 #, kde-format
 msgid "Keep the color space"
 msgstr "保持色彩空间"
 
-#: libs/ui/KisGpuEngineUi.cpp:279
+#: libs/ui/KisGpuEngineUi.cpp:282
+#, kde-format
+msgid ""
+"The GPU engine is verified with NVIDIA Blackwell graphics cards (GeForce RTX "
+"50 series and RTX PRO Blackwell). With other graphics cards it is untested: "
+"results can differ from the CPU, and errors are more likely."
+msgstr ""
+"GPU 引擎已在 NVIDIA Blackwell 显卡 (GeForce RTX 50 系列和 RTX PRO Blackwell) "
+"上验证。在其他显卡上未经测试：结果可能与 CPU 不同，也更容易出错。"
+
+#: libs/ui/KisGpuEngineUi.cpp:288
 #, kde-format
 msgid "Opening other documents:"
 msgstr "打开其他图像时："
 
-#: libs/ui/KisGpuEngineUi.cpp:286
+#: libs/ui/KisGpuEngineUi.cpp:297
 #, kde-format
 msgid "Stopped after an error in this session."
 msgstr "本次会话中因出错而停止。"
 
-#: libs/ui/KisGpuEngineUi.cpp:288
+#: libs/ui/KisGpuEngineUi.cpp:299
 #, kde-format
 msgid "Active on %1."
 msgstr "正在 %1 上运行。"
 
-#: libs/ui/KisGpuEngineUi.cpp:290
+#: libs/ui/KisGpuEngineUi.cpp:301
+#, kde-format
+msgid "The GPU engine was not verified with this graphics card."
+msgstr "GPU 引擎未在此显卡上验证。"
+
+#: libs/ui/KisGpuEngineUi.cpp:304
+#, kde-format
+msgid ""
+"Not used: the GPU engine was not verified with %1. Check the option above to "
+"use it anyway."
+msgstr "未使用：GPU 引擎未在 %1 上验证。如仍要使用，请勾选上面的选项。"
+
+#: libs/ui/KisGpuEngineUi.cpp:307
 #, kde-format
 msgid "Enabled; starts with the first RGBA float document."
 msgstr "已启用；在打开第一个 RGBA 浮点图像时启动。"
 
-#: libs/ui/KisGpuEngineUi.cpp:292
+#: libs/ui/KisGpuEngineUi.cpp:309
 #, kde-format
 msgid "Not used in this session."
 msgstr "本次会话中未使用。"
 
-#: libs/ui/KisGpuEngineUi.cpp:294
+#: libs/ui/KisGpuEngineUi.cpp:311
 #, kde-format
 msgid "Changes take effect after restarting Solstice."
 msgstr "更改将在重启 Solstice 后生效。"
 
-#: libs/ui/KisGpuEngineUi.cpp:296
+#: libs/ui/KisGpuEngineUi.cpp:313
 #, kde-format
 msgid "Not available: this build of Solstice has no Vulkan support."
 msgstr "不可用：此 Solstice 版本不支持 Vulkan。"
@@ -43541,7 +43568,7 @@ msgid "Toggle visibility of layers with a color label"
 msgstr "切换带有颜色标签的图层的可见性"
 
 #. i18n: context: string @ property (toolTip), widget (KisCompositeOpComboBox, cmbComposite)
-#: plugins/dockers/layerdocker/WdgLayerBox.ui:72 libs/image/kis_layer.cc:290
+#: plugins/dockers/layerdocker/WdgLayerBox.ui:72 libs/image/kis_layer.cc:294
 #: libs/ui/widgets/kis_cmb_composite.cc:76
 #: plugins/paintops/libpaintop/KisCompositeOpOptionWidget.cpp:30
 #: plugins/paintops/libpaintop/KisCompositeOpOptionWidget.cpp:53
@@ -52692,7 +52719,7 @@ msgstr "曲线 - 跨通道颜色调整"
 msgid "&Desaturate..."
 msgstr "去色(&D)..."
 
-#: plugins/filters/colorsfilters/kis_desaturate_filter.h:35
+#: plugins/filters/colorsfilters/kis_desaturate_filter.h:38
 #, kde-format
 msgid "Desaturate"
 msgstr "去色"
@@ -52761,7 +52788,7 @@ msgstr "不能使用当前配置，因为它是为其他色彩空间准备的。
 msgid "&Color Adjustment curves..."
 msgstr "曲线 - 颜色调整(&C)..."
 
-#: plugins/filters/colorsfilters/kis_perchannel_filter.h:52
+#: plugins/filters/colorsfilters/kis_perchannel_filter.h:55
 #, kde-format
 msgid "Color Adjustment"
 msgstr "颜色调整"
@@ -54075,17 +54102,17 @@ msgstr "像素高度"
 msgid "Pixelize"
 msgstr "像素化"
 
-#: plugins/filters/posterize/posterize.cpp:43
+#: plugins/filters/posterize/posterize.cpp:44
 #, kde-format
 msgid "&Posterize..."
 msgstr "色调分离(&P)..."
 
-#: plugins/filters/posterize/posterize.cpp:81
+#: plugins/filters/posterize/posterize.cpp:156
 #, kde-format
 msgid "Steps"
 msgstr "色阶"
 
-#: plugins/filters/posterize/posterize.h:31
+#: plugins/filters/posterize/posterize.h:35
 #: plugins/paintops/mypaint/MyPaintStandardOptionData.h:160
 #, kde-format
 msgid "Posterize"
@@ -61409,7 +61436,7 @@ msgstr "颜料量"
 #: plugins/paintops/hairy/wdgInkOptions.ui:62
 #: plugins/paintops/hairy/wdghairyeoptions.ui:301
 #: libs/image/brushengine/kis_standard_uniform_properties_factory.h:19
-#: libs/image/kis_keyframe_channel.cpp:27 libs/image/kis_layer.cc:285
+#: libs/image/kis_keyframe_channel.cpp:27 libs/image/kis_layer.cc:289
 #: libs/widgets/KoColorPopupAction.cpp:85
 #: plugins/paintops/libpaintop/KisStandardOptionData.h:17
 #: plugins/paintops/mypaint/MyPaintBasicOptionWidget.cpp:65

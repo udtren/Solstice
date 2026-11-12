@@ -103,6 +103,9 @@ Document ownership and lifecycle are defined in
 - [Release and feature documentation](decisions/release-feature-documentation.md):
   a single latest-release summary in README, stable guides, illustrated website
   pages, and publication ordering.
+- [The GPU engine starts by itself only on verified GPUs](decisions/gpu-verified-devices.md):
+  NVIDIA Blackwell by default, other GPUs by an option; replaces "other
+  GPUs are untested but run".
 - [GPU engine phase numbering](decisions/gpu-phase-numbering.md): how phase
   numbers are reserved and checked before reuse.
 - [`krita5.xmlgui` stays unchanged](decisions/xmlgui-unchanged.md): why menu

@@ -2,8 +2,10 @@
 
 The GPU Engine is an ongoing rewrite of Solstice's image engine so that layer
 compositing, painting, transforms and filters run on the graphics card with
-Vulkan instead of on the CPU. It is on by default for documents in RGBA 32-bit
-or 16-bit float. Whatever it does not support runs on the CPU as in Krita.
+Vulkan instead of on the CPU. On NVIDIA Blackwell graphics cards it is on by
+default for documents in RGBA 32-bit or 16-bit float; on other graphics cards
+you turn it on yourself (see [Requirements](#requirements)). Whatever it does
+not support runs on the CPU as in Krita.
 
 ## What runs on the GPU
 
@@ -141,15 +143,22 @@ updates sooner; its current times have not been measured.
 
 ## Turning it on or off
 
-The engine is on by default. To change it:
+The engine is on by default on the graphics cards it was verified with (see
+[Requirements](#requirements)). To change it:
 
 1. Open **Settings → Configure Solstice → Performance → General**.
 2. In **GPU Engine (Vulkan)**, check or uncheck **Use the GPU engine for RGBA
-   float documents**. **Paint brush strokes on the GPU** (on by default)
-   chooses whether pixel-brush strokes are painted on the GPU too; strokes
-   the GPU brush does not support are always painted on the CPU.
+   float documents**.
+   - **Paint brush strokes on the GPU** (on by default) chooses whether
+     pixel-brush strokes are painted on the GPU too; strokes the GPU brush
+     does not support are always painted on the CPU.
+   - **Also use it with graphics cards it was not verified with** (off by
+     default) lets the engine run on a graphics card other than NVIDIA
+     Blackwell.
 3. Restart Solstice. With the engine on, the status line in the same place
-   shows the GPU in use once an RGBA float document is open.
+   shows the GPU in use once an RGBA float document is open. On a graphics
+   card the engine was not verified with, it says that the engine is not
+   used and names the card.
 
 Without a usable Vulkan GPU the engine is not used, and Solstice works on the CPU.
 Software Vulkan drivers that run on the processor (common in virtual
@@ -202,7 +211,17 @@ export formats write the file directly and are not covered.)
 ## Requirements
 
 - An NVIDIA Blackwell GPU (GeForce RTX 50 series or RTX PRO Blackwell) with a
-  current driver, the only tested GPU. Other GPUs are untested.
+  current driver. It is the only GPU the engine is developed and tested
+  with, and the only one it starts on by itself.
+- Other GPUs with Vulkan 1.3 are untested. The engine is not used on them,
+  and Solstice works on the CPU, unless you check **Also use it with
+  graphics cards it was not verified with** (see
+  [Turning it on or off](#turning-it-on-or-off)) and restart.
+  - On such a GPU, results can differ from the CPU and errors are more
+    likely. If you see wrong pixels, uncheck the option again.
+  - Up to Solstice 0.9.1 the engine started on any of these GPUs. After an
+    update it stays off on them until you check the option; the other
+    settings are kept.
 - Windows. The canvas must use desktop OpenGL, not ANGLE/Direct3D;
   otherwise compositing still runs on the GPU, but the canvas display does
   not.

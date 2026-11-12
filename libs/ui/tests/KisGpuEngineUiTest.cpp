@@ -5,6 +5,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QLabel>
 #include <QMessageBox>
 #include <QScopeGuard>
 #include <QTimer>
@@ -17,6 +18,10 @@
 
 #include "KisDocument.h"
 #include "KisGpuEngineUi.h"
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuTileBackend.h"
+#include <KisGpuContext.h>
+#endif
 #include "KisPart.h"
 #include "gpu/KisGpuMergeBatch.h"
 #include "kis_image.h"
@@ -29,22 +34,92 @@ class KisGpuEngineUiTest : public QObject
 {
     Q_OBJECT
 private Q_SLOTS:
+    void testUnverifiedDeviceStatus();
     void testPreferences();
     void testOpening_data();
     void testOpening();
 };
+
+void KisGpuEngineUiTest::testUnverifiedDeviceStatus()
+{
+    // Runs first: the settings have to name a graphics card the engine was
+    // not verified with before any document has tried to start the engine.
+#ifdef HAVE_KRITA_GPU_ENGINE
+    if (KisGpuTileBackend::existingInstance()) {
+        QSKIP("the GPU engine was started already");
+    }
+    const KisGpuDeviceInfo device = KisGpuContext::probeDevice();
+    if (device.name.isEmpty()) {
+        QSKIP("no usable GPU");
+    }
+    const bool oldUnverified = KisGpuEngineSettings::unverifiedDeviceAllowedInConfig();
+    auto restore = qScopeGuard([&] {
+        KisGpuEngineSettings::setUnverifiedDeviceAllowedInConfig(oldUnverified);
+        qunsetenv("KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED");
+    });
+    auto statusText = [] {
+        KisGpuEngineSettingsWidget widget;
+        return widget.findChild<QLabel *>(QStringLiteral("gpuEngineStatus"))->text();
+    };
+    KisGpuMergeBatch::setEnabled(true);
+    KisGpuEngineSettings::setUnverifiedDeviceAllowedInConfig(false);
+    qputenv("KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED", "1");
+    QCOMPARE(KisGpuTileBackend::unverifiedDeviceName(), device.name);
+    QVERIFY2(statusText().startsWith(QStringLiteral("Not used:")), qPrintable(statusText()));
+    QVERIFY2(statusText().contains(device.name), qPrintable(statusText()));
+
+    // allowed by the user: nothing to report
+    KisGpuEngineSettings::setUnverifiedDeviceAllowedInConfig(true);
+    QVERIFY(KisGpuTileBackend::unverifiedDeviceName().isEmpty());
+    QVERIFY2(statusText().startsWith(QStringLiteral("Enabled")), qPrintable(statusText()));
+
+    // asking did not start the engine
+    QVERIFY(!KisGpuTileBackend::existingInstance());
+#else
+    QSKIP("built without the GPU engine");
+#endif
+}
 
 void KisGpuEngineUiTest::testPreferences()
 {
     const auto oldPolicy = KisGpuEngineSettings::convertPolicy();
     const bool oldEnabled = KisGpuEngineSettings::enabledInConfig();
     const bool oldBrush = KisGpuEngineSettings::brushEnabledInConfig();
+    const bool oldUnverified = KisGpuEngineSettings::unverifiedDeviceAllowedInConfig();
     auto restore = qScopeGuard([&] {
         KisGpuEngineSettings::setConvertPolicy(oldPolicy);
         KisGpuEngineSettings::setEnabledInConfig(oldEnabled);
         KisGpuEngineSettings::setBrushEnabledInConfig(oldBrush);
+        KisGpuEngineSettings::setUnverifiedDeviceAllowedInConfig(oldUnverified);
     });
     KisGpuEngineSettingsWidget widget;
+
+    // Graphics cards the engine was not verified with: off unless the user
+    // checks the option, and off again with the defaults.
+    auto *unverified = widget.findChild<QCheckBox *>(QStringLiteral("gpuEngineUnverifiedDevice"));
+    QVERIFY(unverified);
+    for (bool allowed : {true, false}) {
+        KisGpuEngineSettings::setUnverifiedDeviceAllowedInConfig(allowed);
+        widget.load(false);
+        QCOMPARE(unverified->isChecked(), allowed);
+        unverified->setChecked(!allowed);
+        widget.save();
+        QCOMPARE(KisGpuEngineSettings::unverifiedDeviceAllowedInConfig(), !allowed);
+        widget.load(true);
+        QVERIFY(!unverified->isChecked());
+    }
+    // the option belongs to the engine switch
+    for (bool enabled : {false, true}) {
+        KisGpuEngineSettings::setEnabledInConfig(enabled);
+        widget.load(false);
+        QCOMPARE(unverified->isEnabled(), enabled);
+    }
+    KisGpuEngineSettings::setUnverifiedDeviceAllowedInConfig(false);
+    QVERIFY(!KisGpuEngineSettings::unverifiedDeviceAllowed());
+    qputenv("KRITA_GPU_ALLOW_UNVERIFIED_DEVICE", "1");
+    QVERIFY(KisGpuEngineSettings::unverifiedDeviceAllowed());
+    qunsetenv("KRITA_GPU_ALLOW_UNVERIFIED_DEVICE");
+
     auto *combo = widget.findChild<QComboBox *>();
     QVERIFY(combo);
     // Check persisted numeric values, including legacy Convert=1 and Keep=2.

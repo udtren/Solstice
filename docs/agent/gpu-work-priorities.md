@@ -31,6 +31,15 @@ The 2026-10-06 ordering placed blend expansion last; later user requests
 authorized it before all possible filter work was complete. Do not retain the
 old ordering as a prohibition against already-delivered work.
 
+## Supported hardware
+
+Decided on 2026-11-12: the engine starts by itself only on NVIDIA
+Blackwell; other GPUs need the option in the settings
+([reference](gpu-engine.md#feature-gate-and-user-interface-implemented-in-phase-33),
+[decision](wiki/decisions/gpu-verified-devices.md)). No work is planned to
+verify other GPUs: the user has none. Its manual check (checklist item 24)
+is pending.
+
 ## Remaining candidates and acceptance
 
 Offset Clone Layer GPU copies (4.110) and partial-tile projection clears
