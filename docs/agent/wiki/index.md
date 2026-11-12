@@ -197,6 +197,9 @@ Document ownership and lifecycle are defined in
 - [Two views writing one settings file](pitfalls/shared-settings-file-stale-writes.md):
   a view that saves its whole in-memory copy overwrites the other view's
   changes; save only owned keys over the current file and notify the others.
+- [GPU readers need a tile data reference](pitfalls/gpu-readers-need-a-tile-data-reference.md):
+  a read-only GPU access used tile data that a CPU writer in another
+  thread had freed; holding the tile is not enough.
 - [A device extent smaller than its tiles](pitfalls/extent-smaller-than-tiles.md):
   compositing skips a layer outside its extent; "compute, then lock and
   store" let an older extent win. A test that compares two results reading

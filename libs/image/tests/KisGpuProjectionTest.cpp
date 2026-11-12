@@ -104,6 +104,8 @@ private Q_SLOTS:
     void testFilterMaskMatchesCpu_data();
     void testFilterMaskMatchesCpu();
     void testColorReferenceTables();
+    void testOffGridMaskedLayerConcurrentUpdates_data();
+    void testOffGridMaskedLayerConcurrentUpdates();
     void testCopyModeMatchesCpu_data();
     void testCopyModeMatchesCpu();
     void testColorTransformTables();
@@ -2274,6 +2276,96 @@ void KisGpuProjectionTest::testColorReferenceTables()
     KisFilterConfigurationSP broken = namedFilterConfig("colorreference");
     broken->setProperty("lut", QString("not a table"));
     QVERIFY(!filter->gpuColorTransform(f16, broken));
+}
+
+void KisGpuProjectionTest::testOffGridMaskedLayerConcurrentUpdates_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("mask");
+    for (bool f16 : {false, true}) {
+        for (const QString &mask : {QString("transparency"), QString("desaturate")}) {
+            QTest::newRow(qPrintable(QString("f16%1-%2").arg(f16).arg(mask))) << f16 << mask;
+        }
+    }
+}
+
+void KisGpuProjectionTest::testOffGridMaskedLayerConcurrentUpdates()
+{
+    // A masked layer that is not on the image's tile grid keeps its masks
+    // on the CPU, and its projection device is off that grid too: merge
+    // jobs of neighbouring image tiles share its tiles. One job writes
+    // such a tile on the CPU (copy-on-write, which frees the old data)
+    // while another reads it for a GPU composite. The GPU access has to
+    // keep the data it reads alive (KisTile::referencedTileData()). That
+    // race crashed the application once (2026-11-12) but is too narrow to
+    // show up here reliably:
+    // KisGpuPaintDeviceTest::testReadOnlyAccessKeepsTileDataAlive checks the
+    // lifetime itself; this test checks the result of such updates.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QString, mask);
+    const QRect bounds(0, 0, 768, 512);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "off grid");
+    KisNodeSP root = image->root();
+    addPaintLayer(image, root, COMPOSITE_OVER, 255, 171, bounds);
+
+    KisGroupLayerSP group = new KisGroupLayer(image, "group", 255);
+    image->addNode(group, root);
+    KisPaintLayerSP painted = addPaintLayer(image, group, COMPOSITE_OVER, 255, 172, QRect(0, 0, 700, 480));
+    painted->paintDevice()->moveTo(QPoint(-10, 0));
+    addPaintLayer(image, group, COMPOSITE_MULT, 200, 173, QRect(100, 60, 400, 300));
+
+    if (mask == "transparency") {
+        KisTransparencyMaskSP transparency = new KisTransparencyMask(image, "mask");
+        transparency->initSelection(painted);
+        transparency->selection()->pixelSelection()->select(QRect(200, 100, 200, 200), 128);
+        transparency->selection()->updateProjection();
+        image->addNode(transparency, painted);
+    } else {
+        KisFilterMaskSP filterMask = new KisFilterMask(image, "mask");
+        filterMask->initSelection(painted);
+        filterMask->setFilter(namedFilterConfig("desaturate0"));
+        image->addNode(filterMask, painted);
+    }
+
+    render(image, true);
+    KisGpuMergeBatch::setEnabled(true);
+
+    // Many small updates in neighbouring image tiles, queued without
+    // waiting, with CPU dabs on the layer in between.
+    std::mt19937 random(174);
+    for (int round = 0; round < 60; ++round) {
+        for (int i = 0; i < 24; ++i) {
+            const int col = int(random() % 11);
+            const int row = int(random() % 7);
+            const QRect rect(col * 64, row * 64, 64, 64);
+            if (i % 3 == 0) {
+                KisPaintDeviceSP dab = new KisPaintDevice(rgbaFloat(f16));
+                fillRandom(dab, rect, 500 + round * 24 + i);
+                KisPainter gc(painted->paintDevice());
+                gc.setOpacityF(0.5);
+                gc.bitBlt(rect.topLeft(), dab, rect);
+            }
+            painted->setDirty(rect);
+        }
+        if (round % 4 == 3) {
+            painted->setDirty(bounds);
+        }
+        image->waitForDone();
+    }
+    KisGpuTileBackend::instance()->context().waitIdle();
+
+    const std::vector<float> gpu = readFloats(image->projection(), bounds);
+    const std::vector<float> cpu = render(image, false);
+    QPoint where;
+    const float error =
+        f16 ? maxHalfUlpDifference(cpu, gpu, &where, bounds.width()) : maxDifference(cpu, gpu, &where, bounds.width());
+    QVERIFY2(error <= (f16 ? 4.0f : 2e-5f),
+             qPrintable(QString("difference %1 at %2,%3, %4")
+                            .arg(error)
+                            .arg(where.x())
+                            .arg(where.y())
+                            .arg(pixelReport(cpu, gpu, where, bounds.width()))));
 }
 
 void KisGpuProjectionTest::testCopyModeMatchesCpu_data()

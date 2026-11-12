@@ -171,6 +171,36 @@ Failure handling:
 `KisGpuTileAccess::syncToCpu(device, rect)` downloads stale tiles in batches
 of 256 per submission (use before bulk CPU reads such as saving).
 
+**Tile data lifetime of readers** (fix of 2026-11-12). A read-only access
+and `syncToCpu()` look a tile's data up without locking the tile. A CPU
+writer in another thread can replace that data at any time (copy-on-write
+in `KisTile::lockForWrite()`), and when the last other owner lets go, the
+old data is freed. CPU readers are protected by the tile's lock counter;
+the GPU readers were not and used a freed `KisTileData`: a crash in
+`KisTileData::blockSwapping()` inside `KisGpuTileAccess::prepare()`.
+
+- Both now take the data with `KisTile::referencedTileData()`: a `ref()`
+  under the lock that guards the release of replaced data, dropped with
+  `deref()` when the access completes or the batch is downloaded. Write
+  accesses do not need it: merge jobs never share a projection tile, and
+  the tile is detached for them.
+- How it happened: a paint layer at x = -10 got a filter mask. Its
+  projection device is off the image's tile grid, so its masks run on the
+  CPU and merge jobs of neighbouring image tiles share its tiles. One job
+  filtered through a temporary device (`KisFilter::process()` clones the
+  tiles, the write copies them, the temporary device is destroyed and
+  frees the data) while another job was uploading the same tile for its
+  composite. Phase 4.112 made such layers GPU-readable; a stroke writing a
+  layer that a merge reads has the same shape at any offset.
+- Tests: `KisGpuPaintDeviceTest::testReadOnlyAccessKeepsTileDataAlive`
+  (the sequence in one thread, counting tile data: fails without the fix),
+  `KisGpuProjectionTest::testOffGridMaskedLayerConcurrentUpdates` (the
+  result of concurrent updates of such a layer; it did not hit the race
+  without the fix in three runs).
+- In the application: the user repeated the scenario with the fix on
+  2026-11-12 and reported no crash. The race is a matter of timing, so
+  this shows that it no longer shows up, not more.
+
 ### Undo
 
 GPU writes reuse `KisMementoManager` unchanged: `detachForExternalWrite`
@@ -1037,7 +1067,7 @@ kept their pixels.
 - Measurements: [Move Tool updates](wiki/benchmarks/move-layer-updates.md)
   (`KisMoveLayerBenchmark`, opt-in with `KRITA_MOVE_BENCHMARK=1`, and
   `KisMoveDocumentBenchmark` for a real `.kra`).
-- Manual check: checklist item 19.
+- Manual check (checklist item 19): reported OK by the user on 2026-11-12.
 
 ### Transparency masks (phase 4.113)
 
@@ -1097,7 +1127,7 @@ layers first).
   mask.
 - Measurements: [Masked layer updates](wiki/benchmarks/masked-layer-updates.md)
   (`KisMaskedLayerBenchmark`, opt-in with `KRITA_MASK_BENCHMARK=1`).
-- Manual check: checklist item 20.
+- Manual check (checklist item 20): reported OK by the user on 2026-11-12.
 
 ### Stroke layer style (phase 4.114)
 
@@ -1180,7 +1210,7 @@ with a solid color, 1-10 pixels wide, in Multiply, Lighten or Screen.
   blend.
 - Measurements: [Layer style updates](wiki/benchmarks/layer-style-updates.md)
   (`KisLayerStyleBenchmark`, opt-in with `KRITA_STYLE_BENCHMARK=1`).
-- Manual check: checklist item 21.
+- Manual check (checklist item 21): reported OK by the user on 2026-11-12.
 
 ### Filter layers (phase 4.115)
 
@@ -1299,7 +1329,7 @@ and one Color Adjustment curve (the RGBA curve).
   channels; the cache; refused transformations).
 - Measurements: [Filter layer updates](wiki/benchmarks/filter-layer-updates.md)
   (`KisFilterLayerBenchmark`, opt-in with `KRITA_FILTER_BENCHMARK=1`).
-- Manual check: checklist item 22.
+- Manual check (checklist item 22): reported OK by the user on 2026-11-12.
 
 ### Filter masks and Color Reference (phase 4.116)
 
@@ -1385,7 +1415,7 @@ mask on the main group of one of the user's RGBA F16 documents: about
   broken table). `KisColorReferenceFilterTest` covers the unchanged CPU
   filter.
 - Measurements: [Filter layer updates](wiki/benchmarks/filter-layer-updates.md).
-- Manual check: checklist item 23.
+- Manual check (checklist item 23): reported OK by the user on 2026-11-12.
 
 ## Technology and device requirements
 
@@ -1588,7 +1618,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | --- | --- |
 | `tiles3/KisTileGpuState.h` | Per-tile-data GPU state and the `KisTileGpuHooks` entry points. |
 | `tiles3/kis_tile_data*.{h,cc}` | `gpuState()`, `installGpuState()`, `notifyCpuWrite()`, `dropClones()`; download hook in `blockSwapping()`; state release in the destructor. |
-| `tiles3/kis_tile.{h,cc}` | `detachForExternalWrite()`; `lockForWrite()` calls `notifyCpuWrite()`. |
+| `tiles3/kis_tile.{h,cc}` | `detachForExternalWrite()`; `lockForWrite()` calls `notifyCpuWrite()`; `referencedTileData()` for GPU readers. |
 | `tiles3/kis_tile_data_store.cc` | The swapper downloads and evicts idle GPU slots before disk swapping; prepared/in-flight slots are skipped. |
 | `gpu/KisGpuTileBackend.*` | Process-wide context, RGBA32F/RGBA16F pools, downloads, deferred slot release, retired resources. Never destroyed. |
 | `gpu/KisGpuTileAccess.*` | Public GPU access to device tiles (see above). |
@@ -2015,6 +2045,9 @@ Section index:
   Not reproduced by `KisGpuProjectionStressTest` (7,500 strokes including
   LOD) or live through Test Control (760 strokes: canvas captures before and
   after a soft proofing refetch, projection before and after Undo/Redo).
+  Correction (2026-11-12): toggling soft proofing does not refetch the
+  canvas in a float document (next item), so if that run toggled the
+  action, its two canvas captures showed the same canvas state.
   - Found while re-reading (2026-11-12) and fixed: `KisTiledExtentManager`
     could keep an extent smaller than the device's tiles after concurrent
     tile additions. Compositing skips a layer outside its extent
@@ -2023,10 +2056,20 @@ Section index:
     Not shown to be the cause: it needs rows or columns appearing at the
     edge of a device, and the report is in the middle of a figure. See
     [the pitfall](wiki/pitfalls/extent-smaller-than-tiles.md).
-  - Next evidence needed when it appears again: whether toggling soft
-    proofing twice (Ctrl+Y) removes it (then the canvas upload is wrong,
-    otherwise the projection), the zoom, and whether the brush uses instant
-    preview.
+  - Next evidence needed when it appears again: whether a refetch of the
+    canvas removes it (then the canvas upload is wrong, otherwise the
+    projection), the zoom, and whether the brush uses instant preview.
+    - To refetch: turn one channel off and on again in the Channels
+      docker. `KisCanvas2::channelSelectionChanged()` updates the whole
+      image on the canvas; with a channel off the canvas reads the
+      projection on the CPU, with all channels on it uses the GPU upload
+      again. From the code; not tried on a visible defect yet.
+    - Not Ctrl+Y: this document asked for the soft proofing toggle until
+      2026-11-12, when the user found that it only shows "Soft Proofing
+      doesn't work in floating point". `KisView::slotSoftProofing()`
+      returns before `KisCanvas2::slotSoftProofing()` (and its
+      `refetchDataFromImage()`) for float documents, the only ones the
+      GPU engine handles.
 
 - Interop requires desktop OpenGL. With the engine on, "Auto" picks it on
   Windows unless the driver is blacklisted; an explicit ANGLE choice still

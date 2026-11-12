@@ -3021,3 +3021,49 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: a phase adds its own section, but the older summary sections
   that state "unsupported" or "split point" need the same edit. Search
   the document for the feature's name before closing a phase.
+
+## 2026-11-12 GPU engine: crash when a filter mask was added (tile data lifetime)
+
+- Found by the user's manual check of phase 4.116: adding a Desaturate
+  filter mask to a paint layer at x = -10 crashed in
+  `KisGpuTileAccess::prepareImpl()`. A read-only GPU access kept a raw
+  `KisTileData *`; another merge job's CPU mask freed it. Fixed with
+  `KisTile::referencedTileData()` in the access and in the batched
+  download.
+- New pitfall:
+  [GPU readers need a tile data reference](pitfalls/gpu-readers-need-a-tile-data-reference.md).
+  Reference: `docs/agent/gpu-engine.md`, "GPU access API".
+- The crash log (`%APPDATA%\Solstice\logs\kritacrash.log`) had the stack
+  with source lines; it named the function, and reading which states leave
+  a tile data without a buffer named the cause.
+- A stress test did not reproduce the race; a single-threaded replay that
+  counts tile data in the store fails without the fix.
+- Not verified: the user's scenario in the application after the fix.
+
+## 2026-11-12 GPU engine: manual checks of phases 4.112 to 4.116
+
+- The user ran checklist items 19 to 23 (moved layers and groups,
+  transparency masks, the Stroke layer style, filter layers, filter masks
+  and Color Reference) in the development build and reported them OK.
+- The run found the crash recorded above (a filter mask on a layer off
+  the tile grid). With the fix installed the user reported that it did not
+  occur again.
+- A question from the run, not a defect: a Desaturate filter layer inside
+  a group and a Desaturate filter mask on the group look different when
+  the group also has a Color Reference mask. A group's masks are applied
+  after its children, bottom mask first, so the filter layer runs before
+  the Color Reference mask and the filter mask above it runs after. The
+  CPU does the same.
+
+## 2026-11-12 GPU engine: the Ctrl+Y diagnostic does nothing in float documents
+
+- The white-rectangle entry of `docs/agent/gpu-engine.md` ("Risks and open
+  questions") asked for a soft proofing toggle (Ctrl+Y twice) to refetch
+  the canvas. The user tried it: "Soft Proofing doesn't work in floating
+  point". `KisView::slotSoftProofing()` returns before the canvas refetch
+  for float documents, so the step never did anything where the GPU
+  engine runs. Replaced by turning a channel off and on in the Channels
+  docker (`KisCanvas2::channelSelectionChanged()`), from the code.
+- Lesson: try a diagnostic step in the application before writing it into
+  a checklist; the step had been written from the canvas code alone,
+  without the view's early return.
