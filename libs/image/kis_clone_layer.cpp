@@ -157,10 +157,12 @@ void KisCloneLayer::copyOriginalToProjection(const KisPaintDeviceSP original,
      * on the GPU instead of reading them back for a CPU copy
      * (docs/agent/clone-layer.md). mayCompositeOnGpu() guarantees the
      * tile-exclusive merge scheduling that the GPU write relies on. Effect
-     * masks run on the CPU and would read the copy back: keep those on
-     * the CPU (measured slower otherwise).
+     * masks that run on the CPU would read the copy back: keep those on
+     * the CPU (measured slower otherwise). Transparency masks are applied
+     * on the GPU (phase 4.113).
      */
-    if (!hasEffectMasks() && KisGpuMergeBatch::mayCompositeOnGpu(KisNodeSP(const_cast<KisCloneLayer *>(this)))
+    if ((!hasEffectMasks() || gpuAppliesEffectMasks())
+        && KisGpuMergeBatch::mayCompositeOnGpu(KisNodeSP(const_cast<KisCloneLayer *>(this)))
         && KisGpuProjectionCompositor::copyShifted(projection,
                                                    rect,
                                                    original,

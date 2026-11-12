@@ -144,6 +144,7 @@ if(HAVE_KRITA_GPU_ENGINE)
         KisGpuBrushTest.cpp
         KisCloneLayerBenchmark.cpp
         KisMoveLayerBenchmark.cpp
+        KisMaskedLayerBenchmark.cpp
         LINK_LIBRARIES kritaimage kritatestsdk
         )
 endif()

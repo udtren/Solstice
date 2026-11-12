@@ -11,6 +11,7 @@
 
 #include <KisGpuCommandList.h>
 #include <KisGpuContext.h>
+#include <KisGpuCoveragePass.h>
 #include <KisGpuShiftedCopyPass.h>
 #include <KisGpuTilePool.h>
 
@@ -50,6 +51,8 @@ struct WorkContext {
     std::unique_ptr<KisGpuLayerCompositor> compositor16;
     std::unique_ptr<KisGpuShiftedCopyPass> shiftedCopy32;
     std::unique_ptr<KisGpuShiftedCopyPass> shiftedCopy16;
+    std::unique_ptr<KisGpuCoveragePass> coverage32;
+    std::unique_ptr<KisGpuCoveragePass> coverage16;
     quint64 lastUse = 0;
 };
 
@@ -62,6 +65,7 @@ QMutex s_contextsMutex;
 std::vector<std::unique_ptr<WorkContext>> *s_freeContexts = new std::vector<std::unique_ptr<WorkContext>>();
 size_t s_contextCount = 0;
 std::atomic<quint64> s_shiftedCopyCount{0};
+std::atomic<quint64> s_coverageCount{0};
 constexpr size_t MinimumContexts = 3;
 
 std::unique_ptr<WorkContext> acquireContext(KisGpuContext &context)
@@ -637,4 +641,105 @@ bool KisGpuProjectionCompositor::copyShifted(KisPaintDeviceSP dst,
         ++s_shiftedCopyCount;
     }
     return ok;
+}
+
+bool KisGpuProjectionCompositor::applyCoverage(KisPaintDeviceSP device,
+                                               const QRect &rect,
+                                               const quint8 *coverage,
+                                               QString *errorMessage)
+{
+    auto fail = [errorMessage](const QString &message) {
+        if (errorMessage) {
+            *errorMessage = message;
+        }
+        return false;
+    };
+
+    if (rect.isEmpty()) {
+        return true;
+    }
+    if (!device || !coverage) {
+        return fail(QStringLiteral("no device or coverage"));
+    }
+    if (!KisGpuTileAccess::isSupported(device, errorMessage)) {
+        return false;
+    }
+    if (qint64(rect.width()) * rect.height() > KisGpuCoveragePass::MaxMaskBytes) {
+        return fail(QStringLiteral("coverage rect is too large"));
+    }
+    if (device->defaultPixel().opacityU8() != OPACITY_TRANSPARENT_U8) {
+        return fail(QStringLiteral("coverage requires a transparent default pixel"));
+    }
+    // The same exclusivity rule as composite(): merge jobs never share a
+    // tile of the image grid.
+    if (device->x() % TileSize || device->y() % TileSize) {
+        return fail(QStringLiteral("device offset is not a multiple of 64"));
+    }
+
+    // Pixels outside the extent are transparent and stay so.
+    const QRect touched = rect & device->extent();
+    if (touched.isEmpty()) {
+        return true;
+    }
+
+    KisGpuContext &context = KisGpuTileBackend::instance()->context();
+    std::unique_ptr<WorkContext> work = acquireContext(context);
+    if (!work->commands.isValid() || !work->commands.wait()) {
+        releaseContext(std::move(work));
+        return fail(QStringLiteral("GPU work context is unavailable"));
+    }
+    work->lastUse = 0;
+    const qint32 pixelSize = device->pixelSize();
+    std::unique_ptr<KisGpuCoveragePass> &pass = pixelSize == 8 ? work->coverage16 : work->coverage32;
+    if (!pass) {
+        pass = KisGpuCoveragePass::create(context,
+                                          pixelSize == 8 ? KisGpuTileFormat::RGBA16F : KisGpuTileFormat::RGBA32F,
+                                          errorMessage);
+    }
+    if (!pass) {
+        releaseContext(std::move(work));
+        return false;
+    }
+
+    KisGpuCommandList &commands = work->commands;
+    commands.begin();
+
+    KisGpuTileAccess target(device, touched, KisGpuTileAccess::ReadWrite);
+    KisGpuTileAccess::UploadArena uploads(
+        qMin<VkDeviceSize>(16 * 1024 * 1024, VkDeviceSize(target.tileCount()) * pixelSize * TileSize * TileSize * 2));
+    bool ok = target.prepare(commands, uploads, errorMessage);
+    if (ok) {
+        const QRect grid = target.tileGrid();
+        const QPoint origin = target.tileOrigin(grid.left(), grid.top());
+        KisGpuCoveragePass::Pass coveragePass;
+        coveragePass.tiles = target.addresses();
+        coveragePass.gridWidth = grid.width();
+        coveragePass.clip = touched.translated(-origin);
+        coveragePass.mask = coverage;
+        coveragePass.maskBounds = rect.translated(-origin);
+        commands.computeBarrier();
+        ok = pass->record(commands, coveragePass, errorMessage);
+    }
+
+    QVector<KisGpuTileAccess *> accessList;
+    accessList << &target;
+    if (ok) {
+        work->lastUse = KisGpuTileAccess::submitAndFinish(commands, accessList);
+        ok = work->lastUse != 0;
+        if (!ok && errorMessage && errorMessage->isEmpty()) {
+            *errorMessage = QStringLiteral("GPU submission refused or failed");
+        }
+    } else {
+        KisGpuTileAccess::finishUnsubmitted(commands, accessList);
+    }
+    releaseContext(std::move(work));
+    if (ok) {
+        ++s_coverageCount;
+    }
+    return ok;
+}
+
+quint64 KisGpuProjectionCompositor::coverageCount()
+{
+    return s_coverageCount.load();
 }

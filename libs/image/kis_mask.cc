@@ -33,6 +33,11 @@
 #include "kis_raster_keyframe_channel.h"
 #include "KisSafeNodeProjectionStore.h"
 
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuProjectionCompositor.h"
+#include <vector>
+#endif
+
 
 struct Q_DECL_HIDDEN KisMask::Private {
     Private(KisMask *_q)
@@ -341,6 +346,27 @@ void KisMask::mergeInMaskInternal(KisPaintDeviceSP projection,
                                   KisNode::PositionToFilthy maskPos,
                                   KisRenderPassFlags flags) const
 {
+#ifdef HAVE_KRITA_GPU_ENGINE
+    /**
+     * Solstice (GPU engine, phase 4.113): a transparency mask multiplies
+     * the alpha by its selection. Do that on the projection's GPU tiles
+     * instead of reading them back for the copies below. The layer made
+     * the same decision for its copy of the original
+     * (KisLayer::gpuAppliesEffectMasks()).
+     */
+    if (effectiveSelection && inherits("KisTransparencyMask") && !applyRect.isEmpty()
+        && qint64(applyRect.width()) * applyRect.height() <= 4096 * 4096) {
+        KisLayer *layer = qobject_cast<KisLayer *>(parent().data());
+        if (layer && layer->gpuAppliesEffectMasks()) {
+            std::vector<quint8> coverage(size_t(applyRect.width()) * applyRect.height());
+            effectiveSelection->projection()->readBytes(coverage.data(), applyRect);
+            if (KisGpuProjectionCompositor::applyCoverage(projection, applyRect, coverage.data())) {
+                return;
+            }
+        }
+    }
+#endif
+
     KisCachedPaintDevice::Guard d1(projection, m_d->paintDeviceCache);
     KisPaintDeviceSP cacheDevice = d1.device();
 

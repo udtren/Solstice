@@ -88,6 +88,8 @@ private Q_SLOTS:
     void testMovedLayersMatchCpu();
     void testMovedGroupMatchesCpu_data();
     void testMovedGroupMatchesCpu();
+    void testTransparencyMaskMatchesCpu_data();
+    void testTransparencyMaskMatchesCpu();
     void benchmarkRefresh();
 };
 
@@ -1343,8 +1345,9 @@ void KisGpuProjectionTest::testCloneLayerMatchesCpu()
                                 .arg(pixelReport(cpu, gpu, where, bounds.width()))));
     };
 
-    // Effect masks run on the CPU: the clone then copies on the CPU too.
-    const bool gpuCopy = mask == "none";
+    // Filter masks run on the CPU: the clone then copies on the CPU too.
+    // Transparency masks are applied on the GPU (phase 4.113).
+    const bool gpuCopy = mask != "blur";
     const quint64 copiesBefore = KisGpuProjectionCompositor::shiftedCopyCount();
     render(image, true);
     QCOMPARE(KisGpuProjectionCompositor::shiftedCopyCount() > copiesBefore, gpuCopy);
@@ -1570,6 +1573,139 @@ void KisGpuProjectionTest::testMovedGroupMatchesCpu()
     QCOMPARE(backend->downloadedTileCount(), downloadsBefore);
     QVERIFY(KisGpuMergeBatch::gpuCompositeCount() > compositesBefore);
     compareWithFullRefresh("GPU moves", false);
+}
+
+void KisGpuProjectionTest::testTransparencyMaskMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("kind");
+    QTest::addColumn<int>("maskCount");
+    for (bool f16 : {false, true}) {
+        for (const QString &kind : {QString("paint"), QString("group"), QString("clone")}) {
+            for (int maskCount : {1, 2}) {
+                QTest::newRow(qPrintable(QString("f16%1-%2-masks%3").arg(f16).arg(kind).arg(maskCount)))
+                    << f16 << kind << maskCount;
+            }
+        }
+    }
+}
+
+void KisGpuProjectionTest::testTransparencyMaskMatchesCpu()
+{
+    // Phase 4.113: transparency masks are applied on the GPU, and the copy
+    // of the original into the layer's projection stays there too.
+    REQUIRE_GPU();
+    QFETCH(bool, f16);
+    QFETCH(QString, kind);
+    QFETCH(int, maskCount);
+    const QRect bounds(0, 0, 512, 384);
+    const QRect content(40, 50, 300, 220);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "transparency mask");
+    KisNodeSP root = image->root();
+    addPaintLayer(image, root, COMPOSITE_OVER, 255, 111, bounds);
+
+    // The layer that is painted, and the layer that carries the masks.
+    KisPaintLayerSP painted;
+    KisLayerSP masked;
+    if (kind == "paint") {
+        painted = addPaintLayer(image, root, COMPOSITE_MULT, 200, 112, content);
+        masked = painted;
+    } else if (kind == "group") {
+        KisGroupLayerSP group = new KisGroupLayer(image, "group", 220);
+        image->addNode(group, root);
+        addPaintLayer(image, group, COMPOSITE_OVER, 255, 113, QRect(100, 20, 300, 300));
+        painted = addPaintLayer(image, group, COMPOSITE_SCREEN, 200, 112, content);
+        masked = group;
+    } else {
+        painted = addPaintLayer(image, root, COMPOSITE_OVER, 255, 112, content);
+        KisCloneLayerSP clone = new KisCloneLayer(painted, image, "clone", 200);
+        clone->setX(37);
+        clone->setY(23);
+        clone->setCompositeOpId(COMPOSITE_MULT);
+        image->addNode(clone, root);
+        masked = clone;
+    }
+
+    QVector<KisTransparencyMaskSP> masks;
+    for (int i = 0; i < maskCount; ++i) {
+        // Every coverage value, a hole (0) and an untouched band (255).
+        KisTransparencyMaskSP mask = new KisTransparencyMask(image, QStringLiteral("transparency %1").arg(i));
+        mask->initSelection(masked);
+        KisPixelSelectionSP pixels = mask->selection()->pixelSelection();
+        const QRect maskRect(10, 10, 420, 330);
+        QByteArray bytes(maskRect.width() * maskRect.height(), Qt::Uninitialized);
+        for (int y = 0; y < maskRect.height(); ++y) {
+            for (int x = 0; x < maskRect.width(); ++x) {
+                bytes[y * maskRect.width() + x] = char((x * (i + 1) + y * 3) % 256);
+            }
+        }
+        pixels->writeBytes(reinterpret_cast<const quint8 *>(bytes.constData()), maskRect);
+        pixels->clear(QRect(100 + 40 * i, 90, 120, 80));
+        pixels->select(QRect(230, 60 + 30 * i, 60, 200), 255);
+        mask->selection()->updateProjection();
+        image->addNode(mask, masked);
+        masks << mask;
+    }
+    addPaintLayer(image, root, COMPOSITE_SCREEN, 128, 114, QRect(200, 0, 300, 384));
+
+    auto compare = [&](const char *stage) {
+        const std::vector<float> gpu = readFloats(image->projection(), bounds);
+        const std::vector<float> cpu = render(image, false);
+        QPoint where;
+        const float error = f16 ? maxHalfUlpDifference(cpu, gpu, &where, bounds.width())
+                                : maxDifference(cpu, gpu, &where, bounds.width());
+        QVERIFY2(error <= (f16 ? 4.0f : 2e-5f),
+                 qPrintable(QString("%1: difference %2 at %3,%4, %5")
+                                .arg(stage)
+                                .arg(error)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(cpu, gpu, where, bounds.width()))));
+    };
+
+    QVERIFY(masked->gpuAppliesEffectMasks() == false); // the GPU projection is off
+    KisGpuMergeBatch::setEnabled(true);
+    QVERIFY(masked->gpuAppliesEffectMasks());
+    const quint64 coverageBefore = KisGpuProjectionCompositor::coverageCount();
+    render(image, true);
+    QVERIFY(KisGpuProjectionCompositor::coverageCount() >= coverageBefore + quint64(maskCount));
+    compare("full refresh");
+
+    // GPU strokes on the painted layer: its tiles become GPU-valid and
+    // CPU-stale, and neither the copy nor the masks may read them back.
+    render(image, true);
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    KisGpuMergeBatch::setEnabled(true);
+    for (int i = 0; i < 3; ++i) {
+        const QRect dab(64 + i * 70, 70 + i * 9, 128, 128);
+        KisPaintDeviceSP dabDevice = new KisPaintDevice(rgbaFloat(f16));
+        fillRandom(dabDevice, dab, 180 + i);
+        KisGpuProjectionCompositor::Layer layer;
+        layer.device = dabDevice;
+        layer.opacity = 0.7f;
+        QString error;
+        QVERIFY2(KisGpuProjectionCompositor::composite(painted->paintDevice(), dab, {layer}, &error),
+                 qPrintable(error));
+        backend->context().waitIdle();
+        const quint64 downloads = backend->downloadedTileCount();
+        const quint64 coverage = KisGpuProjectionCompositor::coverageCount();
+        painted->setDirty(dab);
+        image->waitForDone();
+        backend->context().waitIdle();
+        QCOMPARE(backend->downloadedTileCount(), downloads);
+        QVERIFY(KisGpuProjectionCompositor::coverageCount() > coverage);
+    }
+    compare("partial updates");
+
+    // Editing a mask: the selection changes on the CPU and is applied again.
+    render(image, true);
+    KisGpuMergeBatch::setEnabled(true);
+    const QRect edited(150, 120, 90, 70);
+    masks.first()->selection()->pixelSelection()->select(edited, 96);
+    masks.first()->selection()->updateProjection(edited);
+    masks.first()->setDirty(edited);
+    image->waitForDone();
+    compare("mask edit");
 }
 
 void KisGpuProjectionTest::benchmarkRefresh()

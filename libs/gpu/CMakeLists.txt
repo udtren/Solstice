@@ -63,6 +63,9 @@ kis_gpu_add_shader(kritagpu_SHADERS fill_tiles_rgba16f shaders/fill_tiles.comp D
 # Solstice: Clone Layer offsets (docs/agent/clone-layer.md)
 kis_gpu_add_shader(kritagpu_SHADERS copy_shifted_rgba32f shaders/copy_shifted.comp)
 kis_gpu_add_shader(kritagpu_SHADERS copy_shifted_rgba16f shaders/copy_shifted.comp DEFINES TILE_F16)
+# Solstice: transparency masks (docs/agent/gpu-engine.md, phase 4.113)
+kis_gpu_add_shader(kritagpu_SHADERS apply_coverage_rgba32f shaders/apply_coverage.comp)
+kis_gpu_add_shader(kritagpu_SHADERS apply_coverage_rgba16f shaders/apply_coverage.comp DEFINES TILE_F16)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba32f shaders/composite_layers.comp DEFINES BASIC_BLEND_ONLY
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl)
 kis_gpu_add_shader(kritagpu_SHADERS composite_layers_rgba16f shaders/composite_layers.comp DEFINES TILE_F16 BASIC_BLEND_ONLY
@@ -107,6 +110,7 @@ set(kritagpu_LIB_SRCS
     KisGpuSeparableConvolutionPass.cpp
     KisGpuMaskingCompositePass.cpp
     KisGpuShiftedCopyPass.cpp
+    KisGpuCoveragePass.cpp
 )
 
 if(WIN32)

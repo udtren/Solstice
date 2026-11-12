@@ -215,6 +215,9 @@ Document ownership and lifecycle are defined in
 - [Clone Layer updates](benchmarks/clone-layer-updates.md): update time and
   GPU downloads per dab for clone offsets, masks, RGBA8/F32 and nesting,
   before and after phases 4.110 and 4.111.
+- [Masked layer updates](benchmarks/masked-layer-updates.md): update time
+  and GPU downloads per dab on a layer with transparency masks, before and
+  after phase 4.113.
 - [Move Tool updates](benchmarks/move-layer-updates.md): time and GPU
   downloads per Move Tool step for a full-canvas layer, an object layer
   and a group, aligned and unaligned offsets, before and after phase 4.112.

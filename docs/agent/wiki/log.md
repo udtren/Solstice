@@ -2935,3 +2935,19 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Not verified: the manual check (GPU engine checklist item 19), and a
   Move Tool stroke with Instant Preview in an automated test
   (`move_stroke_test` is registered as broken upstream).
+
+## 2026-11-12 GPU engine: transparency masks (phase 4.113)
+
+- Request: work through the remaining CPU-only items of the GPU engine
+  guide. The user chose masks and filter layers first; integer layers,
+  small filter areas and wrap-around mode stay on the CPU by design. The
+  queue is in `docs/agent/gpu-work-priorities.md`.
+- Transparency masks are applied on the GPU (`KisGpuCoveragePass`,
+  `KisGpuProjectionCompositor::applyCoverage()`), and a layer whose effect
+  masks are all transparency masks copies its original on the GPU
+  (`KisLayer::gpuAppliesEffectMasks()`), Clone Layers included. Reference:
+  `docs/agent/gpu-engine.md`, "Transparency masks (phase 4.113)".
+- New benchmark page:
+  [Masked layer updates](benchmarks/masked-layer-updates.md): a dab update
+  on a masked layer 2.19 → 0.31 ms, 24.6 → 0 downloads.
+- Not verified: the manual check (GPU engine checklist item 20).

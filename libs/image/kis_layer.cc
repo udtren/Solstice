@@ -51,6 +51,10 @@
 #include "KisSafeNodeProjectionStore.h"
 #include "KisClipStackLayer.h"
 #include "kis_default_bounds.h"
+#include "gpu/KisGpuMergeBatch.h"
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuProjectionCompositor.h"
+#endif
 
 
 class KisCloneLayersList {
@@ -990,10 +994,38 @@ bool KisLayer::needProjection() const
     return false;
 }
 
+bool KisLayer::gpuAppliesEffectMasks() const
+{
+#ifdef HAVE_KRITA_GPU_ENGINE
+    if (!KisGpuMergeBatch::mayCompositeOnGpu(KisNodeSP(const_cast<KisLayer *>(this)))) {
+        return false;
+    }
+    const QList<KisEffectMaskSP> masks = effectMasks();
+    if (masks.isEmpty()) {
+        return false;
+    }
+    Q_FOREACH (const KisEffectMaskSP &mask, masks) {
+        if (!mask->inherits("KisTransparencyMask")) {
+            return false;
+        }
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
 void KisLayer::copyOriginalToProjection(const KisPaintDeviceSP original,
                                         KisPaintDeviceSP projection,
                                         const QRect& rect) const
 {
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // Solstice: keep the copy on the GPU when the masks are applied there
+    // (transparency masks, phase 4.113).
+    if (gpuAppliesEffectMasks() && KisGpuProjectionCompositor::copyShifted(projection, rect, original, QPoint())) {
+        return;
+    }
+#endif
     KisPainter::copyAreaOptimized(rect.topLeft(), original, projection, rect);
 }
 
