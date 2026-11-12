@@ -43,7 +43,8 @@ the linked benchmark page.
 GPU compositing of moved layers and groups (4.112, 2026-11-12) is
 implemented; [the contract](gpu-engine.md#moved-layers-and-groups-phase-4112)
 and [measurements](wiki/benchmarks/move-layer-updates.md) are linked. Its
-manual check (checklist item 19) is pending. Open, not requested: a group
+manual check (checklist item 19) was reported OK by the user on
+2026-11-12. Open, not requested: a group
 step still costs more than a layer step, and the final merge of a temporary
 target off the tile grid stays on the CPU.
 
@@ -54,16 +55,21 @@ and filter layers first; then filters, transforms and brushes (not yet
 ordered). Excluded by design: integer layers, filter areas below about
 180 x 180 pixels, wrap-around mode.
 
-- Done: moved layers (4.112), transparency masks (4.113, manual check
-  pending: checklist item 20), the Stroke layer style, outside with a
-  solid color (4.114, manual check pending: checklist item 21). The user
+- Done: moved layers (4.112), transparency masks (4.113, checklist item
+  20), the Stroke layer style, outside with a solid color (4.114,
+  checklist item 21). The user
   moved the stroke ahead of the filter layers on 2026-11-12, after a count
   of their documents (73 strokes against 7 filter layers in float
   documents). Filter layers with Desaturate, and in RGBA F16 with
   Posterize or channel curves, and the Copy blend mode at full opacity
-  (4.115, manual check pending: checklist item 22). Filter masks with
-  those filters, and Color Reference filter layers and masks in RGBA F16
-  (4.116, manual check pending: checklist item 23).
+  (4.115, checklist item 22). Filter masks with those filters, and Color
+  Reference filter layers and masks in RGBA F16 (4.116, checklist item
+  23).
+- Manual checks: the user ran checklist items 19 to 23 in the development
+  build on 2026-11-12 and reported them OK. The run found one crash
+  (adding a filter mask to a layer off the tile grid), fixed the same day
+  ([tile data lifetime of readers](gpu-engine.md#gpu-access-api)); the
+  user reported that it did not occur again with the fix.
 - Open from 4.116: Color Reference in RGBA F32 (the conversion to the
   working space has no table there) and with profiles of other primaries;
   the first Color Reference update of a session pauses about 0.2 s for

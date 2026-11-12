@@ -3039,3 +3039,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - A stress test did not reproduce the race; a single-threaded replay that
   counts tile data in the store fails without the fix.
 - Not verified: the user's scenario in the application after the fix.
+
+## 2026-11-12 GPU engine: manual checks of phases 4.112 to 4.116
+
+- The user ran checklist items 19 to 23 (moved layers and groups,
+  transparency masks, the Stroke layer style, filter layers, filter masks
+  and Color Reference) in the development build and reported them OK.
+- The run found the crash recorded above (a filter mask on a layer off
+  the tile grid). With the fix installed the user reported that it did not
+  occur again.
+- A question from the run, not a defect: a Desaturate filter layer inside
+  a group and a Desaturate filter mask on the group look different when
+  the group also has a Color Reference mask. A group's masks are applied
+  after its children, bottom mask first, so the filter layer runs before
+  the Color Reference mask and the filter mask above it runs after. The
+  CPU does the same.

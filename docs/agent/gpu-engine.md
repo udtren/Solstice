@@ -197,6 +197,9 @@ the GPU readers were not and used a freed `KisTileData`: a crash in
   `KisGpuProjectionTest::testOffGridMaskedLayerConcurrentUpdates` (the
   result of concurrent updates of such a layer; it did not hit the race
   without the fix in three runs).
+- In the application: the user repeated the scenario with the fix on
+  2026-11-12 and reported no crash. The race is a matter of timing, so
+  this shows that it no longer shows up, not more.
 
 ### Undo
 
@@ -1064,7 +1067,7 @@ kept their pixels.
 - Measurements: [Move Tool updates](wiki/benchmarks/move-layer-updates.md)
   (`KisMoveLayerBenchmark`, opt-in with `KRITA_MOVE_BENCHMARK=1`, and
   `KisMoveDocumentBenchmark` for a real `.kra`).
-- Manual check: checklist item 19.
+- Manual check (checklist item 19): reported OK by the user on 2026-11-12.
 
 ### Transparency masks (phase 4.113)
 
@@ -1124,7 +1127,7 @@ layers first).
   mask.
 - Measurements: [Masked layer updates](wiki/benchmarks/masked-layer-updates.md)
   (`KisMaskedLayerBenchmark`, opt-in with `KRITA_MASK_BENCHMARK=1`).
-- Manual check: checklist item 20.
+- Manual check (checklist item 20): reported OK by the user on 2026-11-12.
 
 ### Stroke layer style (phase 4.114)
 
@@ -1207,7 +1210,7 @@ with a solid color, 1-10 pixels wide, in Multiply, Lighten or Screen.
   blend.
 - Measurements: [Layer style updates](wiki/benchmarks/layer-style-updates.md)
   (`KisLayerStyleBenchmark`, opt-in with `KRITA_STYLE_BENCHMARK=1`).
-- Manual check: checklist item 21.
+- Manual check (checklist item 21): reported OK by the user on 2026-11-12.
 
 ### Filter layers (phase 4.115)
 
@@ -1326,7 +1329,7 @@ and one Color Adjustment curve (the RGBA curve).
   channels; the cache; refused transformations).
 - Measurements: [Filter layer updates](wiki/benchmarks/filter-layer-updates.md)
   (`KisFilterLayerBenchmark`, opt-in with `KRITA_FILTER_BENCHMARK=1`).
-- Manual check: checklist item 22.
+- Manual check (checklist item 22): reported OK by the user on 2026-11-12.
 
 ### Filter masks and Color Reference (phase 4.116)
 
@@ -1412,7 +1415,7 @@ mask on the main group of one of the user's RGBA F16 documents: about
   broken table). `KisColorReferenceFilterTest` covers the unchanged CPU
   filter.
 - Measurements: [Filter layer updates](wiki/benchmarks/filter-layer-updates.md).
-- Manual check: checklist item 23.
+- Manual check (checklist item 23): reported OK by the user on 2026-11-12.
 
 ## Technology and device requirements
 
