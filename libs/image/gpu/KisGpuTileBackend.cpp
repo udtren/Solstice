@@ -4,6 +4,7 @@
  */
 
 #include "KisGpuTileBackend.h"
+#include "KisGpuEngineSettings.h"
 #include "KisPaintTrace.h"
 
 #include <KisGpuBuffer.h>
@@ -34,6 +35,8 @@ constexpr int DownloadBatchTiles = 256;
 std::once_flag s_createOnce;
 KisGpuTileBackend *s_instance = nullptr;
 QString s_unavailableReason;
+QString s_unverifiedDeviceName;
+std::atomic<bool> s_creationTried{false};
 QMutex s_failureListenerMutex;
 std::function<void()> *s_failureListener = new std::function<void()>();
 std::atomic<bool> s_failureNotified{false};
@@ -74,13 +77,20 @@ KisGpuTileBackend *KisGpuTileBackend::instance()
 {
     std::call_once(s_createOnce, []() {
         QString error;
-        std::unique_ptr<KisGpuContext> context = KisGpuContext::create(&error);
+        // The engine starts by itself only on the hardware it was verified
+        // with; elsewhere the user has to allow it (user decision, 2026-11-12).
+        KisGpuContext::Options options;
+        options.requireVerifiedDevice = !KisGpuEngineSettings::unverifiedDeviceAllowed();
+        KisGpuDeviceInfo unverifiedDevice;
+        std::unique_ptr<KisGpuContext> context = KisGpuContext::create(options, &error, &unverifiedDevice);
         if (!context) {
             s_unavailableReason = error;
+            s_unverifiedDeviceName = unverifiedDevice.name;
             warnKrita << "GPU engine unavailable:" << error;
-            return;
+        } else {
+            s_instance = new KisGpuTileBackend(std::move(context));
         }
-        s_instance = new KisGpuTileBackend(std::move(context));
+        s_creationTried.store(true);
     });
     return s_instance;
 }
@@ -111,6 +121,18 @@ KisGpuTileBackend *KisGpuTileBackend::existingInstance()
 QString KisGpuTileBackend::unavailableReason()
 {
     return s_unavailableReason;
+}
+
+QString KisGpuTileBackend::unverifiedDeviceName()
+{
+    if (s_creationTried.load()) {
+        return s_unverifiedDeviceName;
+    }
+    if (KisGpuEngineSettings::unverifiedDeviceAllowed()) {
+        return QString();
+    }
+    const KisGpuDeviceInfo device = KisGpuContext::probeDevice();
+    return device.name.isEmpty() || KisGpuContext::acceptsDevice(device, true) ? QString() : device.name;
 }
 
 KisGpuContext &KisGpuTileBackend::context()

@@ -40,7 +40,7 @@ merged; documentation changes alone do not establish interactive acceptance.
 | Direction | Move the engine as a whole to the GPU, with CPU fallbacks. Upstream intake follows the global repository policy. |
 | GPU API | Vulkan. |
 | Working color space | GPU acceleration supports RGBA F32/F16 only. Other models remain editable on the CPU; opening conversion is optional and undoable (see the feature gate below). |
-| Hardware | NVIDIA Blackwell (RTX 50 series, RTX PRO Blackwell) is the only tested target. Other GPUs are untested and have no compatibility guarantee, but nothing Blackwell-specific is required: device selection accepts any GPU with the Vulkan 1.3 features in "Technology and device requirements", and `isBlackwell()` only logs a warning. Docs say "untested", never that other GPUs fall back to the CPU (user decision, 2026-10-14). |
+| Hardware | NVIDIA Blackwell (RTX 50 series, RTX PRO Blackwell) is the only tested target, and the only hardware the engine starts on by itself (user decision, 2026-11-12: the user has no other GPU and does not plan to get one). Other GPUs are untested and have no compatibility guarantee; nothing Blackwell-specific is required, so a GPU with the Vulkan 1.3 features in "Technology and device requirements" runs the engine once the user allows it (`Solstice/GpuEngineUnverifiedDevice`, see "Verified devices"). This replaces the decision of 2026-10-14 (the engine started on any capable GPU, and the docs never said that other GPUs fall back to the CPU): docs now say that other GPUs use the CPU until the option is checked. [Decision record](wiki/decisions/gpu-verified-devices.md). |
 | Priorities | All of brush latency, many-layer documents, and filters matter; current work order is maintained in [GPU priorities](gpu-work-priorities.md). |
 | Implementation workflow | Bundle several related implementation tasks and their automated checks into one manual-test handoff, as requested by the user. |
 
@@ -422,6 +422,60 @@ Continuous and Modulo Continuous ("All other blend modes").
   run would mix GPU merges with CPU-style job exclusivity. The environment
   variable `KRITA_GPU_PROJECTION` (`1` or `0`) overrides the setting.
   Documents that are not RGBA F32/F16 always use the CPU path.
+- **Verified devices** (2026-11-12). The engine being enabled is not enough
+  to start it: `KisGpuTileBackend::instance()` creates the context with
+  `KisGpuContext::Options::requireVerifiedDevice` unless
+  `KisGpuEngineSettings::unverifiedDeviceAllowed()` (the setting
+  `Solstice/GpuEngineUnverifiedDevice`, default off, or the environment
+  variable `KRITA_GPU_ALLOW_UNVERIFIED_DEVICE=1`).
+  - `KisGpuDeviceInfo::isVerified()` is `isBlackwell()`: NVIDIA, device id
+    0x2B00 or above. That also matches NVIDIA generations after Blackwell,
+    which nobody has tested; narrow it when one exists and misbehaves.
+  - A refused device is the same state as a machine without a usable
+    Vulkan GPU: no backend, every document on the CPU, no conversion offer
+    when opening (`gpuEngineUsable()` needs a backend), no error dialog.
+    `KisGpuContext::create()` refuses after device selection and before
+    the Vulkan device is created, and reports the device through its
+    `unverifiedDevice` argument.
+  - The check applies to the device that device selection picked (the
+    highest score). A machine with a Blackwell card and another GPU uses
+    the Blackwell card as before.
+  - Settings: the checkbox "Also use it with graphics cards it was not
+    verified with" (`KisGpuEngineSettingsWidget`, object name
+    `gpuEngineUnverifiedDevice`). The status line says "Not used: the GPU
+    engine was not verified with <card>…" when the card was or would be
+    refused: `KisGpuTileBackend::unverifiedDeviceName()` returns the
+    recorded name after the first start attempt, and before it asks Vulkan
+    with `KisGpuContext::probeDevice()` (instance and device selection
+    only, no Vulkan device), so the settings are right before any document
+    was opened. With the option checked on such a card the status line adds
+    "The GPU engine was not verified with this graphics card."
+  - The backend is created once per process, so the option applies after a
+    restart, like the engine switch. (If no float document was opened yet,
+    it applies to the first one; the status line asks for a restart in
+    both cases.)
+  - Existing profiles: the key is new, so a profile that ran the engine on
+    another GPU up to 0.9.1 gets the CPU path after the update until the
+    option is checked. Nothing else in the profile changes.
+  - Not changed: the Auto renderer (`kis_opengl.cpp`) still prefers
+    desktop OpenGL whenever `Solstice/GpuEngine` is on, also on a machine
+    where the engine is then refused, as it already did on machines
+    without a usable Vulkan GPU.
+  - Tests: `KisGpuEngineTest::testUnverifiedDevicesNeedOptIn` (the rule
+    with made-up vendor and device ids, then the refusal and the opt-in on
+    the machine's own device through
+    `KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED=1`),
+    `KisGpuEngineUiTest::testUnverifiedDeviceStatus` (the status line
+    before the engine started; asking does not start it) and
+    `testPreferences` (the checkbox and the key). With
+    `KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED=1` `KisGpuProjectionTest` skips
+    every GPU test with the refusal as the reason (926 skipped), and
+    passes again with `KRITA_GPU_ALLOW_UNVERIFIED_DEVICE=1` added (930
+    passed), 2026-11-12.
+  - Tests on other hardware: test programs that create a `KisGpuContext`
+    themselves (`libs/gpu/tests`) are not affected. The ones that go
+    through `KisGpuTileBackend` skip on an unverified GPU; set
+    `KRITA_GPU_ALLOW_UNVERIFIED_DEVICE=1` to run them there.
 - Opening a document (`KisMainWindow::slotLoadCompleted()`, deferred until
   the view is shown) calls `KisGpuEngineUi::offerConversion()`: if the
   engine is enabled and usable (Vulkan context created, not failed) and the
@@ -1429,7 +1483,7 @@ mask on the main group of one of the user's RGBA F16 documents: about
 | Shaders | GLSL compute, compiled at build time by the SDK's `glslc` (`--target-env=vulkan1.3 -O -mfmt=num`), included as word arrays (`kis_gpu_add_shader()` in `libs/gpu/CMakeLists.txt`). | No runtime compiler dependency; build fails on shader errors. |
 | Precision | RGBA F32/F16 storage; arithmetic and rounding follow each CPU operation, including double and intermediate half rounding where required. | Preserve operation-specific parity; F16 halves tile storage. |
 | Display | GL/Vulkan shared-buffer interop with exported memory, binary semaphores and device UUID check. | Retain the existing OpenGL canvas, OCIO and decorations; shared-image interop is not the production upload path. |
-| Device choice | Highest score: discrete GPU, then NVIDIA vendor; requires a graphics+compute queue with timestamps. `KisGpuDeviceInfo::isBlackwell()` (NVIDIA device id ≥ 0x2B00) is informational and logs a warning when false. | Blackwell-only target without hard-failing development on other GPUs. |
+| Device choice | Highest score: discrete GPU, then NVIDIA vendor; requires a graphics+compute queue with timestamps. `KisGpuDeviceInfo::isBlackwell()` (NVIDIA device id ≥ 0x2B00) defines `isVerified()`: with `Options::requireVerifiedDevice` (set by the application unless the user allowed other devices) `create()` refuses any other selected device; without it, it logs a warning. | Blackwell-only target; other GPUs by explicit opt-in, and without hard-failing development on them. |
 | Validation | `KRITA_GPU_VALIDATION=1` enables `VK_LAYER_KHRONOS_validation` plus a debug messenger that counts errors (`validationErrorCount()`). | Tests assert zero validation errors. |
 
 ### Numerical parity
@@ -1663,8 +1717,16 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   `Solstice/GpuEngineConvertDocuments` (int: 0 Ask, 1 Convert to F32, 2 Keep,
   3 Convert to F16; values 0/1/2 retained for compatibility, 2026-10-15;
   default 0). See "Feature gate and user interface".
+- kritarc (default group): `Solstice/GpuEngineUnverifiedDevice` (bool,
+  default false, 2026-11-12): run the engine on a GPU it was not verified
+  with. See "Verified devices" under "Feature gate and user interface".
 - Environment `KRITA_GPU_PROJECTION=1` or `0` overrides `Solstice/GpuEngine`
   (development switch; `KisGpuMergeBatch::setEnabled()` in tests).
+- Environment `KRITA_GPU_ALLOW_UNVERIFIED_DEVICE=1` allows unverified
+  devices without the setting (tests on other hardware).
+  `KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED=1` makes every device count as
+  unverified where verification is required (to see the refusal on
+  Blackwell hardware).
 - Device selection refuses `VK_PHYSICAL_DEVICE_TYPE_CPU` devices (software
   Vulkan such as lavapipe or SwiftShader, typical in virtual machines; they
   are slower than the CPU paths), 2026-10-11 at the user's request:
@@ -1914,6 +1976,22 @@ Record the build, format, workload and result separately from earlier acceptance
     conversion tables). Repeat the Color Reference mask as a filter layer,
     in an RGBA 32-bit float image (CPU path), and with Instant Preview at
     a zoom below 50 %.
+24. Verified devices (2026-11-12). On the Blackwell machine, start
+    Solstice with `KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED=1` in the
+    environment and the option "Also use it with graphics cards it was not
+    verified with" unchecked.
+    - Before opening a document, the status line under Settings →
+      Configure Solstice → Performance → General reads "Not used: the GPU
+      engine was not verified with <card>. Check the option above to use
+      it anyway."
+    - Open an RGBA float document and an 8-bit document: no conversion
+      question, painting and moving layers work (on the CPU), no error
+      dialog.
+    - Check the option, restart with the same environment: the status
+      line reads "Active on <card>." after a float document was opened,
+      and the conversion question is back for the 8-bit document.
+    - Without the environment variable and with the option unchecked
+      (the normal state on this machine), the engine is active as before.
 
 ## Phase history
 

@@ -3067,3 +3067,25 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: try a diagnostic step in the application before writing it into
   a checklist; the step had been written from the canvas code alone,
   without the view's early return.
+
+## 2026-11-12 GPU engine: default on only on verified GPUs
+
+- The user asked how other GPUs should be handled, having only a Blackwell
+  card and no plan for another. Decision: the engine starts by itself on
+  NVIDIA Blackwell only; other capable GPUs need the new option "Also use
+  it with graphics cards it was not verified with"
+  (`Solstice/GpuEngineUnverifiedDevice`).
+  [Decision](decisions/gpu-verified-devices.md); reference in
+  `docs/agent/gpu-engine.md` ("Verified devices").
+- This replaces the 2026-10-14 entry "other GPUs are untested, not
+  CPU-only": they are CPU-only now until the option is checked.
+- A refused device goes down the path a machine without a usable Vulkan GPU
+  already took, so no call site needed a new case.
+- The settings status line could not have named the card before the first
+  float document was opened (the backend is created lazily), and would have
+  said "Enabled; starts with the first RGBA float document" on a card where
+  it never starts. `KisGpuContext::probeDevice()` asks Vulkan without
+  creating a device.
+- Not verified: the settings and the refusal in the running application
+  (checklist item 24); the behavior on a GPU other than Blackwell, which is
+  only simulated with `KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED=1`.

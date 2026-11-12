@@ -93,6 +93,7 @@ private:
     QCheckBox *m_enabled;
     /// Solstice: the GPU brush (Solstice/GpuBrush)
     QCheckBox *m_brush;
+    QCheckBox *m_unverifiedDevice;
     QComboBox *m_convertPolicy;
     QLabel *m_status;
 };

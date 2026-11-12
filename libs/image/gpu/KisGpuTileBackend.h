@@ -42,6 +42,15 @@ public:
     static KisGpuTileBackend *existingInstance();
     static QString unavailableReason();
     /**
+     * The name of the graphics card when the engine did not start because
+     * it was not verified with it and the user has not allowed other cards
+     * (KisGpuEngineSettings::unverifiedDeviceAllowed()); empty otherwise.
+     * Before instance() was first called this asks Vulkan which card it
+     * would be (no device is created), so that the settings can say it
+     * before the first document starts the engine.
+     */
+    static QString unverifiedDeviceName();
+    /**
      * GPU engine (Solstice, phase 4.91): compiles the dab and layer compositor
      * pipelines (RGBA32F/F16, basic and extended blend modes) ahead of the
      * first stroke. Blocking and thread-safe; meant for a background thread.
