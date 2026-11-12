@@ -1,7 +1,10 @@
 ---
 type: history
-status: prepared 2026-11-13 JST; not built, not released
+status: released and verified 2026-11-13 JST
 sources:
+  - 0bb81c7190dd144b3b7d8c5fb9956c7961076db5
+  - https://github.com/udtren/Solstice/actions/runs/43246462782
+  - https://github.com/udtren/Solstice/releases/tag/v1.0.0
   - https://github.com/udtren/Solstice/pull/79
   - https://github.com/udtren/Solstice/pull/80
   - https://github.com/udtren/Solstice/pull/81
@@ -10,50 +13,23 @@ sources:
   - https://github.com/udtren/Solstice/pull/84
   - https://github.com/udtren/Solstice/pull/85
   - https://github.com/udtren/Solstice/pull/86
+  - https://github.com/udtren/Solstice/pull/87
+  - https://github.com/udtren/tidalboxstudio-web/pull/37
+  - https://github.com/udtren/tidalboxstudio-web/pull/38
   - docs/agent/versioning.md (Releasing, History)
   - docs/agent/gpu-engine.md (manual regression checklist, items 19 to 24)
 ---
 
-# Solstice 1.0.0 release: preparation and handoff
+# Solstice 1.0.0 release verification
 
-The user asked on 2026-11-13 for the release after 0.9.1 to be 1.0.0, and
-to have the build, the GitHub Release and the website update done by a
-cloud session. This page is what the local session prepared and what is
-left. When the release exists, turn it into the verification record, like
-[0.9.1](release-0.9.1.md): replace the status line, add the build,
-artifact, website and verification sections, and keep "Contents".
+Published 2026-11-12 at 23:47:29 UTC (2026-11-13 08:47:29 JST) as a regular
+release, marked latest. The user asked on 2026-11-13 for the release after
+0.9.1 to be 1.0.0 (`MAJOR`: the first version outside the 0.x series; no
+other meaning was stated, so the documents claim none).
 
 Current procedures: [Actions operations](../../github-actions.md) and
-[Releasing](../../versioning.md#releasing).
-
-## Done in the preparation pull request
-
-- `SOLSTICE_VERSION_*` set to 1.0.0 (empty label, build 0); the version
-  history row, the user guide "Versions" and the versioning decision
-  updated.
-- Manual check 24 recorded as reported OK by the user.
-- Not changed, on purpose: README's "What's new in 0.9.1", the guide index
-  `docs/README.md` and the website. They describe the latest release that
-  exists and change after the GitHub Release is published (step 3 of
-  "Releasing").
-
-## Left to do
-
-1. Merge the preparation pull request into `main` (the user decides).
-2. Run the "Windows x64 trial build" workflow on `main` and wait for it:
-   `gh workflow run windows-build.yml --ref main`.
-3. Create the GitHub Release `v1.0.0` at the built commit as a regular
-   release (no label), as a draft first. Attach the application ZIP,
-   `-dbg.zip`, `SHA256SUMS.txt`, `BUILD-INFO.txt` and
-   `windows-dependencies.lock.json`; verify the downloaded ZIPs and
-   checksums; publish. Draft notes are below.
-4. In a feature-branch pull request: README "What's new in 1.0.0" (and its
-   Contents entry), `docs/README.md`, the History row of
-   `docs/agent/versioning.md` (commit, pull request, run), this page, the
-   wiki index and log.
-5. Website the same day, after the release exists: `solstice/src/site.ts`
-   on `develop` of `tidalboxstudio-web`, check, build, merge to `main`,
-   check the live Download page.
+[Releasing](../../versioning.md#releasing). This record is dated evidence,
+not verification of later builds.
 
 ## Contents
 
@@ -81,56 +57,65 @@ documents):
   Blackwell. On other GPUs it stays off until "Also use it with graphics
   cards it was not verified with" is checked
   ([decision](../decisions/gpu-verified-devices.md)). This changes
-  behavior for anyone who ran the engine on another GPU.
-- Documentation (PR #84) and this preparation.
+  behavior for anyone who ran the engine on another GPU; the release notes
+  say so.
+- Documentation (PR #84) and the version preparation (PR #87).
 
 Exact scope and limits: `docs/gpu-engine.md` ("What runs on the GPU", "What
 stays on the CPU", "Requirements").
 
-## Draft release notes
+## Build and artifacts
 
-Follow the structure of the 0.9.1 and 0.9.0 notes. Fill in the file name,
-commit, run and checksums from the build; do not publish the measured
-values below without the conditions next to them.
+- **Tag and build commit:** `0bb81c7190dd144b3b7d8c5fb9956c7961076db5`, the
+  `main` merge of PR #87.
+- **Run 43246462782** (number 36, 15:19 to 16:45 UTC on 2026-11-12):
+  configuration, compilation, installation, packaging and artifact upload
+  all passed. `BUILD-INFO.txt`: version 1.0.0, the commit above, GPU engine
+  compiled, G'MIC CPU runtime 3.7.4.1.
+- **ZIP integrity:** both ZIPs matched `SHA256SUMS.txt` and passed full CRC
+  checks: 5,323 application entries and 221 debug entries. The packaged
+  `SHA256SUMS.txt` has CRLF line endings; `sha256sum -c` on Git Bash reads
+  the `\r` as part of the file name, so strip it first
+  (`tr -d '\r' < SHA256SUMS.txt | sha256sum -c -`).
+- **Files present:** `Solstice.exe`, `bin/solstice.exe`,
+  `bin/libkritagpu.dll`, `bin/python3.dll`, `lib/site-packages/PyQt6`,
+  466 QML files, `lib/kritaplugins/krita_gmic_qt.dll` with the G'MIC data
+  and `share/gmic/source`, the ja and zh_CN `krita.mo` under `bin/locale`,
+  and `shellex/register-thumbnails.cmd`. `libkritaui.dll` contains the new
+  option text ("verified with").
+- **Dependency lock:** the packaged lock (CRLF) equals
+  `build-tools/github-actions/windows-dependencies.lock.json` at the build
+  commit after line-ending normalization.
+- **Windows metadata:** ProductName `Solstice`, file and product version
+  `1.0.0 (git 0bb81c7)`, numeric version `1.0.0.0`.
+- **Version call:** not run. `solstice.com --version` started without a
+  console shows a dialog instead of printing (see below), and the cloud
+  session that first checked the package had no Windows.
+- **Publication:** created as a draft from the local session; all five
+  assets downloaded again from the draft were byte-identical to the
+  verified files before it was published. The tag resolves to the built
+  commit.
 
-```markdown
-Solstice 1.0.0 moves more of the layer stack to the GPU: moved layers and
-groups, transparency masks, the Stroke layer style, and filter layers and
-filter masks with the most common color filters.
+| Asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `Solstice-1.0.0-windows-x64-0bb81c7190dd.zip` | 418756064 | `515ae1546fcba8900b15a244f0ebd0124abed7fde367f31cb06ccbd161baf3ab` |
+| `Solstice-1.0.0-windows-x64-0bb81c7190dd-dbg.zip` | 12447991 | `0f97617afa89b3a37e3ccbf123f25e974da0a8c1b165e681a271eb55688405be` |
 
-## What's new since 0.9.1
+## Website
 
-All of the following applies to RGBA 16-bit and 32-bit float documents
-with the GPU Engine on.
-
-- **Moved layers and groups (#79):** layers and groups are composited on
-  the GPU wherever they are. Up to 0.9.1 a layer moved by a distance that
-  was not a multiple of 64 pixels was composited on the CPU, also after
-  the move. The Move Tool follows the pointer without reading the image
-  back.
-- **Transparency masks (#80)** are applied on the GPU.
-- **The Stroke layer style (#81)**, outside the layer with a solid color
-  and up to 16 pixels wide, is drawn on the GPU with its layer or group.
-- **Filter layers and filter masks (#82, #83):** Desaturate in both
-  depths; Posterize, Color Adjustment curves and Color Reference in RGBA
-  16-bit float. The Copy blend mode at 100 % opacity is composited on the
-  GPU.
-- **Crash fix (#85):** adding a filter or transparency mask to a layer
-  whose position is not a multiple of 64 pixels could crash Solstice.
-- **The GPU Engine starts by itself only on NVIDIA Blackwell (#86).** On
-  other graphics cards it now stays off, and Solstice works on the CPU,
-  until you check **Also use it with graphics cards it was not verified
-  with** under Settings → Configure Solstice → Performance → General and
-  restart. If you used the engine on another graphics card, check that
-  option after updating. Other settings are kept.
-
-1.0.0 includes everything in 0.9.1.
-```
-
-For "Scope and supported environment", replace the 0.9.x sentence about
-other GPUs: the engine remains experimental, is developed and tested on an
-RTX PRO 6000 Blackwell, and is not used on other GPUs unless the option is
-checked.
+- **tidalboxstudio-web #37**, merged into `develop` at 23:48:09 UTC, after
+  the release existed: version and release link 1.0.0 in
+  `solstice/src/site.ts`, the current GPU Engine settings image, and the
+  GPU engine wording ("on by default" replaced: it starts by itself only
+  on NVIDIA Blackwell) on the GPU engine, Download, home, FAQ and
+  Differences pages in both languages, recorded in `docs/solstice-site.md`.
+  Prepared by the cloud session; `npm run check` (0 errors) and
+  `npm run build` (40 pages) passed again locally before the merge.
+- **#38** published `develop` through `main` at 23:48:23 UTC; the live site
+  showed 1.0.0 by 23:49:30 UTC.
+- **Live check:** home, Download and GPU engine pages in both languages and
+  `/features/` return 200 and show 1.0.0; `/go/release` from all four
+  buttons redirects to v1.0.0. No page was viewed in a browser.
 
 ## Verification before the release (local, Windows 11, RTX PRO 6000 Blackwell)
 
@@ -146,18 +131,14 @@ checked.
 - **After the version change (2026-11-13):** full local rebuild and
   install. CMake reports `Solstice version: 1.0.0`; `kritaversion.h` has
   `SOLSTICE_VERSION_STRING "1.0.0"` and `KRITA_VERSION_STRING
-  "6.0.5-prealpha"`; `solstice.exe` reports ProductName `Solstice`, file
-  and product version `1.0.0 (git a0df294)`, numeric `1.0.0.0`; the usage
-  log of a start says "Solstice Version: 1.0.0 (git a0df294), based on
-  Krita: 6.0.5-prealpha". `KisGpuEngineTest` (19), `KisGpuEngineUiTest`
-  (14) and `KisGpuProjectionTest` (930) passed. The full regression set
-  was not run again: the change is the version number.
+  "6.0.5-prealpha"`; the local `solstice.exe` reports file and product
+  version `1.0.0 (git a0df294)`. `KisGpuEngineTest` (19),
+  `KisGpuEngineUiTest` (14) and `KisGpuProjectionTest` (930) passed. The
+  full regression set was not run again: the change is the version number.
 - **`solstice.com --version` on the desktop:** started from a process
   without a console of its own, it shows the version in a dialog and waits
   for a click instead of printing; with output redirected nothing is
-  written. The local session took the wait for a hang and stopped three
-  such processes before the user said that they had clicked the first
-  dialog. The package check of earlier releases printed `krita <version>`;
+  written. The package check of earlier releases printed `krita <version>`;
   if a release session sees no output, it is this dialog, not a failure.
 
 ## Not verified
@@ -170,5 +151,16 @@ checked.
   still open and unreproduced.
 - The concurrent crash of PR #85 was not reproduced by a stress test; a
   single-threaded replay fails without the fix.
-- The release package: nothing here tests it. The cloud build uses
-  `BUILD_TESTING=OFF`.
+- The release package was not started: neither the interactive
+  application nor `--version`. The cloud build uses `BUILD_TESTING=OFF`.
+
+## Process notes
+
+- The user had the build and release done by a cloud session. It built
+  and checked the package, prepared the website branch, and wrote the
+  notes, but `gh release create` returned HTTP 403 ("not permitted for
+  this session type"): a cloud session cannot create a GitHub Release.
+  The local session downloaded the artifact again, repeated the package
+  checks, created the draft, published it and merged the website PRs.
+- A cloud session's notes file stays in its sandbox; the local session
+  rebuilt the notes from the draft on this page and the build values.

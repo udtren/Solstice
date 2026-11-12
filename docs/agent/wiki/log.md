@@ -3109,3 +3109,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   local session (what was checked by hand, what was not, the behavior
   change of PR #86 for the notes) has to be in the repository before it
   starts, not in the local conversation.
+
+## 2026-11-13 release: Solstice 1.0.0
+
+- Released `v1.0.0` at `0bb81c7190dd` (PR #87, run 43246462782) on
+  2026-11-13 08:47 JST and published the website the same day
+  (tidalboxstudio-web #37, #38). Evidence:
+  [1.0.0 release verification](history/release-1.0.0.md).
+- README, the guide index and the [version ledger](../versioning.md#history)
+  now describe 1.0.0 as released.
+- Lessons: a cloud session can build and check a release but cannot create
+  the GitHub Release (HTTP 403), so the release itself needs a local
+  session. The packaged `SHA256SUMS.txt` has CRLF line endings; strip them
+  before `sha256sum -c` on Git Bash.
