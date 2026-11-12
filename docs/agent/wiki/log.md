@@ -3054,3 +3054,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   after its children, bottom mask first, so the filter layer runs before
   the Color Reference mask and the filter mask above it runs after. The
   CPU does the same.
+
+## 2026-11-12 GPU engine: the Ctrl+Y diagnostic does nothing in float documents
+
+- The white-rectangle entry of `docs/agent/gpu-engine.md` ("Risks and open
+  questions") asked for a soft proofing toggle (Ctrl+Y twice) to refetch
+  the canvas. The user tried it: "Soft Proofing doesn't work in floating
+  point". `KisView::slotSoftProofing()` returns before the canvas refetch
+  for float documents, so the step never did anything where the GPU
+  engine runs. Replaced by turning a channel off and on in the Channels
+  docker (`KisCanvas2::channelSelectionChanged()`), from the code.
+- Lesson: try a diagnostic step in the application before writing it into
+  a checklist; the step had been written from the canvas code alone,
+  without the view's early return.

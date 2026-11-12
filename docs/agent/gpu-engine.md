@@ -2045,6 +2045,9 @@ Section index:
   Not reproduced by `KisGpuProjectionStressTest` (7,500 strokes including
   LOD) or live through Test Control (760 strokes: canvas captures before and
   after a soft proofing refetch, projection before and after Undo/Redo).
+  Correction (2026-11-12): toggling soft proofing does not refetch the
+  canvas in a float document (next item), so if that run toggled the
+  action, its two canvas captures showed the same canvas state.
   - Found while re-reading (2026-11-12) and fixed: `KisTiledExtentManager`
     could keep an extent smaller than the device's tiles after concurrent
     tile additions. Compositing skips a layer outside its extent
@@ -2053,10 +2056,20 @@ Section index:
     Not shown to be the cause: it needs rows or columns appearing at the
     edge of a device, and the report is in the middle of a figure. See
     [the pitfall](wiki/pitfalls/extent-smaller-than-tiles.md).
-  - Next evidence needed when it appears again: whether toggling soft
-    proofing twice (Ctrl+Y) removes it (then the canvas upload is wrong,
-    otherwise the projection), the zoom, and whether the brush uses instant
-    preview.
+  - Next evidence needed when it appears again: whether a refetch of the
+    canvas removes it (then the canvas upload is wrong, otherwise the
+    projection), the zoom, and whether the brush uses instant preview.
+    - To refetch: turn one channel off and on again in the Channels
+      docker. `KisCanvas2::channelSelectionChanged()` updates the whole
+      image on the canvas; with a channel off the canvas reads the
+      projection on the CPU, with all channels on it uses the GPU upload
+      again. From the code; not tried on a visible defect yet.
+    - Not Ctrl+Y: this document asked for the soft proofing toggle until
+      2026-11-12, when the user found that it only shows "Soft Proofing
+      doesn't work in floating point". `KisView::slotSoftProofing()`
+      returns before `KisCanvas2::slotSoftProofing()` (and its
+      `refetchDataFromImage()`) for float documents, the only ones the
+      GPU engine handles.
 
 - Interop requires desktop OpenGL. With the engine on, "Auto" picks it on
   Windows unless the driver is blacklisted; an explicit ANGLE choice still
