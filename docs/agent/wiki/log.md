@@ -2855,3 +2855,28 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   worktree can be fixed from a detached HEAD here and pushed with
   `git push origin HEAD:<branch>`, without touching that worktree. Wiki
   `related` takes wiki pages only; feature documents go under `sources`.
+
+## 2026-11-12 ingest: device extent race, white rectangle re-read
+
+- Re-read the tile residency, copy-on-write, eviction, merge and canvas
+  code for the white rectangle reported on 2026-11-11. Measured the
+  screenshot: 183x30 px, straight edges, fitting the 64 px tile grid at
+  about 48 % or 41 % zoom, so the first reading (the shape of an update
+  rect) was too narrow. Both zooms use instant preview with a large brush;
+  its resume path issues grid-aligned strips
+  (`KisRegion::fromOverlappingRects(..., 64)`), for which the projection
+  clear drops whole tiles on the CPU.
+- Found and fixed a lost update in `KisTiledExtentManager::updateExtent()`
+  (upstream code): the extent could stay smaller than the tiles, and
+  compositing skips a layer outside its extent. New pitfall:
+  [A device extent smaller than its tiles](pitfalls/extent-smaller-than-tiles.md).
+  Test `stressTestExtentAfterConcurrentAdds` fails without the fix (261 of
+  50,000 rounds) and passes with it. Not shown to cause the report.
+- Checked and found consistent: the CPU/GPU validity word, download against
+  publish ordering (state mutex), eviction pins, restore of pending
+  copy-on-write clones. Two narrow windows remain theoretical: a pre-made
+  clone created between `dropClones()` and the publish of an in-place GPU
+  write, and a read-only snapshot published while a CPU write lock is held
+  (cleared at unlock).
+- Lesson: `KisGpuProjectionStressTest` cannot see a wrong extent; noted in
+  the GPU engine build/test notes.
