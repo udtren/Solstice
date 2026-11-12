@@ -781,3 +781,29 @@ layer's projection stays there. Details: `docs/agent/gpu-engine.md`,
   and filter (adjustment) layers come next. Not planned: integer layers,
   filter areas below about 180 x 180 pixels and wrap-around mode stay on
   the CPU by design.
+
+## Stroke layer style (phase 4.114)
+
+2026-11-12, user request. A layer or group whose only style effect is a
+Stroke outside it with a solid color is composited with the stroke on the
+GPU. Details: `docs/agent/gpu-engine.md`, "Stroke layer style (phase
+4.114)"; numbers: [Layer style updates](../benchmarks/layer-style-updates.md).
+
+- The plan was filter layers next. Counting the user's 79 documents showed
+  73 Stroke styles against 7 filter layers in float documents, and one
+  kind of stroke only (Outside, Solid Color), so the user chose the stroke
+  first and the first version covers exactly that kind.
+- Measured first (`KisLayerStyleBenchmark`): the stroke cost 7-9 ms per
+  dab and 220-265 ms per full refresh on the GPU engine, and nearly as
+  much with the engine off. The CPU cost is the style's own work
+  (selection copies, the convolution, clones), not only the readback.
+- The dilation is a real convolution with an unnormalized disc kernel, not
+  a morphological maximum. Summed in double on the GPU it reproduces the
+  CPU's 8-bit rounding, so the stroke's coverage is exact.
+- Found by the group rows of the new test: the merger's temporary
+  projection (need rect varies) was copied into the group's projection on
+  the CPU, 21-27 tile downloads per dab. `writeProjection()` now copies on
+  the GPU.
+- Not done: Inside and Center strokes (the same pass could compute them),
+  gradient and pattern fills, the other effects (Drop Shadow, Glow and
+  others use the Gaussian blur, which has a GPU path), Instant Preview.

@@ -12,6 +12,7 @@
 #include <QVector>
 
 #include <KisGpuLayerCompositor.h>
+#include <KoColor.h>
 
 #include "kis_types.h"
 #include "kritaimage_export.h"
@@ -122,6 +123,52 @@ public:
     applyCoverage(KisPaintDeviceSP device, const QRect &rect, const quint8 *coverage, QString *errorMessage = nullptr);
     /// Successful applyCoverage() calls since startup (tests and measurements).
     static quint64 coverageCount();
+
+    /**
+     * Solstice: Stroke layer style (docs/agent/gpu-engine.md, phase 4.114).
+     * A layer with an outside, solid color Stroke style, as
+     * KisLayerStyleProjectionPlane::apply() composites it.
+     */
+    struct StrokeStyle {
+        KisPaintDeviceSP layer; ///< the layer's projection
+        KisGpuBlendOp layerOp = KisGpuBlendOp::Over;
+        float layerOpacity = 1.0f;
+        bool layerAlphaLocked = false;
+        quint32 layerChannelMask = 0xf;
+
+        KoColor strokeColor; ///< in the projection's color space
+        KisGpuBlendOp strokeOp = KisGpuBlendOp::Over;
+        float strokeOpacity = 1.0f;
+        bool strokeAlphaLocked = false;
+        quint32 strokeChannelMask = 0xf;
+        qreal strokeSize = 1.0; ///< pixels; at most KisGpuStrokeStylePass::MaxRadius
+    };
+
+    /// Whether compositeStrokeStyle() can run at all (GPU with 64-bit float shaders).
+    static bool supportsStrokeStyle();
+    /// Blend modes compositeStrokeStyle() accepts for the layer and the stroke.
+    static bool strokeStyleSupportsBlendOp(KisGpuBlendOp op);
+    /// Largest stroke size compositeStrokeStyle() accepts.
+    static int maxStrokeStyleSize();
+
+    /**
+     * Composites the layer and its stroke onto @p projection inside
+     * @p rect: the layer with its alpha maxed out, and the stroke color
+     * where the dilated layer alpha reaches outside the layer, copied
+     * through that coverage like the CPU's knockout.
+     *
+     * The projection and the layer must share an RGBA F32/F16 color space,
+     * the layer needs a transparent default pixel, and the projection an
+     * offset that is a multiple of 64. Does not wait.
+     *
+     * @return false when unsupported or on failure; the projection is then unchanged
+     */
+    static bool compositeStrokeStyle(KisPaintDeviceSP projection,
+                                     const QRect &rect,
+                                     const StrokeStyle &style,
+                                     QString *errorMessage = nullptr);
+    /// Successful compositeStrokeStyle() calls since startup (tests and measurements).
+    static quint64 strokeStyleCount();
 };
 
 #endif // KISGPUPROJECTIONCOMPOSITOR_H

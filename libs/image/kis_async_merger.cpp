@@ -34,7 +34,9 @@
 #include "kis_abstract_projection_plane.h"
 
 #ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuProjectionCompositor.h"
 #include "gpu/KisGpuTileAccess.h"
+#include "layerstyles/kis_layer_style_projection_plane.h"
 #endif
 
 
@@ -341,13 +343,24 @@ void KisAsyncMerger::setupProjection(KisProjectionLeafSP currentLeaf, const QRec
 
 void KisAsyncMerger::writeProjection(KisProjectionLeafSP topmostLeaf, bool useTempProjection, const QRect &rect) {
     Q_UNUSED(useTempProjection);
-    Q_UNUSED(topmostLeaf);
     if (!m_currentProjection) return;
 
     m_gpuBatch.flush();
 
     if(m_currentProjection != m_finalProjection) {
-        KisPainter::copyAreaOptimized(rect.topLeft(), m_currentProjection, m_finalProjection, rect);
+        bool copied = false;
+#ifdef HAVE_KRITA_GPU_ENGINE
+        // GPU engine (phase 4.114): the temporary projection (used when the
+        // need rect varies: layer styles on groups, filter masks) was
+        // composited on the GPU; a CPU copy would read it back.
+        copied = topmostLeaf && KisGpuMergeBatch::mayCompositeOnGpu(topmostLeaf->node())
+            && KisGpuProjectionCompositor::copyShifted(m_finalProjection, rect, m_currentProjection, QPoint());
+#else
+        Q_UNUSED(topmostLeaf);
+#endif
+        if (!copied) {
+            KisPainter::copyAreaOptimized(rect.topLeft(), m_currentProjection, m_finalProjection, rect);
+        }
     }
     DEBUG_NODE_ACTION("Writing projection", "", topmostLeaf->parent(), rect);
 }
@@ -365,6 +378,21 @@ bool KisAsyncMerger::compositeWithProjection(KisProjectionLeafSP leaf, const QRe
     // GPU engine: defer supported layers into one GPU dispatch
     if (m_gpuBatch.tryAdd(leaf, m_currentProjection, rect))
         return true;
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // GPU engine (phase 4.114): a layer whose style is a Stroke the GPU
+    // can draw is composited together with it.
+    if (KisLayerStyleProjectionPlane *stylePlane =
+            dynamic_cast<KisLayerStyleProjectionPlane *>(leaf->projectionPlane().data())) {
+        if (stylePlane->gpuCompositesStyles()) {
+            m_gpuBatch.flush();
+            if (stylePlane->applyOnGpu(m_currentProjection, rect)) {
+                return true;
+            }
+        }
+    }
+#endif
+
     m_gpuBatch.flush(true);
 
 #ifdef HAVE_KRITA_GPU_ENGINE

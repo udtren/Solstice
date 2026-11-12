@@ -34,6 +34,10 @@ On RGBA 32-bit and 16-bit float layers:
   so the Move Tool follows the pointer without reading the image back.
   (Up to Solstice 0.9.1, a layer moved by a distance that was not a
   multiple of 64 pixels was composited on the CPU, also after the move.)
+- **The Stroke layer style** (outside the layer, with a solid color, up to
+  16 pixels wide) is drawn on the GPU together with its layer or group.
+  Other layer style effects, and strokes inside or centered on the edge or
+  filled with a gradient or pattern, are computed on the CPU.
 - **Transparency masks** are applied on the GPU, on paint layers, groups
   and Clone Layers, so painting on a masked layer does not read the layer
   back. Filter masks still run on the CPU.
@@ -54,7 +58,8 @@ long without AVX2).
 
 - Other filters, and the sharpening step of Unsharp Mask. Filter areas
   smaller than about 180 x 180 pixels, the reduced-resolution Instant Preview,
-  integer layers, wrap-around mode, layer styles and the Colorize Mask.
+  integer layers, wrap-around mode, layer styles other than the Stroke
+  described above, and the Colorize Mask.
 - Perspective, Warp, Cage and Mesh transforms, older Puppet Warp transforms,
   and the preview while editing a transform.
 - Painting the masking brush's mask; animated (`.gih`) and text brush tips;

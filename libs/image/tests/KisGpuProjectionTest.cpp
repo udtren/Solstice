@@ -38,8 +38,10 @@
 #include "kis_paint_layer.h"
 #include "kis_painter.h"
 #include "kis_pixel_selection.h"
+#include "kis_psd_layer_style.h"
 #include "kis_selection.h"
 #include "kis_transparency_mask.h"
+#include "layerstyles/kis_layer_style_projection_plane.h"
 #include "tiles3/kis_tile.h"
 
 #include <algorithm>
@@ -90,6 +92,8 @@ private Q_SLOTS:
     void testMovedGroupMatchesCpu();
     void testTransparencyMaskMatchesCpu_data();
     void testTransparencyMaskMatchesCpu();
+    void testStrokeStyleMatchesCpu_data();
+    void testStrokeStyleMatchesCpu();
     void benchmarkRefresh();
 };
 
@@ -1706,6 +1710,160 @@ void KisGpuProjectionTest::testTransparencyMaskMatchesCpu()
     masks.first()->setDirty(edited);
     image->waitForDone();
     compare("mask edit");
+}
+
+void KisGpuProjectionTest::testStrokeStyleMatchesCpu_data()
+{
+    QTest::addColumn<bool>("f16");
+    QTest::addColumn<QString>("kind");
+    QTest::addColumn<int>("size");
+    QTest::addColumn<QString>("strokeMode");
+    for (bool f16 : {false, true}) {
+        for (const QString &kind : {QString("paint"), QString("group")}) {
+            for (int size : {1, 2, 3, 5, 10, 16}) {
+                // the modes the user's documents use, and Normal
+                const QString strokeMode = size == 2 ? COMPOSITE_LIGHTEN
+                    : size == 3                      ? COMPOSITE_SCREEN
+                    : size == 5                      ? COMPOSITE_OVER
+                                                     : COMPOSITE_MULT;
+                QTest::newRow(qPrintable(QString("f16%1-%2-size%3-%4").arg(f16).arg(kind).arg(size).arg(strokeMode)))
+                    << f16 << kind << size << strokeMode;
+            }
+        }
+    }
+}
+
+void KisGpuProjectionTest::testStrokeStyleMatchesCpu()
+{
+    // Phase 4.114: a layer whose style is a Stroke outside it with a solid
+    // color is composited with the stroke on the GPU.
+    REQUIRE_GPU();
+    if (!KisGpuProjectionCompositor::supportsStrokeStyle()) {
+        QSKIP("the GPU has no 64-bit float shaders");
+    }
+    QFETCH(bool, f16);
+    QFETCH(QString, kind);
+    QFETCH(int, size);
+    QFETCH(QString, strokeMode);
+    const QRect bounds(0, 0, 512, 384);
+    KisImageSP image = new KisImage(nullptr, bounds.width(), bounds.height(), rgbaFloat(f16), "stroke style");
+    KisNodeSP root = image->root();
+    addPaintLayer(image, root, COMPOSITE_OVER, 255, 121, bounds);
+
+    // The painted layer: an opaque block, noise with every alpha, soft
+    // gradients at the edges, and empty tiles around.
+    KisPaintLayerSP painted;
+    KisLayerSP styled;
+    if (kind == "paint") {
+        painted = addPaintLayer(image, root, COMPOSITE_MULT, 200, 122, QRect(150, 110, 120, 90));
+        styled = painted;
+    } else {
+        KisGroupLayerSP group = new KisGroupLayer(image, "group", 220);
+        image->addNode(group, root);
+        addPaintLayer(image, group, COMPOSITE_OVER, 255, 123, QRect(300, 60, 90, 70));
+        painted = addPaintLayer(image, group, COMPOSITE_OVER, 255, 122, QRect(150, 110, 120, 90));
+        styled = group;
+    }
+    {
+        KisPaintDeviceSP device = painted->paintDevice();
+        const KoColorSpace *cs = device->colorSpace();
+        device->fill(QRect(60, 60, 110, 130), KoColor(QColor(200, 80, 40, 255), cs));
+        // a soft edge: alpha falls from 1 to 0 over 24 pixels
+        const QRect soft(170, 220, 96, 60);
+        QVector<float> floats(soft.width() * soft.height() * 4);
+        for (int y = 0; y < soft.height(); ++y) {
+            for (int x = 0; x < soft.width(); ++x) {
+                const float edge =
+                    qBound(0.0f, qMin(qMin(x, soft.width() - 1 - x), qMin(y, soft.height() - 1 - y)) / 24.0f, 1.0f);
+                float *pixel = floats.data() + (y * soft.width() + x) * 4;
+                pixel[0] = 0.2f;
+                pixel[1] = 0.6f;
+                pixel[2] = 0.9f;
+                pixel[3] = edge;
+            }
+        }
+        if (f16) {
+            QVector<qfloat16> half(floats.size());
+            qFloatToFloat16(half.data(), floats.constData(), floats.size());
+            device->writeBytes(reinterpret_cast<const quint8 *>(half.constData()), soft);
+        } else {
+            device->writeBytes(reinterpret_cast<const quint8 *>(floats.constData()), soft);
+        }
+    }
+
+    KisPSDLayerStyleSP style(new KisPSDLayerStyle());
+    style->stroke()->setEffectEnabled(true);
+    style->stroke()->setPosition(psd_stroke_outside);
+    style->stroke()->setFillType(psd_fill_solid_color);
+    style->stroke()->setColor(KoColor(QColor(40, 20, 90), rgbaFloat(f16)));
+    style->stroke()->setBlendMode(strokeMode);
+    style->stroke()->setOpacity(75);
+    style->stroke()->setSize(size);
+    styled->setLayerStyle(style);
+
+    addPaintLayer(image, root, COMPOSITE_SCREEN, 128, 124, QRect(200, 0, 300, 384));
+
+    auto compare = [&](const char *stage) {
+        const std::vector<float> gpu = readFloats(image->projection(), bounds);
+        const std::vector<float> cpu = render(image, false);
+        QPoint where;
+        const float error = f16 ? maxHalfUlpDifference(cpu, gpu, &where, bounds.width())
+                                : maxDifference(cpu, gpu, &where, bounds.width());
+        QVERIFY2(error <= (f16 ? 4.0f : 2e-5f),
+                 qPrintable(QString("%1: difference %2 at %3,%4, %5")
+                                .arg(stage)
+                                .arg(error)
+                                .arg(where.x())
+                                .arg(where.y())
+                                .arg(pixelReport(cpu, gpu, where, bounds.width()))));
+    };
+
+    auto *stylePlane = dynamic_cast<KisLayerStyleProjectionPlane *>(styled->projectionPlane().data());
+    QVERIFY(stylePlane);
+    QVERIFY(!stylePlane->gpuCompositesStyles()); // the GPU projection is off
+    KisGpuMergeBatch::setEnabled(true);
+    QVERIFY(stylePlane->gpuCompositesStyles());
+    const quint64 stylesBefore = KisGpuProjectionCompositor::strokeStyleCount();
+    render(image, true);
+    QVERIFY(KisGpuProjectionCompositor::strokeStyleCount() > stylesBefore);
+    compare("full refresh");
+
+    // GPU strokes on the painted layer: neither the layer nor the stroke
+    // may read anything back.
+    render(image, true);
+    KisGpuTileBackend *backend = KisGpuTileBackend::instance();
+    KisGpuMergeBatch::setEnabled(true);
+    for (int i = 0; i < 3; ++i) {
+        const QRect dab(40 + i * 90, 150 + i * 13, 128, 128);
+        KisPaintDeviceSP dabDevice = new KisPaintDevice(rgbaFloat(f16));
+        fillRandom(dabDevice, dab, 190 + i);
+        KisGpuProjectionCompositor::Layer layer;
+        layer.device = dabDevice;
+        layer.opacity = 0.7f;
+        QString error;
+        QVERIFY2(KisGpuProjectionCompositor::composite(painted->paintDevice(), dab, {layer}, &error),
+                 qPrintable(error));
+        backend->context().waitIdle();
+        const quint64 downloads = backend->downloadedTileCount();
+        const quint64 styles = KisGpuProjectionCompositor::strokeStyleCount();
+        painted->setDirty(dab);
+        image->waitForDone();
+        backend->context().waitIdle();
+        QCOMPARE(backend->downloadedTileCount(), downloads);
+        QVERIFY(KisGpuProjectionCompositor::strokeStyleCount() > styles);
+    }
+    compare("partial updates");
+
+    // A style the GPU pass does not have: the CPU computes it as before.
+    render(image, true);
+    KisPSDLayerStyleSP inside = style->clone().dynamicCast<KisPSDLayerStyle>();
+    inside->stroke()->setPosition(psd_stroke_inside);
+    styled->setLayerStyle(inside);
+    KisGpuMergeBatch::setEnabled(true);
+    stylePlane = dynamic_cast<KisLayerStyleProjectionPlane *>(styled->projectionPlane().data());
+    QVERIFY(stylePlane && !stylePlane->gpuCompositesStyles());
+    render(image, true);
+    compare("inside stroke on the CPU");
 }
 
 void KisGpuProjectionTest::benchmarkRefresh()

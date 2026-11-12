@@ -1094,6 +1094,89 @@ layers first).
   (`KisMaskedLayerBenchmark`, opt-in with `KRITA_MASK_BENCHMARK=1`).
 - Manual check: checklist item 20.
 
+### Stroke layer style (phase 4.114)
+
+2026-11-12, user request. The user's documents were counted first (79
+`.kra` files, metadata only): in RGBA float documents the Stroke layer
+style occurs 73 times, filter layers 7 times, so the user moved the Stroke
+style ahead of the filter layers. All 125 strokes are outside the layer
+with a solid color, 1-10 pixels wide, in Multiply, Lighten or Screen.
+
+- Before: layer styles ran on the CPU. A Stroke style made every update of
+  its layer read the layer and the projection back, convolve an 8-bit
+  selection, and composite on the CPU: 7-9 ms per 256 px dab and
+  220-265 ms per full refresh of a 2480x3508 image (0.2 ms and 9 ms
+  without the style). The CPU paths paid 4-7 ms and 95-195 ms too.
+- `KisLayerStyleProjectionPlane::gpuCompositesStyles()`: the style is
+  enabled, its only enabled effect is a Stroke with position Outside, fill
+  type Solid Color and a size of 1..16 pixels
+  (`KisGpuStrokeStylePass::MaxRadius`); the layer's and the stroke's blend
+  modes are basic ones (below `KisGpuBlendOp::SoftLightSvg`, not Erase);
+  the image is composited on the GPU; full resolution (the CPU scales the
+  size for the level of detail); the GPU has 64-bit float shaders. Then:
+  - `recalculate()` updates the source plane only and leaves the style
+    planes' CPU devices alone;
+  - `KisAsyncMerger::compositeWithProjection()` flushes the batch and
+    calls `applyOnGpu()`, which fills a
+    `KisGpuProjectionCompositor::StrokeStyle` from the leaf and the style
+    and runs `compositeStrokeStyle()`;
+  - if that fails, `apply()` recalculates the style planes for the rect
+    first and composites on the CPU as before.
+- `KisGpuStrokeStylePass` (`shaders/composite_stroke_style.comp`), one
+  pass, per destination pixel, mirroring
+  `KisLayerStyleProjectionPlane::apply()` and
+  `KisLsStrokeFilter::applyStroke()`:
+  1. A = `opacityU8()` of the layer pixel (F32: `int(clamp(a * 255) +
+     0.5f)`; F16: `half(a * 255)` truncated).
+  2. The layer is blended onto the projection with its alpha set to 1
+     where A > 0 (`KritaUtils::ThresholdCeil`, what an outside stroke
+     asks of its source plane).
+  3. D = A dilated: the convolution with
+     `KisGaussianKernel::createDilateMatrix(size)`, summed in double,
+     clamped to 0..255 and rounded as `qRound()` does (`int(v + 0.5)`),
+     which is what `KisConvolutionPainter` gives for an 8-bit selection.
+     Skipped where A is 255 (the coverage is 0 there).
+  4. Coverage = D erased by A: `UINT8_MULT(255 - A, D)`.
+  5. The stroke color is blended onto the projection as it was before the
+     layer (the CPU's `mergedStyle` device) with the stroke's blend mode
+     and its opacity times the layer's
+     (`KisLayerStyleFilterEnvironment::setupFinalPainter()`), and copied
+     through the coverage onto the result of step 2 like the Copy
+     composite op with a selection
+     (`KisLayerStyleKnockoutBlower::apply()`).
+  The layer's tiles are read through an address table that covers the rect
+  grown by the radius; the layer may sit at any offset.
+- Parity: the same tolerances as layer compositing (F32 2e-5, F16 4 half
+  ULPs). The coverage itself is exact unless the CPU's FFT convolution
+  (kernels above 5x5) lands within its rounding error of a half-integer.
+  As with transparency masks, colors above 1 next to a partly covered
+  pixel can differ (the CPU's Copy op clamps whole SIMD batches).
+- Temporary projections: a style on a group makes the walker's need rect
+  vary, and the merger then composites the group's children into a
+  temporary device and copies it into the group's projection
+  (`KisAsyncMerger::writeProjection()`). That copy was a CPU copy, which
+  read the GPU-composited tiles back on every update (21-27 tiles per
+  128 px dab in the test); it now tries
+  `KisGpuProjectionCompositor::copyShifted()` first. This also applies to
+  other updates whose need rect varies (filter masks with a radius).
+- `composite_layers.comp`'s Normal blend moved into
+  `shaders/composite_over.glsl`, shared with the new shader; the layer
+  compositor's code is unchanged.
+- CPU fallbacks: any other effect enabled; Inside or Center strokes;
+  gradient or pattern fills; sizes above 16; extended blend modes on the
+  layer or the stroke; Instant Preview; a projection off the 64 px grid; a
+  layer with a visible default pixel; no 64-bit float shaders.
+- Tests (`KisGpuProjectionTest`): `testStrokeStyleMatchesCpu` (F32 and
+  F16; the style on a paint layer and on a group; sizes 1, 2, 3, 5, 10 and
+  16 with Multiply, Lighten, Screen and Normal strokes; an opaque block,
+  noise with every alpha and a soft edge; full refresh, three GPU dabs
+  that download nothing, and an Inside stroke that stays on the CPU; CPU
+  parity). The existing layer compositing tests cover the moved Normal
+  blend.
+- Measurements: [Layer style updates](wiki/benchmarks/layer-style-updates.md)
+  (`KisLayerStyleBenchmark`, opt-in with `KRITA_STYLE_BENCHMARK=1`).
+- Manual check: checklist item 21.
+
 ## Technology and device requirements
 
 | Topic | Decision | Reason |
@@ -1231,6 +1314,10 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   `VK_LAYER_PATH=<krita-dev-root>\VulkanSDK\1.4.357.0\Bin`.
 - Benchmark size: `KRITA_GPU_BENCH_SIZE` (pixels per side, default 4096) and
   `KRITA_GPU_BENCH_LAYERS` (default 8).
+- Layer style benchmark: target `KisLayerStyleBenchmark` (skips unless
+  `KRITA_STYLE_BENCHMARK=1`; `KRITA_STYLE_BENCHMARK_GPU_ONLY=1` leaves out
+  the CPU rows): dabs on a layer with an outside Stroke style of size 0
+  (none), 1, 4 and 10, then full refreshes.
 - Masked layer benchmark: target `KisMaskedLayerBenchmark` (skips unless
   `KRITA_MASK_BENCHMARK=1`; `KRITA_MASK_BENCHMARK_GPU_ONLY=1` leaves out the
   CPU rows): dabs on a layer with 0, 1 or 2 transparency masks, then full
@@ -1272,6 +1359,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `KisGpuSeparableConvolutionPass.*` + `shaders/separable_convolution.comp` | Phase-4.98 separable convolution in bands: horizontal pass into a double intermediate, vertical pass with the FFT worker's write rules. |
 | `KisGpuShiftedCopyPass.*` + `shaders/copy_shifted.comp` | Phase-4.110 copy between tile grids with any pixel shift (Clone Layer offsets); the default pixel where the source has no tile. |
 | `KisGpuCoveragePass.*` + `shaders/apply_coverage.comp` | Phase-4.113 coverage mask applied to tiles in place (transparency masks), like the CPU Copy op through a selection onto a cleared pixel. |
+| `KisGpuStrokeStylePass.*` + `shaders/composite_stroke_style.comp` | Phase-4.114 layer with an outside, solid color Stroke layer style: thresholded layer, dilated alpha in double, knockout copy. `shaders/composite_over.glsl` is the Normal blend shared with `composite_layers.comp`. |
 | `KisGpuMaskingCompositePass.*` + `shaders/masking_composite.comp` | Phase-4.101 masking brush composite: stroke pixels into the target with the mask composited into alpha, ten modes, CPU-exact. |
 
 ## Source map (`libs/image`)
@@ -1289,7 +1377,8 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `gpu/KisGpuProjectionCompositor.*` | Composites batches in place into GPU-authoritative projection tiles; layer accesses and reusable work contexts. |
 | `kis_clone_layer.cpp` | Phase 4.110: `copyOriginalToProjection()` tries `copyShifted()` for clones without effect masks, or with transparency masks only (phase 4.113). |
 | `kis_layer.{h,cc}`, `kis_paint_layer.cc`, `kis_mask.cc` | Phase 4.113: `KisLayer::gpuAppliesEffectMasks()`, the GPU copy of the original, and the GPU application of transparency masks in `KisMask::mergeInMaskInternal()`. |
-| `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points, `deferClear` in `setupProjection` (phase 4.111). |
+| `layerstyles/kis_layer_style_projection_plane.{h,cpp}` | Phase 4.114: `gpuCompositesStyles()`, `applyOnGpu()`; `recalculate()` skips the style planes then, `apply()` recalculates them when the GPU did not composite. |
+| `kis_async_merger.{h,cpp}` | `m_gpuBatch` member, `tryAdd` in `compositeWithProjection`, flush points, `deferClear` in `setupProjection` (phase 4.111); batched readback before CPU composites (4.112); the GPU Stroke style and the GPU copy of temporary projections in `writeProjection` (4.114). |
 | `kis_updater_context.cpp` | Tile-aligned job exclusivity when `KisGpuMergeBatch::mayCompositeOnGpu`. |
 | `gpu/KisGpuConvolutionWorker.*` | Phase-4.98 Gaussian convolution: old-data snapshot, one GPU submission into a temporary device, CPU copy into the rect. Called by `KisGaussianKernel::applyGaussian()`. |
 | `gpu/KisGpuMaskingWorker.*` | Phase-4.101 masking brush composite for `KisPainterBasedStrokeStrategy::doMaskingBrushUpdates()`; `supports()` is also used by `KisBrushOp`. |
@@ -1334,6 +1423,8 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   `KRITA_GPU_PUPPET=0` and `KRITA_GPU_CONVOLUTION=0` keep the affine passes,
   Liquify (and with it Puppet Warp, which shares the grid warp), Puppet Warp
   alone and the Gaussian convolution on the CPU (development switches).
+  `KRITA_GPU_LAYER_STYLE=0` keeps the Stroke layer style on the CPU
+  (phase 4.114; read once per process).
 - No `.kra` changes or persisted ids: `.kra` files stay readable by the CPU
   path and upstream Krita; GPU mode stores RGBA F32/F16 layers with the
   normal Krita color space ids. Saving works through the CPU path: the tile
@@ -1534,6 +1625,16 @@ Record the build, format, workload and result separately from earlier acceptance
     move the masked layer; Undo/Redo. The masked areas look like the GPU
     Engine turned off, nothing lags or is left behind at tile borders.
     Repeat with Instant Preview at a zoom below 50 %.
+21. Stroke layer style (phase 4.114): on an RGBA float image, give a paint
+    layer and a group a Stroke style (Outside, Color; sizes 1, 4 and 10;
+    Multiply, Lighten, Screen and Normal; opacity below 100 %). Paint on
+    the styled layer and inside the styled group with the GPU brush, also
+    with soft brushes and across tile borders; erase; move the layer;
+    change the stroke's size and color in the style dialog; turn the style
+    off and on; Undo/Redo. The stroke looks like the GPU Engine turned
+    off and follows the painting without lagging. Then switch the stroke to
+    Inside, and add a Drop Shadow: both must still look right (CPU path).
+    Repeat with Instant Preview at a zoom below 50 %.
 
 ## Phase history
 
@@ -1649,6 +1750,7 @@ Section index:
 - [Partial-tile projection clears (phase 4.111)](wiki/history/gpu-phases-4.93-.md#partial-tile-projection-clears-phase-4111)
 - [Moved layers and groups (phase 4.112)](wiki/history/gpu-phases-4.93-.md#moved-layers-and-groups-phase-4112)
 - [Transparency masks (phase 4.113)](wiki/history/gpu-phases-4.93-.md#transparency-masks-phase-4113)
+- [Stroke layer style (phase 4.114)](wiki/history/gpu-phases-4.93-.md#stroke-layer-style-phase-4114)
 
 ## Risks and open questions
 
