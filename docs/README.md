@@ -6,12 +6,12 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.9.0](https://github.com/udtren/Solstice/releases/tag/v0.9.0) adds
+[0.9.1](https://github.com/udtren/Solstice/releases/tag/v0.9.1) fixes a rare
+race that could leave a layer out of the picture in tile-sized blocks until
+Undo and Redo. It builds on
+[0.9.0](https://github.com/udtren/Solstice/releases/tag/v0.9.0), which added
 [At least 1 pixel](brush-minimum-one-pixel.md): thin, pressure-tapered brush
-lines keep at least 1 pixel instead of fading out (on by default). It builds
-on [0.8.1](https://github.com/udtren/Solstice/releases/tag/v0.8.1), which
-lets the [Through-Layer Eraser](through-layer-eraser.md) erase layers with
-Alpha Lock on.
+lines keep at least 1 pixel instead of fading out (on by default).
 
 ## Getting started
 
