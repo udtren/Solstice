@@ -241,7 +241,7 @@ GPU column applies to RGBA 32-bit and 16-bit float layers only.
 | Area | On the GPU | CPU only |
 | --- | --- | --- |
 | Color spaces | RGBA 32-bit and 16-bit float | Every other color space and depth (8/16-bit integer, CMYK, Lab, grayscale), also as single layers in a float document; file layers |
-| Layer compositing | Layer projection, including alpha lock and individual channel locks, of layers and groups at any position; transparency masks; the Stroke layer style (outside, solid color); filter layers with Desaturate, and in 16-bit float with Posterize or channel curves | Other layer style effects, Colorize Mask, filter masks (except their Gaussian blur) |
+| Layer compositing | Layer projection, including alpha lock and individual channel locks, of layers and groups at any position; transparency masks; the Stroke layer style (outside, solid color); filter layers and filter masks with Desaturate, and in 16-bit float with Posterize, channel curves or Color Reference | Other layer style effects, Colorize Mask, filter masks (except their Gaussian blur) |
 | Canvas display | Handing the projection to the OpenGL canvas | ANGLE/Direct3D renderer, soft proofing, channel selection in the Channels docker, LUT-based display profiles, absolute colorimetric intent |
 | Blend modes | Every mode not listed as CPU only | Dissolve, Marker, Destination In, Destination Atop, Divisive Modulo and its Continuous variants; Copy below 100 % opacity |
 | Brush strokes | Pixel brush in Buildup and Wash, with Erase, Alpha Darken, selections, alpha lock and mirror painting | Painting with other brush engines (Color Smudge, Sketch and so on); Alpha Darken with some channels turned off; a single oversized dab |
@@ -250,7 +250,7 @@ GPU column applies to RGBA 32-bit and 16-bit float layers only.
 | Masking brush | Combining the mask with the stroke | Painting the mask itself; the whole masked stroke on GPUs without 64-bit float shader support |
 | Transform Tool | Applying Free Transform (scale, rotate, shear), Liquify and Puppet Warp | Perspective, Warp, Cage and Mesh transforms; older Puppet Warp transforms; the preview while editing; combining Puppet Warp's parts; wrap-around mode |
 | Filters | Gaussian Blur, also inside Unsharp Mask and Gaussian High Pass, in the Filter dialog, filter layers and filter masks | All other filters; the sharpening step of Unsharp Mask; areas smaller than about 180 x 180 pixels; Instant Preview; wrap-around mode |
-| Clone Layers | Copying the source of a Clone Layer moved away from its source | Clone Layers with transparency or filter masks |
+| Clone Layers | Copying the source of a Clone Layer moved away from its source, also with transparency masks | Clone Layers with a filter mask that runs on the CPU |
 
 Free Transform and Liquify results are identical to the CPU results, pixel
 for pixel; so are Puppet Warp's parts, which are then combined on the CPU.

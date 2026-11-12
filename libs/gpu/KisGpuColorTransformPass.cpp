@@ -84,20 +84,25 @@ bool KisGpuColorTransformPass::record(KisGpuCommandList &commands, const Pass &p
         || pass.srcTiles.size() != pass.srcGridWidth * pass.srcGridHeight) {
         return fail(QStringLiteral("invalid color transform grid"));
     }
-    if (pass.kind > DesaturateLast) {
+    if (pass.kind > ColorReference) {
         return fail(QStringLiteral("unknown color transform"));
     }
-    if (pass.kind == ChannelTables && (!m_f16 || !pass.tables || !pass.tablesId)) {
-        return fail(QStringLiteral("channel tables need RGBA F16 tiles"));
+    const bool usesTables = pass.kind == ChannelTables || pass.kind == ColorReference;
+    if (usesTables
+        && (!m_f16 || !pass.tables || !pass.tablesId || pass.tableBytes <= 0 || pass.tableBytes % 4
+            || pass.tableBytes > MaxTableBytes
+            || (pass.kind == ChannelTables && pass.tableBytes != ChannelTablesBytes))) {
+        return fail(QStringLiteral("color transform tables need RGBA F16 tiles and a valid table block"));
     }
     const qint64 maskBytes = pass.mask ? qint64(pass.maskBounds.width()) * pass.maskBounds.height() : 0;
     if (pass.mask && (pass.maskBounds.isEmpty() || maskBytes > MaxMaskBytes)) {
         return fail(QStringLiteral("invalid or oversized coverage mask"));
     }
 
-    if (pass.kind == ChannelTables && m_channelTablesId != pass.tablesId) {
-        const VkDeviceSize tableBytes = VkDeviceSize(TableEntries) * sizeof(quint16);
-        if (!m_channelTables) {
+    if (usesTables && m_channelTablesId != pass.tablesId) {
+        const VkDeviceSize tableBytes = VkDeviceSize(pass.tableBytes);
+        if (!m_channelTables || m_channelTables->size() < tableBytes) {
+            m_channelTablesId = 0;
             m_channelTables = KisGpuBuffer::create(m_context, tableBytes, KisGpuBuffer::Location::Upload, errorMessage);
             if (!m_channelTables) {
                 return false;
@@ -138,7 +143,7 @@ bool KisGpuColorTransformPass::record(KisGpuCommandList &commands, const Pass &p
     constants.dstTiles = m_tables->deviceAddress();
     constants.srcTiles = m_tables->deviceAddress() + dstBytes;
     constants.mask = m_tables->deviceAddress() + maskOffset;
-    constants.tables = pass.kind == ChannelTables ? m_channelTables->deviceAddress() : m_tables->deviceAddress();
+    constants.tables = usesTables ? m_channelTables->deviceAddress() : m_tables->deviceAddress();
     constants.dstTileCount = quint32(pass.dstTiles.size());
     constants.dstGridWidth = quint32(pass.dstGridWidth);
     constants.srcGridWidth = quint32(pass.srcGridWidth);

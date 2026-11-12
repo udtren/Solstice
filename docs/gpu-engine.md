@@ -41,13 +41,16 @@ On RGBA 32-bit and 16-bit float layers:
   filled with a gradient or pattern, are computed on the CPU.
 - **Transparency masks** are applied on the GPU, on paint layers, groups
   and Clone Layers, so painting on a masked layer does not read the layer
-  back. Filter masks still run on the CPU.
-- **Filter layers** with these filters, so that painting below them does
-  not read the image back. The results are the CPU's.
+  back.
+- **Filter layers and filter masks** with these filters, so that painting
+  below a filter layer or on a layer with a filter mask does not read the
+  image back. The results are the CPU's.
   - Desaturate, in every mode.
-  - In RGBA 16-bit float documents also Posterize and Color Adjustment
-    curves (the RGBA curve and the curves of single channels).
-  - A selection painted on the filter layer is applied on the GPU too.
+  - In RGBA 16-bit float documents also Posterize, Color Adjustment
+    curves (the RGBA curve and the curves of single channels) and Color
+    Reference.
+  - A selection painted on the filter layer or the mask is applied on the
+    GPU too.
 - **Clone Layers moved away from their source** (without masks, or with
   transparency masks only) copy the source on the GPU, so they follow GPU
   brush strokes without reading the source back.
@@ -64,9 +67,9 @@ long without AVX2).
 ## What stays on the CPU
 
 - Other filters, and the sharpening step of Unsharp Mask. Filter layers
-  with other filters; in RGBA 32-bit float documents also Posterize and
-  Color Adjustment curves; hue, saturation and lightness curves in either
-  depth. Blur areas
+  and filter masks with other filters; in RGBA 32-bit float documents also
+  Posterize, Color Adjustment curves and Color Reference; hue, saturation
+  and lightness curves in either depth. Blur areas
   smaller than about 180 x 180 pixels, the reduced-resolution Instant Preview,
   integer layers, wrap-around mode, layer styles other than the Stroke
   described above, and the Colorize Mask.
@@ -80,8 +83,8 @@ long without AVX2).
 - Painting with brush engines other than the pixel brush (Color Smudge,
   Sketch and so on). The layers they paint on are still composited on the
   GPU.
-- Filter masks, and with them the copy of a layer or of a Clone Layer's
-  source that has a filter mask.
+- With a filter mask that runs on the CPU, also the copy of its layer or
+  of a Clone Layer's source.
 - Soft proofing, channel selection in the Channels docker, and some display
   color profiles (LUT-based profiles, absolute colorimetric intent) use the
   CPU for the canvas display.

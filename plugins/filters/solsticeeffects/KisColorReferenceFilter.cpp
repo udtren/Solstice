@@ -131,3 +131,64 @@ void KisColorReferenceFilter::processImpl(KisPaintDeviceSP device,
     if (progress)
         progress->setProgress(100);
 }
+
+KisGpuColorTransformSP KisColorReferenceFilter::gpuColorTransform(const KoColorSpace *cs,
+                                                                  const KisFilterConfigurationSP config) const
+{
+    if (!cs || !config)
+        return {};
+    // processImpl()'s inputs. Its early returns (Amount 0, an unreadable
+    // table, no enabled channel) stay on the CPU, which does nothing then.
+    const double requested = config->getDouble("amount", 100);
+    const double amount = std::isfinite(requested) ? qBound(0.0, requested, 100.0) / 100 : 0;
+    if (amount == 0)
+        return {};
+    const QString encoded = config->getString("lut");
+    const bool keep = config->getBool("keepBrightness", true);
+    const auto channels = cs->channels();
+    const auto flags = config->channelFlags();
+    // Bit 0 red, 1 green, 2 blue: the pixel order of RGBA float.
+    quint32 channelMask = 0;
+    for (int i = 0; i < channels.size() && i < 3; ++i)
+        if (channels[i]->channelType() == KoChannelInfo::COLOR
+            && (flags.isEmpty() || (i < flags.size() && flags.testBit(i))))
+            channelMask |= 1u << i;
+    if (!channelMask)
+        return {};
+
+    QMutexLocker locker(&m_gpuCacheMutex);
+    for (int i = 0; i < m_gpuCache.size(); ++i) {
+        const GpuCacheEntry &entry = m_gpuCache[i];
+        if (entry.colorSpace == cs && entry.amount == amount && entry.keepBrightness == keep
+            && entry.channelMask == channelMask && entry.table == encoded) {
+            const KisGpuColorTransformSP transform = entry.transform;
+            if (i > 0)
+                m_gpuCache.move(i, 0);
+            return transform;
+        }
+    }
+
+    GpuCacheEntry entry;
+    entry.colorSpace = cs;
+    entry.table = encoded;
+    entry.amount = amount;
+    entry.keepBrightness = keep;
+    entry.channelMask = channelMask;
+    const auto table = ColorReference::decode(encoded);
+    if (!table.isEmpty()) {
+        KisGpuColorTransform::ColorReferenceParameters parameters;
+        parameters.table.reserve(3 * table.size());
+        // decode() widened the stored floats to double: this narrows them back exactly.
+        for (const auto &color : table)
+            for (double v : color)
+                parameters.table.append(float(v));
+        parameters.amount = amount;
+        parameters.keepBrightness = keep;
+        parameters.channelMask = channelMask;
+        entry.transform = KisGpuColorTransform::colorReference(cs, ColorReference::workingSpace(), parameters);
+    }
+    m_gpuCache.prepend(entry);
+    while (m_gpuCache.size() > 8)
+        m_gpuCache.removeLast();
+    return entry.transform;
+}

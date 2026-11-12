@@ -41,9 +41,11 @@ class KRITAGPU_EXPORT KisGpuColorTransformPass
 public:
     /// Larger masks are refused.
     static constexpr qint64 MaxMaskBytes = 4096 * 4096;
-    /// Entries of one channel table, and of the four tables together.
+    /// Entries of one channel table, and the size of the four tables together.
     static constexpr int ChannelTableSize = 65536;
-    static constexpr int TableEntries = 4 * ChannelTableSize;
+    static constexpr qint64 ChannelTablesBytes = 4 * ChannelTableSize * qint64(sizeof(quint16));
+    /// Larger table blocks are refused.
+    static constexpr qint64 MaxTableBytes = 16 * 1024 * 1024;
 
     /// The shader's transformation kinds.
     enum Kind : quint32 {
@@ -51,7 +53,10 @@ public:
         ChannelTables = 0,
         /// KisDesaturateAdjustment type 0; types 1 to 5 follow.
         Desaturate = 1,
-        DesaturateLast = 6
+        DesaturateLast = 6,
+        /// RGBA F16 only: the Color Reference filter; the tables are its
+        /// block of 32-bit words (shaders/color_transform.comp).
+        ColorReference = 7
     };
 
     struct Pass {
@@ -65,8 +70,10 @@ public:
         float fill[4] = {0.0f, 0.0f, 0.0f, 0.0f}; ///< as float, tile memory order
 
         quint32 kind = ChannelTables;
-        /// TableEntries half bit patterns (R, G, B, A tables); copied before return.
-        const quint16 *tables = nullptr;
+        /// ChannelTables: 4 * ChannelTableSize half bit patterns (R, G, B, A
+        /// tables). ColorReference: its block. Copied before return.
+        const void *tables = nullptr;
+        qint64 tableBytes = 0;
         /// Identifies the tables' content: they are uploaded again only when it changes.
         quint64 tablesId = 0;
 

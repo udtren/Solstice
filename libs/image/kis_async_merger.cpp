@@ -36,7 +36,6 @@
 #ifdef HAVE_KRITA_GPU_ENGINE
 #include <QRegion>
 
-#include "filter/kis_color_transformation_filter.h"
 #include "gpu/KisGpuProjectionCompositor.h"
 #include "gpu/KisGpuTileAccess.h"
 #include "kis_default_bounds_base.h"
@@ -60,34 +59,20 @@ namespace
 {
 /**
  * GPU engine (phase 4.115): the filter of an adjustment layer in the form
- * the GPU computes, or null when the layer is filtered on the CPU: the GPU
- * projection is off, the filter or its configuration has no GPU form, or
- * the update runs at a reduced level of detail.
+ * the GPU computes, or null when the layer is filtered on the CPU
+ * (KisGpuColorTransform::forNode()).
  */
 KisGpuColorTransformSP gpuColorTransformFor(KisAdjustmentLayer *layer, KisPaintDeviceSP projection)
 {
-    // Development switch, like KRITA_GPU_LAYER_STYLE (docs/agent/gpu-engine.md).
-    static const bool disabled = qgetenv("KRITA_GPU_FILTER_LAYER") == "0";
-    if (disabled || !layer || !projection || !KisGpuMergeBatch::mayCompositeOnGpu(KisNodeSP(layer))
-        || !KisGpuProjectionCompositor::supportsColorTransform()) {
+    if (!layer || !projection) {
         return KisGpuColorTransformSP();
     }
     // The layer's own device knows the image's bounds; a temporary
     // projection may not.
-    KisDefaultBoundsBaseSP bounds = layer->original()->defaultBounds();
-    if (bounds->wrapAroundMode() || bounds->currentLevelOfDetail() > 0) {
-        return KisGpuColorTransformSP();
-    }
-    KisFilterConfigurationSP filterConfig = layer->filter();
-    if (!filterConfig) {
-        return KisGpuColorTransformSP();
-    }
-    KisFilterSP filter = KisFilterRegistry::instance()->value(filterConfig->name());
-    const KisColorTransformationFilter *colorFilter = dynamic_cast<const KisColorTransformationFilter *>(filter.data());
-    if (!colorFilter) {
-        return KisGpuColorTransformSP();
-    }
-    return colorFilter->gpuColorTransform(projection->colorSpace(), filterConfig);
+    return KisGpuColorTransform::forNode(KisNodeSP(layer),
+                                         layer->filter(),
+                                         projection->colorSpace(),
+                                         layer->original()->defaultBounds());
 }
 } // namespace
 #endif

@@ -23,6 +23,13 @@
  *  - kind 1 + type: KisDesaturateAdjustment of that type (0 lightness,
  *    1 BT.709 luminosity, 2 BT.601 luminosity, 3 average, 4 minimum,
  *    5 maximum), with the CPU's operations in the CPU's order.
+ *  - kind 7, RGBA F16 only: the Color Reference filter
+ *    (KisColorReferenceFilter::processImpl()). The conversion to its
+ *    working space is a table per channel (half bits -> float), its own
+ *    arithmetic is repeated in double, and the conversion back is a search
+ *    in a sorted table per channel that holds, for every half value, the
+ *    smallest working value the CPU converts to it. Both tables are
+ *    measured from the CPU's converters.
  *
  * One workgroup per destination tile. Compile with -DTILE_F16 for RGBA16F
  * tiles.
@@ -64,7 +71,8 @@ layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer Mas
     uint word[];
 };
 
-// Four tables of 65536 half bit patterns (R, G, B, A), two entries per word.
+// Kind 0: four tables of 65536 half bit patterns (R, G, B, A), two entries
+// per word. Kind 7: the Color Reference block (see ReferenceHeaderWords).
 layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer ChannelTables
 {
     uint word[];
@@ -90,7 +98,53 @@ layout(push_constant) uniform Params
 }
 params;
 
+// double -> float, rounded to nearest even like a C++ conversion
+// (transform_pass.comp): the GPU's own conversion is not guaranteed to.
+float toFloat(double value)
+{
+    precise float f = float(value);
+    if (isinf(f) || isnan(f) || double(f) == value)
+        return f;
+    float best = f;
+    double bestError = abs(double(f) - value);
+    for (int i = -1; i <= 1; i += 2) {
+        uint bits = floatBitsToUint(f);
+        float candidate = uintBitsToFloat(uint(int(bits) + i));
+        double error = abs(double(candidate) - value);
+        if (error < bestError || (error == bestError && (floatBitsToUint(candidate) & 1u) == 0u)) {
+            best = candidate;
+            bestError = error;
+        }
+    }
+    return best;
+}
+
 #ifdef TILE_F16
+// Imath float -> half rounding (nearest even, denormals included), as in
+// transform_pass.comp; values beyond the half range are not expected here.
+float roundToHalf(float value)
+{
+    uint x = floatBitsToUint(value);
+    if (value == 0.0 || isinf(value) || isnan(value))
+        return value;
+    uint sign = (x >> 16) & 0x8000u;
+    int e = int((x >> 23) & 0xffu) - 127 + 15;
+    uint m = x & 0x007fffffu;
+    uint h;
+    if (e <= 0) {
+        if (e < -10)
+            return uintBitsToFloat(sign << 16);
+        m |= 0x00800000u;
+        int t = 14 - e;
+        uint a = (1u << uint(t - 1)) - 1u;
+        uint b = (m >> uint(t)) & 1u;
+        h = sign | ((m + a + b) >> uint(t));
+    } else {
+        h = (sign | (uint(e) << 10)) + ((m + 0x00000fffu + ((m >> 13) & 1u)) >> 13);
+    }
+    return unpackHalf2x16(h).x;
+}
+
 // KoColorSpaceMaths<half>::blend(b, a, opacity): (b - a) * opacity + a in
 // float, rounded after every operation and then to half. Each operation
 // goes through double, where it is exact, so that nothing can fuse the
@@ -98,16 +152,22 @@ params;
 // the different rounding.
 float lerpHalf(float a, float b, float opacity)
 {
-    const float delta = float(double(b) - double(a));
-    const float product = float(double(delta) * double(opacity));
-    return float(float16_t(float(double(product) + double(a))));
+    const float delta = toFloat(double(b) - double(a));
+    const float product = toFloat(double(delta) * double(opacity));
+    return roundToHalf(toFloat(double(product) + double(a)));
+}
+
+// KoColorSpaceMaths<half>::multiply(): the exact product, rounded to half
+float multiplyHalf(float a, float b)
+{
+    return roundToHalf(toFloat(double(a) * double(b)));
 }
 
 // KoColorSpaceMaths<half>::divide() and clampAfterScale(): the quotient in
 // double, at most the largest half
 float divideHalf(float a, float b)
 {
-    return float(float16_t(float(min(double(a) / double(b), 65504.0LF))));
+    return roundToHalf(toFloat(min(double(a) / double(b), 65504.0LF)));
 }
 #endif
 
@@ -116,16 +176,15 @@ vec4 copyThroughMask(vec4 dst, vec4 src, uint coverage)
 {
 #ifdef TILE_F16
     // KoCompositeOpCopy2 on half channels: every assignment rounds to half.
-    const float opacity = float(float16_t(float(coverage) * (1.0 / 255.0)));
+    // The mask byte is scaled in double (KoColorSpaceMaths<quint8, half>).
+    const float opacity = roundToHalf(toFloat(double(coverage) * (1.0LF / 255.0LF)));
     const float newAlpha = lerpHalf(dst.a, src.a, opacity);
     if (newAlpha == 0.0) {
         return vec4(dst.rgb, 0.0);
     }
-    const vec3 dstMult = vec3(f16vec3(dst.rgb * dst.a));
-    const vec3 srcMult = vec3(f16vec3(src.rgb * src.a));
-    return vec4(divideHalf(lerpHalf(dstMult.r, srcMult.r, opacity), newAlpha),
-                divideHalf(lerpHalf(dstMult.g, srcMult.g, opacity), newAlpha),
-                divideHalf(lerpHalf(dstMult.b, srcMult.b, opacity), newAlpha),
+    return vec4(divideHalf(lerpHalf(multiplyHalf(dst.r, dst.a), multiplyHalf(src.r, src.a), opacity), newAlpha),
+                divideHalf(lerpHalf(multiplyHalf(dst.g, dst.a), multiplyHalf(src.g, src.a), opacity), newAlpha),
+                divideHalf(lerpHalf(multiplyHalf(dst.b, dst.a), multiplyHalf(src.b, src.a), opacity), newAlpha),
                 newAlpha);
 #else
     // KoOptimizedCompositeOpCopy128
@@ -144,6 +203,7 @@ vec4 copyThroughMask(vec4 dst, vec4 src, uint coverage)
 
 const uint KindTables = 0;
 const uint KindDesaturate = 1;
+const uint KindColorReference = 7;
 
 // qMax() and qMin(), which keep their first argument when a comparison fails
 float qMax(float a, float b)
@@ -169,14 +229,14 @@ float desaturated(vec3 c, uint type)
         precise double green = double(c.g) * 0.7152LF;
         precise double blue = double(c.b) * 0.0722LF;
         precise double sum = (red + green) + blue;
-        return float(sum);
+        return toFloat(sum);
     }
     case 2: {
         precise double red = double(c.r) * 0.299LF;
         precise double green = double(c.g) * 0.587LF;
         precise double blue = double(c.b) * 0.114LF;
         precise double sum = (red + green) + blue;
-        return float(sum);
+        return toFloat(sum);
     }
     case 3: {
         // A float division by 3 that rounds like the CPU's: GPU divisions
@@ -184,7 +244,7 @@ float desaturated(vec3 c, uint type)
         // is never close enough to a float rounding boundary to matter.
         precise float sum = (c.r + c.g) + c.b;
         precise double average = double(sum) / 3.0LF;
-        return float(average);
+        return toFloat(average);
     }
     case 4:
         return qMin(qMin(c.r, c.g), c.b);
@@ -198,6 +258,143 @@ uint tableEntry(uint channel, uint bits)
 {
     const uint word = params.tables.word[channel * 32768 + (bits >> 1)];
     return (word >> (16 * (bits & 1))) & 0xffffu;
+}
+
+/*
+ * The Color Reference block, in 32-bit words:
+ *   0, 1   the amount (0..1) as a double
+ *   2      keep brightness (0 or 1)
+ *   3      enabled color channels (bit 0 red, 1 green, 2 blue)
+ *   4      thresholdCount
+ *   16     the reference table: 1024 RGB float triples in the working space
+ *   then   3 * 65536 floats: the working value of every half bit pattern of
+ *          the red, green and blue channel
+ *   then   3 * thresholdCount floats, ascending per channel: entry k is the
+ *          smallest working value that converts to half number k or more,
+ *          where the halves are numbered in ascending order (0: -inf,
+ *          1..31743: the negative ones, 31744: zero, then the positive
+ *          ones and +inf)
+ */
+const uint ReferenceHeaderWords = 16;
+const uint ReferenceTableSize = 1024;
+const uint ReferenceForwardOffset = ReferenceHeaderWords + 3 * ReferenceTableSize;
+const uint ReferenceThresholdOffset = ReferenceForwardOffset + 3 * 65536;
+
+double referenceBrightness(dvec3 c)
+{
+    precise double red = 0.2126LF * c.r;
+    precise double green = 0.7152LF * c.g;
+    precise double blue = 0.0722LF * c.b;
+    precise double sum = (red + green) + blue;
+    return sum;
+}
+
+dvec3 referenceEntry(uint index)
+{
+    const uint base = ReferenceHeaderWords + 3 * index;
+    return dvec3(double(uintBitsToFloat(params.tables.word[base])),
+                 double(uintBitsToFloat(params.tables.word[base + 1])),
+                 double(uintBitsToFloat(params.tables.word[base + 2])));
+}
+
+// ColorReference::lookup()
+dvec3 referenceLookup(double position)
+{
+    const double bounded = position < 0.0LF ? 0.0LF : (position > 1.0LF ? 1.0LF : position);
+    precise double x = bounded * double(ReferenceTableSize - 1);
+    const uint a = uint(x);
+    const uint b = min(a + 1, ReferenceTableSize - 1);
+    const dvec3 first = referenceEntry(a);
+    const dvec3 second = referenceEntry(b);
+    precise double fraction = x - double(a);
+    precise dvec3 difference = second - first;
+    precise dvec3 scaled = fraction * difference;
+    precise dvec3 result = first + scaled;
+    return result;
+}
+
+// ColorReference::keepBrightness()
+dvec3 referenceKeepBrightness(dvec3 color, double target)
+{
+    const double l = referenceBrightness(color);
+    double scale = 1.0LF;
+    if (target >= 0.0LF && target <= 1.0LF) {
+        for (int i = 0; i < 3; i++) {
+            precise double d = color[i] - l;
+            if (d > 0.0LF) {
+                precise double limit = (1.0LF - target) / d;
+                scale = scale < limit ? scale : limit;
+            }
+            if (d < 0.0LF) {
+                precise double limit = -target / d;
+                scale = scale < limit ? scale : limit;
+            }
+        }
+    }
+    precise dvec3 offset = color - dvec3(l);
+    precise dvec3 scaled = scale * offset;
+    precise dvec3 result = dvec3(target) + scaled;
+    return result;
+}
+
+// The half bit pattern the CPU's conversion gives a working value.
+uint referenceToHalfBits(uint channel, float value, uint thresholdCount)
+{
+    const uint base = ReferenceThresholdOffset + channel * thresholdCount;
+    // the number of thresholds at or below the value (entry 0 is -inf)
+    uint low = 0;
+    uint high = thresholdCount;
+    while (low < high) {
+        const uint middle = (low + high) / 2;
+        if (uintBitsToFloat(params.tables.word[base + middle]) <= value) {
+            low = middle + 1;
+        } else {
+            high = middle;
+        }
+    }
+    const uint number = low == 0 ? 0 : low - 1;
+    if (number == 0) {
+        return 0xfc00u;
+    }
+    return number < 31744 ? (0x8000u | (31744 - number)) : (number - 31744);
+}
+
+// KisColorReferenceFilter::processImpl() for one pixel, as half bit patterns
+uvec2 colorReference(uvec2 srcBits)
+{
+    const float alpha = unpackHalf2x16(srcBits.y).y;
+    if (!(alpha > 0.0) || isinf(alpha) || isnan(alpha)) {
+        return srcBits;
+    }
+    const uvec3 channelBits = uvec3(srcBits.x & 0xffffu, srcBits.x >> 16, srcBits.y & 0xffffu);
+    vec3 working;
+    for (uint c = 0; c < 3; c++) {
+        working[c] = uintBitsToFloat(params.tables.word[ReferenceForwardOffset + c * 65536 + channelBits[c]]);
+    }
+    if (any(isinf(working)) || any(isnan(working))) {
+        return srcBits;
+    }
+
+    const double amount = packDouble2x32(uvec2(params.tables.word[0], params.tables.word[1]));
+    const dvec3 original = dvec3(working);
+    const double l = referenceBrightness(original);
+    dvec3 mapped = referenceLookup(l);
+    if (params.tables.word[2] != 0) {
+        mapped = referenceKeepBrightness(mapped, l);
+    }
+    precise dvec3 difference = mapped - original;
+    precise dvec3 scaled = amount * difference;
+    precise dvec3 blended = original + scaled;
+
+    const uint enabled = params.tables.word[3];
+    const uint thresholdCount = params.tables.word[4];
+    uvec3 result = channelBits;
+    for (uint c = 0; c < 3; c++) {
+        if ((enabled & (1u << c)) != 0) {
+            result[c] = referenceToHalfBits(c, toFloat(blended[c]), thresholdCount);
+        }
+    }
+    return uvec2(result.r | (result.g << 16), result.b | (srcBits.y & 0xffff0000u));
 }
 #endif
 
@@ -250,9 +447,11 @@ void main()
         }
 
         const vec4 src = vec4(unpackHalf2x16(srcBits.x), unpackHalf2x16(srcBits.y));
-        if (params.kind == KindTables) {
-            const uvec2 bits = uvec2(tableEntry(0, srcBits.x & 0xffffu) | (tableEntry(1, srcBits.x >> 16) << 16),
-                                     tableEntry(2, srcBits.y & 0xffffu) | (tableEntry(3, srcBits.y >> 16) << 16));
+        if (params.kind == KindTables || params.kind == KindColorReference) {
+            const uvec2 bits = params.kind == KindColorReference
+                ? colorReference(srcBits)
+                : uvec2(tableEntry(0, srcBits.x & 0xffffu) | (tableEntry(1, srcBits.x >> 16) << 16),
+                        tableEntry(2, srcBits.y & 0xffffu) | (tableEntry(3, srcBits.y >> 16) << 16));
             if (coverage == 255) {
                 TileWords(dstAddress).word[2 * index] = bits.x;
                 TileWords(dstAddress).word[2 * index + 1] = bits.y;
@@ -264,7 +463,7 @@ void main()
         }
 
         // SCALE_FROM_FLOAT(): the gray value rounded to half
-        const float gray = float(float16_t(desaturated(src.rgb, params.kind - KindDesaturate)));
+        const float gray = roundToHalf(desaturated(src.rgb, params.kind - KindDesaturate));
         if (coverage == 255) {
             // gray is a half value: packing it is exact. The alpha channel
             // is copied, whatever its bit pattern.

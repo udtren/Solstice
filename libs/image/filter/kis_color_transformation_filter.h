@@ -43,7 +43,7 @@ public:
      * KisColorTransformationConfiguration (until one of its properties
      * changes).
      */
-    KisGpuColorTransformSP gpuColorTransform(const KoColorSpace *cs, const KisFilterConfigurationSP config) const;
+    KisGpuColorTransformSP gpuColorTransform(const KoColorSpace *cs, const KisFilterConfigurationSP config) const override;
 
     KisFilterConfigurationSP factoryConfiguration(KisResourcesInterfaceSP resourcesInterface) const override;
 };

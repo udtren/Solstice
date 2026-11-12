@@ -2991,3 +2991,21 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   compaction. The fma, division and Copy fast path findings were already
   there.
 - Not verified: the manual check (GPU engine checklist item 22).
+
+## 2026-11-12 GPU engine: filter masks and Color Reference (phase 4.116)
+
+- Filter masks whose filter has a GPU form are applied to their layer's
+  projection in place (`KisFilterMask::applyOnGpu()`); the hook is now
+  `KisFilter::gpuColorTransform()`. The Color Reference filter has a GPU
+  form in RGBA F16: forward conversion tables, backward thresholds found
+  by bisection, its arithmetic repeated in double. Reference:
+  `docs/agent/gpu-engine.md`, "Filter masks and Color Reference (phase
+  4.116)"; `docs/agent/color-reference.md`, "GPU path".
+- Benchmark page extended:
+  [Filter layer updates](benchmarks/filter-layer-updates.md): a dab inside
+  a group with a Color Reference mask 25.7 → 0.49 ms; the user's document
+  333 → 10.4 ms per Move Tool step.
+- Parity page: items 18 (inverting a monotonic conversion by thresholds)
+  and 19 (no tolerance comparison through a nonlinear filter); item 16
+  extended (`toFloat()`, `roundToHalf()`).
+- Not verified: the manual check (GPU engine checklist item 23).

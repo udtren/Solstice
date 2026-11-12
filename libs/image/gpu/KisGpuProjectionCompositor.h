@@ -189,9 +189,12 @@ public:
      * through it with the Copy composite op: 255 gives the transformed
      * pixel, 0 the source pixel.
      *
-     * Both devices must share an RGBA F32/F16 color space (channel tables:
-     * F16 only), and @p dst needs an offset that is a multiple of 64 (the
-     * same exclusivity rule as composite()). Does not wait.
+     * Both devices must share an RGBA F32/F16 color space (tables: F16
+     * only), and @p dst needs an offset that is a multiple of 64 (the same
+     * exclusivity rule as composite()). @p src may be @p dst (a filter mask
+     * on its layer's projection, phase 4.116); tiles the device lacks
+     * inside @p rect are then created from its default pixel, as the CPU
+     * filter does. Does not wait.
      *
      * @return false when unsupported or on failure; @p dst is then unchanged
      */

@@ -65,7 +65,8 @@ every source tile under the dirty rect on every update.
   dab slower and downloads rose (measured before the restriction; numbers
   in the benchmark page below). Since phase 4.113 transparency masks are
   applied on the GPU (`docs/agent/gpu-engine.md`, "Transparency masks
-  (phase 4.113)"), so a clone with transparency masks only copies on the
+  (phase 4.113; filter masks with a GPU form count too since phase
+  4.116)"), so a clone with transparency masks only copies on the
   GPU too (`KisLayer::gpuAppliesEffectMasks()`); a clone with a filter
   mask keeps the CPU copy.
 

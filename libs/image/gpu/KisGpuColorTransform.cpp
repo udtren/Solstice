@@ -14,6 +14,16 @@
 
 #include <kis_debug.h>
 
+#include "KisGpuMergeBatch.h"
+#include "filter/kis_filter.h"
+#include "filter/kis_filter_configuration.h"
+#include "filter/kis_filter_registry.h"
+#include "kis_default_bounds_base.h"
+#include "kis_node.h"
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "KisGpuProjectionCompositor.h"
+#endif
+
 namespace
 {
 constexpr int Channels = 4;
@@ -55,6 +65,32 @@ quint16 sampleBits(std::mt19937 &random)
     return bits;
 }
 } // namespace
+
+QSharedPointer<const KisGpuColorTransform> KisGpuColorTransform::forNode(KisNodeSP node,
+                                                                         KisFilterConfigurationSP config,
+                                                                         const KoColorSpace *cs,
+                                                                         KisDefaultBoundsBaseSP bounds)
+{
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // Development switch, like KRITA_GPU_LAYER_STYLE (docs/agent/gpu-engine.md).
+    static const bool disabled = qgetenv("KRITA_GPU_FILTER_LAYER") == "0";
+    if (disabled || !node || !config || !cs || !bounds || !KisGpuMergeBatch::mayCompositeOnGpu(node)
+        || !KisGpuProjectionCompositor::supportsColorTransform()) {
+        return {};
+    }
+    if (bounds->wrapAroundMode() || bounds->currentLevelOfDetail() > 0) {
+        return {};
+    }
+    KisFilterSP filter = KisFilterRegistry::instance()->value(config->name());
+    return filter ? filter->gpuColorTransform(cs, config) : QSharedPointer<const KisGpuColorTransform>();
+#else
+    Q_UNUSED(node);
+    Q_UNUSED(config);
+    Q_UNUSED(cs);
+    Q_UNUSED(bounds);
+    return {};
+#endif
+}
 
 QSharedPointer<const KisGpuColorTransform> KisGpuColorTransform::desaturate(const KoColorSpace *cs, int type)
 {
@@ -114,8 +150,25 @@ KisGpuColorTransform::channelTables(const KoColorSpace *cs, const KoColorTransfo
         return {};
     }
 
-    transform->m_tablesId = s_nextTablesId++;
+    transform->m_tablesId = nextTablesId();
     return transform;
+}
+
+quint64 KisGpuColorTransform::nextTablesId()
+{
+    return s_nextTablesId++;
+}
+
+const void *KisGpuColorTransform::tableData() const
+{
+    return m_kind == ColorReference ? static_cast<const void *>(m_words.constData())
+                                    : static_cast<const void *>(m_tables.constData());
+}
+
+qint64 KisGpuColorTransform::tableBytes() const
+{
+    return m_kind == ColorReference ? qint64(m_words.size()) * qint64(sizeof(quint32))
+                                    : qint64(m_tables.size()) * qint64(sizeof(quint16));
 }
 
 void KisGpuColorTransform::applyTables(const quint16 *src, quint16 *dst, int nPixels) const
