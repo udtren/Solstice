@@ -6,12 +6,14 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[0.9.1](https://github.com/udtren/Solstice/releases/tag/v0.9.1) fixes a rare
-race that could leave a layer out of the picture in tile-sized blocks until
-Undo and Redo. It builds on
-[0.9.0](https://github.com/udtren/Solstice/releases/tag/v0.9.0), which added
-[At least 1 pixel](brush-minimum-one-pixel.md): thin, pressure-tapered brush
-lines keep at least 1 pixel instead of fading out (on by default).
+[1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0) moves more of
+the layer stack to the [GPU engine](gpu-engine.md) (moved layers and groups,
+transparency masks, the Stroke layer style, filter layers and filter masks)
+and starts the engine by itself only on NVIDIA Blackwell; other graphics
+cards need an option. It builds on
+[0.9.1](https://github.com/udtren/Solstice/releases/tag/v0.9.1), which fixed a
+rare race that could leave a layer out of the picture in tile-sized blocks
+until Undo and Redo.
 
 ## Getting started
 

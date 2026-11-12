@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 0.9.1](#whats-new-in-091)
+- [What's new in 1.0.0](#whats-new-in-100)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,17 +59,22 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 0.9.1
+## What's new in 1.0.0
 
-[Solstice 0.9.1](https://github.com/udtren/Solstice/releases/tag/v0.9.1) fixes
-a rare race that could leave a layer out of the picture in tile-sized blocks
-until Undo and Redo: a layer's recorded extent could stay smaller than its
-content when tiles were added from several threads at once.
+[Solstice 1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0) moves
+more of the layer stack to the [GPU engine](docs/gpu-engine.md): moved layers
+and groups, transparency masks, the Stroke layer style, and filter layers and
+filter masks with the most common color filters. It also fixes a crash when a
+mask was added to a layer off the 64 pixel tile grid.
 
-It builds on [0.9.0](https://github.com/udtren/Solstice/releases/tag/v0.9.0),
-which added [At least 1 pixel](docs/brush-minimum-one-pixel.md), a Freehand
-Brush option (on by default) that keeps thin, pressure-tapered lines at least
-1 pixel wide instead of letting them fade out.
+The GPU engine now starts by itself only on NVIDIA Blackwell. On other
+graphics cards it stays off until **Also use it with graphics cards it was
+not verified with** is checked in Settings → Configure Solstice →
+Performance → General.
+
+It builds on [0.9.1](https://github.com/udtren/Solstice/releases/tag/v0.9.1),
+which fixed a rare race that could leave a layer out of the picture in
+tile-sized blocks until Undo and Redo.
 
 ## Highlights
 
