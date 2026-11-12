@@ -241,9 +241,9 @@ GPU column applies to RGBA 32-bit and 16-bit float layers only.
 | Area | On the GPU | CPU only |
 | --- | --- | --- |
 | Color spaces | RGBA 32-bit and 16-bit float | Every other color space and depth (8/16-bit integer, CMYK, Lab, grayscale), also as single layers in a float document; file layers |
-| Layer compositing | Layer projection, including alpha lock and individual channel locks, of layers and groups at any position; transparency masks; the Stroke layer style (outside, solid color) | Other layer style effects, Colorize Mask, filter masks (except their Gaussian blur) |
+| Layer compositing | Layer projection, including alpha lock and individual channel locks, of layers and groups at any position; transparency masks; the Stroke layer style (outside, solid color); filter layers with Desaturate, and in 16-bit float with Posterize or channel curves | Other layer style effects, Colorize Mask, filter masks (except their Gaussian blur) |
 | Canvas display | Handing the projection to the OpenGL canvas | ANGLE/Direct3D renderer, soft proofing, channel selection in the Channels docker, LUT-based display profiles, absolute colorimetric intent |
-| Blend modes | Every mode not listed as CPU only | Dissolve, Marker, Destination In, Destination Atop, Divisive Modulo and its Continuous variants |
+| Blend modes | Every mode not listed as CPU only | Dissolve, Marker, Destination In, Destination Atop, Divisive Modulo and its Continuous variants; Copy below 100 % opacity |
 | Brush strokes | Pixel brush in Buildup and Wash, with Erase, Alpha Darken, selections, alpha lock and mirror painting | Painting with other brush engines (Color Smudge, Sketch and so on); Alpha Darken with some channels turned off; a single oversized dab |
 | Brush tips | Circle, Gaussian and soft auto-brush tips; image tips (predefined and imported Photoshop brushes) as alpha mask, Image Stamp, Lightness Map or Gradient Map | Animated (`.gih`) and text tips; the Sharpness option; Image Stamp with a color profile that does not convert each channel separately |
 | Brush textures | Pattern textures | The Lightness and Gradient texture modes |

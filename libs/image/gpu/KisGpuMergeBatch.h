@@ -89,6 +89,8 @@ private:
         float opacity = 1.0f;
         bool alphaLocked = false;
         quint32 channelMask = 0xf;
+        /// The Copy mode at full opacity (phase 4.115); such entries lead the batch.
+        bool replace = false;
     };
 
     void compositeOnCpu();

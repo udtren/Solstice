@@ -59,7 +59,22 @@ ordered). Excluded by design: integer layers, filter areas below about
   solid color (4.114, manual check pending: checklist item 21). The user
   moved the stroke ahead of the filter layers on 2026-11-12, after a count
   of their documents (73 strokes against 7 filter layers in float
-  documents).
+  documents). Filter layers with Desaturate, and in RGBA F16 with
+  Posterize or channel curves, and the Copy blend mode at full opacity
+  (4.115, manual check pending: checklist item 22).
+- Open from 4.115: filter masks; Posterize and curves in RGBA F32 (no
+  tables there; they would need LittleCMS's arithmetic); the other color
+  adjustment filters (HSV, Levels, Color Balance and others: each needs a
+  GPU form, tables where the channels are independent); hue, saturation
+  and lightness curves; the Copy mode at reduced opacity; the Filter
+  dialog and filter strokes. The user's documents use none of them.
+- Found in 4.115, not requested: one of the user's RGBA F16 documents has
+  a Color Reference filter mask (`solstice_color_reference`) on its main
+  group. It runs on the CPU and reads the group's projection back at
+  every update: about 330 ms per full-image Move Tool step with the GPU
+  engine on or off (`KisMoveDocumentBenchmark`), 19 ms for a 512 px rect.
+  A GPU path needs filter masks on the GPU and a GPU form of that filter
+  ([Color Reference](color-reference.md)).
 - Open from 4.114: Inside and Center strokes, gradient and pattern fills,
   the other style effects, and styles during Instant Preview stay on the
   CPU. The user's documents use none of them except one Outer Glow.
@@ -67,10 +82,8 @@ ordered). Excluded by design: integer layers, filter areas below about
   64 px grid (the layer was loaded or masked at such an offset) keeps the
   CPU mask path; measure painting on moved layers before changing
   `KisSafeNodeProjectionStore`.
-- Next: filter masks and filter (adjustment) layers with color adjustment
-  filters (HSV, Levels, Curves and similar point filters). They are split
-  points of the GPU merge today: the projection is read back for the CPU
-  filter and uploaded again.
+- Next: not chosen. Candidates from the user's list: other filters
+  (including the sharpening step of Unsharp Mask), transforms, brushes.
 
 1. **Failure/save UI verification: done except autosave.** Accepted on
    2026-11-11 with Test Control's `gpu_fault` (results in

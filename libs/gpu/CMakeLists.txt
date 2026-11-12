@@ -87,6 +87,9 @@ kis_gpu_add_shader(kritagpu_SHADERS composite_stroke_style_rgba32f shaders/compo
 kis_gpu_add_shader(kritagpu_SHADERS composite_stroke_style_rgba16f shaders/composite_stroke_style.comp DEFINES TILE_F16 BASIC_BLEND_ONLY
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_blend.glsl
              ${CMAKE_CURRENT_SOURCE_DIR}/shaders/composite_over.glsl)
+# Solstice: filter layers (docs/agent/gpu-engine.md, phase 4.115)
+kis_gpu_add_shader(kritagpu_SHADERS color_transform_rgba32f shaders/color_transform.comp)
+kis_gpu_add_shader(kritagpu_SHADERS color_transform_rgba16f shaders/color_transform.comp DEFINES TILE_F16)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f32 shaders/canvas_patches.comp)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f32_f16 shaders/canvas_patches.comp DEFINES DST_F16)
 kis_gpu_add_shader(kritagpu_SHADERS canvas_patches_f16_f32 shaders/canvas_patches.comp DEFINES SRC_F16)
@@ -123,6 +126,7 @@ set(kritagpu_LIB_SRCS
     KisGpuShiftedCopyPass.cpp
     KisGpuCoveragePass.cpp
     KisGpuStrokeStylePass.cpp
+    KisGpuColorTransformPass.cpp
 )
 
 if(WIN32)

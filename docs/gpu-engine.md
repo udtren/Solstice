@@ -12,7 +12,8 @@ On RGBA 32-bit and 16-bit float layers:
 - **Layer compositing and the canvas display**, including alpha lock and
   layers with individual RGB channels turned off.
 - **Blend modes**: every mode except Dissolve, Marker, Destination In,
-  Destination Atop and Divisive Modulo (and its Continuous variants). Modes
+  Destination Atop, Divisive Modulo (and its Continuous variants) and Copy
+  below 100 % opacity. Modes
   based on powers, exponentials or trigonometry (for example Gamma, Easy
   Dodge or Interpolation) match the CPU closely rather than exactly; the
   others give the CPU's result.
@@ -41,6 +42,12 @@ On RGBA 32-bit and 16-bit float layers:
 - **Transparency masks** are applied on the GPU, on paint layers, groups
   and Clone Layers, so painting on a masked layer does not read the layer
   back. Filter masks still run on the CPU.
+- **Filter layers** with these filters, so that painting below them does
+  not read the image back. The results are the CPU's.
+  - Desaturate, in every mode.
+  - In RGBA 16-bit float documents also Posterize and Color Adjustment
+    curves (the RGBA curve and the curves of single channels).
+  - A selection painted on the filter layer is applied on the GPU too.
 - **Clone Layers moved away from their source** (without masks, or with
   transparency masks only) copy the source on the GPU, so they follow GPU
   brush strokes without reading the source back.
@@ -56,7 +63,10 @@ long without AVX2).
 
 ## What stays on the CPU
 
-- Other filters, and the sharpening step of Unsharp Mask. Filter areas
+- Other filters, and the sharpening step of Unsharp Mask. Filter layers
+  with other filters; in RGBA 32-bit float documents also Posterize and
+  Color Adjustment curves; hue, saturation and lightness curves in either
+  depth. Blur areas
   smaller than about 180 x 180 pixels, the reduced-resolution Instant Preview,
   integer layers, wrap-around mode, layer styles other than the Stroke
   described above, and the Colorize Mask.

@@ -1,6 +1,6 @@
 ---
 type: concept
-updated: 2026-10-13
+updated: 2026-11-12
 sources:
   - libs/image/KisImageTipSampler.* (phase 4.103, image tips without QPainter)
   - libs/gpu/shaders/transform_pass.comp (phase 4.94, commit 3828911e98)
@@ -141,6 +141,35 @@ related:
    were explained by one such line. Modes that make NaN from HDR channels
    on the CPU need NaN == NaN in the comparisons (`sameNonFinite()`,
    bitwise `PixelValues`).
+
+15. **Let the CPU fill a table.** When the CPU result comes out of a
+   library (LittleCMS tone curves and conversions, also with its fast
+   float plug-in) there is no arithmetic to repeat. If every output
+   channel depends on one input channel only, RGBA F16 has just 65536
+   inputs per channel: run the CPU transformation over all of them and let
+   the shader look the bit pattern up (phase 4.115,
+   `KisGpuColorTransform::channelTables()`). The result is the CPU's by
+   construction. Prove the independence where it is not obvious
+   (`KisPosterizeColorTransformation::convertsChannelsIndependently()`
+   sweeps every value with the other channels at several values), and
+   mind the channel order: RGBA F16 is stored R, G, B, A, 16-bit integer
+   RGBA as B, G, R, A.
+16. **Ask the CPU which formula it uses.** Phase 4.115 guessed the
+   rounding steps of `KoCompositeOpCopy2` on half channels three times.
+   A throwaway test settled it in one run: call the real composite op on
+   400,000 random pixels and count the mismatches of every candidate
+   (float with and without fma, double; two divisions; three mask
+   scalings). Only the plain float `(b - a) * alpha + a` with a rounding
+   after each operation had none. On the GPU, route each float operation
+   through double (`float(double(a) * double(b))`): the double operation
+   is exact, and the conversion between the two operations keeps the
+   driver from fusing them (see 10). A pixel with an alpha of a few
+   millionths turned one differing subnormal half step into 1 % of color.
+17. **GPU float division.** `x / 3.0` differed from the CPU by one float
+   ULP in the Desaturate average (phase 4.115), `precise` or not. The
+   quotient of the doubles, converted to float, is the correctly rounded
+   float quotient here: an exact quotient of floats is never close enough
+   to a float rounding boundary for the double error to matter.
 
 ## Test pattern
 

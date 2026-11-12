@@ -34,8 +34,13 @@
 #include "kis_abstract_projection_plane.h"
 
 #ifdef HAVE_KRITA_GPU_ENGINE
+#include <QRegion>
+
+#include "filter/kis_color_transformation_filter.h"
 #include "gpu/KisGpuProjectionCompositor.h"
 #include "gpu/KisGpuTileAccess.h"
+#include "kis_default_bounds_base.h"
+#include "kis_pixel_selection.h"
 #include "layerstyles/kis_layer_style_projection_plane.h"
 #endif
 
@@ -49,6 +54,43 @@
 #define DEBUG_NODE_ACTION(message, type, leaf, rect)
 #endif
 
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+namespace
+{
+/**
+ * GPU engine (phase 4.115): the filter of an adjustment layer in the form
+ * the GPU computes, or null when the layer is filtered on the CPU: the GPU
+ * projection is off, the filter or its configuration has no GPU form, or
+ * the update runs at a reduced level of detail.
+ */
+KisGpuColorTransformSP gpuColorTransformFor(KisAdjustmentLayer *layer, KisPaintDeviceSP projection)
+{
+    // Development switch, like KRITA_GPU_LAYER_STYLE (docs/agent/gpu-engine.md).
+    static const bool disabled = qgetenv("KRITA_GPU_FILTER_LAYER") == "0";
+    if (disabled || !layer || !projection || !KisGpuMergeBatch::mayCompositeOnGpu(KisNodeSP(layer))
+        || !KisGpuProjectionCompositor::supportsColorTransform()) {
+        return KisGpuColorTransformSP();
+    }
+    // The layer's own device knows the image's bounds; a temporary
+    // projection may not.
+    KisDefaultBoundsBaseSP bounds = layer->original()->defaultBounds();
+    if (bounds->wrapAroundMode() || bounds->currentLevelOfDetail() > 0) {
+        return KisGpuColorTransformSP();
+    }
+    KisFilterConfigurationSP filterConfig = layer->filter();
+    if (!filterConfig) {
+        return KisGpuColorTransformSP();
+    }
+    KisFilterSP filter = KisFilterRegistry::instance()->value(filterConfig->name());
+    const KisColorTransformationFilter *colorFilter = dynamic_cast<const KisColorTransformationFilter *>(filter.data());
+    if (!colorFilter) {
+        return KisGpuColorTransformSP();
+    }
+    return colorFilter->gpuColorTransform(projection->colorSpace(), filterConfig);
+}
+} // namespace
+#endif
 
 class KisUpdateOriginalVisitor : public KisNodeVisitor
 {
@@ -79,6 +121,14 @@ public:
             layer->projectionPlane()->needRectForOriginal(m_updateRect);
 
         KisPaintDeviceSP originalDevice = layer->original();
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+        // GPU engine (phase 4.115): filters with a GPU form
+        if (filterOnGpu(layer, originalDevice, originalUpdateRect)) {
+            return true;
+        }
+#endif
+
         originalDevice->clear(originalUpdateRect);
 
         const QRect applyRect = originalUpdateRect & m_projection->extent();
@@ -166,6 +216,59 @@ public:
     }
 
 private:
+#ifdef HAVE_KRITA_GPU_ENGINE
+    /**
+     * GPU engine (phase 4.115): what visit(KisAdjustmentLayer*) does below,
+     * with the projection filtered into the layer's original on the GPU, so
+     * neither device is read back. Returns false when the CPU has to do it;
+     * the original may then have been cleared outside the projection's
+     * extent, which the CPU path does first anyway.
+     */
+    bool filterOnGpu(KisAdjustmentLayer *layer, KisPaintDeviceSP originalDevice, const QRect &originalUpdateRect)
+    {
+        const KisGpuColorTransformSP transform = gpuColorTransformFor(layer, m_projection);
+        if (!transform || !(*originalDevice->colorSpace() == *m_projection->colorSpace())) {
+            return false;
+        }
+
+        const QRect applyRect = originalUpdateRect & m_projection->extent();
+
+        // The layer's selection: none of it (the usual case, everything is
+        // selected) or its coverage bytes.
+        QVector<quint8> coverage;
+        if (!applyRect.isEmpty()) {
+            KisSelectionSP selection = layer->fetchComposedInternalSelection(applyRect);
+            KisPixelSelectionSP pixels = selection ? selection->projection() : KisPixelSelectionSP();
+            // the extent of the tiles (KisPixelSelection hides extent())
+            const KisPaintDevice *pixelDevice = pixels.data();
+            const bool allSelected = !pixels
+                || ((pixelDevice->extent() & applyRect).isEmpty() && *pixels->defaultPixel().data() == MAX_SELECTED);
+            if (!allSelected) {
+                const qint64 size = qint64(applyRect.width()) * applyRect.height();
+                if (size > KisGpuProjectionCompositor::maxColorTransformCoveragePixels()) {
+                    return false;
+                }
+                coverage.resize(int(size));
+                pixels->readBytes(coverage.data(), applyRect);
+            }
+        }
+
+        // The filtered rect is replaced as a whole; the rest is cleared.
+        const QRegion outside = QRegion(originalUpdateRect).subtracted(applyRect);
+        for (const QRect &rect : outside) {
+            originalDevice->clear(rect);
+        }
+        if (applyRect.isEmpty()) {
+            return true;
+        }
+        return KisGpuProjectionCompositor::transformColors(originalDevice,
+                                                           applyRect,
+                                                           m_projection,
+                                                           *transform,
+                                                           coverage.isEmpty() ? nullptr : coverage.constData());
+    }
+#endif
+
     QRect m_updateRect;
     KisPaintDeviceSP m_projection;
 };
@@ -205,8 +308,17 @@ void KisAsyncMerger::startMerge(KisBaseRectsWalker &walker, bool notifyClones) {
         if (currentLeaf->isRoot() || (item.m_position & KisMergeWalker::N_EXTRA)
             || currentLeaf->dependsOnLowerNodes()) {
             KisPaintTrace::Scope trace("merge.gpu_flush", currentLeaf->node().data());
-            // Only the root's recalculation does not read it on the CPU.
-            m_gpuBatch.flush(!currentLeaf->isRoot());
+            // Only the root's recalculation does not read it on the CPU...
+            bool cpuReadsNext = !currentLeaf->isRoot();
+#ifdef HAVE_KRITA_GPU_ENGINE
+            // ... and an adjustment layer whose filter runs on the GPU (phase 4.115).
+            if (cpuReadsNext
+                && gpuColorTransformFor(qobject_cast<KisAdjustmentLayer *>(currentLeaf->node().data()),
+                                        m_currentProjection)) {
+                cpuReadsNext = false;
+            }
+#endif
+            m_gpuBatch.flush(cpuReadsNext);
         }
 
         if (currentLeaf->isRoot()) {

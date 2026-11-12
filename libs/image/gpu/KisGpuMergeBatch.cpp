@@ -9,6 +9,7 @@
 #include <QBitArray>
 
 #include <atomic>
+#include <cstring>
 #include <mutex>
 
 #include <kis_debug.h>
@@ -16,6 +17,7 @@
 #include <KoColor.h>
 #include <KoColorModelStandardIds.h>
 #include <KoColorSpace.h>
+#include <KoCompositeOpRegistry.h>
 
 #include "KisGpuEngineSettings.h"
 #include "kis_abstract_projection_plane.h"
@@ -131,9 +133,19 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
         return false;
     }
 
-    KisGpuBlendOp op;
+    KisGpuBlendOp op = KisGpuBlendOp::Over;
     // the leaf's blend mode differs from the layer's inside a clip stack
-    if (!KisGpuProjectionCompositor::blendOpForCompositeOp(leaf->compositeOpId(), &op)) {
+    const QString compositeOpId = leaf->compositeOpId();
+    // Phase 4.115: Copy at full opacity (the mode of filter layers) replaces
+    // the rect with the layer, its default pixel where it has no data:
+    // KisLayerProjectionPlane does not clip this mode to the layer's extent.
+    const bool replace = compositeOpId == COMPOSITE_COPY;
+    if (replace) {
+        if (leaf->opacity() != OPACITY_OPAQUE_U8 || device->defaultBounds()->wrapAroundMode()
+            || std::memcmp(device->defaultPixel().data(), projection->defaultPixel().data(), device->pixelSize())) {
+            return false;
+        }
+    } else if (!KisGpuProjectionCompositor::blendOpForCompositeOp(compositeOpId, &op)) {
         return false;
     }
 
@@ -151,6 +163,13 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
                 channelMask |= 1u << i;
         }
         alphaLocked = !flags.testBit(3);
+    }
+    // KisPainter::bitBlt() copies whole pixels in the Copy mode when both
+    // devices share their offset (fastBitBltPossible(); the color spaces are
+    // compared below): the channel flags do nothing then.
+    if (replace && projection->x() == device->x() && projection->y() == device->y()) {
+        alphaLocked = false;
+        channelMask = 0xf;
     }
 
     // The layer may sit at any offset (phase 4.112); the projection is
@@ -174,6 +193,10 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
     if ((!m_entries.isEmpty() || m_clearPending) && (m_projection != projection || m_rect != rect)) {
         flush();
     }
+    // Replace entries lead a batch (KisGpuProjectionCompositor::composite()).
+    if (replace && !m_entries.isEmpty() && !m_entries.last().replace) {
+        flush();
+    }
 
     m_projection = projection;
     m_rect = rect;
@@ -184,6 +207,7 @@ bool KisGpuMergeBatch::tryAdd(KisProjectionLeafSP leaf, KisPaintDeviceSP project
     entry.opacity = leaf->opacity() / 255.0f;
     entry.alphaLocked = alphaLocked;
     entry.channelMask = channelMask;
+    entry.replace = replace;
     m_entries << entry;
     return true;
 #else
@@ -245,6 +269,7 @@ void KisGpuMergeBatch::flush(bool cpuReadsNext)
             layer.opacity = entry.opacity;
             layer.alphaLocked = entry.alphaLocked;
             layer.channelMask = entry.channelMask;
+            layer.replace = entry.replace;
             layers << layer;
         }
 

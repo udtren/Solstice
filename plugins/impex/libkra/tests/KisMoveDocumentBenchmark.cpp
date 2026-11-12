@@ -96,6 +96,15 @@ void run(const QString &fileName, const QString &nodeName, const Variant &varian
     KisNodeSP movedRoot = KisLayerUtils::findNodeByName(image->root(), nodeName);
     QVERIFY2(movedRoot, qPrintable(QStringLiteral("no node named %1").arg(nodeName)));
 
+    // KRITA_MOVE_BENCHMARK_SHOW: a node to make visible first, for instance a
+    // hidden group of filter layers above the moved node.
+    const QString shownName = qEnvironmentVariable("KRITA_MOVE_BENCHMARK_SHOW");
+    if (!shownName.isEmpty()) {
+        KisNodeSP shown = KisLayerUtils::findNodeByName(image->root(), shownName);
+        QVERIFY2(shown, qPrintable(QStringLiteral("no node named %1").arg(shownName)));
+        shown->setVisible(true);
+    }
+
     // The nodes the Move Tool moves (MoveStrokeStrategy::recursiveApplyNodes;
     // transform masks below a moved node stay as they are).
     QVector<KisNodeSP> nodes;

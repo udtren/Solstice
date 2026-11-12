@@ -2969,3 +2969,25 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   next target. The first plan (filter layers) would have covered 7
   places; the stroke covers 73.
 - Not verified: the manual check (GPU engine checklist item 21).
+
+## 2026-11-12 GPU engine: filter layers (phase 4.115)
+
+- Filter layers whose filter has a GPU form are filtered into their
+  original device on the GPU (`KisUpdateOriginalVisitor::filterOnGpu()`,
+  `KisGpuProjectionCompositor::transformColors()`): Desaturate by
+  arithmetic, Posterize and channel curves in RGBA F16 by tables that the
+  CPU transformation fills (`KisGpuColorTransform`). The Copy blend mode
+  at full opacity is composited on the GPU. Reference:
+  `docs/agent/gpu-engine.md`, "Filter layers (phase 4.115)".
+- New benchmark page:
+  [Filter layer updates](benchmarks/filter-layer-updates.md): a dab below
+  the user's Desaturate and Posterize stack 12.44 → 0.36 ms,
+  24.8 → 0 downloads.
+- New pitfall: [Tests load the installed plugins](pitfalls/tests-load-installed-plugins.md).
+  Parity page: items 15-17 (tables filled by the CPU, asking the CPU which
+  formula it uses, GPU float division). Copy semantics page: the Copy
+  blend mode of a layer.
+- Lesson: read the wiki pages of the area again after a context
+  compaction. The fma, division and Copy fast path findings were already
+  there.
+- Not verified: the manual check (GPU engine checklist item 22).

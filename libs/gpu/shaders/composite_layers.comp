@@ -150,7 +150,27 @@ void main()
                 params.layerTiles.addr[info.tableOffset + uint(source.y >> 6) * info.tableWidth + uint(source.x >> 6)];
             const uint sourceIndex = uint((source.y & 63) * 64 + (source.x & 63));
             if ((info.flags & FlagReplace) != 0) {
-                result = address == 0 ? info.fill : LOAD_PIXEL(TilePixels(address).px[sourceIndex]);
+                const vec4 copied = address == 0 ? info.fill : LOAD_PIXEL(TilePixels(address).px[sourceIndex]);
+                if (info.channelMask == 0xf) {
+                    result = copied;
+                    continue;
+                }
+                // The Copy composite op at full opacity with channel flags
+                // (KoCompositeOpCopy2; the scalar KoOptimizedCompositeOpCopy128).
+                if ((info.channelMask & 8) == 0) {
+                    // alpha locked: a transparent source pixel changes nothing
+                    if (copied.a == 0.0) {
+                        continue;
+                    }
+                } else {
+                    if (result.a == 0.0) {
+                        result.rgb = vec3(0.0);
+                    }
+                    result.a = copied.a;
+                }
+                if ((info.channelMask & 1) != 0) result.r = copied.r;
+                if ((info.channelMask & 2) != 0) result.g = copied.g;
+                if ((info.channelMask & 4) != 0) result.b = copied.b;
                 continue;
             }
             if (address == 0 || outsideMask) {
