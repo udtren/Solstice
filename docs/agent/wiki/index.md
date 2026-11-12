@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-11
+updated: 2026-11-12
 ---
 
 # Agent wiki
@@ -197,6 +197,10 @@ Document ownership and lifecycle are defined in
 - [Two views writing one settings file](pitfalls/shared-settings-file-stale-writes.md):
   a view that saves its whole in-memory copy overwrites the other view's
   changes; save only owned keys over the current file and notify the others.
+- [A device extent smaller than its tiles](pitfalls/extent-smaller-than-tiles.md):
+  compositing skips a layer outside its extent; "compute, then lock and
+  store" let an older extent win. A test that compares two results reading
+  the same cache cannot see it.
 
 ### Benchmarks
 

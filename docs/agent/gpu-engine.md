@@ -1070,7 +1070,9 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   after each stroke the projection must equal a full `refreshGraphAsync()`.
   F32/F16, GPU/CPU brush, and instant preview (LOD 1/2) rows.
   `KRITA_GPU_STRESS_STROKES` sets strokes per row (default 60). It has no
-  canvas, so it does not cover the canvas upload.
+  canvas, so it does not cover the canvas upload. Both sides of the
+  comparison read the same layer extents, so a wrong extent (see the
+  unreproduced report in "Risks and open questions") stays invisible to it.
 - Phase 1 test: target `KisGpuPaintDeviceTest`, ctest name
   `libs-image-KisGpuPaintDeviceTest`. Changes to the tile engine must also
   pass `libs-image-tiles3-*`, `kis_paint_device_test`,
@@ -1462,13 +1464,27 @@ Section index:
 ## Risks and open questions
 
 - Unreproduced report (2026-11-11): while painting an RGBA float document,
-  a rectangle the shape of an update rect (not the tile grid) sometimes
-  shows plain white; Undo and Redo paint it correctly. Not reproduced by
-  `KisGpuProjectionStressTest` (7,500 strokes including LOD) or live through
-  Test Control (760 strokes: canvas captures before and after a soft
-  proofing refetch, projection before and after Undo/Redo). Next evidence
-  needed: whether toggling soft proofing twice (Ctrl+Y) removes it. If it
-  does, the canvas upload is wrong; otherwise the projection is.
+  a white rectangle sometimes appears; Undo and Redo paint it correctly.
+  Measured in the user's screenshot (2026-11-12): 183x30 px with straight
+  edges, and a second straight-edged cut. The edges fit the 64 px tile grid
+  at about 48 % zoom (exactly 6x1 tiles) or about 41 % (five of six edges),
+  so tile granularity is involved, not only an update rect; both zooms are
+  below 50 %, where a large brush uses instant preview.
+  Not reproduced by `KisGpuProjectionStressTest` (7,500 strokes including
+  LOD) or live through Test Control (760 strokes: canvas captures before and
+  after a soft proofing refetch, projection before and after Undo/Redo).
+  - Found while re-reading (2026-11-12) and fixed: `KisTiledExtentManager`
+    could keep an extent smaller than the device's tiles after concurrent
+    tile additions. Compositing skips a layer outside its extent
+    (`KisGpuProjectionCompositor::composite()`, `KisLayerProjectionPlane`),
+    in whole tiles, until the extent is recomputed (Undo/Redo does that).
+    Not shown to be the cause: it needs rows or columns appearing at the
+    edge of a device, and the report is in the middle of a figure. See
+    [the pitfall](wiki/pitfalls/extent-smaller-than-tiles.md).
+  - Next evidence needed when it appears again: whether toggling soft
+    proofing twice (Ctrl+Y) removes it (then the canvas upload is wrong,
+    otherwise the projection), the zoom, and whether the brush uses instant
+    preview.
 
 - Interop requires desktop OpenGL. With the engine on, "Auto" picks it on
   Windows unless the driver is blacklisted; an explicit ANGLE choice still
