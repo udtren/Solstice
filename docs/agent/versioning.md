@@ -10,7 +10,7 @@ starting at `0.1.0-alpha`.
 
 | Version | Value | Defined in | Used for |
 | --- | --- | --- | --- |
-| Solstice version | `0.9.0` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
+| Solstice version | `0.9.1` | top-level `CMakeLists.txt`: `SOLSTICE_VERSION_MAJOR/MINOR/PATCH/LABEL/BUILD` -> `SOLSTICE_VERSION_STRING` | everything shown to users |
 | Krita compatibility version | `6.0.5-prealpha` | top-level `CMakeLists.txt`: `KRITA_VERSION_STRING` and related | file formats, resources, scripting, library versions |
 
 `libs/version/kritaversion.h.cmake` defines both. `KritaVersionWrapper`
@@ -107,6 +107,7 @@ appears in the version strings.
 
 | Version | Date | Reason |
 | --- | --- | --- |
+| `0.9.1` | 2026-11-12 | The device extent keeps up with tiles added from several threads at once (`KisTiledExtentManager`, a race in upstream Krita code): an extent that stayed too small made compositing skip a layer there, in whole tiles, until Undo/Redo (PR #76). Found while looking for the cause of a rare white rectangle during painting; not shown to be that cause. Requested by the user (`PATCH`: a fix only). Krita compatibility version is unchanged. |
 | `0.9.0` | 2026-11-11 | The Freehand Brush At least 1 pixel option (on by default), which keeps thin pressure-tapered lines at least 1 pixel wide (PR #72), with the Asset Library docker and welcome page settings sync fix (PR #68), Test Control `gpu_fault` (PR #70), the GPU projection stress test (PR #71) and the GPU failure UI acceptance record (PR #73); requested by the user (`MINOR`). Regular GitHub Release `v0.9.0` at `eb169f073da7` (PR #74, run 43022003263); [package verification](wiki/history/release-0.9.0.md). Krita compatibility version is unchanged. |
 | `0.8.1` | 2026-11-07 | The Through-Layer Eraser erases alpha locked layers, behind the new Erase alpha locked layers option (on by default); requested by the user, who tried it in the application (`PATCH`: an existing feature extended, as for 0.5.1; PR #66). Regular GitHub Release `v0.8.1` at `8ec846b94750` (run 42314221895); [package verification](wiki/history/release-0.8.1.md). Krita compatibility version is unchanged. |
 | `0.8.0` | 2026-11-05 | Lazy Tools Fast Image Export saved exports per document, stored in the `.kra`, with the Run All Saved Exports and Run Checked Saved Exports actions (PR #63); requested by the user (`MINOR`). The duplicate-on-the-same-layer guide and README card now show an animated GIF, and the Lazy Tools screenshots show saved exports. Regular GitHub Release `v0.8.0` at `4b8b580a02a3` (PR #64, run 41942109402); [package verification](wiki/history/release-0.8.0.md). Krita compatibility version is unchanged. |
