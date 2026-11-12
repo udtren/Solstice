@@ -38,7 +38,7 @@ Blackwell; other GPUs need the option in the settings
 ([reference](gpu-engine.md#feature-gate-and-user-interface-implemented-in-phase-33),
 [decision](wiki/decisions/gpu-verified-devices.md)). No work is planned to
 verify other GPUs: the user has none. Its manual check (checklist item 24)
-is pending.
+was reported OK by the user on 2026-11-13.
 
 ## Remaining candidates and acceptance
 

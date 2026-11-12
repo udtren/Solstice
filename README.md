@@ -39,7 +39,7 @@ Krita 6 codebase.**
 
 Solstice is independently maintained and desktop-only. It is not an official
 Krita edition; upstream Krita changes are adopted selectively as needed. See
-[Versions](docs/versioning.md) for its pre-1.0 version numbering.
+[Versions](docs/versioning.md) for its version numbering.
 
 **Learning Solstice:** for the basics of using the application, see the
 [Krita User Manual](https://docs.krita.org/en/user_manual.html). The

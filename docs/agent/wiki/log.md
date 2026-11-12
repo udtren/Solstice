@@ -3089,3 +3089,23 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Not verified: the settings and the refusal in the running application
   (checklist item 24); the behavior on a GPU other than Blackwell, which is
   only simulated with `KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED=1`.
+
+## 2026-11-13 GPU engine: manual check of the verified-device rule
+
+- The user ran checklist item 24 (the refusal, the status line and the
+  opt-in, with `KRITA_GPU_TREAT_DEVICE_AS_UNVERIFIED=1` on the Blackwell
+  machine) and reported it OK. No other GPU was tried.
+
+## 2026-11-13 Solstice 1.0.0 prepared
+
+- The user asked for the next release to be 1.0.0 and for the build, the
+  GitHub Release and the website to be done by a cloud session. The local
+  session set the version, wrote the history row and a
+  [handoff page with draft notes](history/release-1.0.0.md).
+- The user stated no meaning for 1.0.0 beyond the number, so the documents
+  claim none: the GPU Engine guide keeps "(experimental)", and
+  `docs/versioning.md` says that limits stay as each guide describes them.
+- A cloud session starts from the repository alone. What it needs from the
+  local session (what was checked by hand, what was not, the behavior
+  change of PR #86 for the notes) has to be in the repository before it
+  starts, not in the local conversation.
