@@ -2880,3 +2880,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   (cleared at unlock).
 - Lesson: `KisGpuProjectionStressTest` cannot see a wrong extent; noted in
   the GPU engine build/test notes.
+
+## 2026-11-12 release: Solstice 0.9.1
+
+- Released `v0.9.1` at `02090017a7f7` (PR #76 fix, PR #77 version, run
+  43134758192) on 2026-11-12 11:22 JST and published the website the same
+  day (tidalboxstudio-web #35, #36). Evidence:
+  [0.9.1 release verification](history/release-0.9.1.md).
+- README, the guide index and the [version ledger](../versioning.md#history)
+  now describe 0.9.1 as released.
+- Lessons: when the session cannot merge, prepare everything that does not
+  depend on the merge (version PR, website branch) and check the PR state
+  after each "merged" reply; one reply referred to the earlier of two open
+  website PRs. The release notes state that the fix is not shown to remove
+  the reported white rectangle.

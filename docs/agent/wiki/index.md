@@ -297,6 +297,8 @@ Document ownership and lifecycle are defined in
 - [0.9.0 release verification](history/release-0.9.0.md): At least 1 pixel
   release, open pull requests merged first, package integrity, website
   publication.
+- [0.9.1 release verification](history/release-0.9.1.md): device extent fix
+  release, merges done by the user, package integrity, website publication.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):
