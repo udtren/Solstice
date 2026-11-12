@@ -195,11 +195,12 @@ composites:
 - `KisGpuMergeBatch::tryAdd()` defers a leaf when it is GPU-composable: plain
   `KisLayerProjectionPlane` (no layer style), a supported blend mode, channel
   flags empty (all channels) or any four-channel RGBA mask, the same RGBA
-  F32/F16 color space as the projection, and a device offset that differs
-  from the projection's by a multiple of 64 pixels, inside an image whose
-  own color space is RGBA F32/F16 (`mayCompositeOnGpu`; a float group in an
-  RGBA8 image stays on the CPU because the scheduler below would not keep
-  its jobs apart). Anything else flushes the batch and is composited on the
+  F32/F16 color space as the projection, a projection whose own offset is a
+  multiple of 64 pixels, inside an image whose own color space is RGBA
+  F32/F16 (`mayCompositeOnGpu`; a float group in an RGBA8 image stays on the
+  CPU because the scheduler below would not keep its jobs apart). The
+  layer's device may sit at any offset since phase 4.112 ("Moved layers and
+  groups" below). Anything else flushes the batch and is composited on the
   CPU exactly as before.
 - The merger flushes before every step that reads the projection composited
   so far: root and `N_EXTRA` leaves, leaves that depend on lower nodes
@@ -216,7 +217,9 @@ composites:
   `composite_layers.comp` iterates over all deferred layers per pixel, inside
   the clip rect only. Layer tiles are read through `KisGpuTileAccess`
   (resident; uploaded only when stale); tiles outside a layer's extent are
-  skipped, like `KisLayerProjectionPlane` clips to the extent.
+  skipped, like `KisLayerProjectionPlane` clips to the extent. Every layer
+  has its own tile table (`LayerParams`: table offset and width, pixel
+  bias), so a layer's tiles need not lie on the projection's grid.
 - **Since 3.1 the projection is GPU-authoritative.** The batch composites
   in place into the projection's tiles (`KisGpuTileAccess` read-write, clip
   rect), which become GPU-valid and CPU-stale; nothing is read back by the
@@ -948,6 +951,89 @@ kept their pixels.
   "after phase 4.111".
 - Manual check (checklist item 18): reported OK by the user on 2026-10-16.
 
+### Moved layers and groups (phase 4.112)
+
+2026-11-12, user request (Move Tool performance).
+
+- Before: `KisGpuMergeBatch::tryAdd()` and
+  `KisGpuProjectionCompositor::composite()` refused a layer whose device
+  offset differed from the projection's by anything but a multiple of 64
+  pixels. The merger then flushed the batch, composited that layer on the
+  CPU (which read the projection back tile by tile) and uploaded the
+  projection again for the layers above. Dragging with the Move Tool hit
+  this on almost every step, and a layer left at such an offset kept every
+  later update over it on that path.
+- Now a layer's tiles need not lie on the projection's grid.
+  `composite_layers.comp` reads each layer through its own tile table:
+  `LayerParams` has `tableOffset`, `tableWidth` and a pixel `bias`. A layer
+  on the grid uses the destination grid (bias 0). A layer shifted by
+  `s` = 1..63 pixels per axis (`KisGpuLayerCompositor::Layer::shift`) has a
+  table one column and one row larger, and `bias = 64 - s`: its tile
+  (c, r) covers the grid pixels from `(c - 1) * 64 + s`.
+  `KisGpuProjectionCompositor::composite()` computes the shift from the
+  device offsets and places the layer's tiles in that table. Replace layers
+  and coverage masks work the same way (the mask is in destination
+  coordinates). An integer shift changes no arithmetic, so the parity rules
+  above hold unchanged.
+- The projection itself must still be on the 64 px image grid (in-place
+  writes, job exclusivity). `tryAdd()` now checks this before adding a
+  layer, so a projection off the grid goes to the CPU without a warning for
+  every merge.
+- Groups: upstream moved a group's projection device with the group
+  (`KisGroupLayer::setX()`), which put it off the grid and sent the group
+  and all its children to the CPU. The projection now stays at 0,0 and the
+  group's position is a `KisLodCapableLayerOffset` (as in `KisCloneLayer`),
+  with its own level-of-detail value (`syncLodCache()`), which the device
+  offset provided before. Movers refresh the old and the new area anyway,
+  so nothing depends on the old pixels moving along. `x()`/`y()` return
+  the same values as before; `.kra` is unchanged.
+- Move Tool (`MoveNodeStrategyBase::moveNodeCommon()` in
+  `libs/ui/tool/strokes/move_stroke_strategy.cpp`): the dirty rect of a
+  group uses `looseUserVisibleBounds()` (tile extent) instead of the tight
+  bounds. Tight bounds read the projection's pixels, which every update
+  leaves on the GPU: each step read the group's tiles back one by one.
+  Other nodes keep the tight bounds (their tiles are not rewritten by the
+  move).
+- Bounds after a move (all color spaces, also with the engine off):
+  `KisPaintDevice::moveTo()` dropped the cached exact bounds, and the Move
+  Tool asks for the tight bounds of every moved node at every pointer
+  position. `calculateExactBounds()` scans the device's whole tile extent,
+  so a layer whose tiles cover much more than its content cost 8-38 ms per
+  layer and step in a user's document (17 layers: about 330 ms per step,
+  more than everything else together). `moveTo()` now keeps the cached
+  exact bounds and non-default pixel area and translates them
+  (`KisPaintDeviceCache::validBounds()`/`setTranslatedBounds()`,
+  `KisLockFreeCacheWithModeConsistency::setValue()`). Not with a visible
+  default pixel (the bounds then include the image bounds) and not in
+  wrap-around mode (the move rewrites pixels). The first request after a
+  change of the pixels still scans.
+- CPU composites inside a GPU image
+  (`KisAsyncMerger::compositeWithProjection()` after `tryAdd()` refused:
+  layer styles, CPU-only blend modes, other planes): the merger now reads
+  the projection and the leaf's projection back in batches first
+  (`KisGpuTileAccess::syncToCpu()`, over the rect the leaf can touch and
+  its need rect). Their tile locks downloaded one tile per submission: a
+  group with a layer style read about 2200 tiles per step that way.
+- Also on the GPU now: the Wash preview of a temporary target that is off
+  the grid (`KisGpuBrushPainter::paintWashPreview()`), for example the
+  pixels the Move Tool carries for a selection. The final merge of such a
+  target stays on the CPU (`mergeWash()` needs whole-tile rects).
+- Tests (`KisGpuProjectionTest`): `testMovedLayersMatchCpu` (F32/F16, six
+  offsets; basic, extended and alpha-locked modes with different shifts in
+  one composite; the layers are accepted by `tryAdd()`; three Move Tool
+  steps download nothing; CPU parity) and `testMovedGroupMatchesCpu` (a
+  moved group: on the CPU the incremental update equals a full refresh
+  exactly although the projection did not move; on the GPU the children
+  are accepted, the steps download nothing, CPU parity).
+  `KisGpuBrushTest`'s `preview-unaligned-source` rows now expect the GPU
+  preview. `kis_paint_device_test`: `testMoveKeepsCachedBounds` (cached
+  bounds follow a move and equal a new calculation; a write drops them; an
+  empty device; a visible default pixel).
+- Measurements: [Move Tool updates](wiki/benchmarks/move-layer-updates.md)
+  (`KisMoveLayerBenchmark`, opt-in with `KRITA_MOVE_BENCHMARK=1`, and
+  `KisMoveDocumentBenchmark` for a real `.kra`).
+- Manual check: checklist item 19.
+
 ## Technology and device requirements
 
 | Topic | Decision | Reason |
@@ -1085,6 +1171,20 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
   `VK_LAYER_PATH=<krita-dev-root>\VulkanSDK\1.4.357.0\Bin`.
 - Benchmark size: `KRITA_GPU_BENCH_SIZE` (pixels per side, default 4096) and
   `KRITA_GPU_BENCH_LAYERS` (default 8).
+- Move Tool benchmark: target `KisMoveLayerBenchmark` (skips unless
+  `KRITA_MOVE_BENCHMARK=1`; `KRITA_MOVE_BENCHMARK_GPU_ONLY=1` leaves out the
+  CPU rows). It repeats the Move Tool's update step for a full-canvas
+  layer, an object layer and a group, at aligned and unaligned offsets,
+  then paints dabs over the moved node.
+- Move Tool benchmark on a real document: target `KisMoveDocumentBenchmark`,
+  ctest name `plugins-impex-libkra-KisMoveDocumentBenchmark` (skips unless
+  `KRITA_MOVE_BENCHMARK_FILE` names a `.kra` and `KRITA_MOVE_BENCHMARK_NODE`
+  a node in it; the file is only read; `KRITA_MOVE_BENCHMARK_NODES=1` also
+  prints the bounds time of every moved node). Run it from
+  `<krita-dev-root>\_build\plugins\impex\libkra\tests`. It prints the
+  step time with the engine off and on, and with layer styles and masks
+  turned off, to show what each costs. Synthetic layers hide costs that
+  real documents have: use it before concluding from the synthetic one.
 - Tests skip (not fail) when no suitable Vulkan device or desktop GL context
   exists.
 
@@ -1101,7 +1201,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 | `KisGpuLayerStackCompositor.*` + `shaders/composite_over_stack.comp` | Phase-0 normal-blend stack flattening. |
 | `KisGpuGLSharedImage.*` (Windows) | Vulkan image shared with a GL texture plus exported semaphores. |
 | `KisGpuTileFill.*` + `shaders/fill_tiles.comp` | Fills whole tiles with one color (tests, projection background). |
-| `KisGpuLayerCompositor.*` + `shaders/composite_layers.comp` | Phase-2 layer compositing: per-layer blend op, opacity, alpha lock, clip rect. Defines `KisGpuBlendOp`. |
+| `KisGpuLayerCompositor.*` + `shaders/composite_layers.comp` | Phase-2 layer compositing: per-layer blend op, opacity, alpha lock, clip rect; per-layer tile table and pixel shift (phase 4.112). Defines `KisGpuBlendOp`. |
 | `KisGpuCanvasPatchWriter.*` + `shaders/canvas_patches.comp` | Phase-3.2 canvas patches: edge-extended texture blocks, display conversion (identity / matrix-shaper), F32/F16 in and out. |
 | `KisGpuGLSharedBuffer.*` (Windows) | Vulkan buffer shared with a GL pixel unpack buffer, with the Vulkan/GL semaphore cycle. |
 | `KisGpuGLInterop_p.h` (private) | GL_EXT_memory_object / GL_EXT_semaphore entry points and the device-UUID check shared by the interop classes. |
@@ -1219,6 +1319,10 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\gpu\cmake_ins
 - The GPU writes projection tiles in place only while merge jobs that
   share a tile are kept apart (`KisUpdaterContext::walkerIntersectsJob`)
   and only for projections on the 64 px image grid.
+- A group's projection device stays at offset 0,0 whatever the group's
+  position (`KisGroupLayer::setX()`/`setY()` store the numbers only, phase
+  4.112). Do not move it with the group: a projection off the image grid
+  sends the group and its children back to the CPU.
 - Krita must start and work without Vulkan; GPU features degrade to the CPU
   path.
 - Blend results match the `KoCompositeOp` RGBA float implementation (alpha-0
@@ -1347,6 +1451,15 @@ Record the build, format, workload and result separately from earlier acceptance
     and outside the groups; erase; Undo/Redo. Nothing is left behind or
     missing at the stroke edges, and the result looks like the GPU Engine
     turned off.
+19. Moved layers and groups (phase 4.112): on an RGBA float image with
+    several layers and a group, drag a layer, then the group, with the Move
+    Tool by arbitrary distances, also partly outside the canvas and back;
+    release; Undo/Redo. The content follows the pointer without lagging
+    behind, nothing is left behind where it was, and the result equals the
+    GPU Engine turned off. Then paint on another layer over the moved one
+    (GPU brush) and across its edges. Repeat the drag with Instant Preview
+    on at a zoom below 50 %, and with a selection (the selected pixels
+    move). Save, reopen: the layers and the group are where they were left.
 
 ## Phase history
 
@@ -1460,6 +1573,7 @@ Section index:
 - [Precise contraction audit (phase 4.109)](wiki/history/gpu-phases-4.93-.md#precise-contraction-audit-phase-4109)
 - [Clone Layer offsets (phase 4.110)](wiki/history/gpu-phases-4.93-.md#clone-layer-offsets-phase-4110)
 - [Partial-tile projection clears (phase 4.111)](wiki/history/gpu-phases-4.93-.md#partial-tile-projection-clears-phase-4111)
+- [Moved layers and groups (phase 4.112)](wiki/history/gpu-phases-4.93-.md#moved-layers-and-groups-phase-4112)
 
 ## Risks and open questions
 

@@ -30,6 +30,10 @@ On RGBA 32-bit and 16-bit float layers:
 - **Transform Tool**: applying scale, rotate and shear (Free Transform
   without perspective), Liquify and Puppet Warp. The results are identical
   to the CPU results; Puppet Warp's parts are combined on the CPU.
+- **Moved layers and groups** are composited on the GPU wherever they are,
+  so the Move Tool follows the pointer without reading the image back.
+  (Up to Solstice 0.9.1, a layer moved by a distance that was not a
+  multiple of 64 pixels was composited on the CPU, also after the move.)
 - **Clone Layers moved away from their source** (without masks) copy the
   source on the GPU, so they follow GPU brush strokes without reading the
   source back.
@@ -55,8 +59,6 @@ long without AVX2).
   Large or densely spaced strokes using them can take time to catch up.
 - Alpha Darken with some channels turned off, and the blend modes listed
   above.
-- Compositing a layer moved by a distance that is not a multiple of 64
-  pixels.
 - Painting with brush engines other than the pixel brush (Color Smudge,
   Sketch and so on). The layers they paint on are still composited on the
   GPU.

@@ -70,6 +70,8 @@ private Q_SLOTS:
 
     void testCompositionAssociativity();
 
+    void testMoveKeepsCachedBounds();
+
     void stressTestMemoryFragmentation();
 };
 

@@ -33,6 +33,10 @@
 
 #include "kis_abstract_projection_plane.h"
 
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuTileAccess.h"
+#endif
+
 
 //#define DEBUG_MERGER
 
@@ -362,6 +366,22 @@ bool KisAsyncMerger::compositeWithProjection(KisProjectionLeafSP leaf, const QRe
     if (m_gpuBatch.tryAdd(leaf, m_currentProjection, rect))
         return true;
     m_gpuBatch.flush(true);
+
+#ifdef HAVE_KRITA_GPU_ENGINE
+    // GPU engine: this composite runs on the CPU (a layer style, a blend
+    // mode the GPU does not have, ...). Read what it touches back in batches;
+    // its tile locks would otherwise download one tile at a time.
+    if (KisGpuMergeBatch::mayCompositeOnGpu(leaf->node())) {
+        const QRect appliedRect = rect & leaf->projectionPlane()->looseUserVisibleBounds();
+        if (!appliedRect.isEmpty()) {
+            KisGpuTileAccess::syncToCpu(m_currentProjection, appliedRect);
+            KisPaintDeviceSP source = leaf->projection();
+            if (source) {
+                KisGpuTileAccess::syncToCpu(source, leaf->projectionPlane()->needRect(appliedRect) & source->extent());
+            }
+        }
+    }
+#endif
 
     KisPainter gc(m_currentProjection);
     leaf->projectionPlane()->apply(&gc, rect);

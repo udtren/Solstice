@@ -725,3 +725,39 @@ projection clears (phase 4.111)"; numbers:
   layer as the first leaf would have filtered the uncleared rect. That case
   keeps the CPU clear; `testAdjustmentLayerFirstMatchesCpu` fails (0.9999)
   without the rule.
+
+## Moved layers and groups (phase 4.112)
+
+2026-11-12, user request: find out whether moving an image with the Move
+Tool can be made faster, then do it. Layers and groups at any offset are
+composited on the GPU. Details: `docs/agent/gpu-engine.md`, "Moved layers
+and groups (phase 4.112)"; numbers:
+[Move Tool updates](../benchmarks/move-layer-updates.md).
+
+- Found by reading the code: `KisGpuMergeBatch::tryAdd()` refused a layer
+  whose offset was not a multiple of 64 pixels away from the projection's,
+  a limitation the user guide listed. The Move Tool refreshes the moved
+  node's whole bounds, before and after, for every pointer position
+  (`MoveStrokeStrategy::doCanvasUpdate()`), so a drag paid the CPU
+  fallback with its tile-by-tile readback of the projection on every step.
+- Measured first with a new opt-in benchmark (`KisMoveLayerBenchmark`),
+  which showed two more costs: a group's tight bounds read its projection
+  back on every step, also at aligned offsets, and a moved group's
+  projection left the image grid.
+- The first version of the group change stored the position in two plain
+  integers. The projection device had also kept a separate offset for the
+  level of detail, which an Instant Preview move relies on (the preview
+  stroke and the real stroke each read the start position), so the position
+  became a `KisLodCapableLayerOffset`.
+- Not changed: the final merge of a temporary target off the grid
+  (`KisGpuBrushPainter::mergeWash()`), the Move Tool's 30 ms update
+  interval, and the tight bounds of the nodes that are not groups.
+- The first hand-off was still slow in the user's document (a group of 20
+  nodes with an Outer Glow layer style, RGBA F16, 1754x2480). A second
+  benchmark that loads a `.kra` (`KisMoveDocumentBenchmark`) showed why:
+  about 330 of 364 ms per step went into the exact bounds of the moved
+  layers, with the engine on or off. The synthetic benchmark had 0.6 ms
+  there: its layers' tiles match their content, the document's do not.
+  `KisPaintDevice::moveTo()` now translates the cached bounds. The same
+  run showed the layer style reading about 2200 tiles per step one by one
+  on the GPU engine; the merger now reads them back in batches.
