@@ -3337,7 +3337,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   after the first conflicted with `main` there; main was merged into the
   branch and both sides were kept.
 - Lesson: for a series of small pull requests made on one day, the log and
-  inventory conflicts are certain. Resolving them in a sparse worktree
-  (`docs` and `dev-tools` only) avoids touching the checkout that the build
-  tree compiles. A full worktree under the scratch folder failed on
-  Windows path lengths.
+  inventory conflicts are certain. Resolving them in a separate worktree
+  avoids touching the checkout that the build tree compiles. Under the
+  scratch folder a full worktree fails on Windows path lengths, and one
+  with only `docs` and `dev-tools` makes `check_docs.py` report every link
+  to a source file as missing (166 errors that were not real): check out
+  everything except the few folders with over-long paths.
+- Lesson: `main` requires the documentation check, so a branch cannot be
+  merged right after a push. Stacking the branches (each one merged with
+  the one before) let all checks run at once, and no branch needed another
+  push after its predecessor was merged.
