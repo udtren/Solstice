@@ -721,6 +721,19 @@ Close it with a mouse click, not a synthesized key: on Linux, `xdotool key
 auto-repeated Return presses that ended every polygonal selection after its
 first click ([pitfall](wiki/pitfalls/synthetic-canvas-input.md)).
 
+On Windows, on a machine that has a Krita profile, every `--launch` asks
+"Krita settings and resources were found. Do you want to use them in
+Solstice?": the scratch profile is new, and the first-start question is a
+native message box before Qt starts
+([Settings location](settings-location.md#first-start-and-import-state-machine)).
+Someone has to press No each time (found 2026-11-13, when the user was asked
+again and again by an agent's runs). Point the legacy lookup at empty
+folders before starting the runner, which passes its environment on:
+`SOLSTICE_LEGACY_CONFIG_DIR` and `SOLSTICE_LEGACY_RESOURCE_DIR`. The
+development build also needs `env.bat` and the Python environment, and
+`solstice.com` rather than `solstice.exe` for its output
+(`build-tools/paint-trace/run.cmd`).
+
 The `LANGUAGE` environment variable does not choose Solstice's UI language;
 the language override file does, otherwise the system locale.
 

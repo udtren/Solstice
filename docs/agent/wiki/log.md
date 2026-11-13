@@ -3170,3 +3170,39 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - The user ran manual check 15 (saved exports with Layer Comps) in 1.1.0
   and reported no problems; recorded in `lazy-tools.md` and
   [release 1.1.0](history/release-1.1.0.md).
+
+## 2026-11-13 size: preset text leaves the resource database's thumbnails
+
+- The user's `resourcecache.sqlite` was 500.7 MB. 187 MB of it were the
+  `preset` text chunk of 636 brush preset thumbnails (the whole preset,
+  embedded brush tips included, stored by Krita 5.0 and 5.1; the database
+  dates from 2022 and was imported). `KisResourceCacheDb::initialize()`
+  now removes the text chunks from large preset thumbnails and compacts the
+  file ([feature inventory](../feature-inventory.md), "Undocumented custom
+  changes"). Rehearsed on a scratch copy of the user's whole resource
+  folder: 177.2 MiB removed from 253 thumbnails, 222.7 MB afterwards,
+  `registerResources` 3.0 s on that start and 0.47 s on the next, all
+  resources and storages still there, nothing done on the second start.
+- User decisions: clean automatically at start (not a one-off script), and
+  leave the pattern thumbnails (166 MB, stored at full size) alone.
+- Lesson: a guess about SQLite was wrong and cheap to check. Columns behind
+  the thumbnail blob do not make queries slow (a full scan of `resources`
+  takes 5 ms); the cost of the text was disk, memory and decoding on first
+  display.
+- Lesson: a database built by the current build has no such text (276
+  presets, 8 MB of thumbnails), so the fix is a clean-up, not a change of
+  what is stored.
+- Lesson: test instances with a scratch profile ask the first-start
+  question on a machine that has a Krita profile; the user pressed No many
+  times before saying so. Set `SOLSTICE_LEGACY_CONFIG_DIR` and
+  `SOLSTICE_LEGACY_RESOURCE_DIR` to empty folders
+  ([Test control](../test-control.md#scenario-runner)). And
+  `solstice.com --version` opens a message box instead of printing.
+- Open, found on the way: a scratch profile that held only a copy of the
+  database (no bundle files) crashed at start in
+  `KisStorageModel::removeStorage()`, reached from
+  `KisResourceLocator::synchronizeDb()` for a storage whose file is gone.
+  Not looked into; a normal profile whose bundle was deleted outside
+  Solstice may hit it.
+- Open: three test launches in a row ended with exit code 0xC0000135 and no
+  output, then the same commands worked. Cause not found.
