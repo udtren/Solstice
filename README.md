@@ -133,8 +133,8 @@ tile-sized blocks until Undo and Redo.
 </tr>
 <tr>
 <td width="50%" align="center" valign="top">
-<a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Layer Comps docker with four comps checked for export, Apply and Export columns, and its action buttons" width="100%"></a>
-<p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states.</p>
+<a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Fast Image Export dialog for phantom.kra with three saved exports, the first exporting the layer comp eye_closed, beside the Layer Comps docker with the comps eye_closed, eye_open and eye_open_tear" width="100%"></a>
+<p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states, each with its own export settings.</p>
 </td>
 <td width="50%" align="center" valign="top">
 <a href="docs/through-layer-eraser.md"><img src="docs/images/through-layer%20eraser%20tool.gif" alt="A stroke of the Through-Layer Eraser Tool removing a corner of a red frame and a purple block painted on separate layers, with their Layers docker thumbnails updating" width="100%"></a>
@@ -155,8 +155,8 @@ required.
 <p><b><a href="docs/quick-access.md">Quick Access Manager</a></b><br>Brush and action palettes, a color selector, brush adjustments and gestures.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<a href="docs/lazy-tools.md"><img src="docs/images/lazy_tool/cover.png" alt="The Fast Image Export dialog with a saved export, the Rename Layer dialog, the Selection Masks dialog and the General &gt; Custom settings page" width="100%"></a>
-<p><b><a href="docs/lazy-tools.md">Lazy Tools</a></b><br>Quick layer renaming, selection masks, fast image export with saved exports and color shortcuts.</p>
+<a href="docs/lazy-tools.md"><img src="docs/images/lazy_tool/cover.png" alt="The Fast Image Export dialog with three saved exports and the Layer comp setting, the Rename Layer dialog, the General &gt; Custom settings page and the Selection Masks dialog" width="100%"></a>
+<p><b><a href="docs/lazy-tools.md">Lazy Tools</a></b><br>Quick layer renaming, selection masks, fast image export with saved exports per document and layer comp, and color shortcuts.</p>
 </td>
 </tr>
 <tr>

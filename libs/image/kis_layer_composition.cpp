@@ -90,6 +90,7 @@ private:
 KisLayerComposition::KisLayerComposition(KisImageWSP image, const QString& name)
     : m_image(image)
     , m_name(name)
+    , m_uuid(QUuid::createUuid())
     , m_exportEnabled(true)
 {
 
@@ -105,6 +106,7 @@ KisLayerComposition::KisLayerComposition(const KisLayerComposition &rhs, KisImag
 {
     QMutexLocker locker(&rhs.m_mutex);
     m_name = rhs.m_name;
+    m_uuid = rhs.m_uuid;
     m_exportEnabled = rhs.m_exportEnabled;
     {
         auto it = rhs.m_visibilityMap.constBegin();
@@ -147,6 +149,18 @@ QString KisLayerComposition::name()
 {
     QMutexLocker locker(&m_mutex);
     return m_name;
+}
+
+QUuid KisLayerComposition::uuid() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_uuid;
+}
+
+void KisLayerComposition::setUuid(const QUuid &uuid)
+{
+    QMutexLocker locker(&m_mutex);
+    m_uuid = uuid;
 }
 
 void KisLayerComposition::store()
@@ -199,6 +213,8 @@ void KisLayerComposition::save(QDomDocument& doc, QDomElement& element)
     QDomElement compositionElement = doc.createElement("composition");
     compositionElement.setAttribute("name", m_name);
     compositionElement.setAttribute("exportEnabled", m_exportEnabled);
+    // Solstice: an attribute, which older loaders and Krita ignore.
+    compositionElement.setAttribute("uuid", m_uuid.toString());
     QMapIterator<QUuid, bool> iter(m_visibilityMap);
     while (iter.hasNext()) {
         iter.next();

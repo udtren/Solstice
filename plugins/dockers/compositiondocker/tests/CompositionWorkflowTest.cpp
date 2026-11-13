@@ -46,6 +46,18 @@ void CompositionWorkflowTest::testModel()
     QVERIFY(!model.setData(model.index(0, 1), Qt::Checked, Qt::CheckStateRole));
     QVERIFY(model.setData(model.index(1, 1), Qt::Unchecked, Qt::CheckStateRole));
     QVERIFY(!comps[0]->isExportEnabled());
+    // Names are edited in place; the snapshot row and other columns are not.
+    QVERIFY(model.flags(model.index(1, 2)) & Qt::ItemIsEditable);
+    QVERIFY(!(model.flags(model.index(0, 2)) & Qt::ItemIsEditable));
+    QVERIFY(!(model.flags(model.index(1, 0)) & Qt::ItemIsEditable));
+    QCOMPARE(model.data(model.index(1, 2), Qt::EditRole).toString(), QString("0"));
+    QVERIFY(model.setData(model.index(1, 2), QString("  first "), Qt::EditRole));
+    QCOMPARE(comps[0]->name(), QString("first"));
+    QCOMPARE(model.data(model.index(1, 2)).toString(), QString("first"));
+    QVERIFY(!model.setData(model.index(1, 2), QString("  "), Qt::EditRole));
+    QVERIFY(!model.setData(model.index(1, 2), QString("first"), Qt::EditRole));
+    QVERIFY(!model.setData(model.index(0, 2), QString("snapshot name"), Qt::EditRole));
+    QCOMPARE(comps[0]->name(), QString("first"));
     QVERIFY(!model.moveRows({}, 0, 1, {}, 3));
     QVERIFY(model.moveRows({}, 1, 2, {}, 6));
     QCOMPARE(image->compositions(), (QList<KisLayerCompositionSP>{comps[2], comps[3], comps[4], comps[0], comps[1]}));
@@ -150,11 +162,20 @@ void CompositionWorkflowTest::testPersistence()
     QCOMPARE(loaded->image()->compositions().size(), 1);
     QCOMPARE(loaded->image()->compositions().first()->visibilityMap(), comp->visibilityMap());
     QVERIFY(!loaded->image()->compositions().first()->isExportEnabled());
+    QCOMPARE(loaded->image()->compositions().first()->uuid(), comp->uuid());
     // Exercise old XML both with and without a compositions element.
     KisKraSaver saver(doc.data(), file);
     QDomDocument xml;
     auto element = saver.saveXML(xml, image);
-    element.firstChildElement("compositions").removeAttribute("newLayersVisible");
+    auto compositions = element.firstChildElement("compositions");
+    compositions.removeAttribute("newLayersVisible");
+    // A repeated id (a hand-edited file) and a missing one (Krita, older
+    // Solstice) both get new ids.
+    const auto saved = compositions.firstChildElement("composition");
+    compositions.appendChild(saved.cloneNode());
+    auto withoutId = saved.cloneNode().toElement();
+    withoutId.removeAttribute("uuid");
+    compositions.appendChild(withoutId);
     for (bool removeElement : {false, true}) {
         if (removeElement)
             element.removeChild(element.firstChildElement("compositions"));
@@ -162,6 +183,14 @@ void CompositionWorkflowTest::testPersistence()
         KisImageSP legacy = loader.loadXML(element);
         QVERIFY(legacy);
         QVERIFY(!legacy->newLayersVisibleInCompositions());
+        if (!removeElement) {
+            const auto comps = legacy->compositions();
+            QCOMPARE(comps.size(), 3);
+            QCOMPARE(comps[0]->uuid(), comp->uuid());
+            QVERIFY(!comps[1]->uuid().isNull() && comps[1]->uuid() != comp->uuid());
+            QVERIFY(!comps[2]->uuid().isNull() && comps[2]->uuid() != comp->uuid());
+            QVERIFY(comps[1]->uuid() != comps[2]->uuid());
+        }
     }
 }
 

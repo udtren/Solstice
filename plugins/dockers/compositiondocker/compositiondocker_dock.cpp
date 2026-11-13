@@ -65,7 +65,8 @@ CompositionDockerDock::CompositionDockerDock()
     compositionView->setItemsExpandable(false);
     compositionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     compositionView->setSelectionBehavior(QAbstractItemView::SelectRows);
-    compositionView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    // Only names are editable: double-click or F2 renames a comp in place.
+    compositionView->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
     compositionView->setDragDropMode(QAbstractItemView::InternalMove);
     compositionView->setDefaultDropAction(Qt::MoveAction);
     compositionView->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
@@ -114,8 +115,12 @@ CompositionDockerDock::CompositionDockerDock()
 
     setWidget(widget);
 
-    connect( compositionView, SIGNAL(doubleClicked(QModelIndex)),
-             this, SLOT(activated(QModelIndex)) );
+    // A double-click on a name renames it; elsewhere it still applies, and so
+    // does a double-click on Last Layer Display State, which has no name to edit.
+    connect(compositionView, &QTreeView::doubleClicked, this, [this](const QModelIndex &index) {
+        if (!(m_model->flags(index) & Qt::ItemIsEditable))
+            activated(index);
+    });
 
     compositionView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect( compositionView, SIGNAL(customContextMenuRequested(QPoint)),
