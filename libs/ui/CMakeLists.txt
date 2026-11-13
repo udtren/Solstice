@@ -353,6 +353,7 @@ set(kritaui_LIB_SRCS
     utils/KisFileIconCreator.cpp
     utils/KisRecentDocumentsModelWrapper.cpp
     utils/KisRecentFileIconCache.cpp
+    utils/KisShowInFileExplorer.cpp
 
     input/kis_input_manager.cpp
     input/kis_input_manager_p.cpp

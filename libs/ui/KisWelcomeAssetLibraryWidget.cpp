@@ -7,6 +7,7 @@
 #include "assetlibrary/KisAssetLibrarySettings.h"
 #include "assetlibrary/KisAssetLibraryBrowser.h"
 #include "assetlibrary/KisAssetLibraryOperations.h"
+#include "utils/KisShowInFileExplorer.h"
 
 #include "KisMainWindow.h"
 #include "KisViewManager.h"
@@ -518,6 +519,7 @@ struct KisWelcomeAssetLibraryWidget::Private {
     {
         QMenu menu(q);
         QAction *open = menu.addAction(i18n("Open"));
+        QAction *showInExplorer = menu.addAction(KisShowInFileExplorer::actionText());
         QAction *insertLayer = menu.addAction(i18n("Insert as New Layer"));
         QAction *insertFileLayer = menu.addAction(i18n("Insert as New File Layer"));
         QAction *duplicate = menu.addAction(i18n("Duplicate"));
@@ -529,6 +531,8 @@ struct KisWelcomeAssetLibraryWidget::Private {
         QAction *selected = menu.exec(position);
         if (selected == open) {
             openAsset(path);
+        } else if (selected == showInExplorer) {
+            KisShowInFileExplorer::showFile(path, q);
         } else if (selected == insertLayer) {
             insertAsLayer(path);
         } else if (selected == insertFileLayer) {

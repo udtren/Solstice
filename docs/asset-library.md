@@ -23,6 +23,13 @@ window; each docker keeps its own size, splitter position and Hide state.
 Changes made to the settings file outside Solstice are picked up after a
 restart.
 
+Right-click an asset for **Open**, **Show in File Explorer**, the insert
+commands, **Duplicate**, **Rename** and **Delete**. **Show in File Explorer**
+opens the asset's folder with the file selected. The same command is in the
+right-click menu of the welcome page's **Recent Images** tab, next to
+**Forget**. If the file was moved or deleted, its folder opens instead; if the
+folder is gone too, a warning names the missing path.
+
 Native implementations:
 
 - [`../plugins/dockers/assetlibrary`](../plugins/dockers/assetlibrary/)

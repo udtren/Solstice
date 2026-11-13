@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-11-12 23:21+0900\n"
+"POT-Creation-Date: 2026-11-13 12:28+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -20529,7 +20529,7 @@ msgstr "旋转 (Z)"
 msgid "%1%"
 msgstr "%1%"
 
-#: libs/image/kis_layer_composition.cpp:264
+#: libs/image/kis_layer_composition.cpp:280
 msgctxt "(qtundo-format)"
 msgid "Apply Layer Comp"
 msgstr "应用 Layer Comp"
@@ -22548,7 +22548,7 @@ msgstr "本地资源"
 #: libs/ui/KisRemoteFileFetcher.cpp:64 libs/ui/KisRemoteFileFetcher.cpp:91
 #: libs/ui/KisTemplateCreateDia.cpp:285 libs/ui/KisTemplateCreateDia.cpp:392
 #: libs/ui/KisView.cpp:685 libs/ui/KisView.cpp:1171
-#: libs/ui/KisWelcomePageWidget.cpp:753
+#: libs/ui/KisWelcomePageWidget.cpp:758
 #: libs/ui/animation/KisAnimationRender.cpp:69
 #: libs/ui/animation/KisAnimationRender.cpp:153
 #: libs/ui/animation/KisDlgAnimationRenderer.cpp:809
@@ -24547,14 +24547,14 @@ msgid "Saving As"
 msgstr "保存为"
 
 #: libs/ui/KisMainWindow.cpp:2075
-#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:240
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:198
+#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:257
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:210
 #, kde-format
 msgid "Export Region"
 msgstr "导出区域"
 
 #: libs/ui/KisMainWindow.cpp:2077
-#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:242
+#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:259
 #, kde-format
 msgid "Exported Region"
 msgstr "已导出区域"
@@ -24923,14 +24923,14 @@ msgstr "添加所选滤镜"
 
 #: libs/ui/KisReferenceImageFilters.cpp:225
 #: libs/ui/KisReferenceImageFilters.cpp:296
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:263
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:286
 #, kde-format
 msgid "Move Up"
 msgstr "上移"
 
 #: libs/ui/KisReferenceImageFilters.cpp:228
 #: libs/ui/KisReferenceImageFilters.cpp:302
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:264
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:287
 #, kde-format
 msgid "Move Down"
 msgstr "下移"
@@ -25028,8 +25028,8 @@ msgid "Create Mask"
 msgstr "新建蒙版"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:186
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:321
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:201
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:322
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:205
 #: plugins/python/colorspace/uicolorspace.py:37
 #: plugins/python/documenttools/uidocumenttools.py:25
 #: plugins/python/exportlayers/uiexportlayers.py:35
@@ -25059,22 +25059,22 @@ msgid "Create Selection Mask Alternative"
 msgstr "创建选区蒙版 (替代方式)"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:408 libs/ui/KisSolsticeLazyTools.cpp:413
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:113
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:688
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:704
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:709
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:755
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:119
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:764
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:797
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:801
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:804
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:826
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:780
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:785
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:831
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:840
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:874
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:878
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:881
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:903
 #, kde-format
 msgid "Fast Image Export"
 msgstr "快速导出图像"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:409
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:705
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:781
 #, kde-format
 msgid ""
 "Nothing was exported. More than one saved export would write:\n"
@@ -25084,7 +25084,7 @@ msgstr ""
 "%1"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:414
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:710
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:786
 #, kde-format
 msgid ""
 "Exported %1 file. Skipped:\n"
@@ -25408,189 +25408,189 @@ msgctxt "choice for author profile"
 msgid "Anonymous"
 msgstr "匿名"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:75
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:466
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:76
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:470
 #, kde-format
 msgid "Asset Library Settings"
 msgstr "Asset Library 设置"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:96
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:487
 #, kde-format
 msgid "Alias"
 msgstr "别名"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:96
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:487
 #, kde-format
 msgid "Extensions"
 msgstr "扩展名"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:96
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:487
 #, kde-format
 msgid "Include Subfolders"
 msgstr "包含子文件夹"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:96
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:487
 #, kde-format
 msgid "Path"
 msgstr "路径"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:106
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:502
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:107
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:506
 #, kde-format
 msgid "Select Asset Folder"
 msgstr "选择素材文件夹"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:111
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:507
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:112
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:511
 #, kde-format
 msgid "Folder Alias"
 msgstr "文件夹别名"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:112
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:507
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:113
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:511
 #, kde-format
 msgid "Alias (optional)"
 msgstr "别名 (可选)"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:129
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:538
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:130
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:542
 #, kde-format
 msgid "Asset Paths"
 msgstr "素材路径"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:134
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:543
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:135
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:547
 #, kde-format
 msgid "Auto columns"
 msgstr "自动列数"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:143
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:560
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:144
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:564
 #, kde-format
 msgid "Thumbnail columns"
 msgstr "缩略图列数"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:144
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:561
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:145
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:565
 #, kde-format
 msgid "Fixed thumbnail columns"
 msgstr "固定缩略图列数"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:145
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:562
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:146
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:566
 #, kde-format
 msgid "Thumbnail size"
 msgstr "缩略图大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:146
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:563
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:147
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:567
 #, kde-format
 msgid "Folder button font size"
 msgstr "文件夹按钮字体大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:147
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:564
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:148
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:568
 #, kde-format
 msgid "Header font size"
 msgstr "标题字体大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:148
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:565
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:149
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:569
 #, kde-format
 msgid "Asset filename font size"
 msgstr "素材文件名字体大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:397
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:290
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:398
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:294
 #, kde-format
 msgid "Add asset paths from Settings."
 msgstr "请在设置中添加素材路径。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:423
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:300
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:317
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:424
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:304
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:321
 #, kde-format
 msgid "No asset path is selected."
 msgstr "未选择素材路径。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:428
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:321
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:429
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:325
 #, kde-format
 msgid "Folder not found: %1"
 msgstr "找不到文件夹：%1"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:459
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:355
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:460
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:359
 #, kde-format
 msgid "1 asset"
 msgid_plural "%1 assets"
 msgstr[0] "%1 个素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:520
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:106
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:521
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:107
 #: plugins/python/scripter/ui_scripter/actions/openaction/openaction.py:28
 #, kde-format
 msgid "Open"
 msgstr "打开"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:521
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:523
 #: libs/ui/assetlibrary/KisAssetLibraryOperations.cpp:24
 #: libs/ui/widgets/kis_canvas_drop.cpp:33
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:107
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:109
 #, kde-format
 msgid "Insert as New Layer"
 msgstr "插入为 - 新图层"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:522
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:524
 #: libs/ui/assetlibrary/KisAssetLibraryOperations.cpp:37
 #: libs/ui/widgets/kis_canvas_drop.cpp:34
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:108
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:110
 #, kde-format
 msgid "Insert as New File Layer"
 msgstr "插入为 - 新文件图层"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:537
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:539
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:430
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:541
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:543
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:434
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:438
 #, kde-format
 msgid "Duplicate Asset"
 msgstr "复制素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:539
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:434
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:543
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:438
 #, kde-format
 msgid "Could not copy the file."
 msgstr "无法复制文件。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:542
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:544
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:440
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:546
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:548
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:444
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:448
 #, kde-format
 msgid "Rename Asset"
 msgstr "重命名素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:544
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:444
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:548
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:448
 #, kde-format
 msgid "Could not rename the file."
 msgstr "无法重命名文件。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:548
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:554
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:451
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:459
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:552
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:558
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:455
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:463
 #, kde-format
 msgid "Delete Asset"
 msgstr "删除素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:549
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:452
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:553
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:456
 #, kde-format
 msgid ""
 "Delete this file?\n"
@@ -25599,29 +25599,29 @@ msgstr ""
 "要删除此文件吗？\n"
 "%1"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:554
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:459
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:558
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:463
 #, kde-format
 msgid "Could not delete the file."
 msgstr "无法删除文件。"
 
-#: libs/ui/KisWelcomePageWidget.cpp:169
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:160
+#: libs/ui/KisWelcomePageWidget.cpp:170
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:164
 #, kde-format
 msgid "Asset Library"
 msgstr "Asset Library"
 
-#: libs/ui/KisWelcomePageWidget.cpp:181
+#: libs/ui/KisWelcomePageWidget.cpp:182
 #, kde-format
 msgid "Enable news and check for new releases"
 msgstr "显示最新资讯/检查软件更新"
 
-#: libs/ui/KisWelcomePageWidget.cpp:186
+#: libs/ui/KisWelcomePageWidget.cpp:187
 #, kde-format
 msgid "Enable Krita news and Solstice releases"
 msgstr "启用 Krita 资讯和 Solstice 版本发布信息"
 
-#: libs/ui/KisWelcomePageWidget.cpp:190
+#: libs/ui/KisWelcomePageWidget.cpp:191
 #, kde-format
 msgid ""
 "Show upstream Krita news and Solstice releases: this needs internet to "
@@ -25631,28 +25631,28 @@ msgstr ""
 "显示上游 Krita 的资讯和 Solstice 的版本发布信息：需要联网，从 krita.org 网站"
 "和 Solstice 的 GitHub 仓库获取信息"
 
-#: libs/ui/KisWelcomePageWidget.cpp:194
+#: libs/ui/KisWelcomePageWidget.cpp:195
 #: plugins/python/comics_project_management_tools/comics_metadata_dialog.py:357
 #, kde-format
 msgid "Language"
 msgstr "语言"
 
-#: libs/ui/KisWelcomePageWidget.cpp:195
+#: libs/ui/KisWelcomePageWidget.cpp:196
 #, kde-format
 msgid "English news is always up to date."
 msgstr "英文资讯内容更加及时和齐全。"
 
-#: libs/ui/KisWelcomePageWidget.cpp:391
+#: libs/ui/KisWelcomePageWidget.cpp:392
 #, kde-format
 msgid "Support Upstream Krita"
 msgstr "支持上游 Krita"
 
-#: libs/ui/KisWelcomePageWidget.cpp:396
+#: libs/ui/KisWelcomePageWidget.cpp:397
 #, kde-format
 msgid "Upstream Krita Website"
 msgstr "上游 Krita 官方网站"
 
-#: libs/ui/KisWelcomePageWidget.cpp:410
+#: libs/ui/KisWelcomePageWidget.cpp:411
 #, kde-format
 msgid ""
 "You can <a href=\"ignored\" style=\"color: COLOR_PLACEHOLDER; text-"
@@ -25663,23 +25663,23 @@ msgstr ""
 "text-decoration: underline;\">启用资讯</a>，显示来自 krita.org 的多语言资讯"
 "和 Solstice 的版本发布信息"
 
-#: libs/ui/KisWelcomePageWidget.cpp:670
+#: libs/ui/KisWelcomePageWidget.cpp:673
 #: plugins/dockers/presethistory/presethistory_dock.cpp:302
 #, kde-format
 msgid "Forget \"%1\""
 msgstr "忘记“%1”"
 
-#: libs/ui/KisWelcomePageWidget.cpp:772
+#: libs/ui/KisWelcomePageWidget.cpp:777
 #, kde-format
 msgid "A new upstream Krita version is available."
 msgstr "上游 Krita 已推出新版本。"
 
-#: libs/ui/KisWelcomePageWidget.cpp:800
+#: libs/ui/KisWelcomePageWidget.cpp:805
 #, kde-format
 msgid "An error occurred during the update"
 msgstr "更新时发生错误"
 
-#: libs/ui/KisWelcomePageWidget.cpp:806
+#: libs/ui/KisWelcomePageWidget.cpp:811
 #, kde-format
 msgid "Restart is required."
 msgstr "需要重启软件。"
@@ -26698,10 +26698,10 @@ msgstr "主显示器："
 #: libs/ui/animation/VideoHDRMetadataOptionsDialog.ui:40
 #: libs/ui/forms/wdgcolorsettings.ui:172 libs/ui/forms/wdgdisplaysettings.ui:24
 #: plugins/dockers/advancedcolorselector/wdg_color_selector_settings.ui:444
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:151
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:152
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2458
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2460
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:569
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:573
 #: plugins/dockers/svgcollectiondocker/SvgSymbolCollectionDocker.cpp:234
 #, kde-format
 msgid "Display"
@@ -28219,7 +28219,7 @@ msgstr "确定"
 #: libs/ui/dialogs/KisAsyncAnimationRenderDialogBase.cpp:167
 #: libs/ui/input/kis_tool_invocation_action.cpp:44
 #: libs/ui/widgets/kis_canvas_drop.cpp:45
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:341
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:346
 #, kde-format
 msgid "Cancel"
 msgstr "取消"
@@ -29359,7 +29359,7 @@ msgid "Community"
 msgstr "社区资源"
 
 #. i18n: context: string @ property (text), widget (QLabel, manualLink)
-#: libs/ui/forms/KisWelcomePage.ui:355 libs/ui/KisWelcomePageWidget.cpp:385
+#: libs/ui/forms/KisWelcomePage.ui:355 libs/ui/KisWelcomePageWidget.cpp:386
 #, kde-format
 msgid "User Manual"
 msgstr "使用手册"
@@ -29371,25 +29371,25 @@ msgid "Support Krita"
 msgstr "捐款支持"
 
 #. i18n: context: string @ property (text), widget (QLabel, poweredByKDELink)
-#: libs/ui/forms/KisWelcomePage.ui:535 libs/ui/KisWelcomePageWidget.cpp:406
+#: libs/ui/forms/KisWelcomePage.ui:535 libs/ui/KisWelcomePageWidget.cpp:407
 #, kde-format
 msgid "Powered by KDE"
 msgstr "Krita 由 KDE 社区开发维护"
 
 #. i18n: context: string @ property (text), widget (QLabel, sourceCodeLink)
-#: libs/ui/forms/KisWelcomePage.ui:625 libs/ui/KisWelcomePageWidget.cpp:401
+#: libs/ui/forms/KisWelcomePage.ui:625 libs/ui/KisWelcomePageWidget.cpp:402
 #, kde-format
 msgid "Source Code"
 msgstr "源代码库"
 
 #. i18n: context: string @ property (text), widget (QLabel, gettingStartedLink)
-#: libs/ui/forms/KisWelcomePage.ui:712 libs/ui/KisWelcomePageWidget.cpp:381
+#: libs/ui/forms/KisWelcomePage.ui:712 libs/ui/KisWelcomePageWidget.cpp:382
 #, kde-format
 msgid "Getting Started"
 msgstr "新手入门"
 
 #. i18n: context: string @ property (text), widget (QLabel, userCommunityLink)
-#: libs/ui/forms/KisWelcomePage.ui:799 libs/ui/KisWelcomePageWidget.cpp:376
+#: libs/ui/forms/KisWelcomePage.ui:799 libs/ui/KisWelcomePageWidget.cpp:377
 #, kde-format
 msgid "User Community"
 msgstr "用户社区"
@@ -29401,7 +29401,7 @@ msgid "Krita Website"
 msgstr "官方网站"
 
 #. i18n: context: string @ property (text), widget (QLabel, recentDocumentsLabel)
-#: libs/ui/forms/KisWelcomePage.ui:961 libs/ui/KisWelcomePageWidget.cpp:166
+#: libs/ui/forms/KisWelcomePage.ui:961 libs/ui/KisWelcomePageWidget.cpp:167
 #, kde-format
 msgid "Recent Images"
 msgstr "最近图像"
@@ -30074,9 +30074,9 @@ msgstr "添加当前预设为书签"
 
 #. i18n: context: string @ property (text), widget (QPushButton, pushButtonDelete)
 #: libs/ui/forms/wdgbookmarkedconfigurationseditor.ui:55
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:525
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:527
 #: libs/widgetutils/xmlgui/kshortcutschemeseditor.cpp:64
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:111
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:113
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:66
 #, kde-format
 msgid "Delete"
@@ -31270,7 +31270,7 @@ msgstr "子窗口模式"
 #: libs/ui/input/wintab/drawpile_tablettester/tablettest.ui:43
 #: plugins/dockers/lut/wdglut.ui:241
 #: plugins/extensions/pykrita/plugin/krita/sceditor/mainwindow.ui:105
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:158
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:165
 #: plugins/python/scripter/ui_scripter/tabwidgets/outputwidget/clearaction.py:23
 #, kde-format
 msgid "Clear"
@@ -31795,10 +31795,10 @@ msgstr "添加…"
 #: plugins/tools/tool_lazybrush/kis_tool_lazy_brush_options_widget.ui:159
 #: libs/ui/KisReferenceImageFilters.cpp:206
 #: libs/ui/KisReferenceImageFilters.cpp:308
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:85
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:262
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:86
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:285
 #: libs/widgetutils/xmlgui/kswitchlanguagedialog_p.cpp:430
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:474
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:478
 #: plugins/python/channels2layers/channels2layers.py:106
 #, kde-format
 msgid "Remove"
@@ -32695,7 +32695,7 @@ msgstr "保存新窗口布局"
 #: plugins/impex/brush/wdg_export_gih.ui:41
 #: plugins/paintops/libpaintop/forms/wdgclipboardbrush.ui:117
 #: plugins/paintops/libpaintop/forms/wdgcustombrush.ui:99
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:188
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:199
 #: plugins/dockers/tasksetdocker/tasksetdocker_dock.cpp:199
 #: plugins/python/comics_project_management_tools/comics_metadata_dialog.py:418
 #, kde-format
@@ -34288,9 +34288,9 @@ msgstr "所有方案中的已更改设置都将被重置。您确定要继续吗
 
 #. i18n: context: string @ property (text), widget (QPushButton, duplicateButton)
 #: libs/ui/input/config/kis_edit_profiles_dialog.ui:24
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:523
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:260
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:109
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:525
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:283
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:111
 #, kde-format
 msgid "Duplicate"
 msgstr "复制"
@@ -34303,9 +34303,9 @@ msgstr "全部重置"
 
 #. i18n: context: string @ property (text), widget (QPushButton, renameButton)
 #: libs/ui/input/config/kis_edit_profiles_dialog.ui:51
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:524
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:261
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:110
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:526
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:284
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:112
 #, kde-format
 msgid "Rename"
 msgstr "重命名"
@@ -35419,8 +35419,8 @@ msgid "Add Selection Mask"
 msgstr "添加选区蒙版"
 
 #: libs/ui/kis_mask_manager.cc:203
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:175
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:291
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:182
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:378
 #, kde-format
 msgid "Selection"
 msgstr "选区"
@@ -37024,62 +37024,62 @@ msgstr "导出(&E)..."
 msgid "Pre&view"
 msgstr "预览(&V)"
 
-#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:153
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:315
+#: libs/ui/lazytools/KisLazyToolsFastExport.cpp:155
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:407
 #, kde-format
 msgid "Unknown document"
 msgstr "未知图像"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:120
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:278
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:126
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:365
 #: plugins/python/exportlayers/uiexportlayers.py:84
 #, kde-format
 msgid "PNG"
 msgstr "PNG"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:121
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:278
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:127
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:365
 #: plugins/python/exportlayers/uiexportlayers.py:83
 #, kde-format
 msgid "JPEG"
 msgstr "JPEG"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:123
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:129
 #, kde-format
 msgid "Active document"
 msgstr "当前图像"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:124
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:130
 #, kde-format
 msgid "All open documents"
 msgstr "所有已打开的图像"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:126
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:132
 #, kde-format
 msgid "Same folder as the document"
 msgstr "与图像相同的文件夹"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:127
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:133
 #, kde-format
 msgid "Configured export folder"
 msgstr "已配置的导出文件夹"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:128
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:134
 #, kde-format
 msgid "Choose a folder now"
 msgstr "现在选择文件夹"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:132
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:139
 #, kde-format
 msgid "Browse…"
 msgstr "浏览…"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:141
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:148
 #, kde-format
 msgid "No registered folders"
 msgstr "没有登记的文件夹"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:145
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:152
 #, kde-format
 msgid ""
 "Browse… starts in this folder. Register folders in Settings > Configure "
@@ -37088,48 +37088,49 @@ msgstr ""
 "“浏览…”会从此文件夹开始。请在 设置 > 配置 Solstice > 常规 > 自定义 中登记文件"
 "夹。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:147
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:154
 #, kde-format
 msgid "Choose the export folder, starting in the registered folder."
 msgstr "从登记的文件夹开始选择导出文件夹。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:154
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:161
 #, kde-format
 msgid "Drop a folder here from the file manager to export into it."
 msgstr "从文件管理器把文件夹拖放到这里，即可导出到该文件夹。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:156
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:163
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:738
 #, kde-format
 msgid "Same as the document"
 msgstr "与图像相同"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:157
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:164
 #, kde-format
 msgid ""
 "Optional file name without the extension. Used only for the active document."
 msgstr "可选的文件名，不含扩展名。仅用于当前图像。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:166
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:173
 #, kde-format
 msgid "Save alpha channel"
 msgstr "保存透明度通道"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:174
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:181
 #, kde-format
 msgid "Whole image"
 msgstr "整个图像"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:176
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:183
 #, kde-format
 msgid "Export the whole image, or the area selected when the export runs."
 msgstr "导出整个图像，或导出运行时所选的区域。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:177
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:184
 #, kde-format
 msgid "Relative to the document"
 msgstr "相对于文档"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:179
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:186
 #, kde-format
 msgid ""
 "Save the export folder relative to the document's folder, so it follows the "
@@ -37137,13 +37138,20 @@ msgid ""
 msgstr ""
 "以相对于文档所在文件夹的路径保存导出文件夹，这样两者一起移动时路径仍然有效。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:182
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:190
+#, kde-format
+msgid ""
+"Export the image as this layer comp shows it. The comp is applied to a copy "
+"of the image, so the canvas does not change."
+msgstr "按此 Layer Comp 的显示效果导出图像。Layer Comp 应用于图像的副本，因此画布不会改变。"
+
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:193
 #: plugins/python/comics_project_management_tools/comics_metadata_dialog.py:344
 #, kde-format
 msgid "Format:"
 msgstr "格式："
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:183
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:194
 #: plugins/python/colorspace/uicolorspace.py:70
 #: plugins/python/documenttools/uidocumenttools.py:50
 #: plugins/python/exportlayers/uiexportlayers.py:105
@@ -37151,43 +37159,48 @@ msgstr "格式："
 msgid "Documents:"
 msgstr "图像："
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:184
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:195
 #, kde-format
 msgid "Destination:"
 msgstr "目标位置："
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:185
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:196
 #, kde-format
 msgid "Registered folder:"
 msgstr "登记的文件夹："
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:186
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:197
 #: plugins/python/comics_project_management_tools/comics_project_settings_dialog.py:130
 #, kde-format
 msgid "Export folder:"
 msgstr "导出文件夹："
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:189
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:200
 #, kde-format
 msgid "Area:"
 msgstr "范围："
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:190
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:201
+#, kde-format
+msgid "Layer comp:"
+msgstr "Layer Comp："
+
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:202
 #, kde-format
 msgid "PNG compression:"
 msgstr "PNG 压缩："
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:192
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:204
 #, kde-format
 msgid "JPEG quality:"
 msgstr "JPEG 品质："
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:199
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:211
 #, kde-format
 msgid "Export the selected area of the active document."
 msgstr "导出当前图像中选中的区域。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:256
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:279
 #, kde-format
 msgid ""
 "Export settings saved with this document. Select one to edit it below; check "
@@ -37196,57 +37209,57 @@ msgstr ""
 "保存在此文档中的导出设置。选中一项可在下方编辑；勾选的项目会由“导出已勾选”运"
 "行。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:259
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:282
 #, kde-format
 msgid "Save the settings below as a new export of this document."
 msgstr "将下方的设置保存为此文档的新导出。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:265
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:288
 #, kde-format
 msgid "Export Checked"
 msgstr "导出已勾选"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:266
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:289
 #, kde-format
 msgid "Run the checked saved exports."
 msgstr "运行已勾选的已保存导出。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:267
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:290
 #, kde-format
 msgid "Export All"
 msgstr "全部导出"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:268
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:291
 #, kde-format
 msgid "Run all saved exports."
 msgstr "运行所有已保存的导出。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:349
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:384
 #, kde-format
 msgid "One-off export (not saved)"
 msgstr "一次性导出（不保存）"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:350
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:385
 #, kde-format
 msgid "Export once with the settings below, as before."
 msgstr "像以前一样，使用下方的设置导出一次。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:366
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:401
 #, kde-format
 msgid "Saved exports of %1"
 msgstr "%1 的已保存导出"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:368
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:403
 #, kde-format
 msgid "Saved exports"
 msgstr "已保存的导出"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:371
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:406
 #, kde-format
 msgid "Open a document to save exports with it."
 msgstr "打开一个文档以在其中保存导出设置。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:374
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:409
 #, kde-format
 msgid ""
 "This file format cannot keep saved exports; they last until the document is "
@@ -37255,116 +37268,145 @@ msgstr ""
 "此文件格式无法保存导出设置；它们只保留到文档关闭为止。请将文档保存为 .kra 以"
 "保留它们。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:572
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:448
+#, kde-format
+msgctxt "Saved export layer comp"
+msgid "None (the layers as they are)"
+msgstr "无（保持图层现状）"
+
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:460
+#, kde-format
+msgctxt "A layer comp that a saved export uses but the document no longer has"
+msgid "%1 (missing)"
+msgstr "%1（缺失）"
+
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:644
 #, kde-format
 msgctxt "Default name of a saved export"
 msgid "Export %1"
 msgstr "导出 %1"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:613
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:685
 #, kde-format
 msgctxt "Name of a duplicated saved export"
 msgid "%1 copy"
 msgstr "%1 副本"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:689
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:737
+#, kde-format
+msgid "Document name_layer comp name"
+msgstr "文档名_Layer Comp 名称"
+
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:765
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:841
 #, kde-format
 msgid ""
 "The name cannot contain \\ / : * ? \" < > | or end with a dot or a space."
 msgstr "名称不能包含 \\ / : * ? \" < > |，也不能以句点或空格结尾。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:727
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:749
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:803
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:825
 #, kde-format
 msgid "Select Export Folder"
 msgstr "选择导出文件夹"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:755
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:831
 #, kde-format
 msgid "Select an export folder first."
 msgstr "请先选择一个导出文件夹。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:798
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:875
 #, kde-format
 msgid "Save the active document before exporting a region."
 msgstr "导出区域前，请先保存当前图像。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:801
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:878
 #, kde-format
 msgid "Select an area to export first."
 msgstr "请先选择要导出的区域。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:804
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:881
 #, kde-format
 msgid "Could not export the selected area."
 msgstr "无法导出选中的区域。"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:827
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:904
 #, kde-format
 msgid "Exported %1 document. Skipped: %2"
 msgid_plural "Exported %1 documents. Skipped: %2"
 msgstr[0] "已导出 %1 个图像。已跳过：%2"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:62
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:95
 #, kde-format
 msgctxt "Fast Image Export skipped item: document, reason"
 msgid "%1: %2"
 msgstr "%1：%2"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:68
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:101
 #, kde-format
 msgctxt "Fast Image Export skipped item: document, saved export, reason"
 msgid "%1 / %2: %3"
 msgstr "%1 / %2：%3"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:280
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:367
 #, kde-format
 msgid "Same folder"
 msgstr "相同文件夹"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:282
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:369
 #, kde-format
 msgid "No folder"
 msgstr "无文件夹"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:315
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:381
+#, kde-format
+msgctxt "Saved export summary: the layer comp it exports"
+msgid "Layer comp %1"
+msgstr "Layer Comp %1"
+
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:407
 #, kde-format
 msgid "not available"
 msgstr "不可用"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:321
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:413
 #, kde-format
 msgid "not saved yet"
 msgstr "尚未保存"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:326
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:418
 #, kde-format
 msgid "no saved exports"
 msgstr "没有已保存的导出"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:337
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:429
 #, kde-format
 msgid "no checked exports"
 msgstr "没有已勾选的导出"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:347
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:442
+#, kde-format
+msgid "layer comp not found"
+msgstr "找不到 Layer Comp"
+
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:452
 #, kde-format
 msgid "no export folder"
 msgstr "没有导出文件夹"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:348
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:453
 #, kde-format
 msgid "invalid file name"
 msgstr "文件名无效"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:382
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:418
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:487
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:528
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:541
 #, kde-format
 msgid "could not export"
 msgstr "无法导出"
 
-#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:399
+#: libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp:528
 #, kde-format
 msgid "no selection"
 msgstr "没有选区"
@@ -37635,6 +37677,29 @@ msgstr ""
 "新版 AppImage 软件包已下载到 %1 。要完成更新，请关闭 Krita 并运行该新版 "
 "AppImage 软件包。"
 
+#: libs/ui/utils/KisShowInFileExplorer.cpp:19
+#, kde-format
+msgid "Show in File Explorer"
+msgstr "在文件资源管理器中显示"
+
+#: libs/ui/utils/KisShowInFileExplorer.cpp:35
+#, kde-format
+msgid ""
+"The folder for this file no longer exists:\n"
+"%1"
+msgstr ""
+"此文件所在的文件夹已不存在：\n"
+"%1"
+
+#: libs/ui/utils/KisShowInFileExplorer.cpp:54
+#, kde-format
+msgid ""
+"Could not open the folder:\n"
+"%1"
+msgstr ""
+"无法打开文件夹：\n"
+"%1"
+
 #. i18n: context: string @ property (text), widget (QLabel, lblLinks)
 #: libs/ui/wdgsplash.ui:439
 #, kde-format
@@ -37861,16 +37926,16 @@ msgstr "随机化"
 
 #. i18n: context: string @ property (text), widget (QPushButton, btnUp)
 #: libs/ui/widgets/KisDlgListPicker.ui:98
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:86
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:475
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:87
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:479
 #, kde-format
 msgid "Up"
 msgstr "上移"
 
 #. i18n: context: string @ property (text), widget (QPushButton, btnDown)
 #: libs/ui/widgets/KisDlgListPicker.ui:105
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:87
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:476
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:88
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:480
 #, kde-format
 msgid "Down"
 msgstr "下移"
@@ -42925,13 +42990,13 @@ msgstr "反转饱和度"
 msgid "Reset to default"
 msgstr "重置为默认值"
 
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:203
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:618
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:207
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:622
 #, kde-format
 msgid "Hide"
 msgstr "隐藏"
 
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:611
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:615
 #, kde-format
 msgid "Show"
 msgstr "显示"
@@ -42941,101 +43006,101 @@ msgstr "显示"
 msgid "Layer Comps"
 msgstr "Layer Comps"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:80
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:81
 #, kde-format
 msgid "Overwrite Selected Layer Comps"
 msgstr "覆盖选中的 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:95
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:96
 #, kde-format
 msgid "Show added layers in all comps"
 msgstr "在所有 Layer Comp 中显示新添加的图层"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:109
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:110
 #, kde-format
 msgid "Delete Composition"
 msgstr "删除 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:110
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:111
 #, kde-format
 msgid "New Composition"
 msgstr "新建 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:111
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:112
 #, kde-format
 msgid "Export Composition"
 msgstr "导出 Layer Comp 为图像/动画"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:112
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:113
 #, kde-format
 msgid "Apply Previous Layer Comp"
 msgstr "应用上一个 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:113
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:114
 #, kde-format
 msgid "Apply Next Layer Comp"
 msgstr "应用下一个 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:129
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:134
 #, kde-format
 msgid "Export Images"
 msgstr "导出为图像"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:132
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:137
 #, kde-format
 msgid "Export Animations"
 msgstr "导出为动画"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:147
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:152
 #, kde-format
 msgid "Insert Name"
 msgstr "输入新 Layer Comp 的名称"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:222
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:227
 #, kde-format
 msgid "Delete Layer Comps"
 msgstr "删除 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:223
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:228
 #, kde-format
 msgid "Delete the selected layer comp?"
 msgid_plural "Delete the %1 selected layer comps?"
 msgstr[0] "要删除选中的 %1 个 Layer Comp 吗？"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:311
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:428
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:316
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:433
 #, kde-format
 msgid "Select a Directory"
 msgstr "选择目录"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:340
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:345
 #, kde-format
 msgid "Exporting Compositions..."
 msgstr "正在导出 Layer Comp 为图像/动画..."
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:366
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:371
 #, kde-format
 msgid "Exporting composition: %1..."
 msgstr "正在导出 Layer Comp 为图像/动画：%1..."
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:535
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:540
 #, kde-format
 msgid "Overwrite Layer Comps"
 msgstr "覆盖 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:536
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:541
 #, kde-format
 msgid "Overwrite the selected layer comp?"
 msgid_plural ""
 "Overwrite the %1 selected layer comps with the current visibility?"
 msgstr[0] "要用当前的可见性覆盖选中的 %1 个 Layer Comp 吗？"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:559
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:564
 #, kde-format
 msgid "Rename Composition"
 msgstr "重命名 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:560
+#: plugins/dockers/compositiondocker/compositiondocker_dock.cpp:565
 #, kde-format
 msgid "New Name:"
 msgstr "新名称："
@@ -43045,35 +43110,35 @@ msgstr "新名称："
 msgid "Last Layer Display State"
 msgstr "上次的图层显示状态"
 
-#: plugins/dockers/compositiondocker/compositionmodel.cpp:42
+#: plugins/dockers/compositiondocker/compositionmodel.cpp:44
 #, kde-format
 msgid "Apply this layer comp"
 msgstr "应用此 Layer Comp"
 
-#: plugins/dockers/compositiondocker/compositionmodel.cpp:44
+#: plugins/dockers/compositiondocker/compositionmodel.cpp:46
 #, kde-format
 msgid "Include in export"
 msgstr "包含在导出中"
 
-#: plugins/dockers/compositiondocker/compositionmodel.cpp:46
+#: plugins/dockers/compositiondocker/compositionmodel.cpp:48
 #, kde-format
 msgid ""
 "Restore the last custom visibility state. Newly added layers are left "
 "unchanged."
 msgstr "恢复上次自定义的可见性状态。新添加的图层保持不变。"
 
-#: plugins/dockers/compositiondocker/compositionmodel.cpp:47
+#: plugins/dockers/compositiondocker/compositionmodel.cpp:49
 #, kde-format
-msgid "Double-click to apply. Ctrl/Shift-click to select several layer comps."
-msgstr "双击以应用。按住 Ctrl/Shift 点击可选择多个 Layer Comp。"
+msgid "Double-click to rename. Ctrl/Shift-click to select several layer comps."
+msgstr "双击以重命名。按住 Ctrl/Shift 点击可选择多个 Layer Comp。"
 
-#: plugins/dockers/compositiondocker/compositionmodel.cpp:69
+#: plugins/dockers/compositiondocker/compositionmodel.cpp:85
 #: plugins/tools/tool_transform2/kis_tool_transform.cc:141
 #, kde-format
 msgid "Apply"
 msgstr "应用"
 
-#: plugins/dockers/compositiondocker/compositionmodel.cpp:69
+#: plugins/dockers/compositiondocker/compositionmodel.cpp:85
 #, kde-format
 msgid "Layer Comp"
 msgstr "Layer Comp"
@@ -46804,8 +46869,8 @@ msgstr "导出路径："
 
 #. i18n: context: string @ property (text), widget (QToolButton, btnExport)
 #: plugins/dockers/storyboarddocker/wdgstoryboarddock.ui:21
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:197
-#: plugins/dockers/compositiondocker/compositionmodel.cpp:69
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:209
+#: plugins/dockers/compositiondocker/compositionmodel.cpp:85
 #: plugins/dockers/recorder/recorder_export.cpp:449
 #: plugins/dockers/storyboarddocker/DlgExportStoryboard.cpp:29
 #, kde-format
@@ -58240,8 +58305,8 @@ msgstr ""
 "您想要选择其他位置吗？"
 
 #: plugins/impex/libkra/kis_kra_load_visitor.cpp:149
-#: plugins/impex/libkra/kis_kra_loader.cpp:710
-#: plugins/impex/libkra/kis_kra_loader.cpp:1161
+#: plugins/impex/libkra/kis_kra_loader.cpp:711
+#: plugins/impex/libkra/kis_kra_loader.cpp:1162
 #, kde-format
 msgctxt "@title:window"
 msgid "File not found"
@@ -58348,46 +58413,46 @@ msgstr ""
 msgid "unknown keyframe channel type: %1 in %2"
 msgstr "未知的关键帧通道类型：%1 在 %2 中"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:211
+#: plugins/impex/libkra/kis_kra_loader.cpp:212
 #, kde-format
 msgid "Image does not have a name."
 msgstr "此图像没有名称。"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:216
+#: plugins/impex/libkra/kis_kra_loader.cpp:217
 #, kde-format
 msgid "Image does not specify a width."
 msgstr "此图像没有指定宽度。"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:222
+#: plugins/impex/libkra/kis_kra_loader.cpp:223
 #, kde-format
 msgid "Image does not specify a height."
 msgstr "此图像没有指定高度。"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:272
+#: plugins/impex/libkra/kis_kra_loader.cpp:273
 #, kde-format
 msgid "Image specifies an unsupported color model: %1."
 msgstr "此图像指定了不支持的色彩模型：%1 。"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:590
+#: plugins/impex/libkra/kis_kra_loader.cpp:591
 #, kde-format
 msgctxt "Warning message on loading a .kra file"
 msgid ""
 "Embedded palette is empty and cannot be loaded. The name of the palette: %1"
 msgstr "嵌入色板为空，无法加载。该色板的名称为：%1"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:601
+#: plugins/impex/libkra/kis_kra_loader.cpp:602
 #, kde-format
 msgctxt "Warning message on loading a .kra file"
 msgid "Embedded resource cannot be read. The filename of the resource: %1"
 msgstr "图像内嵌的资源无法读取。该资源的文件名为：%1"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:610
+#: plugins/impex/libkra/kis_kra_loader.cpp:611
 #, kde-format
 msgctxt "Warning message on loading a .kra file"
 msgid "Embedded resource cannot be imported. The filename of the resource: %1"
 msgstr "图像内嵌的资源无法导入。该资源的文件名为：%1"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:705
+#: plugins/impex/libkra/kis_kra_loader.cpp:706
 #, kde-format
 msgctxt "@info"
 msgid ""
@@ -58405,34 +58470,34 @@ msgstr ""
 "\n"
 "您想要手动指定该文件的位置吗？"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:880
+#: plugins/impex/libkra/kis_kra_loader.cpp:881
 #, kde-format
 msgid ""
 "Two global selection masks in active state found. \"%1\" is kept active, "
 "\"%2\" is deactivated"
 msgstr "发现两个同时处于活动状态的全局选区蒙版。“%1”保持活动，“%2”已被停用"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:940
+#: plugins/impex/libkra/kis_kra_loader.cpp:941
 #, kde-format
 msgid "Layer %1 specifies an unsupported color model: %2."
 msgstr "图层 %1 指定了不支持的色彩模型：%2 。"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:968
+#: plugins/impex/libkra/kis_kra_loader.cpp:969
 #, kde-format
 msgid "Layer %1 has an unsupported type."
 msgstr "图层 %1 包含不支持的类型。"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:1003
+#: plugins/impex/libkra/kis_kra_loader.cpp:1004
 #, kde-format
 msgid "Layer %1 has an unsupported type: %2."
 msgstr "图层 %1 包含不支持的类型：%2 。"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:1010
+#: plugins/impex/libkra/kis_kra_loader.cpp:1011
 #, kde-format
 msgid "Failure loading layer %1 of type: %2."
 msgstr "加载类型为 %2 的图层 %1 时失败。"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:1033
+#: plugins/impex/libkra/kis_kra_loader.cpp:1034
 #, kde-format
 msgid ""
 "Layer \"%1\" has blending mode \"%2\" that has changed its behavior for CMYK "
@@ -58444,7 +58509,7 @@ msgstr ""
 "请检查图像的效果是否正确。如果图像显示效果异常，可在“设置->配置 Solstice->常"
 "规->工具->CMYK 混合模式”中将该选项设置为旧版的“加色法”"
 
-#: plugins/impex/libkra/kis_kra_loader.cpp:1156
+#: plugins/impex/libkra/kis_kra_loader.cpp:1157
 #, kde-format
 msgctxt "@info"
 msgid ""
@@ -63855,8 +63920,8 @@ msgstr "随机大小"
 
 #. i18n: context: string @ property (title), widget (QGroupBox, groupBox)
 #: plugins/paintops/spray/wdgshapedynamicsoptions.ui:46
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:322
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:202
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:323
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:206
 #: plugins/python/scripter/ui_scripter/actions/settingsaction/settingsaction.py:28
 #: plugins/python/scripter/ui_scripter/actions/settingsaction/settingsdialog.py:20
 #, kde-format
@@ -67886,9 +67951,9 @@ msgstr "轴心："
 
 #. i18n: context: string @ property (text), widget (QPushButton, addSubbrushButton)
 #: plugins/tools/basictools/wdgmultihandtool.ui:228
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:84
-#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:258
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:473
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:85
+#: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:281
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:477
 #: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:572
 #, kde-format
 msgid "Add"
