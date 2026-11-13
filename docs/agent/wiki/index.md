@@ -329,6 +329,9 @@ Document ownership and lifecycle are defined in
 - [1.0.0 release verification](history/release-1.0.0.md): GPU engine
   release, a cloud session that could not create the release, package
   integrity, website publication.
+- [1.1.0 release verification](history/release-1.1.0.md): Layer Comp saved
+  exports and Show in File Explorer, open pull requests merged first,
+  package integrity, website publication.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

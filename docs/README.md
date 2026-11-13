@@ -6,14 +6,14 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0) moves more of
-the layer stack to the [GPU engine](gpu-engine.md) (moved layers and groups,
-transparency masks, the Stroke layer style, filter layers and filter masks)
-and starts the engine by itself only on NVIDIA Blackwell; other graphics
-cards need an option. It builds on
-[0.9.1](https://github.com/udtren/Solstice/releases/tag/v0.9.1), which fixed a
-rare race that could leave a layer out of the picture in tile-sized blocks
-until Undo and Redo.
+[1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0) gives each
+[Layer Comp](layer-comps.md) its own [Fast Image Export](lazy-tools.md)
+settings through saved exports, and adds **Show in File Explorer** to the
+Recent Images and [Asset Library](asset-library.md) menus. It builds on
+[1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0), which moved
+more of the layer stack to the [GPU engine](gpu-engine.md) and starts the
+engine by itself only on NVIDIA Blackwell; other graphics cards need an
+option.
 
 ## Getting started
 
