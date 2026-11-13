@@ -536,7 +536,8 @@ since). `KisLazyToolsTest` 30/30 on Windows.
 `KisLayerCompositionTest` and `CompositionWorkflowTest` cover the comp id
 ([Layer Comps](layer-comps.md)). On Windows, offscreen: `KisLazyToolsTest`
 29/29, `KisLayerCompositionTest` 5/5, `CompositionWorkflowTest` 5/5.
-Manual check 15 is pending.
+Manual check 15 passed: the user ran it in 1.1.0 on 2026-11-13 and
+reported no problems.
 
 Remembered format options (2026-10-24): `exportOptionsKeepSavedFormatOptions`
 covers PNG and JPEG with and without a saved configuration: saved keys such as
