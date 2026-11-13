@@ -2,23 +2,27 @@
   <img src="krita/data/splash/solstice-splash.png" alt="Solstice" width="480">
 </p>
 
----
-
 <p align="center"><b>A GPU-focused digital painting application for Windows, derived from Krita.</b></p>
 
-## Project page
+<p align="center">
+  <a href="https://github.com/udtren/Solstice/releases/latest"><img src="https://img.shields.io/github/v/release/udtren/Solstice?label=release" alt="Latest release"></a>
+  <a href="COPYING"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL-3.0"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2011%20x64-lightgrey" alt="Platform: Windows 11 x64">
+</p>
 
-**Website: <https://solstice.tidalboxstudio.com>**: an overview, the
-download page and pages for the main features.
-
-This [GitHub repository](https://github.com/udtren/Solstice) holds the
-source code, the releases and the [user guides](docs/README.md); the
-[highlights](#highlights) link to individual feature guides.
+<p align="center">
+  <b><a href="https://solstice.tidalboxstudio.com">Website</a></b> ·
+  <b><a href="https://github.com/udtren/Solstice/releases/latest">Download</a></b> ·
+  <b><a href="docs/README.md">User guides</a></b> ·
+  <b><a href="docs/gpu-engine.md">GPU engine</a></b>
+</p>
 
 ![Solstice main window painting the Solstice splash artwork, with the Brush Presets docker grouped by bundle, Quick Brush Adjustments, HueSVC, the Quick Access Palette, Layers and the Brush section of Tool Options](docs/images/solstice-main-window.webp)
 
 **Solstice is an open-source digital painting application derived from the
-Krita 6 codebase.**
+Krita 6 codebase.** The [website](https://solstice.tidalboxstudio.com) has an
+overview, the download page and pages for the main features; this repository
+holds the source code, the releases and the [user guides](docs/README.md).
 
 <table>
 <tr>
@@ -237,109 +241,69 @@ changes and support are maintained in this repository.
 
 The experimental engine uses Vulkan compute on RGBA 32-bit and 16-bit float
 documents and shares its data with the OpenGL canvas for display. It is
-enabled by default on NVIDIA Blackwell graphics cards; anything it does not support runs on the CPU as in Krita.
-This is an ongoing rewrite, not a fully GPU-based painting pipeline.
+enabled by default on NVIDIA Blackwell graphics cards; anything it does not
+support runs on the CPU as in Krita. This is an ongoing rewrite, not a fully
+GPU-based painting pipeline.
 
-What has moved to the GPU so far, and what still runs only on the CPU. The
-GPU column applies to RGBA 32-bit and 16-bit float layers only.
-
-| Area | On the GPU | CPU only |
-| --- | --- | --- |
-| Color spaces | RGBA 32-bit and 16-bit float | Every other color space and depth (8/16-bit integer, CMYK, Lab, grayscale), also as single layers in a float document; file layers |
-| Layer compositing | Layer projection, including alpha lock and individual channel locks, of layers and groups at any position; transparency masks; the Stroke layer style (outside, solid color); filter layers and filter masks with Desaturate, and in 16-bit float with Posterize, channel curves or Color Reference | Other layer style effects, Colorize Mask, filter masks (except their Gaussian blur) |
-| Canvas display | Handing the projection to the OpenGL canvas | ANGLE/Direct3D renderer, soft proofing, channel selection in the Channels docker, LUT-based display profiles, absolute colorimetric intent |
-| Blend modes | Every mode not listed as CPU only | Dissolve, Marker, Destination In, Destination Atop, Divisive Modulo and its Continuous variants; Copy below 100 % opacity |
-| Brush strokes | Pixel brush in Buildup and Wash, with Erase, Alpha Darken, selections, alpha lock and mirror painting | Painting with other brush engines (Color Smudge, Sketch and so on); Alpha Darken with some channels turned off; a single oversized dab |
-| Brush tips | Circle, Gaussian and soft auto-brush tips; image tips (predefined and imported Photoshop brushes) as alpha mask, Image Stamp, Lightness Map or Gradient Map | Animated (`.gih`) and text tips; the Sharpness option; Image Stamp with a color profile that does not convert each channel separately |
-| Brush textures | Pattern textures | The Lightness and Gradient texture modes |
-| Masking brush | Combining the mask with the stroke | Painting the mask itself; the whole masked stroke on GPUs without 64-bit float shader support |
-| Transform Tool | Applying Free Transform (scale, rotate, shear), Liquify and Puppet Warp | Perspective, Warp, Cage and Mesh transforms; older Puppet Warp transforms; the preview while editing; combining Puppet Warp's parts; wrap-around mode |
-| Filters | Gaussian Blur, also inside Unsharp Mask and Gaussian High Pass, in the Filter dialog, filter layers and filter masks | All other filters; the sharpening step of Unsharp Mask; areas smaller than about 180 x 180 pixels; Instant Preview; wrap-around mode |
-| Clone Layers | Copying the source of a Clone Layer moved away from its source, also with transparency masks | Clone Layers with a filter mask that runs on the CPU |
+- **On the GPU:** layer compositing and the canvas display in nearly every
+  blend mode; the pixel brush in Buildup and Wash, with image tips, pattern
+  textures, selections, mirror painting and masking brushes; moved layers
+  and groups, transparency masks and the outside Stroke layer style;
+  Free Transform, Liquify and Puppet Warp; Gaussian Blur; filter layers
+  and masks with Desaturate, and in 16-bit float with Posterize, channel
+  curves or Color Reference.
+- **Still on the CPU:** every other color space and depth (8/16-bit integer,
+  CMYK, Lab, grayscale), other brush engines, most filters, Perspective,
+  Warp, Cage and Mesh transforms, other layer style effects, and the
+  preview while editing a transform.
 
 Free Transform and Liquify results are identical to the CPU results, pixel
-for pixel; so are Puppet Warp's parts, which are then combined on the CPU.
-Gaussian Blur matches within one rounding step. Blend modes based on powers,
-exponentials or trigonometry match the CPU closely rather than exactly.
+for pixel; Gaussian Blur matches within one rounding step.
 
-The GPU brush can be turned off with **Paint brush strokes on the GPU** next
-to the GPU engine option; `KRITA_GPU_BRUSH=1` or `0` overrides the setting.
-Batched tile transfers and reusable upload buffers reduce transfer waits,
-including for textured and masked brushes. Layer and Wash compositing reuse
-completed work buffers and can queue consecutive updates. Whole-tile copies
-can retain GPU pixels, and CPU filters, FFT convolution, affine transforms
-and layer flips batch their GPU readbacks. Large mirrored brushes with Alpha
-Lock can still catch up after pen release; further tuning of that case is
-deferred.
-
-See the [GPU Engine guide](docs/gpu-engine.md) for setup and limitations.
+See the [GPU Engine guide](docs/gpu-engine.md) for the complete lists of
+[what runs on the GPU](docs/gpu-engine.md#what-runs-on-the-gpu) and
+[what stays on the CPU](docs/gpu-engine.md#what-stays-on-the-cpu), setup and
+limitations.
 
 ## Benchmarks
 
 **These numbers measure specific engine operations, not overall application
-performance.** They are not frame rates or pen-to-screen latency measurements.
+performance.** They are not frame rates. Measured with an AMD Ryzen 9 9950X
+and an NVIDIA RTX PRO 6000 Blackwell (driver 596.86), using local development
+builds; results vary with workload and hardware.
 
-Measured on October 11, 2026, with an AMD Ryzen 9 9950X and NVIDIA RTX PRO 6000
-Blackwell (driver 596.86), using local development builds:
+CPU against GPU, RGBA 32-bit float (2026-10-11):
 
-| Workload | CPU | GPU |
-| --- | ---: | ---: |
-| Resident full layer projection, 4096 x 4096 RGBA32F, 16 layers | 270 ms | 60.6 ms |
-| Canvas data preparation, 4096 x 4096 RGBA32F, 8 layers | 1215 ms | 1.81 ms |
-| Four mirror passes, 14 dabs of 73 x 73 pixels | 0.949 ms | 0.437 ms |
-| Four mirror passes, 32 dabs of 256 x 256 pixels | 51.1 ms | 2.08 ms |
-| Transform Tool apply, scale + rotate (bicubic), 2480 x 3508 RGBA32F | 502 ms | 61.5 ms |
-| Liquify apply, 20 strokes, 2480 x 3508 RGBA32F | 253 ms | 63.5 ms |
-| Gaussian Blur apply, radius 30, 2480 x 3508 RGBA32F | 212 ms | 68.0 ms |
-| Puppet Warp apply, 3 pins, 2480 x 3508 RGBA32F | 750 ms | 212 ms |
+| Workload | CPU | GPU | |
+| --- | ---: | ---: | ---: |
+| Layer projection, 4096 x 4096, 16 layers | 270 ms | 60.6 ms | 4.5x |
+| Transform Tool apply, scale + rotate, 2480 x 3508 | 502 ms | 61.5 ms | 8.2x |
+| Liquify apply, 20 strokes, 2480 x 3508 | 253 ms | 63.5 ms | 4.0x |
+| Gaussian Blur apply, radius 30, 2480 x 3508 | 212 ms | 68.0 ms | 3.1x |
+| Pen input to displayed frame, 256 px Buildup (2026-10-10) | 20.6 ms | 4.8 ms | 4.3x |
 
-The affine transform and Liquify results are identical to the CPU results,
-pixel for pixel; so are Puppet Warp's parts, which are then combined on the
-CPU. The Gaussian Blur results match the CPU results within one rounding
-step.
+Updates of the layer stack with the GPU engine, before and after 1.0.0
+moved them to the GPU (2480 x 3508, 2026-11-12):
 
-Each value is the median of three fresh-process results, with GPU completion
-included and Vulkan validation disabled. Projection and canvas results use
-five-sample medians per process; mirror results use five-update averages after
-warming all three brush staging slots; transform results are medians of three
-calls with a CPU-resident source layer. The Gaussian Blur CPU value splits the
-layer into 32 parallel bands, like the Filter dialog's patches; the GPU value
-is one call. Projection excludes full CPU readback
-(53-57 ms). Canvas preparation starts with GPU-resident projection pixels and
-excludes projection work and final OpenGL texture copies. Mirror measurements
-include reflection and uploads, compare against serial CPU painting, and
-exclude dab generation, scheduling and display.
+| Update | Before | 1.0.0 | |
+| --- | ---: | ---: | ---: |
+| Move Tool step, full-canvas layer | 166 ms | 8.5 ms | 19x |
+| Dab on a layer with a 1 px Stroke layer style | 8.95 ms | 0.24 ms | 37x |
+| Dab on a layer with a transparency mask | 2.19 ms | 0.31 ms | 7x |
+| Dab below a Posterize filter layer (16-bit float, 1754 x 2480) | 11.5 ms | 0.30 ms | 38x |
 
-Completed-stroke measurements from the same day show both the remaining
-overhead and workloads that benefit from GPU brushes:
+On the CPU, for every color space (2026-11-13):
 
-| Queued stroke | CPU only | GPU projection and brush |
-| --- | ---: | ---: |
-| RGBA32F, 64px Normal Wash | 6.19 ms | 10.88 ms |
-| RGBA32F, 256px Normal Buildup | 8.15 ms | 10.70 ms |
-| RGBA16F, 128px Soft Light (SVG) Wash, selection and both mirrors | 73.60 ms | 11.46 ms |
-| RGBA32F, 300px textured (pattern) Buildup | 53.35 ms | 18.42 ms |
-| RGBA32F, 300px textured with a masking brush, Wash | 80.51 ms | 37.45 ms |
+| Operation | Before | Now | |
+| --- | ---: | ---: | ---: |
+| Finding the bounds of all 26 layers of a 5319 x 4705 RGBA8 painting | 3477 ms | 72 ms | 48x |
 
-These use a 1024 x 1024 document, four layers and 24 queued line segments.
-Each value is the median of five-sample medians from three fresh processes.
-They include brush generation, final merging and completed projection, but
-exclude tablet input and screen presentation. These are different workloads,
-not an F16-versus-F32 comparison. Pattern textures and masking brushes are
-applied on the GPU since October 10-11, 2026. See the
-[measurement details and ranges](docs/agent/wiki/benchmarks/transform-and-filter-costs.md#readme-refresh-2026-10-11).
+**A complete short stroke with a small brush can still be slower on the
+GPU** (6.2 ms on the CPU against 10.9 ms for a 64 px Wash stroke); large,
+textured, masked or mirrored strokes favor the GPU. Input-to-display times
+end at Qt's frame swap, not at light leaving the screen.
 
-**Complete short strokes can still be slower on the GPU.** Work-buffer reuse
-removed an avoidable wait, but its before/after timing ranges overlap and do
-not establish a substantial stroke speedup. Measured from pen input to the
-displayed frame instead, the GPU brush is about four times faster (2026-10-10,
-see [the input-to-display comparison](docs/gpu-engine.md#input-to-display)).
-
-See the [current benchmark results and limitations](docs/gpu-engine.md#current-benchmarks).
-Input-to-display timings are Qt input-to-command-swap measurements, not
-physical pen-to-screen latency.
-Results vary with workload and hardware and do not establish performance for
-a packaged release.
+See [all results, how they were measured and their limits](docs/gpu-engine.md#current-benchmarks).
 
 ## Supported environment
 

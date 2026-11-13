@@ -120,6 +120,53 @@ brushes, while larger, textured, masked or mirrored strokes favor the GPU:
 | RGBA32F, 300px textured (pattern) Buildup | 53.35 ms | 18.42 ms |
 | RGBA32F, 300px textured with a masking brush, Wash | 80.51 ms | 37.45 ms |
 
+These values are medians of five-sample medians from three fresh processes,
+with 24 queued line segments per stroke. They are different workloads, not a
+comparison of 16-bit against 32-bit float.
+
+How the first table was measured (2026-10-11, local development builds,
+Vulkan validation off): projection and canvas results are five-sample
+medians per process; the mirror result is a five-update average after
+warming all three brush staging slots; transform results are medians of
+three calls with a CPU-resident source layer. The Gaussian Blur CPU value
+splits the layer into 32 parallel bands, like the Filter dialog's patches;
+the GPU value is one call. Projection excludes a full CPU readback
+(53-57 ms). Canvas preparation starts with GPU-resident projection pixels
+and excludes projection work and the final OpenGL texture copies. The
+mirror measurement includes reflection and uploads, compares against serial
+CPU painting, and excludes dab generation, scheduling and display.
+
+### Layer stack updates since 1.0.0
+
+Solstice 1.0.0 moved more of the layer stack to the GPU. These compare the
+GPU engine before and after that work, not the CPU with the GPU: before, the
+engine read the affected tiles back and did the step on the CPU. Image
+2480 x 3508, RGBA 32-bit float unless noted; a dab is the update after
+painting 256 x 256 pixels; medians in ms (2026-11-12).
+
+| Update | Before | 1.0.0 |
+| --- | ---: | ---: |
+| Move Tool step, full-canvas layer, offset off the tile grid | 166 | 8.5 |
+| Move Tool step, group, offset off the tile grid | 110 | 16 |
+| Dab on a layer with one transparency mask | 2.19 | 0.31 |
+| Dab on a layer with a 1 px Stroke layer style | 8.95 | 0.24 |
+| Full refresh with that 1 px Stroke layer style | 265 | 11.0 |
+| Dab below a Posterize filter layer (16-bit float, 1754 x 2480) | 11.5 | 0.30 |
+| Full refresh below that Posterize filter layer | 78.6 | 5.1 |
+
+In RGBA 32-bit float, Posterize and channel curves still run on the CPU, so
+those rows do not change there.
+
+### CPU changes
+
+Not everything is on the GPU, and RGBA 8-bit documents never are. Finding a
+layer's exact bounds (at the start of a Move or Transform, after a
+visibility change, for layer thumbnails) used to look at every pixel on the
+way from the edges of the layer's tiles to its content. It now skips empty
+tiles. All 26 layers of a 5319 x 4705 RGBA8 painting whose layers reach far
+outside the canvas: 3477 ms before, 72 ms now; the slowest layer 422 ms
+before, 9 ms now (2026-11-13, development build).
+
 From pen input to the displayed frame, the GPU brush is faster (next
 section). Results vary with workload and hardware.
 
