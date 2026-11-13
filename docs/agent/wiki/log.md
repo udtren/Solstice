@@ -3372,3 +3372,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   measurement on the user's profile after the Text Properties change), and
   a custom social preview image has to be uploaded in the repository
   settings by the user.
+
+## 2026-11-13 release: Solstice 1.1.1
+
+- The user asked for the day's CPU performance work and the Reload
+  Original Preset fix to be released as 1.1.1, then the website published.
+  Record: [1.1.1 release verification](history/release-1.1.1.md).
+- Order kept: version preparation (PR #102), build on the merged commit,
+  package checks, GitHub Release, then the site's `develop` into `main`.
+  The site's version change waited on `develop` during the build, so the
+  publication was one merge after the release existed.
+- Lesson: the live site still answered with the old version for a short
+  time after the merge. Waiting on `/go/release` in a loop until it names
+  the new tag is a better check than one request and a guess.
+- Not verified: the release package was not started.
