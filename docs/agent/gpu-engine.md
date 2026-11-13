@@ -1099,6 +1099,24 @@ kept their pixels.
   default pixel (the bounds then include the image bounds) and not in
   wrap-around mode (the move rewrites pixels). The first request after a
   change of the pixels still scans.
+- The scan itself (2026-11-13, all color spaces, also with the engine
+  off): `calculateExactBounds()` walked from the edges of the tile extent
+  to the content one pixel at a time (an accessor move and a virtual
+  `opacityU8()` each), and its column sweeps crossed rows already known to
+  be empty. `Impl::calculateExactBoundsTileWise()` in
+  `kis_paint_device.cc` splits the extent along the tile borders, tests an
+  empty tile once in memory order (alpha bytes that are all zero need no
+  call into the color space) and searches the exact edge only in the tiles
+  on the border of the content. In a 5319x4705 RGBA8 document of the user
+  the scan of all 26 layers went from 3.5 s to 72 ms
+  ([measurements](wiki/benchmarks/exact-bounds-scan.md)). Rules it keeps:
+  the result is the same rect (`testExactBoundsTileWise` compares with a
+  pixel-by-pixel search in six color spaces); tiles inside the content are
+  not read, so a device held by the GPU is not downloaded for it
+  (`KisGpuPaintDeviceTest::testExactBoundsReadsBorderTilesOnly`); a cell is
+  fetched only after checking that it can still move an edge. A visible
+  default pixel (search outside the image bounds only) and
+  `regionExact()` keep the pixel sweeps.
 - CPU composites inside a GPU image
   (`KisAsyncMerger::compositeWithProjection()` after `tryAdd()` refused:
   layer styles, CPU-only blend modes, other planes): the merger now reads

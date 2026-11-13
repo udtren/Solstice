@@ -1,13 +1,14 @@
 ---
 type: pitfall
-updated: 2026-11-12
+updated: 2026-11-13
 sources:
-  - libs/image/kis_paint_device.cc (KisPaintDevice::moveTo, calculateExactBounds)
+  - libs/image/kis_paint_device.cc (KisPaintDevice::moveTo, calculateExactBounds, Impl::calculateExactBoundsTileWise)
   - libs/image/kis_paint_device_cache.h (validBounds, setTranslatedBounds)
   - libs/ui/tool/strokes/move_stroke_strategy.cpp (MoveNodeStrategyBase::moveNodeCommon)
   - plugins/impex/libkra/tests/KisMoveDocumentBenchmark.cpp
 related:
   - ../benchmarks/move-layer-updates.md
+  - ../benchmarks/exact-bounds-scan.md
   - gpu-tiles-read-back-after-strokes.md
   - extent-smaller-than-tiles.md
 ---
@@ -53,3 +54,12 @@ in wrap-around mode (the move rewrites pixels).
   and install") before concluding.
 - The first request after the pixels changed still scans. The Move Tool
   pays it once when a stroke starts (the outline rect).
+
+**The scan itself (2026-11-13).** The cache only helps the second request.
+In the user's paintings (RGBA8, layers whose tiles reach far outside the
+canvas) one uncached scan took up to 430 ms and all layers of one document
+3.5 s. `calculateExactBounds()` now scans tile by tile: 9 ms and 72 ms
+([measurements](../benchmarks/exact-bounds-scan.md),
+`docs/agent/gpu-engine.md`, "Moved layers and groups"). It still reads
+every tile outside the content once, so the advice above stands for code
+that asks in a loop.
