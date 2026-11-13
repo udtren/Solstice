@@ -273,10 +273,13 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
             &QuickAdjustDock::slotLayerBlendChanged);
     connect(reset, &QPushButton::clicked, this, &QuickAdjustDock::slotResetBrush);
 
+    // The controls follow the canvas by polling. The timer runs only while
+    // the dock is shown (showEvent()/hideEvent()): every main window has
+    // this dock, and it used to poll for the whole session, hidden or not.
     m_syncTimer = new QTimer(this);
+    m_syncTimer->setObjectName(QStringLiteral("quickAdjustSyncTimer"));
     m_syncTimer->setInterval(200);
     connect(m_syncTimer, &QTimer::timeout, this, &QuickAdjustDock::syncFromCanvas);
-    m_syncTimer->start();
     setControlsEnabled(false);
 }
 
@@ -377,10 +380,14 @@ void QuickAdjustDock::showEvent(QShowEvent *event)
     QDockWidget::showEvent(event);
     if (m_toolOptionsToggle && m_toolOptionsToggle->isChecked())
         m_toolOptions->setVisible(true);
+    // catch up with what changed while the dock was hidden, then follow
+    syncFromCanvas();
+    m_syncTimer->start();
 }
 
 void QuickAdjustDock::hideEvent(QHideEvent *event)
 {
+    m_syncTimer->stop();
     if (m_toolOptions)
         m_toolOptions->hide();
     QDockWidget::hideEvent(event);
@@ -442,6 +449,13 @@ QToolButton *QuickAdjustDock::createStatusButton(const QString &toolTip, const Q
 void QuickAdjustDock::updateStatusButtons()
 {
     auto setStateIcon = [](QToolButton *button, bool active) {
+        // This runs on every tick of the sync timer: build and set the icon
+        // only when the state it shows changes. A click may have toggled a
+        // checkable button already, so the checked state is compared too.
+        const QVariant shown = button->property("quickAccessShownState");
+        if (shown.isValid() && shown.toBool() == active && (!button->isCheckable() || button->isChecked() == active))
+            return;
+        button->setProperty("quickAccessShownState", active);
         const QString name = button->property("quickAccessIconName").toString();
         const QString separator = name == QStringLiteral("rotate") ? QStringLiteral("-") : QStringLiteral("_");
         button->setIcon(QIcon(QStringLiteral(":/quickaccess/quick_adjust/%1%2%3.png")

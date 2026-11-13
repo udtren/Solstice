@@ -3201,3 +3201,68 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Open: with the Brush Presets docker shown, every setting change still
   emits `dataChanged`, which restarts the stroke preview requests
   (`updatePreviewRequests()` walks all rows).
+## 2026-11-13 performance: Quick Adjust polls only while shown
+
+- `QuickAdjustDock`'s 200 ms timer ran for the whole session in every main
+  window, hidden or not, and each tick built four status icons, set them
+  (a repaint) and, with the Tool Options pad on, laid the borrowed Tool
+  Options out again. The timer now runs
+  only between `showEvent()` and `hideEvent()`, and a status icon is set
+  only when its state changes ([Quick Access](../quick-access.md),
+  "Preserved behavior"). The polling itself stays: an event-driven version
+  would have to cover every path that changes the brush, the active layer,
+  the selection outline action, the gesture setting and the Tool Options'
+  size, for no measured gain.
+- Lesson: a button that is checkable toggles on the click, before the state
+  it shows follows. "Skip when the state is unchanged" has to compare the
+  shown state and the checked state, or a click that changed nothing leaves
+  the button checked.
+- Lesson: `QIcon::cacheKey()` tells a test whether an icon was set again,
+  but only for icons that load: the test program needs the image files in
+  its resources (a missing file gives a null icon with key 0).
+- Not measured: the per-tick cost before and after. The change removes
+  work; it was not profiled.
+## 2026-11-13 performance: Text Properties docker loads on first show
+
+- Found by a logged start (`krita.performance`): of about 6.6 s to the end
+  of `KisApplication::start()`, 1.04 s were `createDockWidget(TextProperties)`,
+  the docker's QML, loaded whether the docker is shown or not.
+  `TextPropertiesDock` now loads it when its contents are first shown
+  ([feature inventory](../feature-inventory.md), "Undocumented custom
+  changes"). Scratch instance through test control: 3 ms at start, one
+  load of 0.87 s on the first `docker_show`, none on the second, no QML
+  errors, clean quit.
+- Lesson: `docker_show` and the `krita.performance` log are enough to check
+  a lazily built docker without the user's profile. The QML's "Binding loop
+  detected" warnings mark the moment it is instantiated.
+- Lesson: the development build exits at once when started without
+  `env.bat` and the Python environment; start `solstice.com` the way
+  `build-tools/paint-trace/run.cmd` does.
+- Not verified by an agent: the docker's contents on screen (test control
+  has no capture of a docker) and editing text properties with it.
+## 2026-11-13 audit and fix: CPU time from start to everyday use
+
+- The user asked where the CPU side could improve. A static read of the
+  start, painting and UI paths was followed by measurements on scratch
+  copies of four of their documents and one logged start; the saved answer
+  is [CPU performance audit](queries/cpu-performance-audit-20261113.md).
+- Fixed: `KisPaintDevice::calculateExactBounds()` scans tile by tile
+  (`Impl::calculateExactBoundsTileWise()`). All layers of a 5319x4705 RGBA8
+  painting: 3.5 s to 72 ms; the slowest layer 422 ms to 9 ms
+  ([exact bounds scan](benchmarks/exact-bounds-scan.md)). Same rect as
+  before (`testExactBoundsTileWise`), no tile inside the content is read
+  (`testExactBoundsReadsBorderTilesOnly`).
+- Lesson: the static ranking was wrong at the top. The item it put first
+  (layer styles growing update rects) cost nothing measurable in the
+  user's documents, and the largest real cost was fourth. A second corpus,
+  the paintings in the Asset Library folders (RGBA8, large canvases, tiles
+  far outside the canvas), behaves differently from the game assets.
+- Lesson: check that a new test can fail. Removing the per-pixel fallback
+  of the alpha test made `testExactBoundsTileWise` fail (RGBA16, an alpha
+  that rounds to 0), as intended.
+- Lesson: a brute-force reference over `extent()` never ends for a device
+  with a visible default pixel (its extent is infinite); search
+  `region().boundingRect()` there.
+- Open, not started: the start-up candidates of the audit (Text Properties
+  docker 1.0 s, 2.9 s of the main window constructor not yet split, the
+  OpenGL probe 0.5 s).
