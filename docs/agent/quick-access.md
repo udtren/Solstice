@@ -271,6 +271,17 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   the panel's top-left (100 × 30 px) above the Size bar and took its clicks. `syncFromCanvas()` runs every
   200 ms, so it sets a control only when its value differs; otherwise it
   would reset a value being typed.
+- The 200 ms timer (`quickAdjustSyncTimer`) runs only while the dock is
+  shown (2026-11-13): `showEvent()` synchronizes once and starts it,
+  `hideEvent()` stops it. Before, every main window's dock (and a compact
+  popup while it existed) polled for the whole session, hidden or not.
+  `updateStatusButtons()` builds and sets a status icon only when the state
+  it shows changes (property `quickAccessShownState`, compared together
+  with the checked state, because a click toggles a checkable button before
+  the state follows); before, each tick built four `QIcon`s and repainted
+  the buttons. Do not start the timer in the constructor again, and keep
+  `setCanvas()`'s direct `syncFromCanvas()`: a hidden dock still has to be
+  right when it is shown.
 - Match the original HueSVC popup lifecycle: the parent is a frameless,
   always-on-top `Qt::Tool`, not a `Qt::Popup`, and closes when the pointer
   leaves it. A combo-box drop-down is a separate `Qt::Popup`; keep HueSVC open
@@ -584,6 +595,17 @@ scratch profile: they add a brush item to its Quick Access profile):
   eraser and preserve alpha buttons toggle; layer opacity and blending mode
   are undoable layer changes.
 - `huesvc-values`: the H, S, V and R, G, B rows set the foreground color.
+
+Sync timer regression checks (2026-11-13): `QuickAdjustDockTest` has
+`syncTimerRunsOnlyWhileShown` (dock and compact popup: inactive when
+created, active while shown) and `statusIconsChangeOnlyWithTheirState` (the
+same state keeps the icon, a changed state replaces it, a click that changed
+nothing is taken back). All seven Quick Access suites and the three
+scenarios above passed with the change. Interactive checks: with the dock
+visible, the sliders, both blending modes and the four status buttons follow
+changes made elsewhere (shortcuts, the toolbar, another docker) within a
+moment; hide the dock or put another tab in front, change the brush size and
+layer opacity, show it again: the values are current at once.
 
 They find widgets by tool tip, or by class and index inside the docker
 (`KisSliderSpinBox` 0-2 are opacity, flow and layer opacity; `QComboBox` 0-1

@@ -39,6 +39,7 @@ public:
 
 private Q_SLOTS:
     void syncFromCanvas();
+    void updateStatusButtons();
     void slotBrushSizeChanged(qreal size);
     void slotBrushOpacityChanged(int value);
     void slotBrushFlowChanged(int value);
@@ -62,7 +63,6 @@ private:
     void updateBrushHistoryButtons();
     void selectHistoryBrush(int index);
     QToolButton *createStatusButton(const QString &toolTip, const QString &iconName);
-    void updateStatusButtons();
     void triggerAction(const QString &name);
     void setControlsEnabled(bool enabled);
 
