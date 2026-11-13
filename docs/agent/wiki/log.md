@@ -3347,3 +3347,28 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   merged right after a push. Stacking the branches (each one merged with
   the one before) let all checks run at once, and no branch needed another
   push after its predecessor was merged.
+
+## 2026-11-13 documentation: README restructured, benchmarks added
+
+- The user asked what could be improved in how the repository and the
+  website look and read. Found and fixed first: the README's download link
+  still pointed at v0.5.0 (now `/releases/latest`), and four places said
+  the GPU engine is on by default (only on NVIDIA Blackwell since 1.0.0).
+  The repository got its website field, a corrected description and less
+  redundant topics.
+- README: badges and a link row under the tagline, the screenshot before
+  the text, a short GPU summary instead of the eleven-row table, and
+  representative benchmark rows with a speed-up column. The complete lists
+  and the measurement details live in `docs/gpu-engine.md`, which already
+  had the lists.
+- New benchmark rows, from numbers the wiki already held: the layer stack
+  updates of 1.0.0 (Move Tool, masks, Stroke style, filter layers) and the
+  exact bounds scan. They compare the GPU engine before and after, or the
+  CPU before and after, and say so; the earlier tables compare CPU and GPU.
+- Lesson: I reported the site's "New in 0.6.0" as a stale statement. It is
+  the site's convention to name the version a feature arrived in. Check
+  whether a pattern repeats before calling one instance an error.
+- Not done: start-up time is not in the benchmarks (it needs a new
+  measurement on the user's profile after the Text Properties change), and
+  a custom social preview image has to be uploaded in the repository
+  settings by the user.
