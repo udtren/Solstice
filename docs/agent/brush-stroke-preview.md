@@ -103,6 +103,21 @@ Stored preset icons and preset data remain unchanged.
   `%APPDATA%\Solstice\cache\brush-stroke-previews\v1`). Resource model
   updates invalidate in-memory lookup state; unchanged keys can still use
   existing disk PNGs. A stale saved checksum is never persisted as `.none`.
+- What invalidates (2026-11-13): a reset, inserted or removed rows of the
+  preset, brush tip, pattern or gradient model, and a `dataChanged` of the
+  brush tip, pattern or gradient model (any preset may link them) drop the
+  whole in-memory lookup state (`invalidate()`). A `dataChanged` of the
+  preset model for up to 64 rows only concerns those presets
+  (`presetChanged()`): a request is identified by the saved checksum, so a
+  preset whose saved bytes changed is asked for under a new request, and
+  one whose bytes did not change keeps its key and image. Only the "could
+  not be loaded" result of that request (its own id as key) is dropped.
+  Before, Reload Original Preset (`KisAllResourcesModel::reloadResource()`
+  reports the row without roles) invalidated everything, and every chooser
+  looked all its visible previews up again: a resource snapshot on the GUI
+  thread and a PNG read each, 18 lookups for 18 visible previews, none now.
+  `dataChanged` with roles that do not include the checksum (unsaved edits)
+  is ignored as before.
 - Visible requests are collected on show/resize/scroll/model changes. The
   process-wide cache tracks each consumer independently. Disk reads, PNG
   decoding, atomic writes and pruning use QtConcurrent; delegate painting
@@ -199,7 +214,10 @@ behavior change. The manual checks below remain the interactive checklist.
      names.
 2. Restart: all previews appear immediately (read from the cache).
 3. Change and save a preset: only its preview is rendered again. Change
-   without saving: the preview stays, and `*` appears.
+   without saving: the preview stays, and `*` appears. Reload Original
+   Preset after an unsaved change: the `*` goes, and no preview in the
+   docker blinks or is filled in again
+   (`testPresetChangeKeepsOtherPreviews`).
 4. Paint while previews are generating: no stutter. Generation resumes
    after the stroke.
 5. Toolbar brush popup: stroke previews, filters and grouping as in the

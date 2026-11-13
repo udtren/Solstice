@@ -3170,3 +3170,25 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - The user ran manual check 15 (saved exports with Layer Comps) in 1.1.0
   and reported no problems; recorded in `lazy-tools.md` and
   [release 1.1.0](history/release-1.1.0.md).
+
+## 2026-11-13 fix: Reload Original Preset keeps the stroke previews
+
+- User report: Reload Original Preset made the Brush Presets docker load
+  the images of all brushes again. `KisAllResourcesModel::reloadResource()`
+  emits `dataChanged` for the row without roles, and
+  `KisBrushStrokePreviewCache` invalidated its whole lookup state for any
+  such signal of the preset model. A preset's row now only concerns that
+  preset ([Brush Stroke Preview](../brush-stroke-preview.md),
+  "Architecture and lifecycle"). Scratch instance with 18 visible
+  previews: 18 lookups after the action before, none now; the brush size
+  goes back to the saved one as before.
+- Lesson: `dataChanged` without roles means "anything in these rows", not
+  "anything in the model". A cache that listens to a model has to use the
+  row range, and say why the rest is unaffected (here: the request id
+  holds the saved checksum).
+- Lesson: an A/B inside one build is cheap for such a check. A temporary
+  environment variable switched the old behavior back on, and temporary
+  log lines counted lookups; both were removed before the commit.
+- Lesson: write the failing test first when the user reports a symptom.
+  `testPresetChangeKeepsOtherPreviews` failed on the old code at the line
+  that states the symptom.
