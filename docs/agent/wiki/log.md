@@ -3155,3 +3155,12 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   and the choice is remembered (`Solstice/FastExportDestination`). Tests and
   test-control scenarios that relied on the old default now choose the
   document's folder explicitly.
+
+## 2026-11-13 release: Solstice 1.1.0
+
+- Open PRs #89 and #90 merged, version 1.1.0 (PR #91), regular release
+  `v1.1.0` at `9c6299a73fe5` (run 43359604919), website published (web #39,
+  #40). Record: [release 1.1.0](history/release-1.1.0.md); README, the user
+  guide index and the versioning history updated.
+- Lesson: a merge of two feature PRs that each add a wiki log entry for the
+  same day conflicts only there; keep both entries in merge order.

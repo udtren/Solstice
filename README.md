@@ -47,7 +47,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 1.0.0](#whats-new-in-100)
+- [What's new in 1.1.0](#whats-new-in-110)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -59,22 +59,21 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 1.0.0
+## What's new in 1.1.0
 
-[Solstice 1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0) moves
-more of the layer stack to the [GPU engine](docs/gpu-engine.md): moved layers
-and groups, transparency masks, the Stroke layer style, and filter layers and
-filter masks with the most common color filters. It also fixes a crash when a
-mask was added to a layer off the 64 pixel tile grid.
+[Solstice 1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0) lets
+each [Layer Comp](docs/layer-comps.md) be exported with its own
+[Fast Image Export](docs/lazy-tools.md) settings: a saved export can export
+the image as one comp shows it, with its own format, folder, file name and
+area, without changing the canvas. Layer Comp names are renamed in place by
+double-click, and the configured export folder is the default Destination.
 
-The GPU engine now starts by itself only on NVIDIA Blackwell. On other
-graphics cards it stays off until **Also use it with graphics cards it was
-not verified with** is checked in Settings → Configure Solstice →
-Performance → General.
+The right-click menus of Recent Images and the
+[Asset Library](docs/asset-library.md) now have **Show in File Explorer**.
 
-It builds on [0.9.1](https://github.com/udtren/Solstice/releases/tag/v0.9.1),
-which fixed a rare race that could leave a layer out of the picture in
-tile-sized blocks until Undo and Redo.
+It builds on [1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0),
+which moved more of the layer stack to the [GPU engine](docs/gpu-engine.md)
+and starts the engine by itself only on NVIDIA Blackwell.
 
 ## Highlights
 
