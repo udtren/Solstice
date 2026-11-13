@@ -3164,3 +3164,9 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   guide index and the versioning history updated.
 - Lesson: a merge of two feature PRs that each add a wiki log entry for the
   same day conflicts only there; keep both entries in merge order.
+
+## 2026-11-13 verification: Lazy Tools manual check 15
+
+- The user ran manual check 15 (saved exports with Layer Comps) in 1.1.0
+  and reported no problems; recorded in `lazy-tools.md` and
+  [release 1.1.0](history/release-1.1.0.md).

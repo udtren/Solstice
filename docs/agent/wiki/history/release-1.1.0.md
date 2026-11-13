@@ -96,9 +96,10 @@ eight new zh_CN entries were filled before it merged.
 ## Not verified
 
 - Manual check 15 of [Lazy Tools](../../lazy-tools.md) (saved exports with
-  Layer Comps in the app) had not been run.
+  Layer Comps in the app) had not been run before the release. The user ran
+  it in 1.1.0 later on 2026-11-13 and reported no problems.
 - Show in File Explorer was not clicked in the app.
 - The release package was not started. The cloud build uses
   `BUILD_TESTING=OFF`.
 
-The release notes state both gaps.
+The release notes state both gaps as they were at publication.
