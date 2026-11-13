@@ -151,6 +151,28 @@ void KisBrushStrokePreviewCache::invalidate()
     m_d->renderer.cancel();
     Q_EMIT previewReady();
 }
+void KisBrushStrokePreviewCache::presetChanged(const Request &request)
+{
+    /**
+     * The model reports a preset's row without roles for Reload Original
+     * Preset, among others. invalidate() there made every chooser look all
+     * its visible previews up again, a resource snapshot on the GUI thread
+     * and a PNG read each, although one preset was reloaded.
+     *
+     * A request is identified by the preset's saved checksum, and its key by
+     * that checksum and the checksums of the linked resources. A preset whose
+     * saved bytes changed is therefore asked for under a new request, and one
+     * whose bytes did not change keeps its key and image. Only a result that
+     * says "this preset could not be loaded" (the request's own id as key) is
+     * dropped, so that the preset is tried again.
+     */
+    const QString id = request.id();
+    if (m_d->keys.value(id) == id) {
+        m_d->keys.remove(id);
+        m_d->empty.remove(id);
+    }
+    Q_EMIT previewReady();
+}
 QString KisBrushStrokePreviewCache::cacheKey(KisPaintOpPresetSP preset, const QString &savedMd5)
 {
     QStringList dependencies;
@@ -193,13 +215,26 @@ void KisBrushStrokePreviewCache::process()
         for (const QString &type :
              {ResourceType::PaintOpPresets, ResourceType::Brushes, ResourceType::Patterns, ResourceType::Gradients}) {
             auto model = KisResourceModelProvider::resourceModel(type);
+            const bool presets = type == ResourceType::PaintOpPresets;
             connect(model,
                     &QAbstractItemModel::dataChanged,
                     this,
-                    [this](const QModelIndex &, const QModelIndex &, const QVector<int> &roles) {
+                    [this, model, presets](const QModelIndex &topLeft,
+                                           const QModelIndex &bottomRight,
+                                           const QVector<int> &roles) {
                         // Unsaved edits only affect the dirty/thumbnail roles.
-                        if (roles.isEmpty() || roles.contains(Qt::UserRole + KisAbstractResourceModel::MD5))
+                        if (!roles.isEmpty() && !roles.contains(Qt::UserRole + KisAbstractResourceModel::MD5))
+                            return;
+                        // A brush tip, pattern or gradient may be linked by
+                        // any preset, so every key may be stale.
+                        const int rows = bottomRight.row() - topLeft.row() + 1;
+                        if (!presets || !topLeft.isValid() || rows > 64) {
                             invalidate();
+                            return;
+                        }
+                        // A preset's row only concerns that preset's preview.
+                        for (int row = topLeft.row(); row <= bottomRight.row(); ++row)
+                            presetChanged(Request::fromIndex(model->index(row, 0)));
                     });
             connect(model, &QAbstractItemModel::modelReset, this, &KisBrushStrokePreviewCache::invalidate);
             connect(model, &QAbstractItemModel::rowsRemoved, this, &KisBrushStrokePreviewCache::invalidate);
