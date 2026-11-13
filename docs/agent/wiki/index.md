@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-12
+updated: 2026-11-13
 ---
 
 # Agent wiki
@@ -237,6 +237,10 @@ Document ownership and lifecycle are defined in
 - [Move Tool updates](benchmarks/move-layer-updates.md): time and GPU
   downloads per Move Tool step for a full-canvas layer, an object layer
   and a group, aligned and unaligned offsets, before and after phase 4.112.
+- [Exact bounds scan](benchmarks/exact-bounds-scan.md): what an uncached
+  `calculateExactBounds()` costs per layer in the user's documents (up to
+  430 ms where tiles reach far outside the canvas), with the pixel sweeps
+  and with the tile-wise scan.
 - [Paint trace overhead](benchmarks/paint-trace-overhead.md): what
   `KRITA_PAINT_TRACE` costs in the GUI (CPU time and frame cadence
   unchanged, a few ms of stroke tail for projection Build-up), measured
@@ -348,6 +352,10 @@ there, under "Phase history"):
 
 ### Queries
 
+- [CPU performance audit, 2026-11-13](queries/cpu-performance-audit-20261113.md):
+  where the CPU time goes from start to everyday use, measured (start
+  6.6 s with its stages, dab updates, exact bounds), what a static read got
+  wrong, and the candidates left.
 - [Maintenance review, 2026-10-15](queries/maintenance-review-20261015.md):
   document/device tool state, float redraw comparison, record validation,
   key-hold ownership, and conversion-policy compatibility.

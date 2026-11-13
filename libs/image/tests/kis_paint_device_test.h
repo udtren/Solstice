@@ -40,6 +40,8 @@ private Q_SLOTS:
     void testAmortizedExactBounds();
     void testNonDefaultPixelArea();
     void testExactBoundsNonTransparent();
+    void testExactBoundsTileWise();
+    void testExactBoundsTileWiseWrapAround();
 
     void testReadBytesWrapAround();
     void testWrappedRandomAccessor();
