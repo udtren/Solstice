@@ -51,7 +51,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 1.1.0](#whats-new-in-110)
+- [What's new in 1.1.1](#whats-new-in-111)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -63,19 +63,23 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 1.1.0
+## What's new in 1.1.1
 
-[Solstice 1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0) lets
-each [Layer Comp](docs/layer-comps.md) be exported with its own
-[Fast Image Export](docs/lazy-tools.md) settings: a saved export can export
-the image as one comp shows it, with its own format, folder, file name and
-area, without changing the canvas. Layer Comp names are renamed in place by
-double-click, and the configured export folder is the default Destination.
+[Solstice 1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1) is a
+performance and fix release for the CPU side. Finding a layer's bounds, at
+the start of a Move or Transform for example, skips empty tiles (all layers
+of one large painting: 3477 ms before, 72 ms now; see
+[Benchmarks](#benchmarks)). Solstice starts faster because the Text
+Properties docker loads when it is first shown, and it does less work while
+idle. The resource cache database no longer keeps a copy of each preset's
+settings in its thumbnails and is compacted at startup. **Reload Original
+Preset** no longer reloads the stroke previews of all brushes.
 
-The right-click menus of Recent Images and the
-[Asset Library](docs/asset-library.md) now have **Show in File Explorer**.
-
-It builds on [1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0),
+It builds on [1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0),
+which lets each [Layer Comp](docs/layer-comps.md) be exported with its own
+[Fast Image Export](docs/lazy-tools.md) settings and added **Show in File
+Explorer** to the Recent Images and [Asset Library](docs/asset-library.md)
+menus, and on [1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0),
 which moved more of the layer stack to the [GPU engine](docs/gpu-engine.md)
 and starts the engine by itself only on NVIDIA Blackwell.
 

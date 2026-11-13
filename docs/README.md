@@ -6,10 +6,13 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0) gives each
+[1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1) is a
+performance and fix release for the CPU side: faster layer bounds, a faster
+start, less idle work and a smaller resource cache. It builds on
+[1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0), which gives each
 [Layer Comp](layer-comps.md) its own [Fast Image Export](lazy-tools.md)
 settings through saved exports, and adds **Show in File Explorer** to the
-Recent Images and [Asset Library](asset-library.md) menus. It builds on
+Recent Images and [Asset Library](asset-library.md) menus, and on
 [1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0), which moved
 more of the layer stack to the [GPU engine](gpu-engine.md) and starts the
 engine by itself only on NVIDIA Blackwell; other graphics cards need an
