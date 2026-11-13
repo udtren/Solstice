@@ -3171,6 +3171,24 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   and reported no problems; recorded in `lazy-tools.md` and
   [release 1.1.0](history/release-1.1.0.md).
 
+## 2026-11-13 performance: Text Properties docker loads on first show
+
+- Found by a logged start (`krita.performance`): of about 6.6 s to the end
+  of `KisApplication::start()`, 1.04 s were `createDockWidget(TextProperties)`,
+  the docker's QML, loaded whether the docker is shown or not.
+  `TextPropertiesDock` now loads it when its contents are first shown
+  ([feature inventory](../feature-inventory.md), "Undocumented custom
+  changes"). Scratch instance through test control: 3 ms at start, one
+  load of 0.87 s on the first `docker_show`, none on the second, no QML
+  errors, clean quit.
+- Lesson: `docker_show` and the `krita.performance` log are enough to check
+  a lazily built docker without the user's profile. The QML's "Binding loop
+  detected" warnings mark the moment it is instantiated.
+- Lesson: the development build exits at once when started without
+  `env.bat` and the Python environment; start `solstice.com` the way
+  `build-tools/paint-trace/run.cmd` does.
+- Not verified by an agent: the docker's contents on screen (test control
+  has no capture of a docker) and editing text properties with it.
 ## 2026-11-13 audit and fix: CPU time from start to everyday use
 
 - The user asked where the CPU side could improve. A static read of the
