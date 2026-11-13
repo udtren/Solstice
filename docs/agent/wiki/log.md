@@ -3122,3 +3122,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the GitHub Release (HTTP 403), so the release itself needs a local
   session. The packaged `SHA256SUMS.txt` has CRLF line endings; strip them
   before `sha256sum -c` on Git Bash.
+
+## 2026-11-13 ingest: Show in File Explorer
+
+- Recent Images and both Asset Library menus got **Show in File Explorer**
+  (`libs/ui/utils/KisShowInFileExplorer.*`); documented in
+  `docs/asset-library.md`, `docs/agent/asset-library.md` and
+  `feature-inventory.md`.
+- Lesson: `update_translations.py --lang ja` reorders `po/ja` on Windows
+  too, not only with Linux gettext; added to
+  `pitfalls/translation-extraction.md`.

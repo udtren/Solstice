@@ -86,8 +86,15 @@ retains the two pre-refactor consumers' edge cases:
   sections on the right.
 - Folder entries retain alias, path, recursive-folder flag, and per-folder
   extension list. With recursion enabled, group assets by containing folder.
-- Tiles support open, insert as paint/vector layer, insert as file layer,
-  duplicate, rename, and delete. Layer insertion must use native undo-aware and
+- Tiles support open, show in file explorer, insert as paint/vector layer,
+  insert as file layer, duplicate, rename, and delete. Show in File Explorer
+  (2026-11-13) calls `KisShowInFileExplorer::showFile()` in
+  `libs/ui/utils/KisShowInFileExplorer.*`, shared with the welcome page's
+  Recent Images menu (`KisWelcomePageWidget::slotRecentDocContextMenuRequest()`).
+  On Windows it runs `explorer.exe /select,"<path>"` through
+  `QProcess::setNativeArguments()` (Qt's argument quoting would put the quote
+  before `/select`, which Explorer rejects); elsewhere, or when the file is
+  gone, it opens the folder with `QDesktopServices`. Layer insertion must use native undo-aware and
   view-manager paths.
 - For `.kra` thumbnails, read `preview.png`, then
   `Thumbnails/thumbnail.png`, and use `mergedimage.png` only as fallback.
@@ -143,6 +150,9 @@ After installing and restarting, check in both views:
    docker and restarting. Add one from the docker: Welcome lists it.
 4. Open an asset; insert PNG/SVG and file layers, then undo/redo insertion.
 5. Duplicate, rename and delete a disposable asset; cancel each dialog once.
+   Show in File Explorer opens Explorer with the asset selected, including a
+   file whose name has spaces or non-ASCII characters; do the same from the
+   Recent Images menu, and for a recent file that was deleted.
 6. Open a second window and close views after resizing, checking that deferred
    timers and document operations remain associated with the proper window.
 
