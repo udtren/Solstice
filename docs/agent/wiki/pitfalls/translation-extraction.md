@@ -60,6 +60,12 @@ real new and removed strings differ (755 new, 276 gone on 2026-10-16).
   merged copy and add them to the committed catalog by hand, or run the
   tool on Windows. The Linux extraction also kept a tab in the
   `swatche.gpl` palette name ("Swatches\t") that the Windows run drops.
+- **Do not merge `po/ja` with the tool, on Windows either** (2026-11-13,
+  Show in File Explorer). `--lang zh_CN ja` on Windows also reordered the
+  whole `po/ja/krita.po` (about 59,000 changed lines): it was never merged
+  by the tool, so its entry order is not the tool's. Merge `zh_CN` only,
+  restore `po/ja` from Git, and add its new entries by hand next to a
+  related entry, with the references the `zh_CN` merge produced.
 - **Moving a text into an `.action` file keeps its translation.**
   `quietlyTranslate()` in `kis_action_registry.cpp` looks the text up with
   the `action` context first and falls back to `i18n()` without context, so

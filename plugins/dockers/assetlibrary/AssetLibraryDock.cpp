@@ -5,6 +5,7 @@
 
 #include "AssetLibraryDock.h"
 #include <assetlibrary/KisAssetLibraryOperations.h>
+#include <utils/KisShowInFileExplorer.h>
 
 #include <KisMainWindow.h>
 #include <KisViewManager.h>
@@ -104,6 +105,7 @@ protected:
     {
         QMenu menu(this);
         QAction *open = menu.addAction(i18n("Open"));
+        QAction *showInExplorer = menu.addAction(KisShowInFileExplorer::actionText());
         QAction *insertLayer = menu.addAction(i18n("Insert as New Layer"));
         QAction *insertFileLayer = menu.addAction(i18n("Insert as New File Layer"));
         QAction *duplicate = menu.addAction(i18n("Duplicate"));
@@ -112,6 +114,8 @@ protected:
         QAction *selected = menu.exec(event->globalPos());
         if (selected == open && m_open)
             m_open(m_path);
+        else if (selected == showInExplorer)
+            KisShowInFileExplorer::showFile(m_path, this);
         else if (selected == insertLayer && m_insertLayer)
             m_insertLayer(m_path);
         else if (selected == insertFileLayer && m_insertFileLayer)

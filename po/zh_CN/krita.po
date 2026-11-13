@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-11-12 23:21+0900\n"
+"POT-Creation-Date: 2026-11-13 11:13+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -22548,7 +22548,7 @@ msgstr "本地资源"
 #: libs/ui/KisRemoteFileFetcher.cpp:64 libs/ui/KisRemoteFileFetcher.cpp:91
 #: libs/ui/KisTemplateCreateDia.cpp:285 libs/ui/KisTemplateCreateDia.cpp:392
 #: libs/ui/KisView.cpp:685 libs/ui/KisView.cpp:1171
-#: libs/ui/KisWelcomePageWidget.cpp:753
+#: libs/ui/KisWelcomePageWidget.cpp:758
 #: libs/ui/animation/KisAnimationRender.cpp:69
 #: libs/ui/animation/KisAnimationRender.cpp:153
 #: libs/ui/animation/KisDlgAnimationRenderer.cpp:809
@@ -25028,8 +25028,8 @@ msgid "Create Mask"
 msgstr "新建蒙版"
 
 #: libs/ui/KisSolsticeLazyTools.cpp:186
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:321
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:201
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:322
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:205
 #: plugins/python/colorspace/uicolorspace.py:37
 #: plugins/python/documenttools/uidocumenttools.py:25
 #: plugins/python/exportlayers/uiexportlayers.py:35
@@ -25408,189 +25408,189 @@ msgctxt "choice for author profile"
 msgid "Anonymous"
 msgstr "匿名"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:75
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:466
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:76
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:470
 #, kde-format
 msgid "Asset Library Settings"
 msgstr "Asset Library 设置"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:96
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:487
 #, kde-format
 msgid "Alias"
 msgstr "别名"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:96
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:487
 #, kde-format
 msgid "Extensions"
 msgstr "扩展名"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:96
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:487
 #, kde-format
 msgid "Include Subfolders"
 msgstr "包含子文件夹"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:95
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:483
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:96
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:487
 #, kde-format
 msgid "Path"
 msgstr "路径"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:106
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:502
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:107
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:506
 #, kde-format
 msgid "Select Asset Folder"
 msgstr "选择素材文件夹"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:111
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:507
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:112
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:511
 #, kde-format
 msgid "Folder Alias"
 msgstr "文件夹别名"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:112
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:507
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:113
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:511
 #, kde-format
 msgid "Alias (optional)"
 msgstr "别名 (可选)"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:129
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:538
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:130
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:542
 #, kde-format
 msgid "Asset Paths"
 msgstr "素材路径"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:134
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:543
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:135
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:547
 #, kde-format
 msgid "Auto columns"
 msgstr "自动列数"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:143
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:560
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:144
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:564
 #, kde-format
 msgid "Thumbnail columns"
 msgstr "缩略图列数"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:144
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:561
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:145
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:565
 #, kde-format
 msgid "Fixed thumbnail columns"
 msgstr "固定缩略图列数"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:145
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:562
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:146
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:566
 #, kde-format
 msgid "Thumbnail size"
 msgstr "缩略图大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:146
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:563
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:147
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:567
 #, kde-format
 msgid "Folder button font size"
 msgstr "文件夹按钮字体大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:147
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:564
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:148
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:568
 #, kde-format
 msgid "Header font size"
 msgstr "标题字体大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:148
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:565
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:149
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:569
 #, kde-format
 msgid "Asset filename font size"
 msgstr "素材文件名字体大小"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:397
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:290
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:398
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:294
 #, kde-format
 msgid "Add asset paths from Settings."
 msgstr "请在设置中添加素材路径。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:423
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:300
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:317
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:424
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:304
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:321
 #, kde-format
 msgid "No asset path is selected."
 msgstr "未选择素材路径。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:428
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:321
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:429
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:325
 #, kde-format
 msgid "Folder not found: %1"
 msgstr "找不到文件夹：%1"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:459
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:355
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:460
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:359
 #, kde-format
 msgid "1 asset"
 msgid_plural "%1 assets"
 msgstr[0] "%1 个素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:520
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:106
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:521
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:107
 #: plugins/python/scripter/ui_scripter/actions/openaction/openaction.py:28
 #, kde-format
 msgid "Open"
 msgstr "打开"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:521
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:523
 #: libs/ui/assetlibrary/KisAssetLibraryOperations.cpp:24
 #: libs/ui/widgets/kis_canvas_drop.cpp:33
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:107
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:109
 #, kde-format
 msgid "Insert as New Layer"
 msgstr "插入为 - 新图层"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:522
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:524
 #: libs/ui/assetlibrary/KisAssetLibraryOperations.cpp:37
 #: libs/ui/widgets/kis_canvas_drop.cpp:34
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:108
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:110
 #, kde-format
 msgid "Insert as New File Layer"
 msgstr "插入为 - 新文件图层"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:537
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:539
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:430
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:541
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:543
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:434
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:438
 #, kde-format
 msgid "Duplicate Asset"
 msgstr "复制素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:539
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:434
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:543
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:438
 #, kde-format
 msgid "Could not copy the file."
 msgstr "无法复制文件。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:542
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:544
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:440
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:546
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:548
 #: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:444
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:448
 #, kde-format
 msgid "Rename Asset"
 msgstr "重命名素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:544
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:444
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:548
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:448
 #, kde-format
 msgid "Could not rename the file."
 msgstr "无法重命名文件。"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:548
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:554
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:451
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:459
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:552
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:558
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:455
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:463
 #, kde-format
 msgid "Delete Asset"
 msgstr "删除素材"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:549
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:452
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:553
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:456
 #, kde-format
 msgid ""
 "Delete this file?\n"
@@ -25599,29 +25599,29 @@ msgstr ""
 "要删除此文件吗？\n"
 "%1"
 
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:554
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:459
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:558
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:463
 #, kde-format
 msgid "Could not delete the file."
 msgstr "无法删除文件。"
 
-#: libs/ui/KisWelcomePageWidget.cpp:169
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:160
+#: libs/ui/KisWelcomePageWidget.cpp:170
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:164
 #, kde-format
 msgid "Asset Library"
 msgstr "Asset Library"
 
-#: libs/ui/KisWelcomePageWidget.cpp:181
+#: libs/ui/KisWelcomePageWidget.cpp:182
 #, kde-format
 msgid "Enable news and check for new releases"
 msgstr "显示最新资讯/检查软件更新"
 
-#: libs/ui/KisWelcomePageWidget.cpp:186
+#: libs/ui/KisWelcomePageWidget.cpp:187
 #, kde-format
 msgid "Enable Krita news and Solstice releases"
 msgstr "启用 Krita 资讯和 Solstice 版本发布信息"
 
-#: libs/ui/KisWelcomePageWidget.cpp:190
+#: libs/ui/KisWelcomePageWidget.cpp:191
 #, kde-format
 msgid ""
 "Show upstream Krita news and Solstice releases: this needs internet to "
@@ -25631,28 +25631,28 @@ msgstr ""
 "显示上游 Krita 的资讯和 Solstice 的版本发布信息：需要联网，从 krita.org 网站"
 "和 Solstice 的 GitHub 仓库获取信息"
 
-#: libs/ui/KisWelcomePageWidget.cpp:194
+#: libs/ui/KisWelcomePageWidget.cpp:195
 #: plugins/python/comics_project_management_tools/comics_metadata_dialog.py:357
 #, kde-format
 msgid "Language"
 msgstr "语言"
 
-#: libs/ui/KisWelcomePageWidget.cpp:195
+#: libs/ui/KisWelcomePageWidget.cpp:196
 #, kde-format
 msgid "English news is always up to date."
 msgstr "英文资讯内容更加及时和齐全。"
 
-#: libs/ui/KisWelcomePageWidget.cpp:391
+#: libs/ui/KisWelcomePageWidget.cpp:392
 #, kde-format
 msgid "Support Upstream Krita"
 msgstr "支持上游 Krita"
 
-#: libs/ui/KisWelcomePageWidget.cpp:396
+#: libs/ui/KisWelcomePageWidget.cpp:397
 #, kde-format
 msgid "Upstream Krita Website"
 msgstr "上游 Krita 官方网站"
 
-#: libs/ui/KisWelcomePageWidget.cpp:410
+#: libs/ui/KisWelcomePageWidget.cpp:411
 #, kde-format
 msgid ""
 "You can <a href=\"ignored\" style=\"color: COLOR_PLACEHOLDER; text-"
@@ -25663,23 +25663,23 @@ msgstr ""
 "text-decoration: underline;\">启用资讯</a>，显示来自 krita.org 的多语言资讯"
 "和 Solstice 的版本发布信息"
 
-#: libs/ui/KisWelcomePageWidget.cpp:670
+#: libs/ui/KisWelcomePageWidget.cpp:673
 #: plugins/dockers/presethistory/presethistory_dock.cpp:302
 #, kde-format
 msgid "Forget \"%1\""
 msgstr "忘记“%1”"
 
-#: libs/ui/KisWelcomePageWidget.cpp:772
+#: libs/ui/KisWelcomePageWidget.cpp:777
 #, kde-format
 msgid "A new upstream Krita version is available."
 msgstr "上游 Krita 已推出新版本。"
 
-#: libs/ui/KisWelcomePageWidget.cpp:800
+#: libs/ui/KisWelcomePageWidget.cpp:805
 #, kde-format
 msgid "An error occurred during the update"
 msgstr "更新时发生错误"
 
-#: libs/ui/KisWelcomePageWidget.cpp:806
+#: libs/ui/KisWelcomePageWidget.cpp:811
 #, kde-format
 msgid "Restart is required."
 msgstr "需要重启软件。"
@@ -26698,10 +26698,10 @@ msgstr "主显示器："
 #: libs/ui/animation/VideoHDRMetadataOptionsDialog.ui:40
 #: libs/ui/forms/wdgcolorsettings.ui:172 libs/ui/forms/wdgdisplaysettings.ui:24
 #: plugins/dockers/advancedcolorselector/wdg_color_selector_settings.ui:444
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:151
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:152
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2458
 #: libs/ui/dialogs/kis_dlg_preferences.cc:2460
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:569
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:573
 #: plugins/dockers/svgcollectiondocker/SvgSymbolCollectionDocker.cpp:234
 #, kde-format
 msgid "Display"
@@ -29359,7 +29359,7 @@ msgid "Community"
 msgstr "社区资源"
 
 #. i18n: context: string @ property (text), widget (QLabel, manualLink)
-#: libs/ui/forms/KisWelcomePage.ui:355 libs/ui/KisWelcomePageWidget.cpp:385
+#: libs/ui/forms/KisWelcomePage.ui:355 libs/ui/KisWelcomePageWidget.cpp:386
 #, kde-format
 msgid "User Manual"
 msgstr "使用手册"
@@ -29371,25 +29371,25 @@ msgid "Support Krita"
 msgstr "捐款支持"
 
 #. i18n: context: string @ property (text), widget (QLabel, poweredByKDELink)
-#: libs/ui/forms/KisWelcomePage.ui:535 libs/ui/KisWelcomePageWidget.cpp:406
+#: libs/ui/forms/KisWelcomePage.ui:535 libs/ui/KisWelcomePageWidget.cpp:407
 #, kde-format
 msgid "Powered by KDE"
 msgstr "Krita 由 KDE 社区开发维护"
 
 #. i18n: context: string @ property (text), widget (QLabel, sourceCodeLink)
-#: libs/ui/forms/KisWelcomePage.ui:625 libs/ui/KisWelcomePageWidget.cpp:401
+#: libs/ui/forms/KisWelcomePage.ui:625 libs/ui/KisWelcomePageWidget.cpp:402
 #, kde-format
 msgid "Source Code"
 msgstr "源代码库"
 
 #. i18n: context: string @ property (text), widget (QLabel, gettingStartedLink)
-#: libs/ui/forms/KisWelcomePage.ui:712 libs/ui/KisWelcomePageWidget.cpp:381
+#: libs/ui/forms/KisWelcomePage.ui:712 libs/ui/KisWelcomePageWidget.cpp:382
 #, kde-format
 msgid "Getting Started"
 msgstr "新手入门"
 
 #. i18n: context: string @ property (text), widget (QLabel, userCommunityLink)
-#: libs/ui/forms/KisWelcomePage.ui:799 libs/ui/KisWelcomePageWidget.cpp:376
+#: libs/ui/forms/KisWelcomePage.ui:799 libs/ui/KisWelcomePageWidget.cpp:377
 #, kde-format
 msgid "User Community"
 msgstr "用户社区"
@@ -29401,7 +29401,7 @@ msgid "Krita Website"
 msgstr "官方网站"
 
 #. i18n: context: string @ property (text), widget (QLabel, recentDocumentsLabel)
-#: libs/ui/forms/KisWelcomePage.ui:961 libs/ui/KisWelcomePageWidget.cpp:166
+#: libs/ui/forms/KisWelcomePage.ui:961 libs/ui/KisWelcomePageWidget.cpp:167
 #, kde-format
 msgid "Recent Images"
 msgstr "最近图像"
@@ -30074,9 +30074,9 @@ msgstr "添加当前预设为书签"
 
 #. i18n: context: string @ property (text), widget (QPushButton, pushButtonDelete)
 #: libs/ui/forms/wdgbookmarkedconfigurationseditor.ui:55
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:525
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:527
 #: libs/widgetutils/xmlgui/kshortcutschemeseditor.cpp:64
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:111
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:113
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:66
 #, kde-format
 msgid "Delete"
@@ -31795,10 +31795,10 @@ msgstr "添加…"
 #: plugins/tools/tool_lazybrush/kis_tool_lazy_brush_options_widget.ui:159
 #: libs/ui/KisReferenceImageFilters.cpp:206
 #: libs/ui/KisReferenceImageFilters.cpp:308
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:85
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:86
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:262
 #: libs/widgetutils/xmlgui/kswitchlanguagedialog_p.cpp:430
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:474
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:478
 #: plugins/python/channels2layers/channels2layers.py:106
 #, kde-format
 msgid "Remove"
@@ -34288,9 +34288,9 @@ msgstr "所有方案中的已更改设置都将被重置。您确定要继续吗
 
 #. i18n: context: string @ property (text), widget (QPushButton, duplicateButton)
 #: libs/ui/input/config/kis_edit_profiles_dialog.ui:24
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:523
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:525
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:260
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:109
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:111
 #, kde-format
 msgid "Duplicate"
 msgstr "复制"
@@ -34303,9 +34303,9 @@ msgstr "全部重置"
 
 #. i18n: context: string @ property (text), widget (QPushButton, renameButton)
 #: libs/ui/input/config/kis_edit_profiles_dialog.ui:51
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:524
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:526
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:261
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:110
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:112
 #, kde-format
 msgid "Rename"
 msgstr "重命名"
@@ -37635,6 +37635,29 @@ msgstr ""
 "新版 AppImage 软件包已下载到 %1 。要完成更新，请关闭 Krita 并运行该新版 "
 "AppImage 软件包。"
 
+#: libs/ui/utils/KisShowInFileExplorer.cpp:19
+#, kde-format
+msgid "Show in File Explorer"
+msgstr "在文件资源管理器中显示"
+
+#: libs/ui/utils/KisShowInFileExplorer.cpp:35
+#, kde-format
+msgid ""
+"The folder for this file no longer exists:\n"
+"%1"
+msgstr ""
+"此文件所在的文件夹已不存在：\n"
+"%1"
+
+#: libs/ui/utils/KisShowInFileExplorer.cpp:54
+#, kde-format
+msgid ""
+"Could not open the folder:\n"
+"%1"
+msgstr ""
+"无法打开文件夹：\n"
+"%1"
+
 #. i18n: context: string @ property (text), widget (QLabel, lblLinks)
 #: libs/ui/wdgsplash.ui:439
 #, kde-format
@@ -37861,16 +37884,16 @@ msgstr "随机化"
 
 #. i18n: context: string @ property (text), widget (QPushButton, btnUp)
 #: libs/ui/widgets/KisDlgListPicker.ui:98
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:86
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:475
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:87
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:479
 #, kde-format
 msgid "Up"
 msgstr "上移"
 
 #. i18n: context: string @ property (text), widget (QPushButton, btnDown)
 #: libs/ui/widgets/KisDlgListPicker.ui:105
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:87
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:476
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:88
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:480
 #, kde-format
 msgid "Down"
 msgstr "下移"
@@ -42925,13 +42948,13 @@ msgstr "反转饱和度"
 msgid "Reset to default"
 msgstr "重置为默认值"
 
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:203
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:618
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:207
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:622
 #, kde-format
 msgid "Hide"
 msgstr "隐藏"
 
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:611
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:615
 #, kde-format
 msgid "Show"
 msgstr "显示"
@@ -63855,8 +63878,8 @@ msgstr "随机大小"
 
 #. i18n: context: string @ property (title), widget (QGroupBox, groupBox)
 #: plugins/paintops/spray/wdgshapedynamicsoptions.ui:46
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:322
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:202
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:323
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:206
 #: plugins/python/scripter/ui_scripter/actions/settingsaction/settingsaction.py:28
 #: plugins/python/scripter/ui_scripter/actions/settingsaction/settingsdialog.py:20
 #, kde-format
@@ -67886,9 +67909,9 @@ msgstr "轴心："
 
 #. i18n: context: string @ property (text), widget (QPushButton, addSubbrushButton)
 #: plugins/tools/basictools/wdgmultihandtool.ui:228
-#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:84
+#: libs/ui/KisWelcomeAssetLibraryWidget.cpp:85
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:258
-#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:473
+#: plugins/dockers/assetlibrary/AssetLibraryDock.cpp:477
 #: plugins/tools/tool_enclose_and_fill/KisToolRemoveDust.cpp:572
 #, kde-format
 msgid "Add"
