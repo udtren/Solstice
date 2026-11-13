@@ -14,6 +14,7 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimer>
 #include <QToolButton>
 #include <KisAngleSelector.h>
 #include <KisGlobalResourcesInterface.h>
@@ -298,6 +299,80 @@ private Q_SLOTS:
             QVERIFY(!child->inherits("QuickAdjustKeyController"));
         QVERIFY(!popup.findChild<KisAngleSelector *>()->parentWidget()->isHidden());
         QVERIFY(!popup.findChild<QWidget *>("quickAccessToolOptionsPad"));
+    }
+
+    void syncTimerRunsOnlyWhileShown()
+    {
+        QuickAdjustDock dock;
+        QTimer *timer = dock.findChild<QTimer *>("quickAdjustSyncTimer");
+        QVERIFY(timer);
+        QCOMPARE(timer->interval(), 200);
+        QVERIFY(!timer->isActive());
+        dock.show();
+        QVERIFY(timer->isActive());
+        dock.hide();
+        QVERIFY(!timer->isActive());
+        dock.show();
+        QVERIFY(timer->isActive());
+
+        QuickAdjustDock popup(nullptr, true);
+        QTimer *popupTimer = popup.findChild<QTimer *>("quickAdjustSyncTimer");
+        QVERIFY(popupTimer);
+        QVERIFY(!popupTimer->isActive());
+        popup.show();
+        QVERIFY(popupTimer->isActive());
+        popup.hide();
+        QVERIFY(!popupTimer->isActive());
+    }
+
+    void statusIconsChangeOnlyWithTheirState()
+    {
+        auto gestures = KSharedConfig::openConfig()->group("QuickAccessGesture");
+        gestures.writeEntry("Enabled", true);
+        QuickAdjustDock dock;
+        dock.show();
+        QToolButton *gesture = nullptr;
+        QToolButton *eraser = nullptr;
+        for (auto *button : dock.findChildren<QToolButton *>()) {
+            if (button->toolTip() == "Toggle Quick Access gestures")
+                gesture = button;
+            if (button->toolTip() == "Toggle eraser mode")
+                eraser = button;
+        }
+        QVERIFY(gesture);
+        QVERIFY(eraser);
+        auto update = [&] {
+            return QMetaObject::invokeMethod(&dock, "updateStatusButtons", Qt::DirectConnection);
+        };
+
+        QVERIFY(update());
+        QVERIFY(gesture->isChecked());
+        QVERIFY(!gesture->icon().isNull());
+        QVERIFY(!eraser->isChecked());
+        const qint64 gestureOn = gesture->icon().cacheKey();
+        const qint64 eraserOff = eraser->icon().cacheKey();
+
+        // the same state again: the icons are not built again
+        QVERIFY(update());
+        QVERIFY(update());
+        QCOMPARE(gesture->icon().cacheKey(), gestureOn);
+        QCOMPARE(eraser->icon().cacheKey(), eraserOff);
+
+        // a changed state shows
+        gestures.writeEntry("Enabled", false);
+        QVERIFY(update());
+        QVERIFY(!gesture->isChecked());
+        QVERIFY(gesture->icon().cacheKey() != gestureOn);
+        QCOMPARE(eraser->icon().cacheKey(), eraserOff);
+
+        // a click that changed nothing (no canvas here) is taken back
+        eraser->setChecked(true);
+        QVERIFY(update());
+        QVERIFY(!eraser->isChecked());
+
+        gestures.writeEntry("Enabled", true);
+        QVERIFY(update());
+        QVERIFY(gesture->isChecked());
     }
 };
 

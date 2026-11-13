@@ -3192,3 +3192,152 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: write the failing test first when the user reports a symptom.
   `testPresetChangeKeepsOtherPreviews` failed on the old code at the line
   that states the symptom.
+## 2026-11-13 size: preset text leaves the resource database's thumbnails
+
+- The user's `resourcecache.sqlite` was 500.7 MB. 187 MB of it were the
+  `preset` text chunk of 636 brush preset thumbnails (the whole preset,
+  embedded brush tips included, stored by Krita 5.0 and 5.1; the database
+  dates from 2022 and was imported). `KisResourceCacheDb::initialize()`
+  now removes the text chunks from large preset thumbnails and compacts the
+  file ([feature inventory](../feature-inventory.md), "Undocumented custom
+  changes"). Rehearsed on a scratch copy of the user's whole resource
+  folder: 177.2 MiB removed from 253 thumbnails, 222.7 MB afterwards,
+  `registerResources` 3.0 s on that start and 0.47 s on the next, all
+  resources and storages still there, nothing done on the second start.
+- User decisions: clean automatically at start (not a one-off script), and
+  leave the pattern thumbnails (166 MB, stored at full size) alone.
+- Lesson: a guess about SQLite was wrong and cheap to check. Columns behind
+  the thumbnail blob do not make queries slow (a full scan of `resources`
+  takes 5 ms); the cost of the text was disk, memory and decoding on first
+  display.
+- Lesson: a database built by the current build has no such text (276
+  presets, 8 MB of thumbnails), so the fix is a clean-up, not a change of
+  what is stored.
+- Lesson: test instances with a scratch profile ask the first-start
+  question on a machine that has a Krita profile; the user pressed No many
+  times before saying so. Set `SOLSTICE_LEGACY_CONFIG_DIR` and
+  `SOLSTICE_LEGACY_RESOURCE_DIR` to empty folders
+  ([Test control](../test-control.md#scenario-runner)). And
+  `solstice.com --version` opens a message box instead of printing.
+- Open, found on the way: a scratch profile that held only a copy of the
+  database (no bundle files) crashed at start in
+  `KisStorageModel::removeStorage()`, reached from
+  `KisResourceLocator::synchronizeDb()` for a storage whose file is gone.
+  Not looked into; a normal profile whose bundle was deleted outside
+  Solstice may hit it.
+- Open: three test launches in a row ended with exit code 0xC0000135 and no
+  output, then the same commands worked. Cause not found.
+## 2026-11-13 performance: brush setting changes skip the closed Brush Editor
+
+- Every change of the current preset refreshed the closed Brush Editor and
+  searched the preset lists. Measured first, with temporary
+  `KisScopedPerformanceLogger` scopes in a scratch instance (276 presets,
+  size set 15 times through test control): 1.4 ms per change, of which
+  `KisPaintOpPresetsEditor::resourceSelected()` was 0.63 ms (about 1.7 calls
+  per change) and eight `KisPresetChooser` instances together 0.3 ms. After
+  the change: 0.01 ms with the Brush Presets docker hidden, 0.17 ms with it
+  shown ([feature inventory](../feature-inventory.md), "Undocumented custom
+  changes"). The cost grows with the number of presets; the user has 989.
+- The static audit had described this as "builds a resource model and scans
+  all presets on every setting change". True, but small: about 5 % of the
+  GUI thread during a size drag at most. Worth the change only because the
+  fix is a visibility check.
+- Lesson: a widget that skips its updates while hidden needs a refresh on
+  show that already exists and is checked. Here it did
+  (`brushEditorShown()`), and a test control run confirmed it: after size
+  and preset changes with the editor closed, the name label, the dirty and
+  reload buttons and the save button were right when it opened, and
+  followed changes while open.
+- Lesson: `KisTagResourceModel::indexForResourceId()` returns an index in
+  another column than the proxy's `indexForResource()` loop, so the two
+  lookups of `KisTagFilterResourceProxyModel` are not interchangeable; the
+  row search there was left alone.
+- Lesson: check that a cache test can fail. Without the invalidation in
+  `resetQuery()`, `testIndexForResourceIdFollowsChanges` fails.
+- Open: with the Brush Presets docker shown, every setting change still
+  emits `dataChanged`, which restarts the stroke preview requests
+  (`updatePreviewRequests()` walks all rows).
+## 2026-11-13 performance: Quick Adjust polls only while shown
+
+- `QuickAdjustDock`'s 200 ms timer ran for the whole session in every main
+  window, hidden or not, and each tick built four status icons, set them
+  (a repaint) and, with the Tool Options pad on, laid the borrowed Tool
+  Options out again. The timer now runs
+  only between `showEvent()` and `hideEvent()`, and a status icon is set
+  only when its state changes ([Quick Access](../quick-access.md),
+  "Preserved behavior"). The polling itself stays: an event-driven version
+  would have to cover every path that changes the brush, the active layer,
+  the selection outline action, the gesture setting and the Tool Options'
+  size, for no measured gain.
+- Lesson: a button that is checkable toggles on the click, before the state
+  it shows follows. "Skip when the state is unchanged" has to compare the
+  shown state and the checked state, or a click that changed nothing leaves
+  the button checked.
+- Lesson: `QIcon::cacheKey()` tells a test whether an icon was set again,
+  but only for icons that load: the test program needs the image files in
+  its resources (a missing file gives a null icon with key 0).
+- Not measured: the per-tick cost before and after. The change removes
+  work; it was not profiled.
+## 2026-11-13 performance: Text Properties docker loads on first show
+
+- Found by a logged start (`krita.performance`): of about 6.6 s to the end
+  of `KisApplication::start()`, 1.04 s were `createDockWidget(TextProperties)`,
+  the docker's QML, loaded whether the docker is shown or not.
+  `TextPropertiesDock` now loads it when its contents are first shown
+  ([feature inventory](../feature-inventory.md), "Undocumented custom
+  changes"). Scratch instance through test control: 3 ms at start, one
+  load of 0.87 s on the first `docker_show`, none on the second, no QML
+  errors, clean quit.
+- Lesson: `docker_show` and the `krita.performance` log are enough to check
+  a lazily built docker without the user's profile. The QML's "Binding loop
+  detected" warnings mark the moment it is instantiated.
+- Lesson: the development build exits at once when started without
+  `env.bat` and the Python environment; start `solstice.com` the way
+  `build-tools/paint-trace/run.cmd` does.
+- Not verified by an agent: the docker's contents on screen (test control
+  has no capture of a docker) and editing text properties with it.
+## 2026-11-13 audit and fix: CPU time from start to everyday use
+
+- The user asked where the CPU side could improve. A static read of the
+  start, painting and UI paths was followed by measurements on scratch
+  copies of four of their documents and one logged start; the saved answer
+  is [CPU performance audit](queries/cpu-performance-audit-20261113.md).
+- Fixed: `KisPaintDevice::calculateExactBounds()` scans tile by tile
+  (`Impl::calculateExactBoundsTileWise()`). All layers of a 5319x4705 RGBA8
+  painting: 3.5 s to 72 ms; the slowest layer 422 ms to 9 ms
+  ([exact bounds scan](benchmarks/exact-bounds-scan.md)). Same rect as
+  before (`testExactBoundsTileWise`), no tile inside the content is read
+  (`testExactBoundsReadsBorderTilesOnly`).
+- Lesson: the static ranking was wrong at the top. The item it put first
+  (layer styles growing update rects) cost nothing measurable in the
+  user's documents, and the largest real cost was fourth. A second corpus,
+  the paintings in the Asset Library folders (RGBA8, large canvases, tiles
+  far outside the canvas), behaves differently from the game assets.
+- Lesson: check that a new test can fail. Removing the per-pixel fallback
+  of the alpha test made `testExactBoundsTileWise` fail (RGBA16, an alpha
+  that rounds to 0), as intended.
+- Lesson: a brute-force reference over `extent()` never ends for a device
+  with a visible default pixel (its extent is infinite); search
+  `region().boundingRect()` there.
+- Open, not started: the start-up candidates of the audit (Text Properties
+  docker 1.0 s, 2.9 s of the main window constructor not yet split, the
+  OpenGL probe 0.5 s).
+
+## 2026-11-13 verification and merge: the CPU performance changes
+
+- The user ran the manual checks of the six changes of this day in the
+  development build (a local branch that merged all of them) and reported
+  no problems: the exact bounds scan, the Text Properties docker, Quick
+  Adjust's timer, the closed Brush Editor, the resource database clean-up
+  and Reload Original Preset. The first start on the real profile removed
+  177.2 MiB of preset text from 253 thumbnails; the database went from
+  500.7 MB to 222.7 MB (usage log).
+- Merged in order at the user's request. Each pull request appended to
+  this log, and three added a row to the feature inventory, so every one
+  after the first conflicted with `main` there; main was merged into the
+  branch and both sides were kept.
+- Lesson: for a series of small pull requests made on one day, the log and
+  inventory conflicts are certain. Resolving them in a sparse worktree
+  (`docs` and `dev-tools` only) avoids touching the checkout that the build
+  tree compiles. A full worktree under the scratch folder failed on
+  Windows path lengths.
