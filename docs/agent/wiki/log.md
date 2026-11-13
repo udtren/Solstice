@@ -3171,6 +3171,36 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   and reported no problems; recorded in `lazy-tools.md` and
   [release 1.1.0](history/release-1.1.0.md).
 
+## 2026-11-13 performance: brush setting changes skip the closed Brush Editor
+
+- Every change of the current preset refreshed the closed Brush Editor and
+  searched the preset lists. Measured first, with temporary
+  `KisScopedPerformanceLogger` scopes in a scratch instance (276 presets,
+  size set 15 times through test control): 1.4 ms per change, of which
+  `KisPaintOpPresetsEditor::resourceSelected()` was 0.63 ms (about 1.7 calls
+  per change) and eight `KisPresetChooser` instances together 0.3 ms. After
+  the change: 0.01 ms with the Brush Presets docker hidden, 0.17 ms with it
+  shown ([feature inventory](../feature-inventory.md), "Undocumented custom
+  changes"). The cost grows with the number of presets; the user has 989.
+- The static audit had described this as "builds a resource model and scans
+  all presets on every setting change". True, but small: about 5 % of the
+  GUI thread during a size drag at most. Worth the change only because the
+  fix is a visibility check.
+- Lesson: a widget that skips its updates while hidden needs a refresh on
+  show that already exists and is checked. Here it did
+  (`brushEditorShown()`), and a test control run confirmed it: after size
+  and preset changes with the editor closed, the name label, the dirty and
+  reload buttons and the save button were right when it opened, and
+  followed changes while open.
+- Lesson: `KisTagResourceModel::indexForResourceId()` returns an index in
+  another column than the proxy's `indexForResource()` loop, so the two
+  lookups of `KisTagFilterResourceProxyModel` are not interchangeable; the
+  row search there was left alone.
+- Lesson: check that a cache test can fail. Without the invalidation in
+  `resetQuery()`, `testIndexForResourceIdFollowsChanges` fails.
+- Open: with the Brush Presets docker shown, every setting change still
+  emits `dataChanged`, which restarts the stroke preview requests
+  (`updatePreviewRequests()` walks all rows).
 ## 2026-11-13 performance: Quick Adjust polls only while shown
 
 - `QuickAdjustDock`'s 200 ms timer ran for the whole session in every main
