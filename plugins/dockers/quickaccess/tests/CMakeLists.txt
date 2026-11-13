@@ -31,6 +31,11 @@ kis_add_test(QuickAdjustDockTest.cpp ../QuickAdjustDock.cpp ../QuickAdjustDockHi
     TEST_NAME QuickAdjustDockTest
     LINK_LIBRARIES kritaui kritatestsdk)
 target_include_directories(QuickAdjustDockTest PRIVATE ..)
+# the status icons whose updates the test follows
+qt_add_resources(QuickAdjustDockTest quickaccess_adjust_test_icons
+    PREFIX "/quickaccess" BASE "../resources" FILES
+    "../resources/quick_adjust/gesture_on.png" "../resources/quick_adjust/gesture_off.png"
+    "../resources/quick_adjust/erase_mode_on.png" "../resources/quick_adjust/erase_mode_off.png")
 
 # Compile the actual palette integration, excluding only factory registration.
 set(quickaccess_interaction_sources ${KRITA_QUICKACCESS_DOCKER_SOURCES})
