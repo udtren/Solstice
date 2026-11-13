@@ -3171,6 +3171,27 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   and reported no problems; recorded in `lazy-tools.md` and
   [release 1.1.0](history/release-1.1.0.md).
 
+## 2026-11-13 fix: Reload Original Preset keeps the stroke previews
+
+- User report: Reload Original Preset made the Brush Presets docker load
+  the images of all brushes again. `KisAllResourcesModel::reloadResource()`
+  emits `dataChanged` for the row without roles, and
+  `KisBrushStrokePreviewCache` invalidated its whole lookup state for any
+  such signal of the preset model. A preset's row now only concerns that
+  preset ([Brush Stroke Preview](../brush-stroke-preview.md),
+  "Architecture and lifecycle"). Scratch instance with 18 visible
+  previews: 18 lookups after the action before, none now; the brush size
+  goes back to the saved one as before.
+- Lesson: `dataChanged` without roles means "anything in these rows", not
+  "anything in the model". A cache that listens to a model has to use the
+  row range, and say why the rest is unaffected (here: the request id
+  holds the saved checksum).
+- Lesson: an A/B inside one build is cheap for such a check. A temporary
+  environment variable switched the old behavior back on, and temporary
+  log lines counted lookups; both were removed before the commit.
+- Lesson: write the failing test first when the user reports a symptom.
+  `testPresetChangeKeepsOtherPreviews` failed on the old code at the line
+  that states the symptom.
 ## 2026-11-13 size: preset text leaves the resource database's thumbnails
 
 - The user's `resourcecache.sqlite` was 500.7 MB. 187 MB of it were the
@@ -3301,3 +3322,28 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Open, not started: the start-up candidates of the audit (Text Properties
   docker 1.0 s, 2.9 s of the main window constructor not yet split, the
   OpenGL probe 0.5 s).
+
+## 2026-11-13 verification and merge: the CPU performance changes
+
+- The user ran the manual checks of the six changes of this day in the
+  development build (a local branch that merged all of them) and reported
+  no problems: the exact bounds scan, the Text Properties docker, Quick
+  Adjust's timer, the closed Brush Editor, the resource database clean-up
+  and Reload Original Preset. The first start on the real profile removed
+  177.2 MiB of preset text from 253 thumbnails; the database went from
+  500.7 MB to 222.7 MB (usage log).
+- Merged in order at the user's request. Each pull request appended to
+  this log, and three added a row to the feature inventory, so every one
+  after the first conflicted with `main` there; main was merged into the
+  branch and both sides were kept.
+- Lesson: for a series of small pull requests made on one day, the log and
+  inventory conflicts are certain. Resolving them in a separate worktree
+  avoids touching the checkout that the build tree compiles. Under the
+  scratch folder a full worktree fails on Windows path lengths, and one
+  with only `docs` and `dev-tools` makes `check_docs.py` report every link
+  to a source file as missing (166 errors that were not real): check out
+  everything except the few folders with over-long paths.
+- Lesson: `main` requires the documentation check, so a branch cannot be
+  merged right after a push. Stacking the branches (each one merged with
+  the one before) let all checks run at once, and no branch needed another
+  push after its predecessor was merged.
