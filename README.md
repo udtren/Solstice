@@ -24,7 +24,7 @@ Krita 6 codebase.**
 <tr>
 <td width="33%" valign="top">
 <h3>⚡ GPU acceleration</h3>
-<p>Vulkan-powered layer compositing and canvas updates, and a GPU brush that is on by default: from pen input to the displayed frame, about four times faster than the CPU brush.</p>
+<p>Vulkan-powered layer compositing and canvas updates, and a GPU brush, on by default on NVIDIA Blackwell graphics cards: from pen input to the displayed frame, about four times faster than the CPU brush.</p>
 </td>
 <td width="33%" valign="top">
 <h3>🎨 Workflows from Clip Studio Paint</h3>
@@ -83,7 +83,7 @@ and starts the engine by itself only on NVIDIA Blackwell.
 <tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/gpu-engine.md"><img src="docs/images/gpu_engine.png" alt="The GPU Engine (Vulkan) section of Settings > Performance, with the GPU engine and GPU brush options enabled" width="100%"></a>
-<p><b><a href="docs/gpu-engine.md">GPU Engine</a></b><br>Vulkan layer compositing and a GPU brush, both on by default.</p>
+<p><b><a href="docs/gpu-engine.md">GPU Engine</a></b><br>Vulkan layer compositing and a GPU brush, both on by default on NVIDIA Blackwell.</p>
 </td>
 <td width="50%" align="center" valign="top">
 <a href="docs/brush-stroke-preview.md"><img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="100%"></a>
@@ -195,13 +195,14 @@ See the [user guides](docs/README.md) for every Solstice feature.
 
 ## Development and downloads
 
-> **Experimental software.** The Vulkan engine is on by default and can be
-> turned off. It does not yet replace every CPU processing path, and its
+> **Experimental software.** The Vulkan engine is on by default on NVIDIA
+> Blackwell graphics cards (on others it has to be allowed in the settings)
+> and can be turned off. It does not yet replace every CPU processing path, and its
 > supported hardware and platforms are limited.
 
 Download the unsigned Windows x64 ZIP from
-[GitHub Releases](https://github.com/udtren/Solstice/releases/tag/v0.5.0),
-extract it and start `solstice.exe`.
+[the latest GitHub release](https://github.com/udtren/Solstice/releases/latest),
+extract it and start `Solstice.exe`.
 
 Source code and newer Windows x64 trial ZIPs are also available from successful
 manual [GitHub Actions builds](https://github.com/udtren/Solstice/actions/workflows/windows-build.yml).
@@ -236,7 +237,7 @@ changes and support are maintained in this repository.
 
 The experimental engine uses Vulkan compute on RGBA 32-bit and 16-bit float
 documents and shares its data with the OpenGL canvas for display. It is
-enabled by default; anything it does not support runs on the CPU as in Krita.
+enabled by default on NVIDIA Blackwell graphics cards; anything it does not support runs on the CPU as in Krita.
 This is an ongoing rewrite, not a fully GPU-based painting pipeline.
 
 What has moved to the GPU so far, and what still runs only on the CPU. The
