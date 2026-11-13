@@ -3189,3 +3189,29 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `build-tools/paint-trace/run.cmd` does.
 - Not verified by an agent: the docker's contents on screen (test control
   has no capture of a docker) and editing text properties with it.
+## 2026-11-13 audit and fix: CPU time from start to everyday use
+
+- The user asked where the CPU side could improve. A static read of the
+  start, painting and UI paths was followed by measurements on scratch
+  copies of four of their documents and one logged start; the saved answer
+  is [CPU performance audit](queries/cpu-performance-audit-20261113.md).
+- Fixed: `KisPaintDevice::calculateExactBounds()` scans tile by tile
+  (`Impl::calculateExactBoundsTileWise()`). All layers of a 5319x4705 RGBA8
+  painting: 3.5 s to 72 ms; the slowest layer 422 ms to 9 ms
+  ([exact bounds scan](benchmarks/exact-bounds-scan.md)). Same rect as
+  before (`testExactBoundsTileWise`), no tile inside the content is read
+  (`testExactBoundsReadsBorderTilesOnly`).
+- Lesson: the static ranking was wrong at the top. The item it put first
+  (layer styles growing update rects) cost nothing measurable in the
+  user's documents, and the largest real cost was fourth. A second corpus,
+  the paintings in the Asset Library folders (RGBA8, large canvases, tiles
+  far outside the canvas), behaves differently from the game assets.
+- Lesson: check that a new test can fail. Removing the per-pixel fallback
+  of the alpha test made `testExactBoundsTileWise` fail (RGBA16, an alpha
+  that rounds to 0), as intended.
+- Lesson: a brute-force reference over `extent()` never ends for a device
+  with a visible default pixel (its extent is infinite); search
+  `region().boundingRect()` there.
+- Open, not started: the start-up candidates of the audit (Text Properties
+  docker 1.0 s, 2.9 s of the main window constructor not yet split, the
+  OpenGL probe 0.5 s).

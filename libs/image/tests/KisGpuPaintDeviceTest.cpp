@@ -84,6 +84,7 @@ private Q_SLOTS:
     void testReadOnlyAccessKeepsTileDataAlive();
     void testTileAllocationBoundsResourceReclamation();
     void testGpuFillVisibleOnCpu();
+    void testExactBoundsReadsBorderTilesOnly();
     void testBulkReadback_data();
     void testBulkReadback();
     void testCpuFiltersBatchReadback_data();
@@ -1605,6 +1606,35 @@ void KisGpuPaintDeviceTest::testGpuFillVisibleOnCpu()
     QCOMPARE(outsidePixels[0], 1.0f);
     QCOMPARE(outsidePixels[3], 0.5f);
     QCOMPARE(device->extent(), QRect(0, 0, 384, 256));
+}
+
+void KisGpuPaintDeviceTest::testExactBoundsReadsBorderTilesOnly()
+{
+    REQUIRE_GPU();
+    // The bounds scan downloads the tiles it reads. It must find the edges
+    // of content held by the GPU without reading the tiles inside it.
+    KisPaintDeviceSP device = new KisPaintDevice(rgbaFloat());
+    const QRect solid(0, 0, 10 * 64, 8 * 64);
+    QVERIFY(gpuFill(device, solid, {0.25f, 0.5f, 0.75f, 1.0f}));
+
+    quint64 before = m_backend->downloadedTileCount();
+    QCOMPARE(device->calculateExactBounds(false), solid);
+    // one tile per edge at most
+    QVERIFY2(m_backend->downloadedTileCount() - before <= 4,
+             qPrintable(QStringLiteral("%1 tiles downloaded").arg(m_backend->downloadedTileCount() - before)));
+
+    // A separate block, so the extent holds tiles that do not exist: they
+    // are searched, the two blocks' inner tiles are not.
+    KisPaintDeviceSP sparse = new KisPaintDevice(rgbaFloat());
+    const QRect first(0, 0, 6 * 64, 6 * 64);
+    const QRect second(12 * 64, 9 * 64, 6 * 64, 6 * 64);
+    QVERIFY(gpuFill(sparse, first, {1.0f, 0.0f, 0.0f, 1.0f}));
+    QVERIFY(gpuFill(sparse, second, {0.0f, 0.0f, 1.0f, 1.0f}));
+
+    before = m_backend->downloadedTileCount();
+    QCOMPARE(sparse->calculateExactBounds(false), first.united(second));
+    const quint64 downloaded = m_backend->downloadedTileCount() - before;
+    QVERIFY2(downloaded <= 6, qPrintable(QStringLiteral("%1 of 72 tiles downloaded").arg(downloaded)));
 }
 
 void KisGpuPaintDeviceTest::testCompositeMatchesCpu()
