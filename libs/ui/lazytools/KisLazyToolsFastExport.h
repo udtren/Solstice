@@ -22,6 +22,9 @@ struct KRITAUI_EXPORT Settings {
     int pngCompression{6};
     bool pngAlpha{true};
     int jpegQuality{90};
+    // The one-off export's Destination: 0 the document's folder, 1 the
+    // configured export folder (default), 2 a folder chosen on export.
+    int destination{1};
 
     static Settings load(KSharedConfigPtr config = KSharedConfig::openConfig());
     void save(KSharedConfigPtr config = KSharedConfig::openConfig()) const;
@@ -85,6 +88,9 @@ KRITAUI_EXPORT RegionResult exportRegion(KisDocument *document,
 // the global selection, masked and cropped. The caller has waited for the
 // image. Returns null when there is no selection or it is empty.
 KRITAUI_EXPORT KisDocument *createRegionDocument(KisDocument *document, bool batchMode);
+// The same, with the pixels of projectionImage, a copy of the document's image
+// of the same size (a layer comp applied to it may hide the selection mask).
+KRITAUI_EXPORT KisDocument *createRegionDocument(KisDocument *document, bool batchMode, KisImageSP projectionImage);
 } // namespace KisLazyToolsFastExport
 
 #endif

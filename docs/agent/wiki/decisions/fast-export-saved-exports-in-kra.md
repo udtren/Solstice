@@ -1,11 +1,12 @@
 ---
 type: decision
-updated: 2026-11-03
+updated: 2026-11-13
 sources:
   - docs/agent/lazy-tools.md (saved exports)
   - libs/ui/lazytools/KisLazyToolsFastExportPresets.cpp
   - "plugins/impex/libkra/kis_kra_tags.h: SOLSTICE_FAST_EXPORT_PATH"
   - libs/ui/KisDocument.cpp (copyFromImpl)
+  - "libs/image/kis_layer_composition.cpp: uuid() (2026-11-13)"
 related: []
 ---
 
@@ -40,3 +41,29 @@ intake does not conflict, and Krita and older Solstice simply ignore it.
 - Running presets must not show the format options dialog or touch the
   source document's batch mode: export a `lockAndCreateSnapshot()` clone or
   a region document in batch mode instead.
+
+## Layer comps (2026-11-13)
+
+**Decision (user, 2026-11-13).** To give each Layer Comp its own export
+settings, a saved export refers to a comp (option B of that day's proposal),
+rather than a comp referring to one saved export (A) or the Layer Comps
+docker keeping its own settings (C). The user accepted the recommended
+defaults: several saved exports per comp, `<document>_<comp>` as the default
+name, the docker's Export check boxes and Export Images button left separate,
+a deleted comp reported and skipped, a comp id saved in the `.kra`, and no
+docker context menu or bulk creation for now.
+
+**Why.** B reuses everything saved exports already have (the run, the
+conflict check, Export Checked/All, the two actions, `.kra` storage) and lets
+one comp have a PNG and a JPEG. A ties a comp to one setting and C would
+duplicate the format, folder and name UI and a second export path. Comps had
+no identity but their name, which can repeat and change, hence the id.
+
+**How to apply.**
+- Refer to a comp by `KisLayerComposition::uuid()` and keep its name as a
+  fallback; Krita drops the id on save. Never fall back to an ambiguous name.
+- Apply a comp only to a snapshot (`KisImage` copies keep the ids), never to
+  the live image: the canvas, undo history and the docker's state stay as
+  they are. A comp may hide the selection mask, so take a selection from the
+  live document.
+- Details: [Lazy Tools](../../lazy-tools.md), "Layer comps in saved exports".

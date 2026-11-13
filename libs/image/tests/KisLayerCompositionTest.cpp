@@ -88,9 +88,14 @@ void KisLayerCompositionTest::testAddedSubtreeAndCopy()
     const auto values = element.firstChildElement().elementsByTagName("value");
     for (int i = 0; i < values.size(); ++i)
         QVERIFY(values.at(i).toElement().hasAttribute("collapsed"));
+    QVERIFY(!comp->uuid().isNull());
+    QCOMPARE(QUuid(element.firstChildElement().attribute("uuid")), comp->uuid());
+    QVERIFY(toQShared(new KisLayerComposition(image, "other"))->uuid() != comp->uuid());
     KisImageSP copy = image->clone();
     QVERIFY(!copy->newLayersVisibleInCompositions());
     QCOMPARE(copy->compositions().size(), 1);
+    // Copies keep the id, so a comp can be found in a copied image.
+    QCOMPARE(copy->compositions().first()->uuid(), comp->uuid());
     copy->barrierLock();
     copy->compositions().first()->apply();
     QVERIFY(!copy->root()->lastChild()->visible());

@@ -14,6 +14,7 @@
 #include <QUrl>
 #include <QBuffer>
 #include <QVersionNumber>
+#include <QSet>
 
 #include <KoStore.h>
 #include <KoColorSpaceRegistry.h>
@@ -1427,6 +1428,7 @@ KisNodeSP KisKraLoader::loadColorizeMask(KisImageSP image, const QDomElement& el
 void KisKraLoader::loadCompositions(const QDomElement& elem, KisImageSP image)
 {
     image->setNewLayersVisibleInCompositions(elem.attribute("newLayersVisible", "0") == "1");
+    QSet<QUuid> compositionIds;
     QDomNode child;
 
     for (child = elem.firstChild(); !child.isNull(); child = child.nextSibling()) {
@@ -1437,6 +1439,12 @@ void KisKraLoader::loadCompositions(const QDomElement& elem, KisImageSP image)
 
         KisLayerCompositionSP composition(new KisLayerComposition(image, name));
         composition->setExportEnabled(exportEnabled);
+        // Files without ids (Krita, older Solstice) keep the new ones.
+        const QUuid compositionId(e.attribute("uuid"));
+        if (!compositionId.isNull() && !compositionIds.contains(compositionId)) {
+            composition->setUuid(compositionId);
+        }
+        compositionIds.insert(composition->uuid());
 
         QDomNode value;
         for (value = child.lastChild(); !value.isNull(); value = value.previousSibling()) {

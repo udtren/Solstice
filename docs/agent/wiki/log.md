@@ -3132,3 +3132,26 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Lesson: `update_translations.py --lang ja` reorders `po/ja` on Windows
   too, not only with Linux gettext; added to
   `pitfalls/translation-extraction.md`.
+
+## 2026-11-13 feature: a Layer Comp per Fast Image Export saved export
+
+- Saved exports can export one Layer Comp each, applied to a snapshot;
+  Layer Comps got a persistent id. Decision and reasons:
+  [saved exports live in the `.kra`](decisions/fast-export-saved-exports-in-kra.md#layer-comps-2026-11-13);
+  details in [Lazy Tools](../lazy-tools.md) and [Layer Comps](../layer-comps.md).
+- Lessons: applying a comp hides nodes it does not record, including a
+  selection mask made later, and a hidden selection mask is no longer the
+  global selection, so take the selection from the live document. Adding a
+  data member to a `libs/image` class changes the size every `new` in other
+  libraries compiles in: build everything that includes the header before
+  installing. `clang-format-diff.py` re-sorted a whole include block and
+  re-indented a neighbouring comment in upstream files; compare the diff
+  after formatting (see [build pitfalls](pitfalls/build-format-test.md)).
+- Layer Comps: double-clicking a name now renames it in place instead of
+  applying the comp (user request while testing). `QAbstractItemView` emits
+  `doubleClicked` before it opens the editor, so a handler that applies on
+  double-click must skip editable indexes.
+- Fast Image Export: the configured export folder is the default Destination
+  and the choice is remembered (`Solstice/FastExportDestination`). Tests and
+  test-control scenarios that relied on the old default now choose the
+  document's folder explicitly.

@@ -102,6 +102,15 @@
       "call": "ui_set",
       "args": {
         "window": "Fast Image Export",
+        "className": "QComboBox",
+        "index": 2,
+        "value": "Same folder as the document"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "window": "Fast Image Export",
         "toolTip": "Optional file name without the extension. Used only for the active document.",
         "value": "lazy-export-named"
       }
@@ -135,6 +144,15 @@
       "call": "action_trigger",
       "args": {
         "name": "fast_image_export"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "window": "Fast Image Export",
+        "className": "QComboBox",
+        "index": 2,
+        "value": "Same folder as the document"
       }
     },
     {
@@ -214,6 +232,15 @@
       "call": "ui_set",
       "args": {
         "window": "Fast Image Export",
+        "className": "QComboBox",
+        "index": 2,
+        "value": "Same folder as the document"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "window": "Fast Image Export",
         "toolTip": "Optional file name without the extension. Used only for the active document.",
         "value": "lazy-export-region"
       }
@@ -253,6 +280,15 @@
       "call": "action_trigger",
       "args": {
         "name": "fast_image_export"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "window": "Fast Image Export",
+        "className": "QComboBox",
+        "index": 2,
+        "value": "Same folder as the document"
       }
     },
     {

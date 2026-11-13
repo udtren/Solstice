@@ -28,6 +28,8 @@ QVariant CompositionModel::data(const QModelIndex &index, int role) const
         return {};
     if (role == Qt::DisplayRole && index.column() == 2)
         return isSnapshot(index) ? i18n("Last Layer Display State") : comp->name();
+    if (role == Qt::EditRole && index.column() == 2 && !isSnapshot(index))
+        return comp->name();
     if (role == Qt::DecorationRole && index.column() == 0)
         return KisIconUtils::loadIcon(comp == m_active ? "visible" : "novisible");
     if (role == Qt::CheckStateRole && index.column() == 1 && !isSnapshot(index))
@@ -44,14 +46,28 @@ QVariant CompositionModel::data(const QModelIndex &index, int role) const
             return i18n("Include in export");
         return isSnapshot(index)
             ? i18n("Restore the last custom visibility state. Newly added layers are left unchanged.")
-            : i18n("Double-click to apply. Ctrl/Shift-click to select several layer comps.");
+            : i18n("Double-click to rename. Ctrl/Shift-click to select several layer comps.");
     }
     return {};
 }
 bool CompositionModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     auto comp = compositionFromIndex(index);
-    if (!comp || isSnapshot(index) || index.column() != 1 || role != Qt::CheckStateRole || !m_image)
+    if (!comp || isSnapshot(index) || !m_image)
+        return false;
+    // Renaming in place, like the Rename Composition action: not undoable,
+    // and an empty name keeps the old one.
+    if (index.column() == 2 && role == Qt::EditRole) {
+        const QString name = value.toString().trimmed();
+        if (name.isEmpty() || name == comp->name())
+            return false;
+        comp->setName(name);
+        m_image->setModifiedWithoutUndo();
+        Q_EMIT dataChanged(index, index, {Qt::DisplayRole, Qt::EditRole});
+        Q_EMIT m_image->sigCompositionsChanged();
+        return true;
+    }
+    if (index.column() != 1 || role != Qt::CheckStateRole)
         return false;
     const bool enabled = value.toInt() == Qt::Checked;
     if (comp->isExportEnabled() == enabled)
@@ -85,6 +101,8 @@ Qt::ItemFlags CompositionModel::flags(const QModelIndex &index) const
         flags |= Qt::ItemIsDragEnabled;
         if (index.column() == 1)
             flags |= Qt::ItemIsUserCheckable;
+        if (index.column() == 2)
+            flags |= Qt::ItemIsEditable;
     }
     return flags;
 }

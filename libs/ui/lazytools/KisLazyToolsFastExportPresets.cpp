@@ -8,6 +8,7 @@
 #include "kis_config.h"
 #include "kis_debug.h"
 #include "kis_image.h"
+#include "kis_layer_composition.h"
 #include "kis_properties_configuration.h"
 #include <QDir>
 #include <QDomDocument>
@@ -17,6 +18,7 @@
 #include <QUuid>
 #include <algorithm>
 #include <klocalizedstring.h>
+#include <memory>
 
 namespace
 {
@@ -57,6 +59,37 @@ QString pathKey(const QString &path)
 #endif
 }
 
+// A copy of the document's image in batch mode, with the layer comp applied
+// when there is one. Null when the copy fails or the comp is gone.
+KisDocument *createSnapshot(KisDocument *document, const QUuid &layerComp)
+{
+    std::unique_ptr<KisDocument> snapshot(document->lockAndCreateSnapshot());
+    if (!snapshot || !snapshot->image()) {
+        return nullptr;
+    }
+    snapshot->setFileBatchMode(true);
+    if (layerComp.isNull()) {
+        return snapshot.release();
+    }
+    // Image copies keep their compositions' ids.
+    KisImageSP image = snapshot->image();
+    KisLayerCompositionSP composition;
+    for (const KisLayerCompositionSP &candidate : image->compositions()) {
+        if (candidate->uuid() == layerComp) {
+            composition = candidate;
+        }
+    }
+    if (!composition) {
+        return nullptr;
+    }
+    image->barrierLock();
+    composition->apply();
+    image->unlock();
+    image->refreshGraphAsync();
+    image->waitForDone();
+    return snapshot.release();
+}
+
 QString reason(const QString &document, const QString &text)
 {
     return i18nc("Fast Image Export skipped item: document, reason", "%1: %2", document, text);
@@ -78,7 +111,7 @@ bool KisLazyToolsFastExportPresets::Preset::operator==(const Preset &other) cons
         && pngCompression == other.pngCompression && pngAlpha == other.pngAlpha && jpegQuality == other.jpegQuality
         && formatOptions == other.formatOptions && destination == other.destination && folder == other.folder
         && folderRelative == other.folderRelative && nameRule == other.nameRule && fixedName == other.fixedName
-        && area == other.area;
+        && area == other.area && layerComp == other.layerComp && layerCompName == other.layerCompName;
 }
 
 KisLazyToolsFastExportPresets::Preset KisLazyToolsFastExportPresets::newPreset(const QString &name)
@@ -117,6 +150,11 @@ QByteArray KisLazyToolsFastExportPresets::toXml(const QList<Preset> &presets)
         element.setAttribute(QStringLiteral("fixedName"), preset.fixedName);
         element.setAttribute(QStringLiteral("area"),
                              preset.area == Area::Selection ? QStringLiteral("selection") : QStringLiteral("image"));
+        // Only exports of a layer comp have them, so older data is unchanged.
+        if (!preset.layerComp.isEmpty()) {
+            element.setAttribute(QStringLiteral("layerComp"), preset.layerComp);
+            element.setAttribute(QStringLiteral("layerCompName"), preset.layerCompName);
+        }
         if (!preset.formatOptions.isEmpty()) {
             QDomElement options = document.createElement(OptionsTag);
             options.appendChild(document.createTextNode(preset.formatOptions));
@@ -167,6 +205,9 @@ QList<KisLazyToolsFastExportPresets::Preset> KisLazyToolsFastExportPresets::from
         preset.fixedName = element.attribute(QStringLiteral("fixedName"));
         preset.area = element.attribute(QStringLiteral("area")) == QLatin1String("selection") ? Area::Selection
                                                                                               : Area::WholeImage;
+        preset.layerComp = element.attribute(QStringLiteral("layerComp"));
+        preset.layerCompName =
+            preset.layerComp.isEmpty() ? QString() : element.attribute(QStringLiteral("layerCompName"));
         preset.formatOptions = element.firstChildElement(OptionsTag).text();
         presets << preset;
     }
@@ -239,19 +280,65 @@ KisLazyToolsFastExportPresets::storedFolder(const QString &absoluteFolder, bool 
     return QDir::fromNativeSeparators(QDir(QFileInfo(documentPath).absolutePath()).relativeFilePath(folder));
 }
 
-QString KisLazyToolsFastExportPresets::outputPath(const Preset &preset, const QString &documentPath)
+QString KisLazyToolsFastExportPresets::outputPath(const Preset &preset,
+                                                  const QString &documentPath,
+                                                  const QString &layerCompName)
 {
     const QString folder = resolvedFolder(preset, documentPath);
     if (folder.isEmpty()) {
         return QString();
     }
-    const QString name = preset.nameRule == NameRule::Fixed
+    QString name = preset.nameRule == NameRule::Fixed
         ? KisLazyToolsFastExport::normalizedBaseName(preset.fixedName, preset.format)
         : QFileInfo(documentPath).completeBaseName();
+    if (preset.nameRule == NameRule::DocumentName && !layerCompName.isEmpty()) {
+        name += QLatin1Char('_') + layerCompName;
+    }
     if (!KisLazyToolsFastExport::isValidBaseName(name)) {
         return QString();
     }
     return QDir(folder).filePath(name + QLatin1Char('.') + preset.format);
+}
+
+QList<KisLazyToolsFastExportPresets::LayerComp> KisLazyToolsFastExportPresets::layerComps(KisDocument *document)
+{
+    QList<LayerComp> comps;
+    KisImageSP image;
+    if (document) {
+        image = document->image();
+    }
+    if (!image) {
+        return comps;
+    }
+    for (const KisLayerCompositionSP &composition : image->compositions()) {
+        comps << LayerComp{composition->uuid().toString(QUuid::WithoutBraces), composition->name()};
+    }
+    return comps;
+}
+
+KisLayerCompositionSP KisLazyToolsFastExportPresets::findLayerComp(KisImageSP image, const Preset &preset)
+{
+    if (!image || preset.layerComp.isEmpty()) {
+        return KisLayerCompositionSP();
+    }
+    const QUuid id(preset.layerComp);
+    const QList<KisLayerCompositionSP> compositions = image->compositions();
+    for (const KisLayerCompositionSP &composition : compositions) {
+        if (!id.isNull() && composition->uuid() == id) {
+            return composition;
+        }
+    }
+    KisLayerCompositionSP named;
+    for (const KisLayerCompositionSP &composition : compositions) {
+        if (!preset.layerCompName.isEmpty() && composition->name() == preset.layerCompName) {
+            if (named) {
+                // Two comps with that name: neither is certainly the one.
+                return KisLayerCompositionSP();
+            }
+            named = composition;
+        }
+    }
+    return named;
 }
 
 KisPropertiesConfigurationSP KisLazyToolsFastExportPresets::exportOptions(const Preset &preset)
@@ -290,6 +377,9 @@ QString KisLazyToolsFastExportPresets::summary(const Preset &preset, const QStri
     if (preset.area == Area::Selection) {
         parts << i18n("Selection");
     }
+    if (!preset.layerComp.isEmpty()) {
+        parts << i18nc("Saved export summary: the layer comp it exports", "Layer comp %1", preset.layerCompName);
+    }
     return parts.join(QStringLiteral(" · "));
 }
 
@@ -301,6 +391,8 @@ KisLazyToolsFastExportPresets::run(const QList<QPointer<KisDocument>> &documents
     struct Item {
         Preset preset;
         QString path;
+        // The layer comp to apply first; null for the layers as they are.
+        QUuid layerComp;
     };
     struct Job {
         QPointer<KisDocument> document;
@@ -340,7 +432,20 @@ KisLazyToolsFastExportPresets::run(const QList<QPointer<KisDocument>> &documents
         }
         Job job{document, caption, {}};
         for (const Preset &preset : selected) {
-            const QString path = outputPath(preset, documentPath);
+            QUuid layerComp;
+            QString layerCompName;
+            if (!preset.layerComp.isEmpty()) {
+                // A deleted comp is reported rather than exporting the layers
+                // as they happen to be.
+                const KisLayerCompositionSP composition = findLayerComp(document->image(), preset);
+                if (!composition) {
+                    result.skipped << reason(caption, preset.name, i18n("layer comp not found"));
+                    continue;
+                }
+                layerComp = composition->uuid();
+                layerCompName = composition->name();
+            }
+            const QString path = outputPath(preset, documentPath, layerCompName);
             if (path.isEmpty()) {
                 result.skipped << reason(caption,
                                          preset.name,
@@ -348,7 +453,7 @@ KisLazyToolsFastExportPresets::run(const QList<QPointer<KisDocument>> &documents
                                                                                         : i18n("invalid file name"));
                 continue;
             }
-            job.items << Item{preset, path};
+            job.items << Item{preset, path, layerComp};
         }
         jobs << job;
     }
@@ -383,39 +488,58 @@ KisLazyToolsFastExportPresets::run(const QList<QPointer<KisDocument>> &documents
             }
             continue;
         }
-        // One snapshot and one region per document serve all its presets.
-        // Batch mode skips the format options dialog; the preset has the options.
-        QScopedPointer<KisDocument> snapshot;
-        QScopedPointer<KisDocument> region;
-        bool regionCreated = false;
+        // The layers as they are, and each layer comp, get one snapshot and one
+        // region, shared by all presets that use them. A comp is applied to its
+        // snapshot only, so the document, its canvas and undo stack stay as they
+        // are. Batch mode skips the format options dialog; the preset has the options.
+        QList<QUuid> layerComps;
         for (const Item &item : job.items) {
-            KisDocument *source = nullptr;
-            if (item.preset.area == Area::Selection) {
-                if (!regionCreated && job.document) {
-                    region.reset(KisLazyToolsFastExport::createRegionDocument(job.document, true));
-                    regionCreated = true;
-                }
-                if (!region) {
-                    result.skipped << reason(job.caption, item.preset.name, i18n("no selection"));
+            if (!layerComps.contains(item.layerComp)) {
+                layerComps << item.layerComp;
+            }
+        }
+        for (const QUuid &layerComp : layerComps) {
+            QScopedPointer<KisDocument> snapshot;
+            QScopedPointer<KisDocument> region;
+            bool snapshotCreated = false;
+            bool regionCreated = false;
+            for (const Item &item : job.items) {
+                if (item.layerComp != layerComp) {
                     continue;
                 }
-                source = region.data();
-            } else {
-                if (!snapshot && job.document) {
-                    snapshot.reset(job.document->lockAndCreateSnapshot());
-                    if (snapshot) {
-                        snapshot->setFileBatchMode(true);
-                    }
+                if (!snapshotCreated && job.document && (!layerComp.isNull() || item.preset.area == Area::WholeImage)) {
+                    snapshot.reset(createSnapshot(job.document, layerComp));
+                    snapshotCreated = true;
                 }
-                source = snapshot.data();
-            }
-            if (source
-                && source->exportDocumentSync(item.path,
-                                              exportMimeType(item.preset.format),
-                                              exportOptions(item.preset))) {
-                ++result.exported;
-            } else {
-                result.skipped << reason(job.caption, item.preset.name, i18n("could not export"));
+                KisDocument *source = nullptr;
+                if (item.preset.area == Area::Selection) {
+                    if (!regionCreated && job.document && (layerComp.isNull() || snapshot)) {
+                        // The selection is the document's: applying a comp can
+                        // hide its selection mask in the snapshot.
+                        region.reset(
+                            layerComp.isNull()
+                                ? KisLazyToolsFastExport::createRegionDocument(job.document, true)
+                                : KisLazyToolsFastExport::createRegionDocument(job.document, true, snapshot->image()));
+                        regionCreated = true;
+                    }
+                    if (!region) {
+                        result.skipped << reason(job.caption,
+                                                 item.preset.name,
+                                                 regionCreated ? i18n("no selection") : i18n("could not export"));
+                        continue;
+                    }
+                    source = region.data();
+                } else {
+                    source = snapshot.data();
+                }
+                if (source
+                    && source->exportDocumentSync(item.path,
+                                                  exportMimeType(item.preset.format),
+                                                  exportOptions(item.preset))) {
+                    ++result.exported;
+                } else {
+                    result.skipped << reason(job.caption, item.preset.name, i18n("could not export"));
+                }
             }
         }
     }

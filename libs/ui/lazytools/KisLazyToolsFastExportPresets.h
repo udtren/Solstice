@@ -50,9 +50,16 @@ struct KRITAUI_EXPORT Preset {
     // "/" separators. Relative to the document's folder when folderRelative.
     QString folder;
     bool folderRelative{false};
+    // DocumentName adds "_<layer comp name>" when the export uses a layer comp.
     NameRule nameRule{NameRule::DocumentName};
     QString fixedName;
     Area area{Area::WholeImage};
+    // The KisLayerComposition::uuid() the export applies to a copy of the
+    // image first, without braces; empty exports the layers as they are.
+    QString layerComp;
+    // The comp's name when the export was last edited. Finds the comp when
+    // its id is gone (a file saved by Krita drops it).
+    QString layerCompName;
 
     bool operator==(const Preset &other) const;
     bool operator!=(const Preset &other) const
@@ -84,8 +91,21 @@ KRITAUI_EXPORT QString resolvedFolder(const Preset &preset, const QString &docum
 // The folder as the preset stores it: relative to the document's folder when
 // relative is set and the document has a path, absolute otherwise.
 KRITAUI_EXPORT QString storedFolder(const QString &absoluteFolder, bool relative, const QString &documentPath);
-// The full output path, or empty when the folder or fixed name is invalid.
-KRITAUI_EXPORT QString outputPath(const Preset &preset, const QString &documentPath);
+// The full output path, or empty when the folder or name is invalid. A
+// document-named export of a layer comp appends "_" and layerCompName.
+KRITAUI_EXPORT QString outputPath(const Preset &preset,
+                                  const QString &documentPath,
+                                  const QString &layerCompName = QString());
+
+struct LayerComp {
+    QString id;
+    QString name;
+};
+// The document's layer comps in the Layer Comps docker's order.
+KRITAUI_EXPORT QList<LayerComp> layerComps(KisDocument *document);
+// The comp the preset uses: the one with its id, otherwise the only comp
+// with its stored name. Null when it uses none or none matches.
+KRITAUI_EXPORT KisLayerCompositionSP findLayerComp(KisImageSP image, const Preset &preset);
 // The preset's format options, with its compression and alpha, or quality, on top.
 KRITAUI_EXPORT KisPropertiesConfigurationSP exportOptions(const Preset &preset);
 // One line for the list: format and destination.

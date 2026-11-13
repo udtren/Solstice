@@ -40,6 +40,14 @@ public:
     */
     QString name();
 
+    /**
+     * Identifies the composition across renames and reordering. New
+     * compositions get a new id; image copies keep it, so a copied image's
+     * composition can be found from the original's.
+     */
+    QUuid uuid() const;
+    void setUuid(const QUuid &uuid);
+
    /**
     * Stores the current visibility of all layers in the composition
     */
@@ -77,6 +85,7 @@ private:
     mutable QMutex m_mutex;
     KisImageWSP m_image;
     QString m_name;
+    QUuid m_uuid;
     QMap<QUuid, bool> m_visibilityMap;
     QMap<QUuid, bool> m_collapsedMap;
     bool m_exportEnabled;

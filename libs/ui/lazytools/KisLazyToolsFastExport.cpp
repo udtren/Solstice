@@ -57,6 +57,7 @@ KisLazyToolsFastExport::Settings KisLazyToolsFastExport::Settings::load(KSharedC
     settings.pngCompression = group.readEntry("Solstice/FastExportPngCompression", 6);
     settings.pngAlpha = group.readEntry("Solstice/FastExportPngAlpha", true);
     settings.jpegQuality = group.readEntry("Solstice/FastExportJpegQuality", 90);
+    settings.destination = qBound(0, group.readEntry("Solstice/FastExportDestination", 1), 2);
     return settings;
 }
 
@@ -67,6 +68,7 @@ void KisLazyToolsFastExport::Settings::save(KSharedConfigPtr config) const
     group.writeEntry("Solstice/FastExportPngCompression", pngCompression);
     group.writeEntry("Solstice/FastExportPngAlpha", pngAlpha);
     group.writeEntry("Solstice/FastExportJpegQuality", jpegQuality);
+    group.writeEntry("Solstice/FastExportDestination", destination);
     group.sync();
 }
 
@@ -192,11 +194,21 @@ KisLazyToolsFastExport::RegionResult KisLazyToolsFastExport::exportRegion(KisDoc
 
 KisDocument *KisLazyToolsFastExport::createRegionDocument(KisDocument *document, bool batchMode)
 {
+    KisImageSP image;
+    if (document) {
+        image = document->image();
+    }
+    return createRegionDocument(document, batchMode, image);
+}
+
+KisDocument *
+KisLazyToolsFastExport::createRegionDocument(KisDocument *document, bool batchMode, KisImageSP projectionImage)
+{
     KisImageSP sourceImage;
     if (document) {
         sourceImage = document->image();
     }
-    if (!sourceImage) {
+    if (!sourceImage || !projectionImage || projectionImage->bounds() != sourceImage->bounds()) {
         return nullptr;
     }
 
@@ -216,7 +228,12 @@ KisDocument *KisLazyToolsFastExport::createRegionDocument(KisDocument *document,
             return nullptr;
         }
 
-        device = new KisPaintDevice(*sourceImage->projection());
+        if (projectionImage == sourceImage) {
+            device = new KisPaintDevice(*sourceImage->projection());
+        } else {
+            KisImageBarrierLock projectionLock(projectionImage);
+            device = new KisPaintDevice(*projectionImage->projection());
+        }
         const KoColorSpace *colorSpace = device->colorSpace();
         KisSequentialIterator deviceIt(device, bounds);
         KisSequentialConstIterator maskIt(mask, bounds);

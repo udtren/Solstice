@@ -1,6 +1,6 @@
 ---
 type: pitfall
-updated: 2026-11-11
+updated: 2026-11-13
 sources:
   - docs/agent/duplicate-selection-in-layer.md (2026-10-27, out-of-tree build of libkritaimage, libkritaui, libkritalibkra and the Move Tool while another session rebuilt _build)
   - "docs/agent/quick-access.md (\"Icon item span regression checks\", 2026-10-24)"
@@ -79,6 +79,12 @@ wrong anyway.
   `--sort-includes=false` together with `--lines` avoids the reordering
   (2026-11-11), but it can still remove blank lines next to a changed line;
   check the diff.
+- **`clang-format-diff.py` (llvm-mingw 20251118) sorted whole include
+  blocks too** (2026-11-13): one added include re-sorted the 30-line block
+  of `KisLazyToolsTest.cpp` and the `<Q...>` block of `kis_kra_loader.cpp`,
+  and an added declaration re-indented the next, untouched doc comment of
+  `kis_layer_composition.h` and a constructor signature. Restore such lines
+  from `git show HEAD:<file>` and keep only your own lines changed.
 - **Shells drop empty arguments.** A helper called as
   `script "" "a.cpp,b.cpp"` from PowerShell lost the empty first argument,
   and whole upstream files were formatted. Call such helpers from bash, or

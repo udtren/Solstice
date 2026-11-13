@@ -6,7 +6,7 @@ document, a preset-based rename dialog, layer color labels, saved selections,
 foreground color shortcuts and a system-wide color picker. No separate Lazy
 Tools docker or Python installation is required.
 
-![The Fast Image Export dialog with a saved export, the Rename Layer dialog, the Selection Masks dialog and the General > Custom settings page](images/lazy_tool/cover.png)
+![The Fast Image Export dialog with three saved exports and the Layer comp setting, the Rename Layer dialog, the General > Custom settings page and the Selection Masks dialog](images/lazy_tool/cover.png)
 
 For the original, see the plugin repository, [Lazy
 Tools](https://github.com/udtren/krita-lazy-tools). This guide covers
@@ -19,7 +19,7 @@ Alternative**, **Create Selection Mask Popup** or **Set Foreground Color**.
 
 ## Fast Image Export
 
-![The Fast Image Export dialog for undead.kra: under Saved exports, the checked saved export undead_sword is selected below One-off export (not saved), beside Add, Duplicate, Rename, Remove, Move Up, Move Down, Export Checked and Export All; below the list are Format, Documents, Destination, Registered folder, Export folder, Relative to the document, Name, Area, the PNG and JPEG options, and the Export, Export Region and Cancel buttons](images/lazy_tool/fast_image_export.png)
+![The Fast Image Export dialog for phantom.kra: Export 2 of three checked saved exports is selected below One-off export (not saved), beside Add, Duplicate, Rename, Remove, Move Up, Move Down, Export Checked and Export All; below the list are Format, Documents, Destination set to Configured export folder, Registered folder, Export folder, Relative to the document, an empty Name showing Document name_layer comp name, Area, Layer comp set to eye_open, the PNG and JPEG options, and the Export, Export Region and Cancel buttons](images/lazy_tool/fast_image_export.png)
 
 **Fast Image Export** saves PNG or JPEG copies without changing the document's
 file name or saved state. Export once with the settings in the dialog, or
@@ -29,8 +29,10 @@ export.
 
 - **Format:** PNG or JPEG.
 - **Documents:** the active document or all open documents.
-- **Destination:** the document's own folder, the configured **Export
-  folder**, or a folder chosen when you press **Export**.
+- **Destination:** the configured **Export folder** (the default), the
+  document's own folder, or a folder chosen when you press **Export**. The
+  dialog keeps your last choice: it opens with it next time, even if you
+  closed the dialog without exporting.
 - **PNG compression**, **Save alpha channel** and **JPEG quality** set the
   format options.
 
@@ -73,7 +75,9 @@ unavailable while a saved export is selected; run saved exports with
   name), and **Area**: the whole image, or the area selected when the export
   runs. **Relative to the document** stores the folder relative to the
   document's folder, so it still works after you move the document together
-  with that folder, for example a whole game project.
+  with that folder, for example a whole game project. **Layer comp** exports
+  the image as one of the document's [Layer Comps](layer-comps.md) shows it;
+  see [Layer comps](#layer-comps).
 - The checkbox of each saved export marks it for **Export Checked**;
   **Export All** runs every saved export. With **Documents** set to **All
   open documents**, each open document runs its own saved exports, and
@@ -99,6 +103,32 @@ changing them marks the document as modified, but they are not part of undo.
 Other formats, such as PNG or JPEG documents, cannot store them: they last
 until the document is closed, and the dialog says so. Opening and saving a
 `.kra` in Krita or an older Solstice version drops them.
+
+#### Layer comps
+
+Each saved export can export one comp of the
+[Layer Comps](layer-comps.md) docker, so every layer arrangement gets its own
+format, folder, name and area. Select the saved export and choose the comp in
+**Layer comp**; **None** exports the layers as they are. A comp can have
+several saved exports, for example a PNG for the game and a JPEG for the web.
+
+- The comp is applied to a copy of the image while exporting. The canvas, the
+  Layer Comps docker and undo history do not change, and nothing has to be
+  restored afterwards.
+- With an empty **Name**, the file is named after the document and the comp:
+  `phantom.kra` with the comp `001` becomes `phantom_001.png`. A typed name is
+  used as it is.
+- Renaming or reordering comps does not affect their saved exports; the file
+  name follows a renamed comp. If the comp is deleted, the saved export is
+  kept, shows the comp as *missing*, and is skipped with the reason "layer comp
+  not found" until you choose another comp.
+- A saved export of the **Selection** area uses the document's selection, even
+  when the comp hides the selection mask.
+- The **Export** checkboxes and the export button of the Layer Comps docker
+  are separate from saved exports: **Export Checked** runs the checked saved
+  exports, not the checked comps.
+- Solstice versions before this feature ignore **Layer comp**: they export the
+  layers as they are, and drop the setting if you edit that saved export.
 
 ### Export Region
 

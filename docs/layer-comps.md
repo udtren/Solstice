@@ -12,9 +12,9 @@ at the left, and extra height goes to the list.
 1. Arrange layer visibility in the Layers docker.
 2. Enter a name and click **Add**. An empty name gets a number automatically.
 3. Repeat for each variation.
-4. Click a comp's eye, double-click its name, or use the previous/next
-   buttons to apply it. With the list focused, Up/Down also applies the row
-   you move to. Previous/Next stop at the ends.
+4. Click a comp's eye, or use the previous/next buttons, to apply it. With
+   the list focused, Up/Down also applies the row you move to.
+   Previous/Next stop at the ends.
 
 The eye indicates a comp whose recorded visibility matches the current
 layers. Manual visibility changes clear it unless they match another comp.
@@ -43,8 +43,11 @@ is restored; layers that no longer exist are ignored.
 - **Overwrite** records the current layer state into all selected comps.
   **Delete** removes all selected comps. Multiple-item operations request
   confirmation.
-- Use the context menu's **Rename Composition** to rename the current comp;
-  **Update Composition** overwrites selected comps.
+- Double-click a comp's name, or press F2, to rename it in place; press
+  Enter to keep the new name or Esc to cancel. An empty name keeps the old
+  one. The context menu's **Rename Composition** renames the current comp in
+  a dialog; **Update Composition** overwrites selected comps. Last Layer
+  Display State cannot be renamed; double-clicking it applies it.
 
 These list edits are saved with the document but are not undoable.
 
@@ -66,6 +69,20 @@ Use the export button or its menu for the existing PNG image and animation
 exports. Only checked comps are exported. Export restores the open image's
 previous state and does not replace Last Layer Display State. PNG export
 still blocks the interface and cannot be canceled.
+
+![The Fast Image Export dialog for phantom.kra with three saved exports, the first exporting the layer comp eye_closed, beside the Layer Comps docker with the comps eye_closed, eye_open and eye_open_tear](images/Layer_Comps.png)
+
+To give each comp its own export settings (PNG or JPEG, folder, file name,
+whole image or selection), use the saved exports of **Fast Image Export** and
+choose the comp in their **Layer comp** setting; see
+[Lazy Tools: Layer comps](lazy-tools.md#layer-comps). Those exports run on a
+copy of the image, so the canvas does not change. The **Export** checkboxes
+here do not select saved exports.
+
+Each comp has a hidden id, saved in the `.kra`, by which saved exports find it
+after a rename. Krita and older Solstice versions drop the id when they save
+the file; saved exports then find a comp by its name, as long as only one
+comp has that name.
 
 Comps store visibility and group expansion, not opacity, blend modes,
 position or pixel contents. PSD layer-comp import/export is not supported.

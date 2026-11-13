@@ -37,6 +37,7 @@
 #include "kis_paint_device.h"
 #include "kis_properties_configuration.h"
 #include "kis_default_bounds.h"
+#include "kis_layer_composition.h"
 #include "kis_selection.h"
 #include "kis_undo_adapter.h"
 #include "KisImageResolutionProxy.h"
@@ -95,6 +96,46 @@ void selectRect(KisDocument *doc, const QRect &rect)
     selection->updateProjection();
     image->undoAdapter()->addCommand(new KisSetGlobalSelectionCommand(image, selection));
     image->waitForDone();
+}
+
+// Adds an opaque red layer above the document's layer and two comps: "Base"
+// hides it, "Top" shows it. The red layer is visible afterwards.
+QList<KisLayerCompositionSP> addLayerComps(KisDocument *doc)
+{
+    KisImageSP image = doc->image();
+    const auto *cs = KoColorSpaceRegistry::instance()->rgb8();
+    KisPaintLayerSP top = new KisPaintLayer(image, "top", OPACITY_OPAQUE_U8, cs);
+    top->paintDevice()->fill(image->bounds(), KoColor(QColor(255, 0, 0), cs));
+    image->addNode(top, image->root());
+    QList<KisLayerCompositionSP> comps;
+    for (const bool visible : {false, true}) {
+        top->setVisible(visible);
+        auto comp = toQShared(new KisLayerComposition(image, visible ? "Top" : "Base"));
+        image->barrierLock();
+        comp->store();
+        image->unlock();
+        image->addComposition(comp);
+        comps << comp;
+    }
+    image->refreshGraphAsync();
+    image->waitForDone();
+    return comps;
+}
+
+// Settings whose one-off Destination is the document's own folder.
+void saveSameFolderSettings()
+{
+    Export::Settings settings;
+    settings.destination = 0;
+    settings.save();
+}
+
+Saved::Preset layerCompPreset(const QString &name, const KisLayerCompositionSP &comp)
+{
+    Saved::Preset preset = Saved::newPreset(name);
+    preset.layerComp = comp->uuid().toString(QUuid::WithoutBraces);
+    preset.layerCompName = comp->name();
+    return preset;
 }
 } // namespace
 
@@ -177,6 +218,7 @@ private Q_SLOTS:
         QCOMPARE(settings.pngCompression, 6);
         QVERIFY(settings.pngAlpha);
         QCOMPARE(settings.jpegQuality, 90);
+        QCOMPARE(settings.destination, 1);
         QVERIFY(!QFileInfo::exists(dir.filePath("test.ini")));
         auto group = config->group(QString());
         group.writeEntry("unrelated", 123);
@@ -184,7 +226,9 @@ private Q_SLOTS:
         group.writeEntry("Solstice/FastExportPngCompression", 8);
         group.writeEntry("Solstice/FastExportPngAlpha", false);
         group.writeEntry("Solstice/FastExportJpegQuality", 71);
+        group.writeEntry("Solstice/FastExportDestination", 7);
         settings = Export::Settings::load(config);
+        QCOMPARE(settings.destination, 2);
         QCOMPARE(settings.folder, QString("old folder"));
         QCOMPARE(settings.pngCompression, 8);
         QVERIFY(!settings.pngAlpha);
@@ -193,6 +237,7 @@ private Q_SLOTS:
         settings.pngCompression = 3;
         settings.pngAlpha = true;
         settings.jpegQuality = 88;
+        settings.destination = 0;
         settings.save(config);
         config->reparseConfiguration();
         QCOMPARE(group.readEntry("unrelated", 0), 123);
@@ -200,6 +245,7 @@ private Q_SLOTS:
         QCOMPARE(group.readEntry("Solstice/FastExportPngCompression", 0), 3);
         QVERIFY(group.readEntry("Solstice/FastExportPngAlpha", false));
         QCOMPARE(group.readEntry("Solstice/FastExportJpegQuality", 0), 88);
+        QCOMPARE(group.readEntry("Solstice/FastExportDestination", -1), 0);
         const QString source = dir.filePath("paint.v2.kra");
         QCOMPARE(Export::outputPath(source, "png", {}), dir.filePath("paint.v2.png"));
         QCOMPARE(Export::outputPath(source, "jpg", dir.filePath("out")), dir.filePath("out/paint.v2.jpg"));
@@ -310,8 +356,8 @@ private Q_SLOTS:
         QCOMPARE(dialog->parentWidget(), &parent);
         QVERIFY(dialog->testAttribute(Qt::WA_DeleteOnClose));
         const auto combos = dialog->findChildren<QComboBox *>();
-        // Format, documents, destination, registered folder, then area.
-        QCOMPARE(combos.size(), 5);
+        // Format, documents, destination, registered folder, area, then layer comp.
+        QCOMPARE(combos.size(), 6);
         QCOMPARE(combos[0]->currentData().toString(), QString("png"));
         combos[0]->setCurrentIndex(1);
         combos[1]->setCurrentIndex(all ? 1 : 0);
@@ -413,6 +459,7 @@ private Q_SLOTS:
         QVERIFY(QDir().mkpath(root + "/sub"));
         Export::Settings settings;
         settings.folder = fallback;
+        settings.destination = 0;
         settings.save();
         Export::setExplorerFolders({});
         QWidget parent;
@@ -442,7 +489,7 @@ private Q_SLOTS:
         };
 
         QPointer<QDialog> empty = KisLazyToolsFastExportDialog::create(&parent, documents, wait);
-        QCOMPARE(empty->findChildren<QComboBox *>().size(), 5);
+        QCOMPARE(empty->findChildren<QComboBox *>().size(), 6);
         QVERIFY(!empty->findChildren<QComboBox *>()[3]->isEnabled());
         QVERIFY(button(empty, "Browse…")->isEnabled());
         QVERIFY(!button(empty, "Open in Explorer"));
@@ -481,6 +528,51 @@ private Q_SLOTS:
         dialog->reject();
         QTRY_VERIFY(dialog.isNull());
         Export::setExplorerFolders({});
+    }
+
+    void exportDialogDestination()
+    {
+        QTemporaryDir dir;
+        QScopedPointer<KisDocument> doc(document(dir.filePath("dest.kra")));
+        Export::Settings().save();
+        QWidget parent;
+        auto open = [&] {
+            return QPointer<QDialog>(KisLazyToolsFastExportDialog::create(
+                &parent,
+                [&](bool) {
+                    return QList<QPointer<KisDocument>>({doc.data()});
+                },
+                [](KisImageSP) {
+                    return true;
+                },
+                doc.data()));
+        };
+        // The configured export folder is the default.
+        QPointer<QDialog> dialog = open();
+        auto *destination = dialog->findChildren<QComboBox *>()[2];
+        QCOMPARE(destination->currentData().toInt(), 1);
+        // A choice is kept without exporting.
+        destination->setCurrentIndex(destination->findData(2));
+        delete dialog;
+        QCOMPARE(Export::Settings::load().destination, 2);
+        dialog = open();
+        destination = dialog->findChildren<QComboBox *>()[2];
+        QCOMPARE(destination->currentData().toInt(), 2);
+
+        // A saved export's destination is its own and does not change it.
+        destination->setCurrentIndex(destination->findData(1));
+        auto *list = dialog->findChild<QListWidget *>();
+        button(dialog, "Add")->click();
+        QCOMPARE(list->currentRow(), 1);
+        destination->setCurrentIndex(destination->findData(0));
+        QCOMPARE(Saved::presets(doc.data())[0].destination, Saved::Destination::SameFolder);
+        QCOMPARE(Export::Settings::load().destination, 1);
+        list->setCurrentRow(0);
+        QCOMPARE(destination->currentData().toInt(), 1);
+        delete dialog;
+        dialog = open();
+        QCOMPARE(dialog->findChildren<QComboBox *>()[2]->currentData().toInt(), 1);
+        delete dialog;
     }
 
     void realExport_data()
@@ -600,7 +692,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const QString source = dir.filePath("original.kra");
         QScopedPointer<KisDocument> doc(document(source));
-        Export::Settings().save();
+        saveSameFolderSettings();
         QWidget parent;
         bool allDocuments = false;
         QPointer<QDialog> dialog = KisLazyToolsFastExportDialog::create(
@@ -700,7 +792,7 @@ private Q_SLOTS:
     {
         QTemporaryDir dir;
         QScopedPointer<KisDocument> doc(document(dir.filePath("original.kra")));
-        Export::Settings().save();
+        saveSameFolderSettings();
         QWidget parent;
         QList<bool> scopes;
         QPointer<QDialog> dialog = KisLazyToolsFastExportDialog::create(
@@ -788,9 +880,13 @@ private Q_SLOTS:
         Saved::Preset png = Saved::newPreset("Godot");
         png.pngCompression = 3;
         png.pngAlpha = false;
+        png.layerComp = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        png.layerCompName = QString::fromUtf8("Comp \xe6\x9c\xac");
         QVERIFY(!web.id.isEmpty() && web.id != png.id);
         const QByteArray data = Saved::toXml({web, png});
         QCOMPARE(Saved::fromXml(data), QList<Saved::Preset>({web, png}));
+        // Exports of the layers as they are save what they saved before.
+        QVERIFY(!Saved::toXml({web}).contains("layerComp"));
 
         // Newer or damaged data: unknown parts are ignored, unknown formats
         // dropped, ids made unique and numbers clamped.
@@ -821,6 +917,9 @@ private Q_SLOTS:
         Saved::Preset preset = Saved::newPreset("p");
         QCOMPARE(Saved::outputPath(preset, source), dir.filePath("art/hero.v2.png"));
         QCOMPARE(Saved::outputPath(preset, {}), QString());
+        // A layer comp's name follows the document's.
+        QCOMPARE(Saved::outputPath(preset, source, "001"), dir.filePath("art/hero.v2_001.png"));
+        QCOMPARE(Saved::outputPath(preset, source, "a:b"), QString());
 
         preset.destination = Saved::Destination::Folder;
         QCOMPARE(Saved::outputPath(preset, source), QString());
@@ -841,6 +940,7 @@ private Q_SLOTS:
         preset.nameRule = Saved::NameRule::Fixed;
         preset.fixedName = "sprite.JPG";
         QCOMPARE(Saved::outputPath(preset, source), dir.filePath("game/gfx/sprite.jpg"));
+        QCOMPARE(Saved::outputPath(preset, source, "001"), dir.filePath("game/gfx/sprite.jpg"));
         preset.fixedName = "bad/name";
         QCOMPARE(Saved::outputPath(preset, source), QString());
         preset.fixedName.clear();
@@ -1049,13 +1149,176 @@ private Q_SLOTS:
         QVERIFY(!dialogSeen);
     }
 
+    void presetRunLayerComps()
+    {
+        QTemporaryDir dir;
+        const QString source = dir.filePath("comps.kra");
+        QScopedPointer<KisDocument> doc(document(source));
+        doc->setFileBatchMode(false);
+        const auto comps = addLayerComps(doc.data());
+        KisImageSP image = doc->image();
+        KisNodeSP top = image->root()->lastChild();
+        QCOMPARE(top->name(), QString("top"));
+
+        const auto listed = Saved::layerComps(doc.data());
+        QCOMPARE(listed.size(), 2);
+        QCOMPARE(listed[0].name, QString("Base"));
+        QCOMPARE(listed[1].id, comps[1]->uuid().toString(QUuid::WithoutBraces));
+
+        Saved::Preset base = layerCompPreset("Base PNG", comps[0]);
+        Saved::Preset web = layerCompPreset("Top JPEG", comps[1]);
+        web.format = "jpg";
+        Saved::Preset plain = Saved::newPreset("Plain");
+        // The selection is made after the comps, which therefore hide its mask.
+        Saved::Preset crop = layerCompPreset("Crop", comps[0]);
+        crop.area = Saved::Area::Selection;
+        crop.nameRule = Saved::NameRule::Fixed;
+        crop.fixedName = "crop";
+        Saved::Preset gone = Saved::newPreset("Gone");
+        gone.layerComp = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        gone.layerCompName = "Deleted";
+        doc->setSolsticeFastExportData(Saved::toXml({base, web, plain, crop, gone}));
+        selectRect(doc.data(), QRect(2, 3, 5, 4));
+        doc->setModified(false);
+        const int undoCount = doc->undoStack()->count();
+
+        bool dialogSeen = false;
+        QTimer guard;
+        connect(&guard, &QTimer::timeout, &guard, [&] {
+            if (QWidget *modal = QApplication::activeModalWidget()) {
+                dialogSeen = true;
+                modal->close();
+            }
+        });
+        guard.start(100);
+        auto wait = [](KisImageSP image) {
+            image->waitForDone();
+            return true;
+        };
+
+        auto result = Saved::run({doc.data()}, Saved::Which::All, wait);
+        QCOMPARE(result.exported, 4);
+        QCOMPARE(result.skipped, QStringList({doc->caption() + " / Gone: layer comp not found"}));
+        QVERIFY(!dialogSeen);
+        // Base hides the red layer, Top and the layers as they are show it.
+        const QColor baseColor = QImage(dir.filePath("comps_Base.png")).pixelColor(0, 0);
+        QCOMPARE(baseColor.alpha(), 127);
+        QVERIFY(baseColor.red() < 120 && baseColor.blue() > 160);
+        const QColor plainColor = QImage(dir.filePath("comps.png")).pixelColor(0, 0);
+        QCOMPARE(plainColor, QColor(255, 0, 0));
+        const QColor webColor = QImage(dir.filePath("comps_Top.jpg")).pixelColor(0, 0);
+        QVERIFY(webColor.red() > 220 && webColor.green() < 40 && webColor.blue() < 40);
+        const QImage cropped(dir.filePath("crop.png"));
+        QCOMPARE(cropped.size(), QSize(5, 4));
+        QCOMPARE(cropped.pixelColor(0, 0).alpha(), 127);
+
+        // The document is as it was: no comp applied, nothing to undo.
+        QVERIFY(top->visible());
+        QVERIFY(!doc->isModified());
+        QCOMPARE(doc->undoStack()->count(), undoCount);
+        QVERIFY(!doc->fileBatchMode());
+        QVERIFY(image->globalSelection());
+        QColor live;
+        image->projection()->pixel(0, 0, &live);
+        QCOMPARE(live, QColor(255, 0, 0));
+
+        // A renamed comp is found by its id and names the file after its new name.
+        comps[1]->setName("Renamed");
+        QCOMPARE(Saved::findLayerComp(image, web), comps[1]);
+        doc->setSolsticeFastExportData(Saved::toXml({web}));
+        result = Saved::run({doc.data()}, Saved::Which::All, wait);
+        QCOMPARE(result.exported, 1);
+        QVERIFY(QFileInfo::exists(dir.filePath("comps_Renamed.jpg")));
+
+        // Without its id (a file saved by Krita), the only comp with its name.
+        Saved::Preset byName = web;
+        byName.layerComp = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        byName.layerCompName = "Renamed";
+        QCOMPARE(Saved::findLayerComp(image, byName), comps[1]);
+        comps[0]->setName("Renamed");
+        QVERIFY(!Saved::findLayerComp(image, byName));
+        QVERIFY(!Saved::findLayerComp(image, plain));
+
+        // Two comps writing one file: nothing is written.
+        Saved::Preset twin = layerCompPreset("Twin", comps[0]);
+        twin.nameRule = Saved::NameRule::Fixed;
+        twin.fixedName = "same";
+        Saved::Preset twin2 = layerCompPreset("Twin 2", comps[1]);
+        twin2.nameRule = Saved::NameRule::Fixed;
+        twin2.fixedName = "same";
+        doc->setSolsticeFastExportData(Saved::toXml({twin, twin2}));
+        result = Saved::run({doc.data()}, Saved::Which::All, wait);
+        QCOMPARE(result.exported, 0);
+        QCOMPARE(result.conflicts, QStringList({QDir::toNativeSeparators(dir.filePath("same.png"))}));
+        QVERIFY(!dialogSeen);
+    }
+
+    void presetDialogLayerComps()
+    {
+        QTemporaryDir dir;
+        QScopedPointer<KisDocument> doc(document(dir.filePath("dialog.kra")));
+        const auto comps = addLayerComps(doc.data());
+        saveSameFolderSettings();
+        QWidget parent;
+        QPointer<QDialog> dialog = KisLazyToolsFastExportDialog::create(
+            &parent,
+            [&](bool) {
+                return QList<QPointer<KisDocument>>({doc.data()});
+            },
+            [](KisImageSP image) {
+                image->waitForDone();
+                return true;
+            },
+            doc.data());
+        auto *list = dialog->findChild<QListWidget *>();
+        auto *layerComp = dialog->findChildren<QComboBox *>()[5];
+        QLineEdit *name = nullptr;
+        for (auto *edit : dialog->findChildren<QLineEdit *>()) {
+            if (edit->placeholderText() == "Same as the document")
+                name = edit;
+        }
+        QVERIFY(list && name);
+        QVERIFY(!layerComp->isEnabled());
+        QCOMPARE(layerComp->count(), 3);
+        QCOMPARE(layerComp->itemText(1), QString("Base"));
+
+        button(dialog, "Add")->click();
+        QVERIFY(layerComp->isEnabled());
+        QCOMPARE(layerComp->currentIndex(), 0);
+        QVERIFY(Saved::presets(doc.data())[0].layerComp.isEmpty());
+        layerComp->setCurrentIndex(2);
+        auto preset = Saved::presets(doc.data())[0];
+        QCOMPARE(preset.layerComp, comps[1]->uuid().toString(QUuid::WithoutBraces));
+        QCOMPARE(preset.layerCompName, QString("Top"));
+        QCOMPARE(name->placeholderText(), QString("Document name_layer comp name"));
+        QVERIFY(list->item(1)->toolTip().contains("Layer comp Top"));
+
+        // A deleted comp stays selected as missing, and other edits keep it.
+        doc->image()->removeComposition(comps[1]);
+        list->setCurrentRow(0);
+        QCOMPARE(layerComp->count(), 2);
+        QCOMPARE(name->placeholderText(), QString("Same as the document"));
+        list->setCurrentRow(1);
+        QCOMPARE(layerComp->count(), 3);
+        QCOMPARE(layerComp->currentText(), QString("Top (missing)"));
+        dialog->findChildren<QSpinBox *>()[0]->setValue(2);
+        preset = Saved::presets(doc.data())[0];
+        QCOMPARE(preset.pngCompression, 2);
+        QCOMPARE(preset.layerComp, comps[1]->uuid().toString(QUuid::WithoutBraces));
+        QCOMPARE(preset.layerCompName, QString("Top"));
+
+        layerComp->setCurrentIndex(0);
+        QVERIFY(Saved::presets(doc.data())[0].layerComp.isEmpty());
+        delete dialog;
+    }
+
     void presetDialog()
     {
         QTemporaryDir dir;
         const QString source = dir.filePath("dialog.kra");
         QScopedPointer<KisDocument> doc(document(source));
         doc->setModified(false);
-        Export::Settings().save();
+        saveSameFolderSettings();
         QWidget parent;
         QPointer<QDialog> dialog = KisLazyToolsFastExportDialog::create(
             &parent,
@@ -1077,7 +1340,7 @@ private Q_SLOTS:
         QVERIFY(exportButton->isEnabled());
         QVERIFY(!exportAll->isEnabled());
         const auto combos = dialog->findChildren<QComboBox *>();
-        QCOMPARE(combos.size(), 5);
+        QCOMPARE(combos.size(), 6);
         auto *format = combos[0];
         auto *area = combos[4];
         auto *folder = dialog->findChild<QLineEdit *>();

@@ -25,6 +25,11 @@ and dialogs are owned by each `KisViewManager`.
   storage hooks in `libs/ui/KisDocument.*` and `plugins/impex/libkra/`
   (`kis_kra_tags.h`, `kis_kra_saver.*`, `kis_kra_loader.*`,
   `kra_converter.cpp`); scenario `libs/ui/tests/scenarios/lazy-fast-export-presets.json`.
+- A Layer Comp per saved export (2026-11-13, option B of the proposal of the
+  same day, accepted with its recommended defaults): the same files, the comp
+  id in `libs/image/kis_layer_composition.*` and `kis_kra_loader.cpp`, and the
+  `createRegionDocument()` overload in `KisLazyToolsFastExport.*`. The Layer
+  Comps docker is unchanged ([Layer Comps](layer-comps.md)).
 - Released in [0.5.1](wiki/history/release-0.5.1.md) (PR #33): Fast Image
   Export registered folders, Name, Export Region and icon, and the Rename
   Layer Presets editor. Remembered format options followed in
@@ -115,9 +120,17 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
   transparent-background hack as `scrollAreaWidgetContents`.
 - `KisLazyToolsFastExport::Settings` preserves the four root-group keys
   `Solstice/FastExportFolder`, `Solstice/FastExportPngCompression` (6),
-  `Solstice/FastExportPngAlpha` (true), and `Solstice/FastExportJpegQuality` (90).
-  Only these values are saved; format, scope, destination and the Name field
-  still start at PNG, active document, source folder and empty. The dialog
+  `Solstice/FastExportPngAlpha` (true), and `Solstice/FastExportJpegQuality` (90),
+  and since 2026-11-13 `Solstice/FastExportDestination` (1; 0 the document's
+  folder, 1 the configured folder, 2 chosen on export; clamped). The user
+  asked for the configured folder as the default and for the choice to stay:
+  the dialog opens with the saved destination and saves a one-off change at
+  once (load, change, save), not only on Export; changes while a saved
+  export is edited, and form loads (`m_loading`), are not saved. A one-off
+  Add copies the form's destination, so with the configured folder and an
+  empty Export folder the new saved export has no folder until one is set.
+  Format, scope and the Name field still start at PNG, active document and
+  empty. The dialog
   keeps its existing numeric ranges and trims the configured folder before
   saving.
 - `fast_image_export` uses the `document-export` icon, like File > Export
@@ -247,6 +260,47 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
   is 4) and `findChild<QCheckBox *>()` is still the alpha box. Export
   Checked/All run the dialog's document, or every open document with "All
   open documents", and close the dialog on success.
+- Layer comps in saved exports (2026-11-13). `Preset::layerComp` is the
+  `KisLayerComposition::uuid()` without braces, `layerCompName` the comp's
+  name when the export was last edited; both are written as attributes only
+  when `layerComp` is set, so exports without a comp keep their XML (no
+  version change; older Solstice ignores them, and drops them when it rewrites
+  the list). `findLayerComp()` matches the id first, then the only comp with
+  `layerCompName` (Krita and older Solstice drop the comp id on save); two
+  comps with that name match nothing. `run()` reports a preset whose comp is
+  not found as "layer comp not found" instead of exporting the live layers.
+  `NameRule::DocumentName` appends `_<current comp name>`; a fixed name is
+  used as it is; the comp's name goes through `isValidBaseName()` like a
+  fixed name. Paths are resolved, and conflicts checked, before anything is
+  written, as before.
+  - Execution: per document, items are grouped by comp (null = the layers as
+    they are, which keeps the previous single snapshot and the region from the
+    live document). Each comp gets its own `lockAndCreateSnapshot()` in batch
+    mode; `KisImage`'s copy keeps the compositions and their ids, so the
+    snapshot's comp is found by id and applied with the legacy `apply()`
+    under the snapshot's barrier, then `refreshGraphAsync()` and
+    `waitForDone()`. The live image, canvas, `CompositionDocumentState`,
+    undo stack and modified flag are never touched, unlike the docker's own
+    Export Images (which applies comps to the live image). One snapshot is
+    alive at a time.
+  - Selection exports of a comp use
+    `createRegionDocument(document, batch, snapshot->image())`: the mask from
+    the document's global selection, the pixels from the snapshot. `apply()`
+    hides nodes a comp does not record, and a hidden selection mask is not
+    the global selection (`KisLayer` masks cache requires `visible`), so the
+    selection made after the comp would vanish from the snapshot.
+  - Dialog: the `Layer comp:` combo is created after Area and the relative
+    check box (combo index 5) and filled by `fillLayerComps()` from
+    `layerComps()` on every selection change and reload (activation), with
+    the plain name in `Qt::UserRole + 1`. Like Area it is enabled only while a
+    saved export is edited, and Add from the one-off form saves no comp. A
+    comp the export uses that the document no longer has is listed as
+    "<name> (missing)" and stays selected, so other edits keep the reference.
+    The Name placeholder reads "Document name_layer comp name" while a comp
+    is chosen; tooltips use the comp's current name.
+  - Not done (decided 2026-11-13): no link between the docker's Export check
+    boxes or Export Images button and saved exports, no docker context menu
+    and no bulk creation of one export per comp.
 - Actions `fast_image_export_run_all` and `fast_image_export_run_checked`
   (`document-export` icon, no default shortcut) run the active document's
   presets through `KisSolsticeLazyTools::runSavedExports()`; success shows a
@@ -324,6 +378,15 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\libs\ui\cmake_inst
     folder and run again. Open the `.kra` in Krita, save, reopen in Solstice:
     the exports are gone, the image is intact. In a PNG document the dialog
     shows the session-only note and the document is not marked modified.
+15. Saved exports with layer comps: in a `.kra` with comps 001-003, add three
+    saved exports and choose one comp each (one as JPEG, one as Selection);
+    leave Name empty. Export All: `<document>_001.png` etc. show the comps'
+    layers, while the canvas, the Layer Comps eye and undo history do not
+    change and nothing blinks. Rename a comp in the docker, reopen the dialog
+    (the tooltip shows the new name) and run again: the file uses the new
+    name. Reorder comps: nothing changes. Delete a comp: the export shows
+    "(missing)" and is skipped with "layer comp not found". Save, close and
+    reopen: comps and exports are kept.
 
 Automated through [test control](test-control.md) scenarios (2026-10-27,
 Linux), as far as state decides them; run them with
@@ -445,6 +508,35 @@ one-off settings, Export Checked and a dialog without a document. The
 existing dialog tests now expect five combo boxes. Offscreen QtTest passed
 27/27; `kritaui` and `kritalibkra` were installed with matching
 build/install SHA-256 hashes and `kritamenu.action` with the two actions.
+
+Layer comps in saved exports (2026-11-13): `presetXml` round-trips the comp
+id and a Unicode comp name and checks that an export without a comp writes
+no `layerComp` attribute; `presetPaths` the `_<comp>` suffix, an invalid comp
+name and a fixed name that ignores the comp; `presetRunLayerComps` a document
+out of batch mode with a red layer that comp "Base" hides and "Top" shows:
+Run All writes `comps_Base.png` (the layer below, alpha 127),
+`comps_Top.jpg` (red), the live layers' `comps.png` (red) and a 5x4
+Selection crop of "Base" made after the comps (so the comp hides the
+selection mask), reports the deleted comp, shows no dialog and leaves the
+document's visibility, selection, projection, modified flag, batch mode and
+undo stack as they were; then a renamed comp found by id and naming the file,
+the name fallback (only for a unique name) and a conflict between two comps
+writing one file. `presetDialogLayerComps` covers the combo (disabled for the
+one-off row, None plus the comps), choosing a comp, the placeholder and
+tooltip, a deleted comp shown as missing and kept while another setting
+changes, and choosing None. The dialog tests now expect six combo boxes.
+Destination (2026-11-13): `exportSettingsAndPaths` covers the default, a
+clamped value and the round trip of `Solstice/FastExportDestination`;
+`exportDialogDestination` the configured folder as the default, a change kept
+without exporting, and a saved export's destination not changing it. Dialog
+tests that expect the document's folder now save that destination first
+(`saveSameFolderSettings()`), and the `lazy-fast-export*.json` scenarios
+choose "Same folder as the document" after opening the dialog (not run
+since). `KisLazyToolsTest` 30/30 on Windows.
+`KisLayerCompositionTest` and `CompositionWorkflowTest` cover the comp id
+([Layer Comps](layer-comps.md)). On Windows, offscreen: `KisLazyToolsTest`
+29/29, `KisLayerCompositionTest` 5/5, `CompositionWorkflowTest` 5/5.
+Manual check 15 is pending.
 
 Remembered format options (2026-10-24): `exportOptionsKeepSavedFormatOptions`
 covers PNG and JPEG with and without a saved configuration: saved keys such as

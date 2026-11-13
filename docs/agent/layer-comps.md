@@ -25,7 +25,13 @@ authorization, not separate user confirmations of every option.
 
 Keep docker ID `CompositionDocker`, plugin/module IDs and action IDs
 `update_composition` / `rename_composition`. Only the visible docker title
-changes. Double-click applies; the existing Rename action edits names.
+changes. Double-clicking a name (or F2) renames it in place (user request,
+2026-11-13; it used to apply): `CompositionModel` makes column 2 of saved
+comps `ItemIsEditable` and handles `Qt::EditRole` (trimmed, empty or
+unchanged names rejected, modified without undo, `sigCompositionsChanged`).
+The view's `doubleClicked` signal arrives before the editor opens, so the
+docker applies only when the index is not editable: the eye column and the
+snapshot row still apply on double-click. The Rename action keeps its dialog.
 Up/Down without modifiers applies; Ctrl/Shift navigation does not.
 
 Existing `<composition name exportEnabled>` and `<value uuid visible
@@ -34,6 +40,15 @@ stores the new policy. Always save the parent element, including zero comps.
 The loader defaults the image flag to false before loading nodes, including
 legacy files with no compositions element. Newly constructed images default
 to true. Image copies and replacement copy both records and policy.
+
+Each comp has its own id, `KisLayerComposition::uuid()` (2026-11-13), saved
+as the `<composition uuid>` attribute, so Fast Image Export saved exports can
+refer to a comp across renames and reordering ([Lazy Tools](lazy-tools.md),
+"Layer comps in saved exports"). New comps get a new id; the copy
+constructor, and therefore image copies and snapshots, keep it. The loader
+keeps a new id when the attribute is missing (Krita, older Solstice) or
+repeats an earlier comp's. Krita and older Solstice ignore the attribute and
+drop it when they save.
 
 Missing UUIDs apply as hidden regardless of the current policy. The policy
 only affects newly added nodes and never retroactively changes records.
@@ -144,8 +159,11 @@ ask the user to close it. Fully restart after installation.
 ## Manual regression checklist
 
 1. Open Layer Comps using an existing workspace. Existing shortcuts work.
-2. Add and rename comps. Eye, double-click, plain Up/Down and previous/next
-   apply; Shift/Ctrl selection and export checkboxes do not apply.
+2. Add and rename comps; double-click a name and F2 rename in place (Enter
+   keeps, Esc cancels, empty keeps the old name), and the Fast Image Export
+   saved exports of a renamed comp follow it. Eye, plain Up/Down and
+   previous/next apply; Shift/Ctrl selection, export checkboxes and
+   double-clicking a name do not apply.
 3. Apply A, B, Undo, Redo. One step restores all visibility, including nested
    groups and masks, and LoD preview agrees with the final canvas.
 4. Make a custom visibility state; apply comps and restore Last Layer Display
@@ -161,6 +179,18 @@ ask the user to close it. Fully restart after installation.
    are preserved afterwards; unchecked comps are omitted.
 
 ## Verification record
+
+2026-11-13 (rename in place): `CompositionWorkflowTest::testModel` checks the
+editable flags, a trimmed rename through the model, and rejected empty,
+unchanged and snapshot renames; 5/5 pass offscreen on Windows. The docker
+was installed with matching hashes; the double-click itself is checked
+manually (item 2).
+
+2026-11-13 (comp ids for saved exports): see the
+[Lazy Tools](lazy-tools.md) regression coverage for the run;
+`KisLayerCompositionTest` checks a new comp's id, the saved attribute and an
+image copy keeping it; `CompositionWorkflowTest::testPersistence` a `.kra`
+round trip of the id and legacy XML with a repeated and a missing id.
 
 2026-10-16:
 

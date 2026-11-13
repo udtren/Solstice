@@ -8,6 +8,8 @@
 #include "KisDocument.h"
 #include "KisLazyToolsFastExportPresets.h"
 #include "kis_config.h"
+#include "kis_image.h"
+#include "kis_layer_composition.h"
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
@@ -38,6 +40,10 @@
 namespace
 {
 namespace Presets = KisLazyToolsFastExportPresets;
+
+// The layer comp combo box keeps each comp's plain name here; the text of a
+// missing comp says that it is missing.
+const int LayerCompNameRole = Qt::UserRole + 1;
 
 // Accepts a folder dragged from the system file manager, so a subfolder found
 // from a registered folder can become the export folder.
@@ -126,6 +132,7 @@ public:
         m_destination->addItem(i18n("Same folder as the document"), 0);
         m_destination->addItem(i18n("Configured export folder"), 1);
         m_destination->addItem(i18n("Choose a folder now"), 2);
+        m_destination->setCurrentIndex(qMax(0, m_destination->findData(settings.destination)));
         m_registeredFolder = new QComboBox(this);
         m_registeredFolder->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
         m_registeredFolder->setMinimumContentsLength(30);
@@ -178,6 +185,10 @@ public:
         m_relative->setToolTip(
             i18n("Save the export folder relative to the document's folder, so it follows the document when "
                  "both are moved together."));
+        m_layerComp = new QComboBox(this);
+        m_layerComp->setToolTip(
+            i18n("Export the image as this layer comp shows it. The comp is applied to a copy of the image, so "
+                 "the canvas does not change."));
 
         form->addRow(i18n("Format:"), m_format);
         form->addRow(i18n("Documents:"), m_scope);
@@ -187,6 +198,7 @@ public:
         form->addRow(QString(), m_relative);
         form->addRow(i18n("Name:"), nameRow);
         form->addRow(i18n("Area:"), m_area);
+        form->addRow(i18n("Layer comp:"), m_layerComp);
         form->addRow(i18n("PNG compression:"), m_pngCompression);
         form->addRow(QString(), m_pngAlpha);
         form->addRow(i18n("JPEG quality:"), m_jpegQuality);
@@ -223,10 +235,21 @@ public:
         };
         connect(m_format, QOverload<int>::of(&QComboBox::currentIndexChanged), this, apply);
         connect(m_destination, QOverload<int>::of(&QComboBox::currentIndexChanged), this, apply);
+        // The one-off destination is remembered as soon as it is chosen, not
+        // only on Export, so the next dialog opens with it.
+        connect(m_destination, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
+            if (m_loading || editingPreset()) {
+                return;
+            }
+            auto remembered = KisLazyToolsFastExport::Settings::load();
+            remembered.destination = m_destination->currentData().toInt();
+            remembered.save();
+        });
         connect(m_folder, &QLineEdit::textChanged, this, apply);
         connect(m_relative, &QCheckBox::toggled, this, apply);
         connect(m_name, &QLineEdit::textChanged, this, apply);
         connect(m_area, QOverload<int>::of(&QComboBox::currentIndexChanged), this, apply);
+        connect(m_layerComp, QOverload<int>::of(&QComboBox::currentIndexChanged), this, apply);
         connect(m_pngCompression, QOverload<int>::of(&QSpinBox::valueChanged), this, apply);
         connect(m_pngAlpha, &QCheckBox::toggled, this, apply);
         connect(m_jpegQuality, QOverload<int>::of(&QSpinBox::valueChanged), this, apply);
@@ -327,6 +350,18 @@ private:
         return m_presetDocument ? m_presetDocument->localFilePath() : QString();
     }
 
+    // The summary with the comp's current name, which a rename in the Layer
+    // Comps docker changes.
+    QString presetSummary(Presets::Preset preset) const
+    {
+        if (m_presetDocument) {
+            if (const KisLayerCompositionSP comp = Presets::findLayerComp(m_presetDocument->image(), preset)) {
+                preset.layerCompName = comp->name();
+            }
+        }
+        return Presets::summary(preset, documentPath());
+    }
+
     QString currentPresetId() const
     {
         const QListWidgetItem *item = m_presetList->currentItem();
@@ -354,7 +389,7 @@ private:
                 item->setData(Qt::UserRole, preset.id);
                 item->setFlags(item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEditable);
                 item->setCheckState(preset.enabled ? Qt::Checked : Qt::Unchecked);
-                item->setToolTip(Presets::summary(preset, documentPath()));
+                item->setToolTip(presetSummary(preset));
                 if (preset.id == selectedId) {
                     selectedRow = m_presetList->count() - 1;
                 }
@@ -393,11 +428,43 @@ private:
                     loadPreset(preset);
                 }
             }
-        } else if (m_oneOff.valid) {
-            restoreFormState(m_oneOff);
-            m_oneOff.valid = false;
+        } else {
+            fillLayerComps(nullptr);
+            if (m_oneOff.valid) {
+                restoreFormState(m_oneOff);
+                m_oneOff.valid = false;
+            }
         }
         updateState();
+    }
+
+    // Lists the document's layer comps and selects the one the preset uses. A
+    // comp it uses that the document no longer has stays listed as missing, so
+    // editing other settings does not change the export's comp.
+    void fillLayerComps(const Presets::Preset *preset)
+    {
+        QScopedValueRollback<bool> loading(m_loading, true);
+        m_layerComp->clear();
+        m_layerComp->addItem(i18nc("Saved export layer comp", "None (the layers as they are)"), QString());
+        for (const Presets::LayerComp &comp : Presets::layerComps(m_presetDocument)) {
+            m_layerComp->addItem(comp.name, comp.id);
+            m_layerComp->setItemData(m_layerComp->count() - 1, comp.name, LayerCompNameRole);
+        }
+        int index = 0;
+        if (preset && !preset->layerComp.isEmpty()) {
+            const KisLayerCompositionSP comp =
+                m_presetDocument ? Presets::findLayerComp(m_presetDocument->image(), *preset) : KisLayerCompositionSP();
+            index = comp ? m_layerComp->findData(comp->uuid().toString(QUuid::WithoutBraces)) : -1;
+            if (index < 0) {
+                m_layerComp->addItem(i18nc("A layer comp that a saved export uses but the document no longer has",
+                                           "%1 (missing)",
+                                           preset->layerCompName),
+                                     preset->layerComp);
+                index = m_layerComp->count() - 1;
+                m_layerComp->setItemData(index, preset->layerCompName, LayerCompNameRole);
+            }
+        }
+        m_layerComp->setCurrentIndex(index);
     }
 
     struct FormState {
@@ -449,6 +516,7 @@ private:
         m_relative->setChecked(preset.folderRelative);
         m_name->setText(preset.nameRule == Presets::NameRule::Fixed ? preset.fixedName : QString());
         m_area->setCurrentIndex(m_area->findData(static_cast<int>(preset.area)));
+        fillLayerComps(&preset);
         m_pngCompression->setValue(preset.pngCompression);
         m_pngAlpha->setChecked(preset.pngAlpha);
         m_jpegQuality->setValue(preset.jpegQuality);
@@ -483,6 +551,10 @@ private:
         preset->fixedName = name;
         preset->area =
             editingPreset() ? static_cast<Presets::Area>(m_area->currentData().toInt()) : Presets::Area::WholeImage;
+        // Like Area, chosen after the export is saved.
+        preset->layerComp = editingPreset() ? m_layerComp->currentData().toString() : QString();
+        preset->layerCompName =
+            preset->layerComp.isEmpty() ? QString() : m_layerComp->currentData(LayerCompNameRole).toString();
         return true;
     }
 
@@ -534,7 +606,7 @@ private:
         });
         for (const Presets::Preset &preset : Presets::presets(m_presetDocument)) {
             if (preset.id == id && m_presetList->currentItem()) {
-                m_presetList->currentItem()->setToolTip(Presets::summary(preset, documentPath()));
+                m_presetList->currentItem()->setToolTip(presetSummary(preset));
             }
         }
     }
@@ -660,6 +732,10 @@ private:
         m_exportButton->setEnabled(!editing);
         m_regionButton->setEnabled(single && !editing);
         m_area->setEnabled(editing);
+        m_layerComp->setEnabled(editing);
+        const bool usesLayerComp = editing && !m_layerComp->currentData().toString().isEmpty();
+        m_name->setPlaceholderText(usesLayerComp ? i18n("Document name_layer comp name")
+                                                 : i18n("Same as the document"));
         m_relative->setEnabled(editing && !documentPath().isEmpty() && m_destination->currentData().toInt() != 0);
         // A saved export cannot ask for a folder each time it runs.
         if (auto *model = qobject_cast<QStandardItemModel *>(m_destination->model())) {
@@ -770,6 +846,7 @@ private:
         request->settings.pngCompression = m_pngCompression->value();
         request->settings.pngAlpha = m_pngAlpha->isChecked();
         request->settings.jpegQuality = m_jpegQuality->value();
+        request->settings.destination = destination;
         request->settings.save();
         return true;
     }
@@ -846,6 +923,7 @@ private:
     QSpinBox *m_jpegQuality{nullptr};
     QComboBox *m_area{nullptr};
     QCheckBox *m_relative{nullptr};
+    QComboBox *m_layerComp{nullptr};
     QPushButton *m_clearName{nullptr};
     QPushButton *m_exportButton{nullptr};
     QPushButton *m_regionButton{nullptr};
