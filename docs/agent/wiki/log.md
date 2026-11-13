@@ -3170,3 +3170,25 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - The user ran manual check 15 (saved exports with Layer Comps) in 1.1.0
   and reported no problems; recorded in `lazy-tools.md` and
   [release 1.1.0](history/release-1.1.0.md).
+
+## 2026-11-13 performance: Quick Adjust polls only while shown
+
+- `QuickAdjustDock`'s 200 ms timer ran for the whole session in every main
+  window, hidden or not, and each tick built four status icons, set them
+  (a repaint) and, with the Tool Options pad on, laid the borrowed Tool
+  Options out again. The timer now runs
+  only between `showEvent()` and `hideEvent()`, and a status icon is set
+  only when its state changes ([Quick Access](../quick-access.md),
+  "Preserved behavior"). The polling itself stays: an event-driven version
+  would have to cover every path that changes the brush, the active layer,
+  the selection outline action, the gesture setting and the Tool Options'
+  size, for no measured gain.
+- Lesson: a button that is checkable toggles on the click, before the state
+  it shows follows. "Skip when the state is unchanged" has to compare the
+  shown state and the checked state, or a click that changed nothing leaves
+  the button checked.
+- Lesson: `QIcon::cacheKey()` tells a test whether an icon was set again,
+  but only for icons that load: the test program needs the image files in
+  its resources (a missing file gives a null icon with key 0).
+- Not measured: the per-tick cost before and after. The change removes
+  work; it was not profiled.
