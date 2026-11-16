@@ -3386,3 +3386,24 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   time after the merge. Waiting on `/go/release` in a loop until it names
   the new tag is a better check than one request and a guess.
 - Not verified: the release package was not started.
+
+## 2026-11-16 intake: upstream 2026-W47
+
+- Reviewed the 2026-W47 report against `main` 1da1bd50e7. Adopted
+  W47-01 (`savingImage` not restored in `serializeToNativeByteArray()`),
+  W47-02 (eraser button actions mark the preset dirty) and W47-03 (MyPaint
+  sensor curves loaded as non-corner points). All three applied without
+  3-way fallback conflicts and the merged code was read against `main`.
+- Ledger: W47-04 to -07 held, W47-08 to -12 rejected, W45-06 held until
+  2026-11-23 (same file and same kind of rewrite as held U-2026W44-11).
+  W45-07 to -16 and W46-03 to -08 are still not recorded.
+- The share answers at `192.168.1.22`; `192.168.1.37` is gone. The helper
+  `scripts/intake.sh` on the share still names the old address, so a
+  scratch copy was used.
+- `cmd /c "call env.bat >nul && ..."` from Git Bash fails with "The system
+  cannot find the path specified" and a piped `tail` hides the failure:
+  do not redirect `env.bat`, and print a marker after the build.
+- Built `kritaimage`, `kritaui`, `kritamypaintop`; `kis_cubic_curve_test`,
+  `KisMyPaintOpTest` and `KisMyPaintParityTest` passed; the three were
+  installed. Not verified: the zip-handler assert, the eraser toggle and
+  MyPaint preset activation in the running app (manual checks pending).
