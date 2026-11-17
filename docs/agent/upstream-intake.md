@@ -15,7 +15,7 @@ is the procedure for that work and the ledger of every decision.
 ## Locations
 
 The review lives outside this repository, on the DGX Spark share
-`\\192.168.1.37\share\upstream-krita-check`:
+`\\192.168.1.22\share\upstream-krita-check`:
 
 - `reports/<YYYY-Www>.md` (Japanese, for the user) and
   `reports/<YYYY-Www>.json` (items, commits, dry-run results, notes for
@@ -63,7 +63,7 @@ reported as its own item to adopt now. The user still decides every item;
    in the order the report gives (Git Bash, in the checkout):
 
    ```bash
-   TMPDIR=<scratch-dir> bash //192.168.1.37/share/upstream-krita-check/scripts/intake.sh U-<YYYY>W<ww>-<nn> <full-sha>
+   TMPDIR=<scratch-dir> bash //192.168.1.22/share/upstream-krita-check/scripts/intake.sh U-<YYYY>W<ww>-<nn> <full-sha>
    ```
 
    The helper copies the commit's preimage blobs into this repository (so
@@ -73,6 +73,11 @@ reported as its own item to adopt now. The user still decides every item;
    trailer `Upstream-Intake: <item>` and the attribution line. The share
    belongs to another user, so it passes `safe.directory` per command. A
    persistent `upstream` remote stays forbidden by `AGENTS.md`.
+
+   The share moved from `192.168.1.37` to `192.168.1.22` (seen 2026-11-16).
+   The helper on the share still names the old address in `M=` and an
+   older model in its attribution line; until it is updated there, run a
+   scratch copy with both lines corrected (done for 2026-W47).
 
    On the Linux machine the share is mounted at
    `/media/solarsea/share/upstream-krita-check` (first used for 2026-W45).
@@ -270,6 +275,7 @@ the adopting commit (`-` otherwise). The 2026-W42 rows give the commits on
 | U-2026W45-03 | `3ec9c5b8fb6fcac9601717e93159c2db54a211d2` | master | adopted | `433539efe5` | 2026-11-02 | Same change on master; not applied: its preimage contains the rejected U-2026W42-13 commits, the krita/6.0 commit (row above) was applied instead |
 | U-2026W45-04 | `a4fc11b936d666c307385522eca5cdc845b8e6f2` | krita/6.0 | adopted | `441e5dccf3` | 2026-11-02 | fix improper color triangle rendering at document creation; adapted: trailing whitespace removed |
 | U-2026W45-05 | `6e88a87d03bc4171f2475e7da603cb138d80d2b4` | krita/6.0 | adopted | `f25abe818a` | 2026-11-02 | Add missing action XML data; the 23 new `action`-context strings translated in `9dd0e6ec09` (zh_CN, ja). Behavior changes: five Python plugin actions need an open image; the action ID `assing_profile_to_image` became `assign_profile_to_image` (a shortcut on the old ID is lost) |
+| U-2026W45-06 | `fbd5e1f712bacc941736353a1a665012973858c8` | master | held | - | 2026-11-16 | Replace toLower() with compare() (seven files; the `HACKING` hunk conflicts and would be dropped); user: hold until 2026-11-23 and decide together with U-2026W44-11: same `KoFFWWSConverter.cpp`, and the same kind of rewrite introduced the inverted compare there; measure `TestSvgText` first (recommendation consider, soak_until 2026-11-16) |
 | U-2026W46-01 | `bfb15bb92279c7f45615cb2914998005d54f6a7b` | master | held | - | 2026-11-09 | Use theme for Log Viewer log text colors; user: hold until soak_until 2026-11-23 (master-only fix; recommendation adopt) |
 | U-2026W46-01 | `08aca5ef2d5c65f25775ec47ccc9d9762086c3d6` | master | held | - | 2026-11-09 | Use theme for Recorder thread indicator colors; user: hold until soak_until 2026-11-23 (master-only fix; recommendation adopt) |
 | U-2026W46-01 | `1cb90830faec685da6aef4557d5db6d49c934447` | master | held | - | 2026-11-09 | Don't use KColorScheme on Qt5; user: hold until soak_until 2026-11-23 (master-only fix; recommendation adopt) |
@@ -278,3 +284,30 @@ the adopting commit (`-` otherwise). The 2026-W42 rows give the commits on
 | U-2026W46-09 | `cc32f3dbeaf7d844fe2926bd5bf4c6cfaff3a18a` | krita/6.0 | rejected | - | 2026-11-09 | Add export/import variations converting to 16px; user: not adopted; icons, same as U-2026W42-07 (recommendation reject) |
 | U-2026W46-09 | `15a27ab5e5ad16e90010ebe5048c0a5f74086c10` | krita/6.0 | rejected | - | 2026-11-09 | Add icons for cut, copy and paste variations; user: not adopted; icons, same as U-2026W42-07 (recommendation reject) |
 | U-2026W46-09 | `f5d41b2af57ceb71dc55010173fc4911602a65ff` | master | rejected | - | 2026-11-09 | Add icons for cut, copy and paste variations (master version of `15a27ab5e5`); user: not adopted; icons, same as U-2026W42-07 (recommendation reject) |
+| U-2026W47-01 | `95a027de92e5eb0852b11b1fb2844d925aab56de` | master | adopted | `f9c6e93a02` | 2026-11-16 | Fix an assert when the system requests "application/zip" mime type; `serializeToNativeByteArray()` now restores `savingImage` (BUG 528540, 528539) |
+| U-2026W47-02 | `1d5f8db3473f58b7377e3ce2883a46d5b64dbbe6` | krita/6.0 | adopted | `73c3ccfef3` | 2026-11-16 | Don't mark the eraser presets as dirty on activation; master version d723b77604 |
+| U-2026W47-03 | `d3c4139da3dd68b057812492a8e4dda098f9ae1f` | krita/6.0 | adopted | `ab01e68985` | 2026-11-16 | Fix MyPaint brushes not to be set dirty on activation; master version 101db0a1b3 |
+| U-2026W47-04 | `0ad7895407b7de242b5b9438ea2c3c979507e6d2` | master | held | - | 2026-11-16 | Fix font family selection by using compare correctly.; user: hold; fix for the inverted compare that held U-2026W44-11 `ec6a328c80` introduced, applies only on that chain; decide with it on 2026-11-23 by re-measuring `TestSvgText` (recommendation consider, soak_until 2026-11-30) |
+| U-2026W47-05 | `6cfee81a099d3131366644026f74b3c825f562c3` | master | held | - | 2026-11-16 | Fix remainder non-color-managed lines in the assistants.; user: hold until an upstream release; follow-up of unadopted U-2026W46-08 `493473492e` (recommendation consider) |
+| U-2026W47-06 | `3f2dcd8dc2e20a3ce0624df4cc8e412eda155e54` | master | held | - | 2026-11-16 | Fix new 3-point ellipse creation dots to be HDR-color managed.; user: hold until an upstream release; follow-up of unadopted U-2026W45-10 3-point ellipse mode (recommendation consider) |
+| U-2026W47-07 | `cdb06f48e47a25f8aa25c42b6a92501c074b1c7a` | master | held | - | 2026-11-16 | Reconnect disconnected unit tests; user: hold until an upstream release; test infrastructure only, the brushhud hunk conflicts (docker removed) (recommendation consider) |
+| U-2026W47-07 | `70b9b38db4031a1fa9558867be056396f7022c97` | master | held | - | 2026-11-16 | Fix Qt6 build; user: hold until an upstream release; test infrastructure only, the brushhud hunk conflicts (docker removed) (recommendation consider) |
+| U-2026W47-08 | `f00afb2d204f23427a44f6c50d1925fa3389ca09` | master | rejected | - | 2026-11-16 | Initial brush Stroke Preview implementation; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `bd5ef7b8485ac23c85ae8e71359d8f4e3d72cfd6` | master | rejected | - | 2026-11-16 | Fix stroke preview thumbnails when using Ctrl+Scroll; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `caad8d3f14707d66d83adfb5a9d987c27446983c` | master | rejected | - | 2026-11-16 | Remove slotCanvasResourceChanged from brush preveiw cache; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `4133b31e3b936993b4dca39b76cbfd16b3f9159d` | master | rejected | - | 2026-11-16 | Update the entire viewport when recreating strokes; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `2fba3233dfc723fe5088e2d8d208224bd19483d6` | master | rejected | - | 2026-11-16 | Generate previes on demand instead of loading them all at once; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `1c898feffd03d256630e91bbeda104a932f1c17c` | master | rejected | - | 2026-11-16 | Add thumnail and preview, brush display option; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `57d86c59e178edd1d9258cfba8e0cd69ca438a6b` | master | rejected | - | 2026-11-16 | Default to thumbnail and preview brush display; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `30e84075405ea0209c9f29ecf4ff8f954bc477b3` | master | rejected | - | 2026-11-16 | Get rid of some QImage&; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `6a79146f459cf44f59a04b124bfe9fe927bf053d` | master | rejected | - | 2026-11-16 | Fix brush icon display on high dpi; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `0b8e02f5eea7208ad2bf5d602942cb4bcfa473ea` | master | rejected | - | 2026-11-16 | Fix brush previews sometimes generating blank; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `f0cc1e6340a94719f94ff08ca2681858699ac3c8` | master | rejected | - | 2026-11-16 | Add a queue system for preview generation; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `73b82028e167a31a27c60b9da3061226aed3881e` | master | rejected | - | 2026-11-16 | Fix fractional HiDPI for stroke preview placeholders; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-08 | `216446ec9a2c22488cd971581c7abcf45119588a` | master | rejected | - | 2026-11-16 | Fix Qt5; user: not adopted; upstream Brush Stroke Preview would replace the Solstice implementation (recommendation reject) |
+| U-2026W47-09 | `4691bddc64a573b7cbd80d94a44bbc25207b0dea` | krita/6.0 | rejected | - | 2026-11-16 | Auto-generate version variables for build.gradle; user: not adopted; Android packaging only (recommendation reject) |
+| U-2026W47-09 | `842857d4f13a18e35d23c154bd3d83e30128a65f` | krita/6.0 | rejected | - | 2026-11-16 | Don't generate version.properties in the source tree; user: not adopted; Android packaging only (recommendation reject) |
+| U-2026W47-09 | `2079dbca3582ab7d1dea7a19f65ab5d043921aa8` | master | rejected | - | 2026-11-16 | Auto-generate version variables for build.gradle; user: not adopted; Android packaging only (recommendation reject) |
+| U-2026W47-10 | `ce9e21c192fbe7a2944fa831e3a215321721a68b` | krita/6.0 | rejected | - | 2026-11-16 | Add icons to color-shift actions; user: not adopted; icons, same as U-2026W42-07; master version f260d45238 (recommendation reject) |
+| U-2026W47-11 | `9e592b28b2a6b17294ecc76a02e2cd1129b94525` | master | rejected | - | 2026-11-16 | Remove reference to non-existent directory; user: not adopted; cleanup only (recommendation reject) |
+| U-2026W47-12 | `20d2a5dee3ed6e195269070b01c88a2676c95e94` | master | rejected | - | 2026-11-16 | Remove unused leftover .cpp/.h files; user: not adopted; cleanup only (recommendation reject) |
