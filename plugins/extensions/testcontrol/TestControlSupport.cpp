@@ -25,7 +25,15 @@
 namespace
 {
 constexpr qint64 MaxHashedBytes = qint64(512) * 1024 * 1024;
-}
+// How long a read waits for the image. KisIdleTasksManager starts its tasks
+// 50 ms (after a document appears) to about 300 ms (after a change) after
+// the image fell idle, which is after wait_idle returned: on Windows, 5 of
+// 40 reads right after document_new, a new layer and wait_idle met them, and
+// the image was free again 20 to 35 ms later (800x600, two tasks). A stroke
+// kept open on purpose (the Transform Tool) still fails the read, one second
+// later.
+constexpr int ImageLockTimeoutMs = 1000;
+} // namespace
 
 namespace TestControlSupport
 {
@@ -149,5 +157,19 @@ void pollUntil(QObject *context,
                          done(satisfied, clock.elapsed());
                      });
     timer->start();
+}
+
+void lockImageForRead(QObject *context, KisImageSP image, std::function<void(bool, qint64)> done)
+{
+    // The lambda is mutable because tryBarrierLock() is not const. When it
+    // returns true, pollUntil() calls done(true) in the same pass, so the
+    // lock is held exactly when done() gets true.
+    pollUntil(
+        context,
+        [image]() mutable {
+            return image->tryBarrierLock(true);
+        },
+        ImageLockTimeoutMs,
+        done);
 }
 } // namespace TestControlSupport

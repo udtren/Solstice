@@ -3407,3 +3407,25 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `KisMyPaintOpTest` and `KisMyPaintParityTest` passed; the three were
   installed. Not verified: the zip-handler assert, the eraser toggle and
   MyPaint preset activation in the running app (manual checks pending).
+
+## 2026-11-18 fix: test control reads after wait_idle
+
+- Cause of "The image is busy; call wait_idle first" right after
+  `wait_idle`: `KisIdleTasksManager` starts its strokes 50 to 300 ms after
+  the image fell idle, after `wait_idle` returned. Confirmed with lldb
+  (backtraces of `KisImage::startStroke()` around the failed reads).
+- `query_state`, `query_pixels` and `query_layers` now retry the barrier
+  lock for up to one second (`TestControlSupport::lockImageForRead()`) and
+  report `lockWaitMs`; `wait_idle` is unchanged. Before: 4 of 60 driver
+  rounds and 4 of 40 scenario runs failed; after: 0 of 140 and 0 of 40.
+- New pitfall page [An idle image turns busy by itself](pitfalls/idle-image-turns-busy.md);
+  counts and the `--all` comparison are in `docs/agent/test-control.md`
+  ("Busy reads after wait_idle").
+- lldb from llvm-mingw 20251118 works on the development build with
+  `-p <pid> -o "breakpoint set -n <symbol> -G true -C \"bt 14\"" -o continue`
+  and stdin from the null device; `--batch -s <file>` ran none of the
+  commands. Take the process ID from the launcher, never by image name: a
+  syntax test attached to an unrelated `python.exe`, and lldb crashed on
+  its PDB symbols while attached.
+- Not verified: Linux, the GPU engine, and `ctest` (the plugin was built
+  out of tree because `_build` compiles another checkout).

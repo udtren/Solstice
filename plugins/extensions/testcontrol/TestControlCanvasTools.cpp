@@ -283,7 +283,8 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
 
     server->addTool("query_state",
                     "Report the active tool, document, undo stack, selection bounds/pixel count/hash and the "
-                    "active layer's exact bounds and SHA-256 pixel hash. Fails while the image is busy.",
+                    "active layer's exact bounds and SHA-256 pixel hash. Waits up to one second for a busy "
+                    "image (lockWaitMs), then fails.",
                     objectSchema({{"includeLayerHash",
                                    schemaProperty("boolean", "Hash the active layer's pixels (default true).")}}),
                     std::bind(&TestControlCanvasTools::queryState, this, _1, _2));
@@ -319,8 +320,8 @@ void TestControlCanvasTools::registerTools(TestControlMcpServer *server)
         "query_pixels",
         "Hash and measure a rectangle of the active layer or of the image projection, in image pixels: "
         "SHA-256 of the device's pixels, non-transparent and opaque pixel counts, mean alpha and the mean "
-        "color of the non-transparent pixels (8-bit sRGB), optionally a small PNG. Fails while the image is "
-        "busy.",
+        "color of the non-transparent pixels (8-bit sRGB), optionally a small PNG. Waits up to one second "
+        "for a busy image (lockWaitMs), then fails.",
         objectSchema({
             {"x", schemaProperty("integer", "Left edge (default 0).")},
             {"y", schemaProperty("integer", "Top edge (default 0).")},
@@ -940,8 +941,27 @@ void TestControlCanvasTools::queryPixels(const Arguments &arguments, const Reply
         return;
     }
 
-    if (!image->tryBarrierLock(true)) {
-        reply(TestControlMcpServer::ToolResult::failure("The image is busy; call wait_idle first"));
+    lockImageForRead(this, image, [image, rect, source, arguments, reply](bool locked, qint64 lockWaitMs) {
+        if (!locked) {
+            reply(TestControlMcpServer::ToolResult::failure("The image is busy; call wait_idle first"));
+            return;
+        }
+        replyWithPixels(image, rect, source, arguments, lockWaitMs, reply);
+    });
+}
+
+void TestControlCanvasTools::replyWithPixels(KisImageSP image,
+                                             const QRect &rect,
+                                             const QString &source,
+                                             const Arguments &arguments,
+                                             qint64 lockWaitMs,
+                                             const Reply &reply)
+{
+    // Events ran while the lock was awaited; the view may be another one.
+    KisViewManager *viewManager = currentViewManager();
+    if (!viewManager || viewManager->image().data() != image.data()) {
+        image->unlock();
+        reply(TestControlMcpServer::ToolResult::failure("The document changed while the image was busy"));
         return;
     }
 
@@ -995,6 +1015,7 @@ void TestControlCanvasTools::queryPixels(const Arguments &arguments, const Reply
         {"nonTransparentPixels", visible},
         {"opaquePixels", opaque},
         {"meanAlpha", alpha / total},
+        {"lockWaitMs", lockWaitMs},
     };
     if (visible > 0) {
         result.insert("meanColor",
@@ -1119,18 +1140,46 @@ void TestControlCanvasTools::queryState(const Arguments &arguments, const Reply 
 {
     const bool includeLayerHash = arguments.value("includeLayerHash").toBool(true);
 
-    QJsonObject state{{"activeTool", KoToolManager::instance()->activeToolId()}};
     KisViewManager *viewManager = currentViewManager();
     KisImageSP image;
     if (viewManager) {
         image = viewManager->image();
     }
-    state.insert("document", documentInfo(viewManager));
     if (!image) {
-        reply(TestControlMcpServer::ToolResult::success(state));
+        reply(TestControlMcpServer::ToolResult::success({
+            {"activeTool", KoToolManager::instance()->activeToolId()},
+            {"document", documentInfo(viewManager)},
+        }));
         return;
     }
 
+    lockImageForRead(this, image, [image, includeLayerHash, reply](bool locked, qint64 lockWaitMs) {
+        replyWithState(image, includeLayerHash, locked, lockWaitMs, reply);
+    });
+}
+
+void TestControlCanvasTools::replyWithState(KisImageSP image,
+                                            bool includeLayerHash,
+                                            bool locked,
+                                            qint64 lockWaitMs,
+                                            const Reply &reply)
+{
+    // Events ran while the lock was awaited; the view may be another one.
+    // Everything is read now, so the result describes one moment.
+    KisViewManager *viewManager = currentViewManager();
+    if (!viewManager || viewManager->image().data() != image.data()) {
+        if (locked) {
+            image->unlock();
+        }
+        reply(TestControlMcpServer::ToolResult::failure("The document changed while the image was busy"));
+        return;
+    }
+
+    QJsonObject state{
+        {"activeTool", KoToolManager::instance()->activeToolId()},
+        {"document", documentInfo(viewManager)},
+        {"lockWaitMs", lockWaitMs},
+    };
     KisDocument *document = viewManager->document();
     if (document && document->undoStack()) {
         KUndo2Stack *stack = document->undoStack();
@@ -1143,7 +1192,7 @@ void TestControlCanvasTools::queryState(const Arguments &arguments, const Reply 
                      });
     }
 
-    if (!image->tryBarrierLock(true)) {
+    if (!locked) {
         reply(TestControlMcpServer::ToolResult::failure("The image is busy; call wait_idle first", state));
         return;
     }

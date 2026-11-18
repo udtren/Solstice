@@ -181,8 +181,8 @@ void TestControlDocumentTools::registerTools(TestControlMcpServer *server)
     server->addTool("query_layers",
                     "Report the active document's layer tree from top to bottom, as the Layers docker shows "
                     "it: name, class, visibility, opacity (0-255), blending mode, color label, lock, alpha "
-                    "lock (paint layers) and which node is active, with the children of groups. Fails while "
-                    "the image is busy.",
+                    "lock (paint layers) and which node is active, with the children of groups. Waits up to "
+                    "one second for a busy image (lockWaitMs), then fails.",
                     objectSchema({}),
                     std::bind(&TestControlDocumentTools::queryLayers, this, _1, _2));
 
@@ -257,17 +257,27 @@ void TestControlDocumentTools::queryLayers(const Arguments &arguments, const Rep
         reply(TestControlMcpServer::ToolResult::failure("No document; create or open one first"));
         return;
     }
-    if (!image->tryBarrierLock(true)) {
-        reply(TestControlMcpServer::ToolResult::failure("The image is busy; call wait_idle first"));
-        return;
-    }
-    const KisNodeSP activeNode = viewManager->activeNode();
-    const QJsonArray layers = childNodes(image->root(), activeNode);
-    image->unlock();
-    reply(TestControlMcpServer::ToolResult::success({
-        {"layers", layers},
-        {"active", activeNode ? QJsonValue(activeNode->name()) : QJsonValue()},
-    }));
+    lockImageForRead(this, image, [image, reply](bool locked, qint64 lockWaitMs) mutable {
+        if (!locked) {
+            reply(TestControlMcpServer::ToolResult::failure("The image is busy; call wait_idle first"));
+            return;
+        }
+        // Events ran while the lock was awaited; the view may be another one.
+        KisViewManager *viewManager = currentViewManager();
+        if (!viewManager || viewManager->image().data() != image.data()) {
+            image->unlock();
+            reply(TestControlMcpServer::ToolResult::failure("The document changed while the image was busy"));
+            return;
+        }
+        const KisNodeSP activeNode = viewManager->activeNode();
+        const QJsonArray layers = childNodes(image->root(), activeNode);
+        image->unlock();
+        reply(TestControlMcpServer::ToolResult::success({
+            {"layers", layers},
+            {"active", activeNode ? QJsonValue(activeNode->name()) : QJsonValue()},
+            {"lockWaitMs", lockWaitMs},
+        }));
+    });
 }
 
 void TestControlDocumentTools::documentOpen(const Arguments &arguments, const Reply &reply)
