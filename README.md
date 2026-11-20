@@ -2,7 +2,7 @@
   <img src="krita/data/splash/solstice-splash.png" alt="Solstice" width="480">
 </p>
 
-<p align="center"><b>A GPU-focused digital painting application for Windows, derived from Krita.</b></p>
+<p align="center"><b>A digital painting application for Windows with a Vulkan GPU engine and brush strokes that stay editable, derived from Krita.</b></p>
 
 <p align="center">
   <a href="https://github.com/udtren/Solstice/releases/latest"><img src="https://img.shields.io/github/v/release/udtren/Solstice?label=release" alt="Latest release"></a>
@@ -14,10 +14,16 @@
   <b><a href="https://solstice.tidalboxstudio.com">Website</a></b> ·
   <b><a href="https://github.com/udtren/Solstice/releases/latest">Download</a></b> ·
   <b><a href="docs/README.md">User guides</a></b> ·
-  <b><a href="docs/gpu-engine.md">GPU engine</a></b>
+  <b><a href="docs/gpu-engine.md">GPU engine</a></b> ·
+  <b><a href="docs/vector-brush-strokes.md">Vector brush strokes</a></b>
 </p>
 
 ![Solstice main window painting the Solstice splash artwork, with the Brush Presets docker grouped by bundle, Quick Brush Adjustments, HueSVC, the Quick Access Palette, Layers and the Brush section of Tool Options](docs/images/solstice-main-window.webp)
+
+<p align="center">
+  <a href="docs/vector-brush-strokes.md"><img src="docs/images/vector_brush_strokes/cover.gif" alt="A purple line is drawn with a pressure brush on a vector layer, its points are dragged with the Edit Brush Strokes Tool, parts of it are removed with the vector eraser, and the pieces are enlarged with the Select Shapes Tool and stay sharp" width="720"></a><br>
+  <b><a href="docs/vector-brush-strokes.md">Vector brush strokes</a></b>: draw with a brush, then edit, erase and scale the line.
+</p>
 
 **Solstice is an open-source digital painting application derived from the
 Krita 6 codebase.** The [website](https://solstice.tidalboxstudio.com) has an
@@ -31,12 +37,12 @@ holds the source code, the releases and the [user guides](docs/README.md).
 <p>Vulkan-powered layer compositing and canvas updates, and a GPU brush, on by default on NVIDIA Blackwell graphics cards: from pen input to the displayed frame, about four times faster than the CPU brush.</p>
 </td>
 <td width="33%" valign="top">
-<h3>🎨 Workflows from Clip Studio Paint</h3>
-<p><a href="docs/puppet-warp.md">Puppet Warp</a> with movable and rotatable pins, eye marks that put brush settings in <a href="docs/brush-editor.md#brush-options-in-tool-options">Tool Options</a>, and a <a href="docs/brush-stroke-layer.md">Brush Stroke Layer</a> that redraws its strokes sharply when scaled, like a vector layer.</p>
+<h3>✒️ Vector brush strokes</h3>
+<p>Paint on a vector layer with your pixel brushes, on any graphics card. <a href="docs/vector-brush-strokes.md">Every stroke stays an object</a>: erase it up to an intersection, move its points, change its width, color or brush, and scale it without blur.</p>
 </td>
 <td width="33%" valign="top">
 <h3>🛠️ Krita, refined</h3>
-<p><a href="docs/brush-stroke-preview.md">Brush Presets</a> with stroke previews, filters and grouping, a reworked <a href="docs/brush-editor.md">Brush Editor</a>, <a href="docs/photoshop-brushes.md">Photoshop brush import</a> with presets, textures and folders, <a href="docs/docker-locks.md">docker locks</a>, a live <a href="docs/overview-live-update.md">Overview</a> and a modernized <a href="docs/ui-modernization.md">interface</a>, together with native tools such as <a href="docs/quick-access.md">Quick Access</a> and the <a href="docs/asset-library.md">Asset Library</a>.</p>
+<p><a href="docs/puppet-warp.md">Puppet Warp</a> with movable and rotatable pins and eye marks that put brush settings in <a href="docs/brush-editor.md#brush-options-in-tool-options">Tool Options</a>, as in Clip Studio Paint. <a href="docs/brush-stroke-preview.md">Brush Presets</a> with stroke previews, filters and grouping, a reworked <a href="docs/brush-editor.md">Brush Editor</a>, <a href="docs/photoshop-brushes.md">Photoshop brush import</a> with presets, textures and folders, <a href="docs/docker-locks.md">docker locks</a>, a live <a href="docs/overview-live-update.md">Overview</a> and a modernized <a href="docs/ui-modernization.md">interface</a>, together with native tools such as <a href="docs/quick-access.md">Quick Access</a> and the <a href="docs/asset-library.md">Asset Library</a>.</p>
 </td>
 </tr>
 </table>
@@ -58,6 +64,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
   - [Other Major Changes](#other-major-changes)
 - [Development and downloads](#development-and-downloads)
 - [Differences from Krita](#differences-from-krita)
+- [Vector brush strokes](#vector-brush-strokes)
 - [GPU engine](#gpu-engine)
 - [Benchmarks](#benchmarks)
 - [Supported environment](#supported-environment)
@@ -94,59 +101,66 @@ and starts the engine by itself only on NVIDIA Blackwell.
 <p><b><a href="docs/gpu-engine.md">GPU Engine</a></b><br>Vulkan layer compositing and a GPU brush, both on by default on NVIDIA Blackwell.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<a href="docs/brush-stroke-preview.md"><img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="100%"></a>
-<p><b><a href="docs/brush-stroke-preview.md">Brush Presets</a></b><br>Stroke previews, engine and bundle filters, and grouping.</p>
+<a href="docs/vector-brush-strokes.md"><img src="docs/images/vector_brush_strokes/1_basic.gif" alt="Three purple lines drawn on a vector layer with pressure brushes; their points are dragged with the Edit Brush Strokes Tool, and each line is drawn again with its brush along the new path" width="100%"></a>
+<p><b><a href="docs/vector-brush-strokes.md">Vector Brush Strokes</a></b><br>Brush strokes on a vector layer stay objects: erase, reshape, recolor and scale them.</p>
 </td>
 </tr>
 <tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/brush-stroke-preview.md"><img src="docs/images/brush-presets.png" alt="Brush Presets grouped by bundle, with the Engines filter open" width="100%"></a>
+<p><b><a href="docs/brush-stroke-preview.md">Brush Presets</a></b><br>Stroke previews, engine and bundle filters, and grouping.</p>
+</td>
 <td width="50%" align="center" valign="top">
 <a href="docs/brush-editor.md#brush-options-in-tool-options"><img src="docs/images/tool-options-brush.png" alt="Brush Editor with eyes on brush settings, and the Brush section of Tool Options showing them under the stroke preview" width="100%"></a>
 <p><b><a href="docs/brush-editor.md#brush-options-in-tool-options">Brush options in Tool Options</a></b><br>Eye marks put Brush Editor settings in Tool Options.</p>
 </td>
+</tr>
+<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/clipping-mask.md"><img src="docs/images/clipping_mask.png" alt="A character painted inside an oval; in the Layers docker, Group 24 carries the orange clipping icon and bar and is clipped to the oval Paint Layer 46 below it" width="100%"></a>
 <p><b><a href="docs/clipping-mask.md">Clipping Mask</a></b><br>Clip a layer to the layer or group directly below it, without a group.</p>
 </td>
-</tr>
-<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/puppet-warp.md"><img src="docs/images/puppet_warp.png" alt="A painted figure and a copy reposed with Puppet Warp, with pins on the Transform Tool's mesh and the Puppet Warp Tool Options" width="100%"></a>
 <p><b><a href="docs/puppet-warp.md">Puppet Warp</a></b><br>Repose artwork with movable, rotatable pins in the Transform Tool.</p>
 </td>
-<td width="50%" align="center" valign="top">
-<a href="docs/brush-stroke-layer.md"><img src="docs/images/brush-stroke-layer.png" alt="A small figure sketch and a copy enlarged and drawn again at the new size, on two Brush Stroke Layers" width="100%"></a>
-<p><b><a href="docs/brush-stroke-layer.md">Brush Stroke Layer</a></b><br>Strokes are redrawn at the new size when scaled, without blurring.</p>
-</td>
 </tr>
 <tr>
+<td width="50%" align="center" valign="top">
+<a href="docs/brush-stroke-layer.md"><img src="docs/images/brush-stroke-layer.png" alt="A small figure sketch and a copy enlarged and drawn again at the new size, on two Brush Stroke Layers" width="100%"></a>
+<p><b><a href="docs/brush-stroke-layer.md">Brush Stroke Layer</a></b><br>A paint layer whose strokes are redrawn at the new size when scaled, without blurring.</p>
+</td>
 <td width="50%" align="center" valign="top">
 <a href="docs/effects-filters.md"><img src="docs/images/more_filter.png" alt="Nine versions of one portrait with Solstice effects such as Chromatic Aberration, Color Filter, Crystal, Drop Shadow, Color Reference and Film Grain" width="100%"></a>
 <p><b><a href="docs/effects-filters.md">Effects &amp; Color</a></b><br>New native filters such as Film Grain, Glow and Color Reference.</p>
 </td>
+</tr>
+<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/move-tool.md#duplicating-a-selection"><img src="docs/images/duplicate_in_same_layer.gif" alt="A four-pointed star on Paint Layer 1 is selected and Ctrl-dragged twice with the Move Tool; two copies are placed on the same layer, and the Layers docker still lists only Paint Layer 1 and Background" width="100%"></a>
 <p><b><a href="docs/move-tool.md#duplicating-a-selection">Duplicate on the same layer</a></b><br>Ctrl-drag a selection with the Move Tool to place a copy on the same layer.</p>
 </td>
-</tr>
-<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/reference-tool.md"><img src="docs/images/reference-tool-filters.png" alt="A selected reference drawing with Desaturate, Posterize and Glow in the Filter menu; Glow offers enable, edit, reorder and remove controls" width="100%"></a>
 <p><b><a href="docs/reference-tool.md">Reference Tool filters</a></b><br>Non-destructive filter stacks and templates for reference images.</p>
 </td>
+</tr>
+<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/remove-dust.md"><img src="docs/images/remove_dust.png" alt="A rectangle drawn with the Remove Dust Tool around specks on a sketch, and the same area afterwards without the specks" width="100%"></a>
 <p><b><a href="docs/remove-dust.md">Remove Dust</a></b><br>Remove or select small specks, and fill small gaps, with a tool or a filter.</p>
 </td>
-</tr>
-<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/layer-comps.md"><img src="docs/images/Layer_Comps.png" alt="The Fast Image Export dialog for phantom.kra with three saved exports, the first exporting the layer comp eye_closed, beside the Layer Comps docker with the comps eye_closed, eye_open and eye_open_tear" width="100%"></a>
 <p><b><a href="docs/layer-comps.md">Layer Comps</a></b><br>Record, apply and export layer visibility states, each with its own export settings.</p>
 </td>
+</tr>
+<tr>
 <td width="50%" align="center" valign="top">
 <a href="docs/through-layer-eraser.md"><img src="docs/images/through-layer%20eraser%20tool.gif" alt="A stroke of the Through-Layer Eraser Tool removing a corner of a red frame and a purple block painted on separate layers, with their Layers docker thumbnails updating" width="100%"></a>
 <p><b><a href="docs/through-layer-eraser.md">Through-Layer Eraser</a></b><br>Erase through all visible layers, or the selected layers, with one stroke.</p>
 </td>
+<td width="50%"></td>
 </tr>
 </table>
 
@@ -229,7 +243,8 @@ Check the [supported environment](#supported-environment) before building.
 ## Differences from Krita
 
 Solstice follows its own development direction, centered on an experimental
-Vulkan image engine and a separately maintained native feature set. Selected
+Vulkan image engine, brush strokes that stay editable on vector layers, and
+a separately maintained native feature set. Selected
 Python-based extensions have been reimplemented in C++, with compatibility
 for existing settings where practical. The Asset Library is also available
 from the welcome page, and Puppet Warp is integrated into the Transform Tool.
@@ -240,6 +255,42 @@ as well.
 Solstice does not merge upstream Krita wholesale; upstream changes are
 reviewed regularly and adopted selectively as needed. Solstice-specific
 changes and support are maintained in this repository.
+
+## Vector brush strokes
+
+The brush tools paint on a vector layer with any brush preset, and every
+stroke stays an object that is drawn again with its brush when it changes.
+It needs no particular graphics card and works with or without the GPU
+engine.
+
+> **Not in a release yet.** Vector brush strokes are on `main` and in the
+> [development builds](docs/test-builds.md); the first release after 1.1.1
+> will include them.
+
+- **Draw:** Freehand Brush, Dynamic Brush and Multibrush, with pressure,
+  opacity and the canvas mirror kept in the stroke.
+- **Erase:** the eraser cuts lines instead of painting: the touched part,
+  the whole line, or up to the next intersection.
+- **Reshape:** move points, change or redraw the width, redraw a part of a
+  line, cut, join, simplify, and switch points between corner and curve.
+- **Restyle:** apply another color, size or brush preset to lines that are
+  already drawn, and make a line lighter along its length.
+- **Reuse:** turn lines and vector shapes into painting assistants, and the
+  area inside a line into a selection.
+- **Scale:** resizing draws the strokes again at the new size, so line art
+  stays sharp.
+
+**Limits:** brushes that mix with the paint below (smudge) find nothing to
+mix with, blending modes other than Normal apply inside a stroke only, and
+other applications open the strokes as pictures. A control point has no
+curve handles to drag.
+
+See the [Vector Brush Strokes guide](docs/vector-brush-strokes.md) for every
+tool and mode, the
+[comparison with Clip Studio Paint's vector layers](docs/vector-brush-strokes.md#comparison-with-clip-studio-paint)
+and the [current limitations](docs/vector-brush-strokes.md#current-limitations).
+To keep strokes on a paint layer instead, without editing single lines, use
+a [Brush Stroke Layer](docs/brush-stroke-layer.md).
 
 ## GPU engine
 

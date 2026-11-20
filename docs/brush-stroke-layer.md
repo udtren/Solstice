@@ -7,7 +7,7 @@ the remembered strokes again at the new size with the same brush.
 
 To keep each stroke as an object that can be selected, moved and resized,
 draw on a vector layer instead:
-[Brush strokes on vector layers](vector-brush-strokes.md).
+[Vector Brush Strokes](vector-brush-strokes.md).
 
 ## Creating one
 
