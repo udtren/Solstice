@@ -52,6 +52,17 @@ void pollUntil(QObject *context,
                int timeoutMs,
                std::function<void(bool, qint64)> done,
                int stablePolls = 1);
+
+/**
+ * Takes @p image's barrier lock for reading and calls @p done(true, waitedMs);
+ * the caller unlocks the image. Krita starts strokes of its own once the
+ * image is idle (the idle tasks: layer thumbnails, Overview, Histogram), so
+ * a read right after wait_idle can meet one. While the image is busy this
+ * tries again every 20 ms for up to one second, then calls
+ * @p done(false, waitedMs) without the lock. It never asks a stroke to end,
+ * and events are processed while it waits: resolve the view again in @p done.
+ */
+void lockImageForRead(QObject *context, KisImageSP image, std::function<void(bool, qint64)> done);
 } // namespace TestControlSupport
 
 #endif // TESTCONTROLSUPPORT_H

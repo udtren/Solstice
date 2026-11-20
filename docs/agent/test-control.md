@@ -136,6 +136,15 @@ Verification (2026-10-26, cloud session, no Krita build available):
   stroke stayed on the GPU; the acceptance run later found it did not.
 - `gpu_fault` drove the GPU failure UI acceptance (2026-11-11), recorded in
   [GPU checklist item 16](gpu-engine.md#manual-regression-checklist).
+- Busy reads after `wait_idle` (2026-11-18, Windows 11 25H2, CPU engine,
+  `--launch` with a scratch profile, branch `claude/test-control-busy-read`;
+  the plugin's three changed sources compiled from a worktree against
+  `_build` and the DLL copied into `_install`): cause and counts in
+  [Busy reads after wait_idle](#busy-reads-after-wait_idle-2026-11-18). The
+  reads now wait for the image; 0 busy reads in 140 rounds and in 40 scenario
+  runs, against 4 of 60 and 4 of 40 before. `--all`: 21 pass, 1 unrecorded,
+  6 fail, the same six as without the change. `ctest` was not run: `_build`
+  belongs to another checkout, and no unit test covers the canvas tools.
 
 ## Source locations
 
@@ -148,7 +157,7 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Canvas tools: session, documents from scratch, tools, input, keys, waits, queries | `TestControlCanvasTools.{h,cpp}` |
 | Widget tools: query, click, set, close windows; dockers | `TestControlUiTools.{h,cpp}` |
 | Document tools: open, export, close, view reset, brush, layer tree, active layer | `TestControlDocumentTools.{h,cpp}` |
-| Helpers shared by the tool classes, `pollUntil` | `TestControlSupport.{h,cpp}` |
+| Helpers shared by the tool classes, `pollUntil`, `lockImageForRead` | `TestControlSupport.{h,cpp}` |
 | Clock, process CPU time, canvas frame recorder (QtWidgets only) | `TestControlTiming.{h,cpp}`, `tests/TestControlTimingTest.cpp` |
 | Test root path checks (QtCore only) | `TestControlPaths.{h,cpp}` |
 | Tests | `tests/TestControlProtocolTest.cpp`, `tests/TestControlInputInjectorTest.cpp`, `tests/TestControlPathsTest.cpp`, `tests/TestControlTimingTest.cpp` |
@@ -210,17 +219,17 @@ tested in the cloud session.
 | `input_key` | `key` (`QKeySequence` portable text: `Return`, `Escape`, `Delete`, `Ctrl+Z`), `modifiers` | `ShortcutOverride`, `KeyPress` and `KeyRelease` to the canvas widget after it got focus, wrapped in the modifier keys' presses and releases |
 | `input_drag` | `from`, `to` (`x`, `y`), `steps` (default 20), `durationMs` (default 200), `device`, `coordinates`, `button`, `pressure`, `realtime`, `releaseDelayMs`, `keyAfterRelease`, `modifiers` | As `input_stroke`; a straight line in equal steps |
 | `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, and, while the current selection has a shape selection, for 600 ms plus twice the longest poll gap, measured with a clock; waited time (at least 40 ms, or about 640 ms), longest gap between polls (`maxPollGapMs`) |
-| `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
+| `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels). Waits up to 1 s for a busy image, then fails; `lockWaitMs` is how long it waited (0 when the image was free) |
 | `action_trigger` | `name`, `async` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...). With `async`, replies first and triggers from the event loop afterwards, for actions that open a modal dialog (Rename Alternative) |
 | `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only. It shows the image but not the canvas decorations: tool overlays, the crop rectangle and selection outlines were all missing (Windows, OpenGL canvas, 2026-11-18) |
 | `canvas_frames` | `action` (`start`/`read`/`stop`, default `read`), `sinceMs` | Times when the current canvas presented frames, for timing without the paint trace: `start` clears the record and follows the canvas widget (`frameSwapped()` of the OpenGL canvas, connected by name, the paint trace's command-swap endpoint; otherwise the start of each paint event, `kind` `paint`); `read` returns the frames after `sinceMs`, `recording`, `overflowed` (more than 100000 frames) and `nowMs`. All times are milliseconds on one monotonic clock (`TestControlTiming::clockMs()`, `std::chrono::steady_clock`) |
-| `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize`, `fullResolutionPng` (at most 2048x2048), `reference` (base64 PNG), `maxChannelDiff`, `maxMismatchPixels` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG; with a reference, `reference` (`matches`, `maxChannelDiff`, `mismatchPixels`, `tolerance`) |
+| `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize`, `fullResolutionPng` (at most 2048x2048), `reference` (base64 PNG), `maxChannelDiff`, `maxMismatchPixels` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG; with a reference, `reference` (`matches`, `maxChannelDiff`, `mismatchPixels`, `tolerance`). Waits for a busy image like `query_state` (`lockWaitMs`) |
 | `document_open` | `path` (relative to the test root) | Opens without dialogs (`KisMainWindow::BatchMode`); document and canvas once its view is active |
 | `document_export_png` | `path` (relative, `.png`) | Exports the active document's image without dialogs, replacing a file; size in bytes |
 | `document_close` | `all` | Closes the active document or every document without asking; documents closed and left |
 | `view_reset` | `width`, `height` (window, default 1280x900) | Normal window of that size, zoom 100 %, no rotation or mirroring, image centered; zoom, rotation, image rectangle in the canvas |
 | `brush_set` | `preset` (name), `size` (1-1000), `opacity` (0-1), `eraser`, `color` (`#RRGGBB`), `paintMode` (`buildup`/`wash`, the preset's `PaintOpAction` as an unsaved change) | Current preset, size, opacity, flow, blending mode (`compositeOp`), eraser mode, painting mode, preserve alpha and foreground color (`color`, and `colorRgb` as three numbers for tolerances); without arguments it only reports; an unknown preset lists up to 200 names |
-| `query_layers` | none | The layer tree from top to bottom as the Layers docker lists it: name, class, visibility, opacity (0-255), blending mode, color label, lock, alpha lock (paint layers), `active`, and `children` of groups; the active node's name. Fails while the image is busy |
+| `query_layers` | none | The layer tree from top to bottom as the Layers docker lists it: name, class, visibility, opacity (0-255), blending mode, color label, lock, alpha lock (paint layers), `active`, and `children` of groups; the active node's name. Waits for a busy image like `query_state` (`lockWaitMs`) |
 | `layer_activate` | `name`, `select` (names) | Makes the first node with that name (from the top, parents before children) active and selects it, or selects the listed nodes, through `KisNodeManager::slotImageRequestNodeReselection()`; active and selected names |
 | `ui_query` | `nameFilter`, `within` (object name of a container), `window` (window title), `includeUnnamed` | Visible widgets with object name, class, enabled state and value (button text and checked state, combo items and index, spin box value, label text, tool tip, window title of top-level widgets) |
 | `ui_click` | selectors `objectName`, `text`, `toolTip`, `className`, or `standardButton` (`Apply`, `Reset`, `Ok`, ...) of the `QDialogButtonBox` they find; `within`, `window`, `index`, `async` | Clicks a visible, enabled button with `QAbstractButton::click()`; its state afterwards. With `async`, replies first and clicks afterwards, for buttons that may open a modal dialog |
@@ -357,10 +366,21 @@ field; protocol errors (unknown tool, malformed arguments) are JSON-RPC errors.
   process: read-backs resume, but in the 2026-11-11 acceptance strokes
   painted after a reset were not left on the GPU (cause not investigated).
   Start a fresh Solstice for each check that needs GPU-only tiles.
-- **Reads.** `query_state` takes `KisImage::tryBarrierLock(true)` and fails
-  instead of blocking when the image is busy. Undo commands reach the stack
-  before the image reports idle (`KisDocument`'s undo stack pushes from
-  stroke threads through a blocking queued call).
+- **Reads.** `query_state`, `query_pixels` and `query_layers` take
+  `KisImage::tryBarrierLock(true)` through
+  `TestControlSupport::lockImageForRead()`: when the image is busy they try
+  again every 20 ms for up to one second (`ImageLockTimeoutMs`), then fail
+  with "The image is busy". They never block the GUI thread and never use
+  `barrierLock()`, which asks running strokes to end (the Transform Tool
+  would apply). The wait exists for strokes Solstice starts by itself on an
+  idle image ([Busy reads after wait_idle](#busy-reads-after-wait_idle-2026-11-18));
+  it does not replace `wait_idle`, which also lets work queued to the GUI
+  thread run. Events are processed during the wait, so each read resolves
+  the view again afterwards and fails with "The document changed while the
+  image was busy" when the current view shows another image. `query_state`
+  reads everything, undo stack included, after the wait. Undo commands reach
+  the stack before the image reports idle (`KisDocument`'s undo stack pushes
+  from stroke threads through a blocking queued call).
 
 ## Invariants
 
@@ -595,6 +615,61 @@ Findings:
 - A scratch profile's `klanguageoverridesrc` needs `solstice=` as well as
   `krita=`; with only `krita=en_US` the UI followed the system language
   (Japanese), and scenarios that click buttons by text failed.
+
+### Busy reads after wait_idle (2026-11-18)
+
+Found while running several scenarios in one instance: a read right after
+`wait_idle` sometimes failed with "The image is busy; call wait_idle first"
+(`query_state`, `query_pixels`; `color-label-controls` had failed the same
+way at `query_layers` on 2026-10-28). Windows 11 25H2, CPU engine
+(`KRITA_GPU_PROJECTION=0`), `--launch` with a fresh scratch profile,
+development build of `88da60c8f2`.
+
+Reproduction, one instance, per round: `document_close` (all),
+`document_new` 800x600, `view_reset`, `action_trigger add_new_paint_layer`,
+`wait_idle`, then `query_state` or `query_pixels` (alternating), from a
+scratch Python driver built on the runner's `Launched` and `Client`.
+
+| Build | Driver rounds with a busy first read | Scenario runs failing on a busy read |
+| --- | --- | --- |
+| Before | 2 of 5, 5 of 40, 4 of 60 | 4 of 40 (ten runs each of `color-label-controls`, `through-layer-eraser`, `lazy-rename-layer`, `brush-stroke-undo`; all four in `color-label-controls`, at `query_layers`) |
+| With the lock wait | 0 of 60, and 0 of 80 with `add_new_shape_layer` and `query_pixels` on the projection; four reads waited 19-22 ms (`lockWaitMs`) | 0 of 40 |
+
+In the failing rounds the image was busy 1-16 ms after `wait_idle` returned
+and free again 28-40 ms after it. Rounds in which `wait_idle` itself took
+80-100 ms instead of 40 ms never failed: there the same busy period fell
+inside the wait.
+
+Cause, confirmed with lldb attached to the scratch instance (a breakpoint
+with a backtrace on `KisImage::startStroke()` and on the two failure
+replies, 16 rounds, 3 busy reads): in every round the next strokes after the
+layer's own (`KisNodeCommandsAdapter::addNodeAsync()`) were two idle tasks
+started by `KisIdleTasksManager::slotImageIsIdle()`, the first from the
+`KisIdleWatcher` timer and the second when the first finished; each busy
+read came right after that pair started, and nothing else started a stroke
+on the image in between. `KisIdleTasksManager` waits for
+`KisImage::isIdle()` like `wait_idle` does: one 50 ms tick after a no-delay
+trigger (`setImage()` for a new view, `addIdleTask()` by a docker), which a
+change does not postpone, or a 50 ms compressor and five 50 ms ticks after a
+change. `wait_idle` returns after three polls 20 ms apart, so the tasks
+start just after it, and `tryBarrierLock()` fails while their strokes are
+queued or running. The idle tasks only read the image, so a read that waits
+for them sees the same pixels.
+
+Fix: the reads wait for the lock (see **Reads** under
+[Architecture and lifecycle](#architecture-and-lifecycle)). `wait_idle` is
+unchanged.
+
+`run_scenarios.py --all --launch`, same machine and day
+(`KRITA_NO_ASSERT_MSG=1`; the log's only asserts were the known Lazy Tools
+one): before, 20 pass, 1 unrecorded, 7 fail; with the change, 21 pass, 1
+unrecorded, 6 fail. The six fail both ways and are not busy reads:
+`rect-select-fill`, `contiguous-select`, `ellipse-select`, `outline-select`
+and `selection-modifiers` (the narrow canvas of a fresh profile, see
+[Windows, phases 1-4](#windows-phases-1-4-2026-10-28)), and
+`quick-access-brush-item` (step 7 `brush_set`: `eraser` false, expected
+true; not investigated). The seventh was `color-label-controls`, busy at
+`query_layers`.
 
 ## Scenarios (format version 1)
 
@@ -918,9 +993,10 @@ warning, close it in every process (the runner cannot).
   40 ms `wait_idle` took. Run a failed scenario again before reading
   anything into such a failure.
 - Transform Tool: the transform runs as a stroke that keeps the image busy
-  until Apply, Return or a tool switch, so `query_state` and `query_pixels`
-  fail with "busy" between the tool's activation and Apply. Read what is
-  needed before activating it, and judge previews only by `canvas_capture`.
+  until Apply, Return or a tool switch, so `query_state`, `query_pixels` and
+  `query_layers` fail with "busy" between the tool's activation and Apply,
+  each after waiting one second (since 2026-11-18). Read what is needed
+  before activating it, and judge previews only by `canvas_capture`.
   Preview against applied output therefore stays manual.
 - Transform Tool: a press at the exact center of the content grabs the pivot
   instead of moving the content; scenarios start drags off-center.
@@ -933,6 +1009,15 @@ warning, close it in every process (the runner cannot).
   selection of pins, mesh fill and expansion, multi-layer and group
   processing, transform masks, saved state.
 
+- An idle image does not stay idle. `KisIdleTasksManager` starts strokes of
+  its own (layer thumbnails, Overview, Histogram, Channels) 50 to about
+  300 ms after the image fell idle, which is after `wait_idle` returned
+  ([details](#busy-reads-after-wait_idle-2026-11-18)). The three reads wait
+  for them; any new tool that needs the image lock must use
+  `lockImageForRead()` too, not a bare `tryBarrierLock()`. Do not make
+  `wait_idle` wait for them instead: they restart after every change, the
+  manager has no "pending" query, and every call would take 300 ms or more
+  instead of 40 ms.
 - An active selection limits where strokes paint. A scenario that selects
   and then paints elsewhere must `deselect` first; otherwise the stroke adds
   an undo step and changes no pixels.
