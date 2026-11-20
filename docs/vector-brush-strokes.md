@@ -279,9 +279,9 @@ Studio Paint page
 read on 2026-11-18) and what Solstice has for each. Clip Studio Paint may
 have functions the page does not mention; they are not listed.
 
-"Yes" means the function exists and is covered by automated tests or
-in-application test runs with a mouse or synthetic tablet input; none of
-it has been checked with a real pen by the developers' tests.
+"Yes" means the function exists, is covered by automated tests or
+in-application test runs, and was checked by hand in the application with
+a pen tablet (2026-11-20).
 
 | Clip Studio Paint (page section) | Solstice | How, and what differs |
 | --- | --- | --- |
