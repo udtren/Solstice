@@ -3953,3 +3953,20 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - The user checked the Apply Background Color message and Create
   Assistants for vector shapes in the application, with the three fixes
   above, and found all working.
+
+## 2026-11-20 ingest: Vector Brush Strokes as a second headline feature
+
+- User decision (2026-11-20): brush strokes on vector layers are presented
+  at the same rank as the GPU engine, in the README and on the website.
+  Public name: **Vector Brush Strokes**; the guide keeps its file name
+  `docs/vector-brush-strokes.md`.
+- README: tagline, link row, the cover animation under the main window,
+  a column of the three-column summary, the first row of New Features,
+  and a "Vector brush strokes" section before "GPU engine". The Brush
+  Stroke Layer is no longer described as "like a vector layer".
+- Animations are in `docs/images/vector_brush_strokes/` (the user's
+  recordings): `cover.gif` for the main page, `1_basic.gif` at the head
+  of the feature page, 2 to 7 in the guide's sections.
+- The README says the feature is not in a release yet. Remove that note
+  with the first release after 1.1.1; the website pages follow that
+  release (AGENTS.md, "Releases and the website").

@@ -1,7 +1,10 @@
-# Brush strokes on vector layers
+# Vector Brush Strokes
 
-The brush tools draw on a vector layer with any brush preset. Each stroke
-becomes its own object on the layer: it looks like the stroke you painted,
+![Three purple lines drawn on a vector layer with pressure brushes; in Move Points mode of the Edit Brush Strokes Tool their points are dragged one after another, and each line is drawn again with its brush along the new path](images/vector_brush_strokes/1_basic.gif)
+
+Brush strokes on vector layers: the brush tools draw on a vector layer
+with any brush preset. Each stroke becomes its own object on the layer: it
+looks like the stroke you painted,
 and it is drawn again with the same brush whenever it is resized, so line
 art stays sharp. This is the editable counterpart of the
 [Brush Stroke Layer](brush-stroke-layer.md), which keeps its strokes as
@@ -48,7 +51,11 @@ The part of a line before a cut looks exactly as it did. The part after it
 is drawn again from the cut, so with soft, textured or scattering brushes
 its dabs can land slightly differently; ink pens show no difference.
 
+![The vector eraser cuts a thin line into pieces; Simplify Lines reduces the control points of a thick line, and Switch Corner turns its curve points into corners](images/vector_brush_strokes/4_eraser_simplifyline_switchcorner.gif)
+
 ## Editing a line's path
+
+![Change Width mode makes three lines thinner and wider around the dragged places, and Cut mode splits a line in two](images/vector_brush_strokes/2_change_width_and_cut.gif)
 
 The **Edit Brush Strokes Tool** (in the toolbox next to the Through-Layer
 Eraser) changes the lines themselves. Move the cursor over a line on the
@@ -118,12 +125,18 @@ Options:
 The line is drawn again with its brush while you drag. Each drag or click
 is one undo step.
 
+![Change Density makes a line lighter around the dragged place, and Add Width makes it wider](images/vector_brush_strokes/5_change_density_width.gif)
+
+![Redraw replaces a part of a line with a newly drawn path, and Redraw Width gives a traced part the width of the current brush](images/vector_brush_strokes/6_redraw_and_redraw_width.gif)
+
 Add Point, Delete Point and Switch Corner are most useful on a simplified
 line (see "Fewer control points" below): a freshly drawn line has a
 control point every few pixels, so changing a single one changes very
 little. On such a line every control point counts as a corner.
 
 ### Color, size and brush of lines
+
+![A selected line takes the current color with Apply Color, another the current brush size with Apply Size, and a third another brush preset with Apply Brush](images/vector_brush_strokes/3_apply_color_size_brush.gif)
 
 Click a line without dragging to select it; its path turns orange. Click
 more lines to add them, click a selected line again to take it out, and
@@ -166,6 +179,8 @@ is left. A line is turned around when that is needed to connect it.
   several lines as one stroke) cannot be joined.
 
 ### Assistants along lines
+
+![A wavy brush line, a rectangle and an ellipse on a vector layer are selected, Create Assistants makes painting assistants along them, and brush strokes on a paint layer with Snap to Assistants follow the line, the rectangle and the ellipse](images/vector_brush_strokes/7_create_assistants.gif)
 
 Select one or more lines and press **Create Assistants** in Tool Options.
 Painting assistants appear along the lines: a Spline assistant for every
