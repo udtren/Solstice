@@ -57,7 +57,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 1.1.1](#whats-new-in-111)
+- [What's new in 1.2.0](#whats-new-in-120)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -70,25 +70,24 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 1.1.1
+## What's new in 1.2.0
 
-[Solstice 1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1) is a
-performance and fix release for the CPU side. Finding a layer's bounds, at
-the start of a Move or Transform for example, skips empty tiles (all layers
-of one large painting: 3477 ms before, 72 ms now; see
-[Benchmarks](#benchmarks)). Solstice starts faster because the Text
-Properties docker loads when it is first shown, and it does less work while
-idle. The resource cache database no longer keeps a copy of each preset's
-settings in its thumbnails and is compacted at startup. **Reload Original
-Preset** no longer reloads the stroke previews of all brushes.
+[Solstice 1.2.0](https://github.com/udtren/Solstice/releases/tag/v1.2.0) adds
+[Vector Brush Strokes](docs/vector-brush-strokes.md): the brush tools paint
+on vector layers, and every stroke stays an object. The eraser cuts lines
+(the touched part, the whole line, or up to an intersection), the Edit
+Brush Strokes Tool moves a line's points and changes or redraws its width,
+drawn lines take another color, size or brush, and resizing draws the
+strokes again so they stay sharp. Lines and vector shapes can become
+painting assistants, and the area inside a line a selection. See
+[Vector brush strokes](#vector-brush-strokes) below.
 
-It builds on [1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0),
-which lets each [Layer Comp](docs/layer-comps.md) be exported with its own
-[Fast Image Export](docs/lazy-tools.md) settings and added **Show in File
-Explorer** to the Recent Images and [Asset Library](docs/asset-library.md)
-menus, and on [1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0),
-which moved more of the layer stack to the [GPU engine](docs/gpu-engine.md)
-and starts the engine by itself only on NVIDIA Blackwell.
+It builds on [1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1),
+a performance and fix release for the CPU side (finding a layer's bounds,
+a faster start, less idle work; see [Benchmarks](#benchmarks)), and on
+[1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0), which lets
+each [Layer Comp](docs/layer-comps.md) be exported with its own
+[Fast Image Export](docs/lazy-tools.md) settings.
 
 ## Highlights
 
@@ -263,9 +262,7 @@ stroke stays an object that is drawn again with its brush when it changes.
 It needs no particular graphics card and works with or without the GPU
 engine.
 
-> **Not in a release yet.** Vector brush strokes are on `main` and in the
-> [development builds](docs/test-builds.md); the first release after 1.1.1
-> will include them.
+New in [1.2.0](https://github.com/udtren/Solstice/releases/tag/v1.2.0).
 
 - **Draw:** Freehand Brush, Dynamic Brush and Multibrush, with pressure,
   opacity and the canvas mirror kept in the stroke.

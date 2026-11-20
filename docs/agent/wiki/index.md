@@ -351,6 +351,8 @@ Document ownership and lifecycle are defined in
   package integrity, website publication.
 - [1.1.1 release verification](history/release-1.1.1.md): CPU performance
   and fix release, package integrity, website publication.
+- [1.2.0 release verification](history/release-1.2.0.md): Vector Brush
+  Strokes as a second headline feature; package checks and the website.
 
 GPU engine phase records moved from `docs/agent/gpu-engine.md` (section index
 there, under "Phase history"):

@@ -3970,3 +3970,20 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - The README says the feature is not in a release yet. Remove that note
   with the first release after 1.1.1; the website pages follow that
   release (AGENTS.md, "Releases and the website").
+
+## 2026-11-20 ingest: Solstice 1.2.0 released
+
+- Regular GitHub Release `v1.2.0` at `f4041d71cfc1` (run 44678851678);
+  record: [1.2.0 release verification](history/release-1.2.0.md).
+- The website shows Vector Brush Strokes beside the GPU engine: a section
+  on the top page and `/vector-brush-strokes/` in both languages
+  (tidalboxstudio-web #44 to #46).
+- Animations for a README go in compressed: the user's eight recordings
+  were 41 MB, 14 MB after `palettegen`/`paletteuse` with 64 colors, 8 fps
+  and 640 px (the cover kept its size and 10 fps). The originals are
+  outside the repository, in the development folder.
+- The cover animation was replaced after the build commit, so the tag
+  holds the older one; the README and the release notes show the file on
+  `main`.
+- The guide's comparison section now says the functions were checked by
+  hand with a pen tablet (PR #110).
