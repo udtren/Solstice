@@ -74,6 +74,25 @@ struct InplaceTransformStrokeStrategy::Private
     KisPaintDeviceSP externalSource;
     KisNodeSP imageRoot;
     int currentTime = -1; // NOTE: initialized asynchronously in initStrokeCallback!
+
+    // Solstice: vector layers whose brush strokes show scaled pictures
+    // while the transform is in progress (docs/agent/vector-brush-strokes.md)
+    QMutex previewedShapeLayersMutex;
+    QVector<KisShapeLayerSP> previewedShapeLayers;
+
+    /// Ends the preview of the brush strokes: they are drawn again, exactly
+    void endBrushStrokePreview()
+    {
+        QVector<KisShapeLayerSP> layers;
+        {
+            QMutexLocker locker(&previewedShapeLayersMutex);
+            layers.swap(previewedShapeLayers);
+        }
+        Q_FOREACH (KisShapeLayerSP layer, layers) {
+            layer->setBrushStrokePreview(false);
+            layer->forceUpdateTimedNode();
+        }
+    }
     int previewLevelOfDetail = -1;
     bool forceLodMode = true;
 
@@ -180,6 +199,11 @@ InplaceTransformStrokeStrategy::InplaceTransformStrokeStrategy(ToolTransformArgs
 
 InplaceTransformStrokeStrategy::~InplaceTransformStrokeStrategy()
 {
+    // Solstice: a preview never outlives the stroke
+    QMutexLocker locker(&m_d->previewedShapeLayersMutex);
+    Q_FOREACH (KisShapeLayerSP layer, m_d->previewedShapeLayers) {
+        layer->setBrushStrokePreview(false);
+    }
 }
 
 void InplaceTransformStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
@@ -805,6 +829,17 @@ void InplaceTransformStrokeStrategy::transformNode(KisNodeSP node, const ToolTra
                 if (levelOfDetail <= 0) {
                     const QRect oldDirtyRect = extLayer->projectionPlane()->tightUserVisibleBounds() | extLayer->theoreticalBoundingRect();
 
+                    // Solstice: every step of the drag would draw all brush
+                    // strokes of a vector layer again; they show scaled
+                    // pictures until the stroke is finalized
+                    if (KisShapeLayer *shapeLayer = dynamic_cast<KisShapeLayer *>(extLayer)) {
+                        QMutexLocker locker(&m_d->previewedShapeLayersMutex);
+                        if (!m_d->previewedShapeLayers.contains(shapeLayer)) {
+                            m_d->previewedShapeLayers << shapeLayer;
+                        }
+                        shapeLayer->setBrushStrokePreview(true);
+                    }
+
                     KisTransformWorker w = KisTransformUtils::createTransformWorker(config, 0, 0);
                     QTransform t = w.transform();
                     KUndo2Command *cmd = extLayer->transform(t);
@@ -1041,6 +1076,12 @@ void InplaceTransformStrokeStrategy::reapplyTransform(ToolTransformArgs args,
 
 void InplaceTransformStrokeStrategy::finalizeStrokeImpl(QVector<KisStrokeJobData *> &mutatedJobs, bool saveCommands)
 {
+    // Solstice: the transform is settled (applied or cancelled): the brush
+    // strokes of vector layers are drawn exactly
+    KritaUtils::addJobBarrier(mutatedJobs, [this]() {
+        m_d->endBrushStrokePreview();
+    });
+
     KritaUtils::addJobBarrier(mutatedJobs, [this]() {
         Q_FOREACH (KisSelectionSP selection, m_d->deactivatedSelections) {
             selection->setVisible(true);

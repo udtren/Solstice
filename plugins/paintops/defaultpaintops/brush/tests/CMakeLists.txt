@@ -83,3 +83,9 @@ kis_add_test(KisAbrPresetTest.cpp
     TEST_NAME KisAbrPresetTest
     LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
     )
+
+# Solstice: brush strokes on a vector layer (docs/agent/vector-brush-strokes.md)
+kis_add_test(KisVectorBrushStrokeTest.cpp
+    TEST_NAME KisVectorBrushStrokeTest
+    LINK_LIBRARIES kritadefaultpaintops_static kritalibpaintop kritaui kritatestsdk
+    )

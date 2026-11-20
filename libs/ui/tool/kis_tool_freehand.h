@@ -24,7 +24,7 @@ class KoCanvasBase;
 
 class KisPaintingInformationBuilder;
 class KisToolFreehandHelper;
-
+class KisBrushStrokeShapeEraser;
 
 class KRITAUI_EXPORT KisToolFreehand : public KisToolPaint
 {
@@ -126,9 +126,25 @@ protected:
     bool m_only_one_assistant {true};
     bool m_eraser_snapping {false};
 
+    /// Solstice: the tool's strokes on a vector layer become brush stroke
+    /// shapes (docs/agent/vector-brush-strokes.md); off unless the tool
+    /// turns it on
+    void setPaintsOnVectorLayers(bool value)
+    {
+        m_paintsOnVectorLayers = value;
+    }
+
 private:
     KisPaintingInformationBuilder *m_infoBuilder {nullptr};
     KisToolFreehandHelper *m_helper {nullptr};
+    bool m_paintsOnVectorLayers{false};
+    /// Solstice: the vector eraser of the drag in progress on a vector
+    /// layer (the tool in eraser mode), and where it last erased, in image
+    /// pixels
+    QScopedPointer<KisBrushStrokeShapeEraser> m_vectorEraser;
+    QPointF m_vectorEraserLastPoint;
+    qreal vectorEraserRadius();
+    void finishVectorEraser();
 
     QPointF m_initialGestureDocPoint;
     QPointF m_lastDocumentPoint;

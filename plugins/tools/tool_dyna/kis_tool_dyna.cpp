@@ -39,6 +39,7 @@ KisToolDyna::KisToolDyna(KoCanvasBase * canvas)
 {
     setObjectName("tool_dyna");
     setIsOpacityPresetMode(true);
+    setPaintsOnVectorLayers(true);
     initDyna();
 }
 

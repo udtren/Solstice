@@ -22,6 +22,7 @@
 #include "KisMaskingBrushRenderer.h"
 #include "KisRunnableStrokeJobData.h"
 #include "KisAnimAutoKey.h"
+#include "kis_shape_layer.h"
 
 #include "gpu/KisGpuMaskingWorker.h"
 #include "kis_default_bounds_base.h"
@@ -369,6 +370,11 @@ void KisPainterBasedStrokeStrategy::initStrokeCallback()
     KritaUtils::addJobSequential(jobs, [this] () {
         QVector<KUndo2Command *> commands;
         for (KisNodeSP node : strokeNodes()) {
+            // Solstice: a vector layer has no paint device (its brush
+            // strokes become shapes)
+            if (!node->paintDevice()) {
+                continue;
+            }
             KUndo2Command *autoKeyframeCommand =
                 KisAutoKey::tryAutoCreateDuplicatedFrame(node->paintDevice(),
                                                          KisAutoKey::AllowBlankMode |
@@ -397,9 +403,20 @@ void KisPainterBasedStrokeStrategy::initStrokeCallback()
         // Solstice: the dabs of a through-layer erase are painted once, on a
         // temporary target that all its layers share
         const bool throughLayers = !m_resources->throughLayerTargets().isEmpty();
-        m_throughLayerBuildUp = throughLayers && !m_resources->needsIndirectPainting();
+        // Solstice: a brush stroke on a vector layer is painted on a
+        // temporary target over the layer's shapes, whatever the preset's
+        // painting mode, and becomes a shape when it ends
+        // (docs/agent/vector-brush-strokes.md). Its picture is the layer's
+        // own; a selection does not clip the shape.
+        const bool vectorLayer = !throughLayers && dynamic_cast<KisShapeLayer *>(node.data());
+        if (vectorLayer) {
+            paintDevice = node->original();
+            targetDevice = paintDevice;
+            selection = nullptr;
+        }
+        m_throughLayerBuildUp = (throughLayers || vectorLayer) && !m_resources->needsIndirectPainting();
         bool hasIndirectPainting =
-            supportsIndirectPainting() && (throughLayers || m_resources->needsIndirectPainting());
+            supportsIndirectPainting() && (throughLayers || vectorLayer || m_resources->needsIndirectPainting());
         const QString indirectCompositeOp =
             m_throughLayerBuildUp ? QString(COMPOSITE_OVER) : m_resources->indirectPaintingCompositeOp();
         // KisOpacityOption moves the opacity sensors to the flow when it sees
@@ -422,6 +439,9 @@ void KisPainterBasedStrokeStrategy::initStrokeCallback()
                             attachThroughLayerTarget(target, targetDevice);
                         }
                     }
+                } else if (m_throughLayerBuildUp) {
+                    // a Build-up stroke on a vector layer
+                    attachWhenPaintOpsExist = true;
                 } else {
                     indirect->setTemporaryTarget(targetDevice);
 
@@ -441,8 +461,9 @@ void KisPainterBasedStrokeStrategy::initStrokeCallback()
         std::unique_ptr<KisInterstrokeDataFactory> interstrokeDataFactory(
             KisPaintOpRegistry::instance()->createInterstrokeDataFactory(m_resources->currentPaintOpPreset()));
 
-        // Solstice: a smudge preset's interstroke data belongs to one layer
-        if (throughLayers) {
+        // Solstice: a smudge preset's interstroke data belongs to one layer;
+        // a vector layer's stroke has no pixels below it to keep data for
+        if (throughLayers || vectorLayer) {
             interstrokeDataFactory.reset();
         }
 
@@ -498,10 +519,17 @@ void KisPainterBasedStrokeStrategy::initStrokeCallback()
             initPainters(targetDevice, nullptr, selection, hasIndirectPainting, indirectCompositeOp);
         }
 
-        if (attachWhenPaintOpsExist) {
+        if (attachWhenPaintOpsExist && throughLayers) {
             for (KisNodeSP target : strokeNodes()) {
                 attachThroughLayerTarget(target, targetDevice);
             }
+        } else if (attachWhenPaintOpsExist) {
+            KisIndirectPaintingSupport *indirect = dynamic_cast<KisIndirectPaintingSupport *>(node.data());
+            indirect->setTemporaryTarget(targetDevice);
+            indirect->setTemporaryCompositeOp(m_resources->compositeOpId());
+            indirect->setTemporaryOpacity(OPACITY_OPAQUE_F);
+            indirect->setTemporarySelection(nullptr);
+            indirect->setTemporaryChannelFlags(QBitArray());
         }
 
         m_targetDevice = targetDevice;
@@ -593,7 +621,31 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
         wrapper->addCommand(m_additionalUndoCommand.release());
     }
 
-    if (indirect && indirect->hasTemporaryTarget()) {
+    if (KisShapeLayer *shapeLayer = dynamic_cast<KisShapeLayer *>(node.data())) {
+        // Solstice: the stroke on a vector layer leaves no pixels of its
+        // own. Its undo command adds the stroke's shape
+        // (FreehandStrokeStrategy); without one the preview just goes away.
+        const bool hasShape = parentCommand->childCount() > 0;
+        m_transaction->end();
+        m_transaction.reset();
+        deletePainters();
+
+        QVector<KisRunnableStrokeJobData *> jobs;
+        // after the layer's updates, which read the preview
+        KritaUtils::addJobBarrier(jobs, [shapeLayer, hasShape, parentCommand, undoAdapter]() {
+            if (hasShape) {
+                parentCommand->redo();
+                if (undoAdapter) {
+                    undoAdapter->addCommand(parentCommand);
+                }
+            }
+            shapeLayer->finishBrushStrokePreview(hasShape);
+        });
+        Q_FOREACH (KisRunnableStrokeJobData *job, jobs) {
+            job->setCancellable(false);
+        }
+        runnableJobsInterface()->addRunnableJobs(jobs);
+    } else if (indirect && indirect->hasTemporaryTarget()) {
         KUndo2MagicString transactionText = m_transaction->text();
         m_transaction->end();
         m_transaction.reset();
@@ -633,8 +685,7 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
         }
 
         runnableJobsInterface()->addRunnableJobs(jobs);
-    }
-    else {
+    } else {
         KisCommandUtils::CompositeCommand *wrapper = new KisCommandUtils::CompositeCommand(parentCommand.data());
         wrapper->addCommand(m_transaction->endAndTake());
         if (m_closingUndoCommand) {
@@ -648,9 +699,7 @@ void KisPainterBasedStrokeStrategy::finishStrokeCallback()
             parentCommand->redo();
             undoAdapter->addCommand(parentCommand);
         }
-
     }
-
 }
 
 void KisPainterBasedStrokeStrategy::setAdditionalUndoCommand(KUndo2Command *command, KUndo2Command *closingCommand)

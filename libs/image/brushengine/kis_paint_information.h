@@ -256,6 +256,16 @@ public:
             qreal tiltDirectionOffset = 0.0);
 
     /**
+     * How dense the line of a recorded brush stroke is at this place
+     * (Solstice): 1 as drawn, less where it was edited to be lighter.
+     * Mixed like the other values. No paint op reads it:
+     * KisBrushStrokeShape multiplies the stroke's finished picture by it
+     * along the path.
+     */
+    qreal densityFactor() const;
+    void setDensityFactor(qreal factor);
+
+    /**
      * Returns the canvas rotation if that has been given to the kispaintinformation.
      */
     qreal canvasRotation() const;

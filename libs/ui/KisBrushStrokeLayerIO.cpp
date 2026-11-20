@@ -41,7 +41,12 @@ namespace
 const quint32 magic = 0x5342534c; // "SBSL"
 // 2: the start of each copy's dab spacing (KisRecordedBrushStroke::starts)
 // 3: the canvas mirror (KisRecordedBrushStroke::mirrorHorizontal and others)
-const quint32 version = 3;
+// 4: the density factor of every paint information
+//    (KisPaintInformation::densityFactor()). Written only for strokes that
+//    have one below 1, so that files without it stay readable by
+//    applications that know version 3.
+const quint32 version = 4;
+const quint32 versionWithoutDensity = 3;
 
 /// more copies of a stroke than any tool paints: damaged data
 const qint32 maximumStrokeInfoCount = 4096;
@@ -84,14 +89,17 @@ KoColor readColor(QDataStream &stream)
     return KoColor(reinterpret_cast<const quint8 *>(data.constData()), cs);
 }
 
-void writePaintInformation(QDataStream &stream, const KisPaintInformation &pi)
+void writePaintInformation(QDataStream &stream, const KisPaintInformation &pi, quint32 fileVersion)
 {
     stream << pi.pos() << pi.pressure() << pi.xTilt() << pi.yTilt() << pi.rotation() << pi.tangentialPressure()
            << pi.perspective() << pi.currentTime() << pi.drawingSpeed() << pi.canvasRotation()
            << pi.tiltDirectionOffset() << pi.canvasMirroredH() << pi.canvasMirroredV();
+    if (fileVersion >= 4) {
+        stream << pi.densityFactor();
+    }
 }
 
-KisPaintInformation readPaintInformation(QDataStream &stream)
+KisPaintInformation readPaintInformation(QDataStream &stream, quint32 fileVersion)
 {
     QPointF pos;
     qreal pressure, xTilt, yTilt, rotation, tangentialPressure, perspective, time, speed, canvasRotation,
@@ -105,7 +113,25 @@ KisPaintInformation readPaintInformation(QDataStream &stream)
     pi.setTiltDirectionOffset(tiltDirectionOffset);
     pi.setCanvasMirroredH(mirroredH);
     pi.setCanvasMirroredV(mirroredV);
+    if (fileVersion >= 4) {
+        qreal densityFactor = 1.0;
+        stream >> densityFactor;
+        // a damaged value paints as drawn
+        pi.setDensityFactor(std::isfinite(densityFactor) ? densityFactor : 1.0);
+    }
     return pi;
+}
+
+bool hasDensity(const QVector<KisRecordedBrushStrokeSP> &strokes)
+{
+    for (const KisRecordedBrushStrokeSP &stroke : strokes) {
+        for (const KisRecordedBrushStroke::Job &job : stroke->jobs) {
+            if (job.pi1.densityFactor() < 1.0 || job.pi2.densityFactor() < 1.0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 /// The preset's XML as KisPaintOpPreset::toXML() writes it, without the
@@ -299,7 +325,8 @@ bool KisBrushStrokeLayer::saveStrokes(const QVector<KisRecordedBrushStrokeSP> &s
 
     QDataStream stream(device);
     prepare(stream);
-    stream << magic << version;
+    const quint32 fileVersion = hasDensity(strokes) ? version : versionWithoutDensity;
+    stream << magic << fileVersion;
 
     stream << quint32(presets.size());
     for (const QString &xml : presets) {
@@ -328,8 +355,8 @@ bool KisBrushStrokeLayer::saveStrokes(const QVector<KisRecordedBrushStrokeSP> &s
         stream << quint32(stroke.jobs.size());
         for (const KisRecordedBrushStroke::Job &job : stroke.jobs) {
             stream << qint32(job.type) << qint32(job.strokeInfoId);
-            writePaintInformation(stream, job.pi1);
-            writePaintInformation(stream, job.pi2);
+            writePaintInformation(stream, job.pi1, fileVersion);
+            writePaintInformation(stream, job.pi2, fileVersion);
             stream << job.control1 << job.control2;
         }
     }
@@ -431,8 +458,8 @@ bool KisBrushStrokeLayer::loadStrokes(QIODevice *device, QVector<KisRecordedBrus
             }
             job.type = type;
             job.strokeInfoId = strokeInfoId;
-            job.pi1 = readPaintInformation(stream);
-            job.pi2 = readPaintInformation(stream);
+            job.pi1 = readPaintInformation(stream, fileVersion);
+            job.pi2 = readPaintInformation(stream, fileVersion);
             stream >> job.control1 >> job.control2;
             if (!validPosition(job.pi1.pos()) || !validPosition(job.pi2.pos()) || !validPosition(job.control1)
                 || !validPosition(job.control2)) {

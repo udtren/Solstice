@@ -1,0 +1,916 @@
+{
+  "format": "solstice-test-control-scenario",
+  "version": 1,
+  "name": "vector-brush-stroke",
+  "description": "The Freehand Brush draws on a vector layer: each stroke becomes a shape, undo and redo remove and return it, a PNG export leaves the layer unchanged, the eraser cuts the stroke where it crosses it (one undo step), drawing continues afterwards, and the Whole Line eraser removes every line it touches.",
+  "covers": "Brush strokes on a vector layer through the input manager (docs/agent/vector-brush-strokes.md)",
+  "steps": [
+    {
+      "call": "document_new",
+      "args": {
+        "width": 800,
+        "height": 600
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "add_new_shape_layer"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "save": {
+        "undoBefore": "undo.count"
+      },
+      "expect": {
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "tool_activate",
+      "args": {
+        "id": "KritaShape/KisToolBrush"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "preset": "b) Basic-5 Size Opacity",
+        "size": 20,
+        "opacity": 1,
+        "eraser": false,
+        "color": "#000000"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "empty": "sha256"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 396,
+        "y": 296,
+        "width": 8,
+        "height": 8
+      },
+      "save": {
+        "emptyCrossing": "sha256"
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 330.0,
+            "y": 250.0
+          },
+          {
+            "x": 335.83,
+            "y": 254.17
+          },
+          {
+            "x": 341.67,
+            "y": 258.33
+          },
+          {
+            "x": 347.5,
+            "y": 262.5
+          },
+          {
+            "x": 353.33,
+            "y": 266.67
+          },
+          {
+            "x": 359.17,
+            "y": 270.83
+          },
+          {
+            "x": 365.0,
+            "y": 275.0
+          },
+          {
+            "x": 370.83,
+            "y": 279.17
+          },
+          {
+            "x": 376.67,
+            "y": 283.33
+          },
+          {
+            "x": 382.5,
+            "y": 287.5
+          },
+          {
+            "x": 388.33,
+            "y": 291.67
+          },
+          {
+            "x": 394.17,
+            "y": 295.83
+          },
+          {
+            "x": 400.0,
+            "y": 300.0
+          },
+          {
+            "x": 405.83,
+            "y": 304.17
+          },
+          {
+            "x": 411.67,
+            "y": 308.33
+          },
+          {
+            "x": 417.5,
+            "y": 312.5
+          },
+          {
+            "x": 423.33,
+            "y": 316.67
+          },
+          {
+            "x": 429.17,
+            "y": 320.83
+          },
+          {
+            "x": 435.0,
+            "y": 325.0
+          },
+          {
+            "x": 440.83,
+            "y": 329.17
+          },
+          {
+            "x": 446.67,
+            "y": 333.33
+          },
+          {
+            "x": 452.5,
+            "y": 337.5
+          },
+          {
+            "x": 458.33,
+            "y": 341.67
+          },
+          {
+            "x": 464.17,
+            "y": 345.83
+          },
+          {
+            "x": 470.0,
+            "y": 350.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Freehand Brush Stroke",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "one": "sha256"
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$empty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 396,
+        "y": 296,
+        "width": 8,
+        "height": 8
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$emptyCrossing"
+        }
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 330.0,
+            "y": 350.0
+          },
+          {
+            "x": 335.83,
+            "y": 345.83
+          },
+          {
+            "x": 341.67,
+            "y": 341.67
+          },
+          {
+            "x": 347.5,
+            "y": 337.5
+          },
+          {
+            "x": 353.33,
+            "y": 333.33
+          },
+          {
+            "x": 359.17,
+            "y": 329.17
+          },
+          {
+            "x": 365.0,
+            "y": 325.0
+          },
+          {
+            "x": 370.83,
+            "y": 320.83
+          },
+          {
+            "x": 376.67,
+            "y": 316.67
+          },
+          {
+            "x": 382.5,
+            "y": 312.5
+          },
+          {
+            "x": 388.33,
+            "y": 308.33
+          },
+          {
+            "x": 394.17,
+            "y": 304.17
+          },
+          {
+            "x": 400.0,
+            "y": 300.0
+          },
+          {
+            "x": 405.83,
+            "y": 295.83
+          },
+          {
+            "x": 411.67,
+            "y": 291.67
+          },
+          {
+            "x": 417.5,
+            "y": 287.5
+          },
+          {
+            "x": 423.33,
+            "y": 283.33
+          },
+          {
+            "x": 429.17,
+            "y": 279.17
+          },
+          {
+            "x": 435.0,
+            "y": 275.0
+          },
+          {
+            "x": 440.83,
+            "y": 270.83
+          },
+          {
+            "x": 446.67,
+            "y": 266.67
+          },
+          {
+            "x": 452.5,
+            "y": 262.5
+          },
+          {
+            "x": 458.33,
+            "y": 258.33
+          },
+          {
+            "x": 464.17,
+            "y": 254.17
+          },
+          {
+            "x": 470.0,
+            "y": 250.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "two": "sha256"
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$one"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$one"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$empty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_redo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$one"
+        }
+      }
+    },
+    {
+      "call": "document_export_png",
+      "args": {
+        "path": "vector-brush-stroke.png"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$one"
+        }
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "eraser": true,
+        "size": 20
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 330.0,
+            "y": 350.0
+          },
+          {
+            "x": 335.83,
+            "y": 345.83
+          },
+          {
+            "x": 341.67,
+            "y": 341.67
+          },
+          {
+            "x": 347.5,
+            "y": 337.5
+          },
+          {
+            "x": 353.33,
+            "y": 333.33
+          },
+          {
+            "x": 359.17,
+            "y": 329.17
+          },
+          {
+            "x": 365.0,
+            "y": 325.0
+          },
+          {
+            "x": 370.83,
+            "y": 320.83
+          },
+          {
+            "x": 376.67,
+            "y": 316.67
+          },
+          {
+            "x": 382.5,
+            "y": 312.5
+          },
+          {
+            "x": 388.33,
+            "y": 308.33
+          },
+          {
+            "x": 394.17,
+            "y": 304.17
+          },
+          {
+            "x": 400.0,
+            "y": 300.0
+          },
+          {
+            "x": 405.83,
+            "y": 295.83
+          },
+          {
+            "x": 411.67,
+            "y": 291.67
+          },
+          {
+            "x": 417.5,
+            "y": 287.5
+          },
+          {
+            "x": 423.33,
+            "y": 283.33
+          },
+          {
+            "x": 429.17,
+            "y": 279.17
+          },
+          {
+            "x": 435.0,
+            "y": 275.0
+          },
+          {
+            "x": 440.83,
+            "y": 270.83
+          },
+          {
+            "x": 446.67,
+            "y": 266.67
+          },
+          {
+            "x": 452.5,
+            "y": 262.5
+          },
+          {
+            "x": 458.33,
+            "y": 258.33
+          },
+          {
+            "x": 464.17,
+            "y": 254.17
+          },
+          {
+            "x": 470.0,
+            "y": 250.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Erase Brush Strokes",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "erased": "sha256"
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$one"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 396,
+        "y": 296,
+        "width": 8,
+        "height": 8
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$emptyCrossing"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$one"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_redo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$erased"
+        }
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "eraser": false
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 330.0,
+            "y": 350.0
+          },
+          {
+            "x": 335.83,
+            "y": 345.83
+          },
+          {
+            "x": 341.67,
+            "y": 341.67
+          },
+          {
+            "x": 347.5,
+            "y": 337.5
+          },
+          {
+            "x": 353.33,
+            "y": 333.33
+          },
+          {
+            "x": 359.17,
+            "y": 329.17
+          },
+          {
+            "x": 365.0,
+            "y": 325.0
+          },
+          {
+            "x": 370.83,
+            "y": 320.83
+          },
+          {
+            "x": 376.67,
+            "y": 316.67
+          },
+          {
+            "x": 382.5,
+            "y": 312.5
+          },
+          {
+            "x": 388.33,
+            "y": 308.33
+          },
+          {
+            "x": 394.17,
+            "y": 304.17
+          },
+          {
+            "x": 400.0,
+            "y": 300.0
+          },
+          {
+            "x": 405.83,
+            "y": 295.83
+          },
+          {
+            "x": 411.67,
+            "y": 291.67
+          },
+          {
+            "x": 417.5,
+            "y": 287.5
+          },
+          {
+            "x": 423.33,
+            "y": 283.33
+          },
+          {
+            "x": 429.17,
+            "y": 279.17
+          },
+          {
+            "x": 435.0,
+            "y": 275.0
+          },
+          {
+            "x": 440.83,
+            "y": 270.83
+          },
+          {
+            "x": 446.67,
+            "y": 266.67
+          },
+          {
+            "x": 452.5,
+            "y": 262.5
+          },
+          {
+            "x": 458.33,
+            "y": 258.33
+          },
+          {
+            "x": 464.17,
+            "y": 254.17
+          },
+          {
+            "x": 470.0,
+            "y": 250.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Freehand Brush Stroke"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbVectorEraserMode",
+        "value": "Whole Line"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "eraser": true
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 330.0,
+            "y": 250.0
+          },
+          {
+            "x": 335.83,
+            "y": 254.17
+          },
+          {
+            "x": 341.67,
+            "y": 258.33
+          },
+          {
+            "x": 347.5,
+            "y": 262.5
+          },
+          {
+            "x": 353.33,
+            "y": 266.67
+          },
+          {
+            "x": 359.17,
+            "y": 270.83
+          },
+          {
+            "x": 365.0,
+            "y": 275.0
+          },
+          {
+            "x": 370.83,
+            "y": 279.17
+          },
+          {
+            "x": 376.67,
+            "y": 283.33
+          },
+          {
+            "x": 382.5,
+            "y": 287.5
+          },
+          {
+            "x": 388.33,
+            "y": 291.67
+          },
+          {
+            "x": 394.17,
+            "y": 295.83
+          },
+          {
+            "x": 400.0,
+            "y": 300.0
+          },
+          {
+            "x": 405.83,
+            "y": 304.17
+          },
+          {
+            "x": 411.67,
+            "y": 308.33
+          },
+          {
+            "x": 417.5,
+            "y": 312.5
+          },
+          {
+            "x": 423.33,
+            "y": 316.67
+          },
+          {
+            "x": 429.17,
+            "y": 320.83
+          },
+          {
+            "x": 435.0,
+            "y": 325.0
+          },
+          {
+            "x": 440.83,
+            "y": 329.17
+          },
+          {
+            "x": 446.67,
+            "y": 333.33
+          },
+          {
+            "x": 452.5,
+            "y": 337.5
+          },
+          {
+            "x": 458.33,
+            "y": 341.67
+          },
+          {
+            "x": 464.17,
+            "y": 345.83
+          },
+          {
+            "x": 470.0,
+            "y": 350.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Erase Brush Strokes"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$empty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$empty"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbVectorEraserMode",
+        "value": "Touched Part"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "eraser": false
+      }
+    },
+    {
+      "call": "document_close"
+    }
+  ]
+}

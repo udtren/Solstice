@@ -79,6 +79,9 @@ set(kritaui_LIB_SRCS
     flake/kis_node_shape.cpp
     flake/kis_shape_controller.cpp
     flake/kis_shape_layer.cc
+    flake/KisBrushStrokeShape.cpp
+    flake/KisBrushStrokeShapeEraser.cpp
+    flake/KisBrushStrokePathEdit.cpp
     flake/kis_shape_layer_canvas.cpp
     flake/kis_shape_selection.cpp
     flake/kis_shape_selection_canvas.cpp

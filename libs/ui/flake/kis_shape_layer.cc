@@ -67,6 +67,65 @@
 
 #include "kis_layer_properties_icons.h"
 
+#include "KisBrushStrokeShape.h"
+#include <KoShapeCreateCommand.h>
+#include <QBuffer>
+#ifdef HAVE_KRITA_GPU_ENGINE
+#include "gpu/KisGpuMergeBatch.h"
+#include "gpu/KisGpuTileAccess.h"
+#endif
+
+namespace
+{
+/// the brush strokes of the layer's brush stroke shapes, next to content.svg
+const QString BrushStrokesFile = QStringLiteral("brushstrokes");
+
+/// Runs a shape command in the GUI thread, where shapes are changed, from
+/// the thread of a stroke; owns the shape while it is not in a layer
+class GuiThreadShapeCommand : public KUndo2Command
+{
+public:
+    GuiThreadShapeCommand(KUndo2Command *command, KoShape *shape)
+        : m_command(command)
+        , m_shape(shape)
+        , m_redo([this]() {
+            m_command->redo();
+        })
+        , m_undo([this]() {
+            m_command->undo();
+        })
+    {
+    }
+
+    ~GuiThreadShapeCommand() override
+    {
+        m_command.reset();
+        // once it has run, the shape command owns the shape while the shape
+        // is not in the layer
+        if (!m_hasRun) {
+            delete m_shape;
+        }
+    }
+
+    void redo() override
+    {
+        m_hasRun = true;
+        m_redo.start();
+    }
+
+    void undo() override
+    {
+        m_undo.start();
+    }
+
+private:
+    QScopedPointer<KUndo2Command> m_command;
+    KoShape *m_shape;
+    bool m_hasRun = false;
+    KisSafeBlockingQueueConnectionProxy<void> m_redo;
+    KisSafeBlockingQueueConnectionProxy<void> m_undo;
+};
+} // namespace
 
 #include <SimpleShapeContainerModel.h>
 class ShapeLayerContainerModel : public SimpleShapeContainerModel
@@ -112,6 +171,20 @@ public:
             return true;
         }
         return false;
+    }
+
+    /**
+     * Solstice: a copied layer starts with its source's resolution. With
+     * the default of 72 ppi it took the unchanged resolution of its image
+     * for a change, threw the picture it had just copied away and asked
+     * for a repaint; saving and autosave copy the document and expect a
+     * copy that needs no update (the assert in
+     * KisDocument::initiateSavingInBackground()).
+     */
+    void copyResolutionFrom(const ShapeLayerContainerModel &rhs)
+    {
+        m_xRes = rhs.m_xRes;
+        m_yRes = rhs.m_yRes;
     }
 
 private:
@@ -173,6 +246,13 @@ KisShapeLayer::KisShapeLayer(const KisShapeLayer& _rhs, KoShapeControllerBase* c
         , KoShapeLayer(new ShapeLayerContainerModel(this)) //no _rhs here otherwise both layer have the same KoShapeContainerModel
         , m_d(new Private())
 {
+    // Solstice: before the resolution is compared with the image's
+    const ShapeLayerContainerModel *sourceModel = dynamic_cast<const ShapeLayerContainerModel *>(_rhs.model());
+    ShapeLayerContainerModel *thisModel = dynamic_cast<ShapeLayerContainerModel *>(this->model());
+    if (sourceModel && thisModel) {
+        thisModel->copyResolutionFrom(*sourceModel);
+    }
+
     initShapeLayerImpl(controller, canvasFactory());
     m_d->isAntialiased = _rhs.m_d->isAntialiased;
 
@@ -267,6 +347,7 @@ void KisShapeLayer::initShapeLayerImpl(KoShapeControllerBase* controller,
 {
     setSupportsLodMoves(false);
     setShapeId(KIS_SHAPE_LAYER_ID);
+    KisBrushStrokeShape::registerFactory();
 
     KIS_SAFE_ASSERT_RECOVER_RETURN(canvas);
 
@@ -651,7 +732,27 @@ bool KisShapeLayer::saveLayer(KoStore * store) const
     const QSizeF sizeInPx = image()->bounds().size();
     const QSizeF sizeInPt(sizeInPx.width() / image()->xRes(), sizeInPx.height() / image()->yRes());
 
-    return saveShapesToStore(store, this->shapes(), sizeInPt);
+    // Solstice: the brush stroke shapes keep their strokes in one file
+    // beside the SVG, which holds each brush once
+    KisBrushStrokeShape::SavingScope brushStrokes;
+
+    if (!saveShapesToStore(store, this->shapes(), sizeInPt)) {
+        return false;
+    }
+    if (brushStrokes.strokes().isEmpty()) {
+        return true;
+    }
+
+    QBuffer buffer;
+    buffer.open(QIODevice::WriteOnly);
+    if (!KisBrushStrokeLayer::saveStrokes(brushStrokes.strokes(), &buffer)) {
+        return false;
+    }
+    if (!store->open(BrushStrokesFile)) {
+        return false;
+    }
+    const bool written = store->write(buffer.data()) == buffer.data().size();
+    return store->close() && written;
 }
 
 bool KisShapeLayer::loadSvg(QIODevice *device, const QString &baseXmlDir, QStringList *warnings)
@@ -684,6 +785,26 @@ bool KisShapeLayer::loadLayer(KoStore* store, QStringList *warnings)
         warnKrita << "No store backend";
         return false;
     }
+
+    // Solstice: the strokes of the brush stroke shapes; a shape whose stroke
+    // is missing shows its saved picture
+    QVector<KisRecordedBrushStrokeSP> strokes;
+    if (store->hasFile(BrushStrokesFile) && store->open(BrushStrokesFile)) {
+        QByteArray data = store->read(store->size());
+        store->close();
+        QBuffer buffer(&data);
+        buffer.open(QIODevice::ReadOnly);
+        if (!KisBrushStrokeLayer::loadStrokes(&buffer, &strokes)) {
+            strokes.clear();
+            if (warnings) {
+                *warnings << i18n(
+                    "The brush strokes of vector layer \"%1\" could not be read. "
+                    "They are shown as pictures and are not drawn again when resized.",
+                    KisExternalLayer::name());
+            }
+        }
+    }
+    KisBrushStrokeShape::LoadingScope brushStrokes(strokes);
 
     if (store->open("content.svg")) {
         KoStoreDevice storeDev(store);
@@ -810,6 +931,63 @@ void KisShapeLayer::slotImageResolutionChanged()
     }
 }
 
+bool KisShapeLayer::needProjection() const
+{
+    return hasTemporaryTarget();
+}
+
+void KisShapeLayer::copyOriginalToProjection(const KisPaintDeviceSP original,
+                                             KisPaintDeviceSP projection,
+                                             const QRect &rect) const
+{
+    KisIndirectPaintingSupport::ReadLocker l(this);
+
+    KisExternalLayer::copyOriginalToProjection(original, projection, rect);
+
+    if (hasTemporaryTarget()) {
+        KisPainter gc(projection);
+        setupTemporaryPainter(&gc);
+#ifdef HAVE_KRITA_GPU_ENGINE
+        if (KisGpuMergeBatch::isEnabled()) {
+            KisGpuTileAccess::syncToCpu(temporaryTarget(), rect);
+            KisGpuTileAccess::syncToCpu(projection, rect);
+        }
+#endif
+        gc.bitBlt(rect.topLeft(), temporaryTarget(), rect);
+    }
+}
+
+KUndo2Command *KisShapeLayer::createAddShapeCommand(KoShape *shape)
+{
+    return new GuiThreadShapeCommand(new KoShapeCreateCommand(m_d->controller, shape, this), shape);
+}
+
+void KisShapeLayer::setBrushStrokePreview(bool enabled)
+{
+    m_d->canvas->setBrushStrokePreview(enabled);
+}
+
+void KisShapeLayer::finishBrushStrokePreview(bool keep)
+{
+    QRect rect;
+    {
+        KisIndirectPaintingSupport::WriteLocker l(this);
+        KisPaintDeviceSP target = temporaryTarget();
+        if (!target) {
+            return;
+        }
+        rect = target->extent();
+        if (keep) {
+            // the same pixels the stroke's shape paints once the layer
+            // repaints itself
+            KisPainter gc(m_d->paintDevice);
+            setupTemporaryPainter(&gc);
+            gc.bitBlt(rect.topLeft(), target, rect);
+        }
+        releaseResources();
+    }
+    setDirty(rect);
+}
 
 bool KisShapeLayer::antialiased() const
 {

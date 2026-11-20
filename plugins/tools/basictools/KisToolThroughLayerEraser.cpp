@@ -30,6 +30,7 @@ KisToolThroughLayerEraser::KisToolThroughLayerEraser(KoCanvasBase *canvas)
     : KisToolBrush(canvas)
 {
     setObjectName("tool_through_layer_eraser");
+    setPaintsOnVectorLayers(false);
 
     m_helper = new KisToolFreehandHelper(paintingInformationBuilder(),
                                          canvas->resourceManager(),

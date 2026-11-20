@@ -38,6 +38,7 @@
 #include "KisViewManager.h"
 #include <brushengine/KisMinimumDabSize.h>
 #include <kis_signals_blocker.h>
+#include <KisBrushStrokeShapeEraser.h>
 
 #define MAXIMUM_SMOOTHNESS_DISTANCE 1000.0 // 0..1000.0 == weight in gui
 #define MAXIMUM_MAGNETISM 1000
@@ -61,6 +62,8 @@ KisToolBrush::KisToolBrush(KoCanvasBase * canvas)
 {
     setObjectName("tool_brush");
     setIsOpacityPresetMode(true);
+    // Solstice: also the Multibrush, which derives from this tool
+    setPaintsOnVectorLayers(true);
 
     connect(this, SIGNAL(smoothingTypeChanged()), this, SLOT(resetCursorStyle()));
 
@@ -82,6 +85,10 @@ void KisToolBrush::activate(const QSet<KoShape*> &shapes)
 
     m_configGroup = KSharedConfig::openConfig()->group(toolId());
     optionWidgets(); // Ensure m_chkAssistant is initialized.
+    // Solstice: another brush tool may have changed the shared setting
+    if (m_cmbVectorEraserMode) {
+        m_cmbVectorEraserMode->setCurrentIndex(int(KisBrushStrokeShapeEraser::configuredMode()));
+    }
     QAction *toggleaction = action("toggle_assistant");
     connect(toggleaction, SIGNAL(triggered(bool)), m_chkAssistant, SLOT(toggle()), Qt::UniqueConnection);
 
@@ -567,6 +574,7 @@ QWidget * KisToolBrush::createOptionWidget()
 
     m_chkAssistant = new QCheckBox(optionsWidget);
     m_chkAssistant->setText(i18n("Snap to Assistants"));
+    m_chkAssistant->setObjectName("chkBrushSnapToAssistants");
 
     assistantWidget->setToolTip(i18n("You need to add Assistants before this tool will work."));
     connect(m_chkAssistant, SIGNAL(toggled(bool)), this, SLOT(setAssistant(bool)));
@@ -585,6 +593,7 @@ QWidget * KisToolBrush::createOptionWidget()
     QLabel* snapSingleLabel = new QLabel(i18n("Snap to Single Line"), optionsWidget);
 
     m_chkOnlyOneAssistant = new QCheckBox(optionsWidget);
+    m_chkOnlyOneAssistant->setObjectName("chkBrushSnapSingleAssistant");
     m_chkOnlyOneAssistant->setToolTip(i18nc("@info:tooltip","Make it only snap to a single assistant line, prevents snapping mess while using the infinite assistants."));
     m_chkOnlyOneAssistant->setCheckState(Qt::Checked); // turn on by default.
     connect(m_chkOnlyOneAssistant, SIGNAL(toggled(bool)), this, SLOT(setOnlyOneAssistantSnap(bool)));
@@ -624,6 +633,22 @@ QWidget * KisToolBrush::createOptionWidget()
         KisConfig(true).readEntry<bool>(KisMinimumDabSize::configKey(), KisMinimumDabSize::defaultEnabled()));
     connect(m_chkMinimumOnePixel, &QCheckBox::toggled, this, &KisToolBrush::slotSetMinimumOnePixel);
     addOptionWidgetOption(m_chkMinimumOnePixel);
+
+    // Solstice: how the eraser erases brush strokes on a vector layer
+    // (docs/agent/vector-brush-strokes.md); one setting for all brush tools
+    m_cmbVectorEraserMode = new QComboBox(optionsWidget);
+    m_cmbVectorEraserMode->setObjectName("cmbVectorEraserMode");
+    m_cmbVectorEraserMode->addItems(QStringList() << i18nc("@item:inlistbox Vector Eraser", "Touched Part")
+                                                  << i18nc("@item:inlistbox Vector Eraser", "Whole Line")
+                                                  << i18nc("@item:inlistbox Vector Eraser", "Up to Intersection"));
+    m_cmbVectorEraserMode->setToolTip(
+        i18n("What the eraser removes from brush strokes on a vector layer: the part of a line it touches, every "
+             "line it touches, or a touched line as far as the next line crossing it"));
+    m_cmbVectorEraserMode->setCurrentIndex(int(KisBrushStrokeShapeEraser::configuredMode()));
+    connect(m_cmbVectorEraserMode, QOverload<int>::of(&QComboBox::activated), this, [](int index) {
+        KisBrushStrokeShapeEraser::setConfiguredMode(KisBrushStrokeShapeEraser::Mode(qBound(0, index, 2)));
+    });
+    addOptionWidgetOption(m_cmbVectorEraserMode, new QLabel(i18n("Vector Eraser:"), optionsWidget));
 
     KisConfig cfg(true);
 

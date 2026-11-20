@@ -75,6 +75,7 @@ struct KisPaintInformation::Private {
         canvasMirroredH = rhs.canvasMirroredH;
         canvasMirroredV = rhs.canvasMirroredV;
         tiltDirectionOffset = rhs.tiltDirectionOffset;
+        densityFactor = rhs.densityFactor;
 
         if (rhs.drawingAngleOverride) {
             drawingAngleOverride = *rhs.drawingAngleOverride;
@@ -100,6 +101,7 @@ struct KisPaintInformation::Private {
     bool canvasMirroredH {false};
     bool canvasMirroredV {false};
     qreal tiltDirectionOffset {0};    // [0.0, 360.0) degrees
+    qreal densityFactor{1.0}; // Solstice: see KisPaintInformation::densityFactor()
 
     boost::optional<qreal> drawingAngleOverride;
     bool sanityIsRegistered = false;
@@ -271,6 +273,15 @@ KisPaintInformation::createHoveringModeInfo(const QPointF &pos,
     return info;
 }
 
+qreal KisPaintInformation::densityFactor() const
+{
+    return d->densityFactor;
+}
+
+void KisPaintInformation::setDensityFactor(qreal factor)
+{
+    d->densityFactor = qBound(0.0, factor, 1.0);
+}
 
 qreal KisPaintInformation::canvasRotation() const
 {
@@ -634,9 +645,11 @@ void KisPaintInformation::mixOtherImpl(const QPointF &p, qreal t, const KisPaint
         qreal perspective = (1 - t) * other.perspective() + t * this->perspective();
         qreal time = mixTime ? ((1 - t) * other.currentTime() + t * this->currentTime()) : this->currentTime();
         qreal speed = (1 - t) * other.drawingSpeed() + t * this->drawingSpeed();
+        const qreal densityFactor = (1 - t) * other.densityFactor() + t * this->densityFactor();
 
         KIS_ASSERT_RECOVER_NOOP(other.isHoveringMode() == this->isHoveringMode());
         *(this->d) = Private(p, pressure, xTilt, yTilt, rotation, tangentialPressure, perspective, time, speed, other.isHoveringMode());
+        this->d->densityFactor = densityFactor;
         this->d->canvasRotation = other.d->canvasRotation;
         this->d->canvasMirroredH = other.d->canvasMirroredH;
         this->d->canvasMirroredV = other.d->canvasMirroredV;

@@ -5,6 +5,10 @@ on it. The goal, as with Clip Studio Paint's vector layers, is to draw line
 art small and enlarge it later without blurring: enlarging the image draws
 the remembered strokes again at the new size with the same brush.
 
+To keep each stroke as an object that can be selected, moved and resized,
+draw on a vector layer instead:
+[Brush strokes on vector layers](vector-brush-strokes.md).
+
 ## Creating one
 
 In the Layers docker, open the add-layer menu (**+**) and choose **Brush

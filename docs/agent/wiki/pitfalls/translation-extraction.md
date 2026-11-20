@@ -74,3 +74,10 @@ real new and removed strings differ (755 new, 276 gone on 2026-10-16).
   file need entries; the template still lists every moved text with the
   `action` context, and the next Windows run turns them into fuzzy entries,
   so add them with the reused translation.
+
+## New files must be known to Git (2026-11-18)
+
+`update_translations.py` lists the sources with `git ls-files`. Strings in a
+new file that is still untracked are not extracted, without any message:
+the catalog simply lacks them. Run `git add -N <files>` (or commit) before
+the update, and check that a string of the new file is in `krita.po`.

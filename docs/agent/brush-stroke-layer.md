@@ -83,6 +83,11 @@ arrive. Ordinary paint layers retain their existing parallel behavior.
 `renderStrokes()` draws the ordered records through `FreehandStrokeStrategy`
 into a temporary native paint layer, flushes asynchronous dabs and waits for
 completion. It restores starting spacing, resources, mirror axes and seed.
+Called outside the GUI thread, it hands its temporary image to the GUI
+thread for destruction
+([pitfall](wiki/pitfalls/temporary-image-destroyed-off-gui-thread.md)).
+[Brush strokes on vector layers](vector-brush-strokes.md) record and replay
+through the same paths; keep both working when changing them.
 Replay must not depend on GUI-thread resource-database lookup from processing
 threads. Do not replace this path with a simplified point renderer.
 
@@ -224,9 +229,13 @@ record/attribute. Other image formats retain pixels only.
 
 The sidecar uses magic `0x5342534c` (SBSL), `QDataStream::Qt_5_15`,
 little-endian byte order and double-precision floating-point encoding.
-The writer emits version 3; existing versions 1, 2 and 3 remain readable.
+The writer emits version 3, or version 4 when a stroke has a density below
+1 (2026-11-18; only [brush strokes on vector layers](vector-brush-strokes.md)
+set one); versions 1 to 4 remain readable.
 Version 2 added per-copy starting dab state; version 3 added canvas mirror
-flags/axes. Version 1 has no starts; versions 1/2 default to no canvas mirror.
+flags/axes; version 4 added `KisPaintInformation::densityFactor()` after
+every paint information. Version 1 has no starts; versions 1/2 default to
+no canvas mirror; versions 1 to 3 have a density of 1.
 Earlier applications unable to read a newer record keep the saved pixels.
 
 Preset XML and a deduplicated resource table precede indexed stroke records.

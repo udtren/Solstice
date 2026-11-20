@@ -196,6 +196,9 @@ private:
     void initRecording(const QVector<KisFreehandStrokeInfo *> &strokeInfos);
     void recordJob(const Data &data);
     void endRecordedChange();
+    /// Solstice: the command that adds the finished stroke to its vector
+    /// layer as a shape; nullptr if it painted nothing or was not recorded
+    KUndo2Command *createVectorShapeCommand();
 
 public:
     void initStrokeCallback() override;

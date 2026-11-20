@@ -24,6 +24,9 @@
 #include <KoPointerEvent.h>
 #include <KoViewConverter.h>
 #include <KoCanvasController.h>
+#include <KoCompositeOpRegistry.h>
+#include "KisBrushStrokeShapeEraser.h"
+#include "kis_shape_layer.h"
 
 //pop up palette
 #include <kis_canvas_resource_provider.h>
@@ -170,7 +173,11 @@ void KisToolFreehand::activate(const QSet<KoShape*> &shapes)
 void KisToolFreehand::deactivate()
 {
     if (mode() == PAINT_MODE) {
-        endStroke();
+        if (m_vectorEraser) {
+            finishVectorEraser();
+        } else {
+            endStroke();
+        }
         setMode(KisTool::HOVER_MODE);
     }
     KisToolPaint::deactivate();
@@ -261,8 +268,27 @@ void KisToolFreehand::beginPrimaryAction(KoPointerEvent *event)
     requestUpdateOutline(event->point, event);
 
     NodePaintAbility paintability = nodePaintAbility();
+    // Solstice: the brush tools draw on a vector layer; each stroke becomes
+    // a shape (docs/agent/vector-brush-strokes.md)
+    const bool vectorStroke =
+        paintability == VECTOR && m_paintsOnVectorLayers && currentNode() && currentNode()->inherits("KisShapeLayer");
+    if (vectorStroke && nodeEditable()
+        && canvas()->resourceManager()->resource(KoCanvasResource::CurrentEffectiveCompositeOp).toString()
+            == COMPOSITE_ERASE) {
+        // the eraser cuts the paths of the strokes instead of painting
+        KisShapeLayerSP layer = dynamic_cast<KisShapeLayer *>(currentNode().data());
+        m_vectorEraser.reset(new KisBrushStrokeShapeEraser(layer, KisBrushStrokeShapeEraser::configuredMode()));
+        m_vectorEraserLastPoint = convertToPixelCoord(event);
+
+        setMode(KisTool::PAINT_MODE);
+        if (KisCanvas2 *canvas2 = dynamic_cast<KisCanvas2 *>(canvas())) {
+            canvas2->viewManager()->disableControls();
+        }
+        m_vectorEraser->erase(m_vectorEraserLastPoint, m_vectorEraserLastPoint, vectorEraserRadius());
+        return;
+    }
     // XXX: move this to KisTool and make it work properly for clone layers: for clone layers, the shape paint tools don't work either
-    if (!nodeEditable() || paintability != PAINT) {
+    if (!nodeEditable() || (paintability != PAINT && !vectorStroke)) {
         if (paintability == KisToolPaint::VECTOR || paintability == KisToolPaint::CLONE){
             KisCanvas2 * kiscanvas = static_cast<KisCanvas2*>(canvas());
             QString message = i18n("The brush tool cannot paint on this layer.  Please select a paint layer or mask.");
@@ -296,16 +322,51 @@ void KisToolFreehand::continuePrimaryAction(KoPointerEvent *event)
 
     requestUpdateOutline(event->point, event);
 
+    if (m_vectorEraser) {
+        const QPointF point = convertToPixelCoord(event);
+        m_vectorEraser->erase(m_vectorEraserLastPoint, point, vectorEraserRadius());
+        m_vectorEraserLastPoint = point;
+        return;
+    }
+
     /**
      * Actual painting
      */
     doStroke(event);
 }
 
+qreal KisToolFreehand::vectorEraserRadius()
+{
+    KisPaintOpPresetSP preset = currentPaintOpPreset();
+    return preset && preset->settings() ? qMax(0.5, preset->settings()->paintOpSize() * 0.5) : 0.5;
+}
+
+void KisToolFreehand::finishVectorEraser()
+{
+    if (!m_vectorEraser) {
+        return;
+    }
+    // already applied; the command only undoes and redoes it
+    KUndo2Command *command = m_vectorEraser->finish();
+    m_vectorEraser.reset();
+    if (command) {
+        canvas()->addCommand(command);
+    }
+}
+
 void KisToolFreehand::endPrimaryAction(KoPointerEvent *event)
 {
     Q_UNUSED(event);
     CHECK_MODE_SANITY_OR_RETURN(KisTool::PAINT_MODE);
+
+    if (m_vectorEraser) {
+        finishVectorEraser();
+        if (KisCanvas2 *canvas2 = dynamic_cast<KisCanvas2 *>(canvas())) {
+            canvas2->viewManager()->enableControls();
+        }
+        setMode(KisTool::HOVER_MODE);
+        return;
+    }
 
     endStroke();
 
