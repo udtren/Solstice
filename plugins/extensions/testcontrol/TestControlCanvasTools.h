@@ -14,6 +14,10 @@
 #include "TestControlMcpServer.h"
 #include "TestControlTiming.h"
 
+#include <kis_types.h>
+
+class QRect;
+
 /**
  * The MCP tools that act on the running application: documents, tools,
  * synthetic strokes, idle waits and state/pixel queries.
@@ -51,6 +55,17 @@ private:
     void queryPixels(const Arguments &arguments, const Reply &reply);
     void canvasFrames(const Arguments &arguments, const Reply &reply);
     void gpuFault(const Arguments &arguments, const Reply &reply);
+
+    /// The second halves of query_pixels and query_state, run once the image
+    /// is locked for reading (or, for the state, could not be locked).
+    static void replyWithPixels(KisImageSP image,
+                                const QRect &rect,
+                                const QString &source,
+                                const Arguments &arguments,
+                                qint64 lockWaitMs,
+                                const Reply &reply);
+    static void
+    replyWithState(KisImageSP image, bool includeLayerHash, bool locked, qint64 lockWaitMs, const Reply &reply);
 
     /// Options shared by the input tools.
     struct StrokeOptions {

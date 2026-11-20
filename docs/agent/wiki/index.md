@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-13
+updated: 2026-11-18
 ---
 
 # Agent wiki
@@ -159,6 +159,10 @@ Document ownership and lifecycle are defined in
   thumbnails, Overview and Histogram idle tasks wait until no stroke is open;
   Duplicate Layer's node juggler kept the new layer's thumbnail empty for
   about 4.5 s (now a provisional worker-thread thumbnail).
+- [An idle image turns busy by itself](pitfalls/idle-image-turns-busy.md):
+  idle tasks start strokes 50 to 300 ms after `KisImage::isIdle()` became
+  true, so a single `tryBarrierLock()` after an idle wait fails now and
+  then; retry it for a bounded time, never `barrierLock()` in a probe.
 - [Synthetic canvas input](pitfalls/synthetic-canvas-input.md): events
   reach the input manager only on its current canvas widget; a pen press
   eats the next mouse press and blocks mouse input until proximity leaves;
