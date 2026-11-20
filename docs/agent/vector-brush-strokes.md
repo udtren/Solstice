@@ -846,7 +846,12 @@ feature.
 tool. Rules: only functions the page names; "Yes" only for what a test or
 scenario in this document covers; differences go in the third column.
 When a function of this feature is added or changed, update its row; when
-the page is read again, change the date. The SVG row rests on
+the page is read again, change the date. The guide also says the
+functions were checked by hand with a pen tablet: the user's manual test
+of 2026-11-20 (the list under "Manual regression checks"), which
+replaced the earlier statement that no real pen had been used. The "Not
+verified: real pen" remarks in the verification notes below are dated
+records from before that test. The SVG row rests on
 `saveSvg()` and its test, not on an export run in the application.
 
 ## Known gaps
