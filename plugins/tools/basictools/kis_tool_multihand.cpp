@@ -421,7 +421,13 @@ void KisToolMultihand::initTransformations()
         }
     }
 
+    m_transformations = transformations;
     m_helper->setupTransformations(transformations);
+}
+
+QVector<QTransform> KisToolMultihand::vectorEraserTransformations() const
+{
+    return m_transformations.isEmpty() ? KisToolBrush::vectorEraserTransformations() : m_transformations;
 }
 
 QWidget* KisToolMultihand::createOptionWidget()

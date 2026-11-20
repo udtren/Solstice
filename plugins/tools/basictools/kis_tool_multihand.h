@@ -42,6 +42,9 @@ protected:
     
     QWidget* createOptionWidget() override;
 
+    /// Solstice: the vector eraser erases at every copy of the brush
+    QVector<QTransform> vectorEraserTransformations() const override;
+
 private:
     void initTransformations();
     void finishAxesSetup();
@@ -84,6 +87,8 @@ private:
     int m_intervalX;
     int m_intervalY;
     QRandomGenerator m_randomGenerator;
+    /// Solstice: the copies' maps of the latest initTransformations()
+    QVector<QTransform> m_transformations;
 
     KisToolMultiHandConfigWidget* customUI;
 };

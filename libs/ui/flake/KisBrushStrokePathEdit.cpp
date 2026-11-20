@@ -17,13 +17,16 @@
 #include <kundo2command.h>
 
 #include <KoColor.h>
+#include <KoColorSpaceRegistry.h>
 #include <KoShape.h>
 #include <KoShapeContainer.h>
 #include <kis_cubic_curve.h>
+#include <kis_paint_device.h>
 #include <kis_paintop_preset.h>
 #include <kis_paintop_settings.h>
 #include <strokes/freehand_stroke.h>
 
+#include "KisBrushStrokeLayer.h"
 #include "KisBrushStrokeShape.h"
 #include "KisBrushStrokeShapeEraser.h"
 #include "kis_shape_layer.h"
@@ -1076,6 +1079,98 @@ KisRecordedBrushStrokeSP KisBrushStrokePathEdit::joined(const QVector<JoinPart> 
     return result;
 }
 
+QVector<KisBrushStrokePathEdit::PathPiece> KisBrushStrokePathEdit::pathPieces(const QPainterPath &path)
+{
+    QVector<PathPiece> pieces;
+    QPointF current;
+    auto addLine = [&](const QPointF &to) {
+        if (QLineF(current, to).length() > 1e-6) {
+            PathPiece piece;
+            piece.start = current;
+            piece.control1 = current;
+            piece.control2 = to;
+            piece.end = to;
+            pieces << piece;
+        }
+    };
+    // a curve whose handles lie on the line between its ends is straight
+    auto onChord = [](const PathPiece &piece, const QPointF &handle) {
+        const QLineF chord(piece.start, piece.end);
+        if (chord.length() < 1e-6) {
+            return false;
+        }
+        const qreal along =
+            QPointF::dotProduct(handle - piece.start, piece.end - piece.start) / (chord.length() * chord.length());
+        return along > -1e-6 && along < 1.0 + 1e-6
+            && QLineF(chord.pointAt(along), handle).length() <= 1e-6 * qMax(1.0, chord.length());
+    };
+    for (int i = 0; i < path.elementCount(); i++) {
+        const QPainterPath::Element element = path.elementAt(i);
+        const QPointF point(element.x, element.y);
+        switch (element.type) {
+        case QPainterPath::MoveToElement:
+            current = point;
+            break;
+        case QPainterPath::LineToElement:
+            addLine(point);
+            current = point;
+            break;
+        case QPainterPath::CurveToElement: {
+            if (i + 2 >= path.elementCount()) {
+                return pieces;
+            }
+            PathPiece piece;
+            piece.curve = true;
+            piece.start = current;
+            piece.control1 = point;
+            piece.control2 = QPointF(path.elementAt(i + 1).x, path.elementAt(i + 1).y);
+            piece.end = QPointF(path.elementAt(i + 2).x, path.elementAt(i + 2).y);
+            i += 2;
+            if (onChord(piece, piece.control1) && onChord(piece, piece.control2)) {
+                addLine(piece.end);
+            } else {
+                pieces << piece;
+            }
+            current = piece.end;
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    return pieces;
+}
+
+bool KisBrushStrokePathEdit::ellipseAxes(const QRectF &rect,
+                                         const QTransform &transform,
+                                         QPointF *major1,
+                                         QPointF *major2,
+                                         QPointF *minor)
+{
+    if (rect.isEmpty() || !transform.isAffine()) {
+        return false;
+    }
+    const QPointF center = transform.map(rect.center());
+    // the images of the two half axes: the ellipse is u cos(t) + v sin(t)
+    const QPointF u = transform.map(rect.center() + QPointF(rect.width() / 2, 0)) - center;
+    const QPointF v = transform.map(rect.center() + QPointF(0, rect.height() / 2)) - center;
+    // its own axes are where that is longest and shortest
+    const qreal angle =
+        0.5 * std::atan2(2 * QPointF::dotProduct(u, v), QPointF::dotProduct(u, u) - QPointF::dotProduct(v, v));
+    QPointF first = u * std::cos(angle) + v * std::sin(angle);
+    QPointF second = -u * std::sin(angle) + v * std::cos(angle);
+    if (QLineF(QPointF(), first).length() < QLineF(QPointF(), second).length()) {
+        std::swap(first, second);
+    }
+    if (QLineF(QPointF(), second).length() < 1e-6) {
+        return false;
+    }
+    *major1 = center - first;
+    *major2 = center + first;
+    *minor = center + second;
+    return true;
+}
+
 QVector<KisBrushStrokePathEdit::PathPiece> KisBrushStrokePathEdit::pathPieces(KisRecordedBrushStrokeSP stroke,
                                                                               qreal tolerance)
 {
@@ -1889,6 +1984,24 @@ KisRecordedBrushStrokeSP KisBrushStrokePathEdit::withBackgroundColor(KisRecorded
     QSharedPointer<KisRecordedBrushStroke> changed(new KisRecordedBrushStroke(*stroke));
     changed->bgColor = color;
     return changed;
+}
+
+bool KisBrushStrokePathEdit::usesBackgroundColor(KisRecordedBrushStrokeSP stroke, const QRectF &recordRect)
+{
+    const QRect bounds = recordRect.toAlignedRect();
+    if (!stroke || bounds.isEmpty()) {
+        return false;
+    }
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    auto picture = [&](const QColor &background) {
+        KisPaintDeviceSP device =
+            KisBrushStrokeLayer::renderStrokes({withBackgroundColor(stroke, KoColor(background, cs))},
+                                               cs,
+                                               bounds,
+                                               stroke->deviceOffset);
+        return device ? device->convertToQImage(nullptr, bounds) : QImage();
+    };
+    return picture(Qt::black) != picture(Qt::white);
 }
 
 KisRecordedBrushStrokeSP KisBrushStrokePathEdit::withBrushSize(KisRecordedBrushStrokeSP stroke, qreal size)

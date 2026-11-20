@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-11-20 08:58+0900\n"
+"POT-Creation-Date: 2026-11-20 12:46+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -27536,17 +27536,17 @@ msgstr "导出为视频"
 #: plugins/paintops/spray/KisSprayShapeOptionModel.cpp:88
 #: plugins/paintops/spray/KisSprayShapeOptionWidget.cpp:36
 #: plugins/paintops/spray/KisSprayShapeOptionWidget.cpp:40
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1277
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1340
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1366
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1429
 #: plugins/tools/basictools/kis_tool_brush.cc:520
 #: plugins/tools/basictools/kis_tool_fill.cc:582
 #: plugins/tools/basictools/kis_tool_fill.cc:598
 #: plugins/tools/basictools/kis_tool_fill.cc:610
 #: plugins/tools/basictools/kis_tool_movetooloptionswidget.cpp:51
 #: plugins/tools/basictools/kis_tool_movetooloptionswidget.cpp:52
-#: plugins/tools/basictools/kis_tool_multihand.cpp:481
-#: plugins/tools/basictools/kis_tool_multihand.cpp:492
-#: plugins/tools/basictools/kis_tool_multihand.cpp:494
+#: plugins/tools/basictools/kis_tool_multihand.cpp:487
+#: plugins/tools/basictools/kis_tool_multihand.cpp:498
+#: plugins/tools/basictools/kis_tool_multihand.cpp:500
 #: plugins/tools/selectiontools/kis_tool_select_contiguous.cc:414
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:502
 #: plugins/tools/tool_enclose_and_fill/KisToolEncloseAndFill.cpp:516
@@ -37523,7 +37523,7 @@ msgid ""
 msgstr "此工具无法在克隆图层绘制，请选中一个颜料图层、矢量图层或者蒙版图层。"
 
 #: libs/ui/tool/KisToolOutlineBase.cpp:169
-#: libs/ui/tool/kis_tool_freehand.cc:299
+#: libs/ui/tool/kis_tool_freehand.cc:300
 #: libs/ui/tool/kis_tool_polyline_base.cpp:122
 #: libs/ui/tool/kis_tool_rectangle_base.cpp:167
 #: plugins/tools/basictools/kis_tool_line.cc:212
@@ -37587,7 +37587,7 @@ msgstr "无选项"
 msgid "Local selection is locked."
 msgstr "局部选区蒙版已锁定。"
 
-#: libs/ui/tool/kis_tool_freehand.cc:294
+#: libs/ui/tool/kis_tool_freehand.cc:295
 #, kde-format
 msgid ""
 "The brush tool cannot paint on this layer.  Please select a paint layer or "
@@ -37605,7 +37605,7 @@ msgstr ""
 
 #: libs/ui/tool/kis_tool_rectangle_base.cpp:297
 #: plugins/tools/basictools/kis_tool_line.cc:313
-#: plugins/tools/basictools/kis_tool_multihand.cpp:545
+#: plugins/tools/basictools/kis_tool_multihand.cpp:551
 #, kde-format
 msgid ""
 "X: %1 px\n"
@@ -53531,7 +53531,7 @@ msgstr "独立颜色通道"
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:2042
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:52
 #: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:42
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1272
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1361
 #: plugins/python/highpass/highpass.py:67
 #, kde-format
 msgid "Mode:"
@@ -55145,7 +55145,7 @@ msgid "Dust size:"
 msgstr "灰尘大小："
 
 #: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:44
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1356
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1445
 #, kde-format
 msgid "Tolerance:"
 msgstr "容差："
@@ -66932,230 +66932,243 @@ msgstr "自定义按钮"
 msgid "Open workflow buttons settings dialog"
 msgstr "打开自定义按钮设置对话框"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:317
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:319
 #, kde-format
 msgid "Select a vector layer with brush strokes to edit their lines."
 msgstr "请选择含有笔画的矢量图层以编辑其线条。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:390
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:392
 #, kde-format
 msgid "A line keeps at least two control points."
 msgstr "线条至少保留两个控制点。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:401
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:403
 #, kde-format
 msgid "Only control points between a line's ends can be switched."
 msgstr "只有线条两端之间的控制点可以切换。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:506
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:508
 #, kde-format
 msgid "The frame cannot be folded or flattened."
 msgstr "变换框不能翻折或压平。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:660
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:891
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:948
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:662
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1037
 #, kde-format
 msgid "No lines are selected. Click lines with this tool to select them."
 msgstr "没有选中线条。请用此工具点击线条以选中它们。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:782
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:784
 msgctxt "(qtundo-format)"
 msgid "Transform Brush Strokes"
 msgstr "变换笔画"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:791
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:793
 #, kde-format
 msgid "Lines drawn with the canvas mirror cannot be transformed here."
 msgstr "使用画布镜像绘制的线条无法在此变换。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:803
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:805
 msgctxt "(qtundo-format)"
 msgid "Change Brush Stroke Color"
 msgstr "更改笔画颜色"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:813
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:837
 msgctxt "(qtundo-format)"
 msgid "Change Brush Stroke Background Color"
 msgstr "更改笔画背景色"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:830
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:842
+#, kde-format
+msgid ""
+"The background color does not show in the selected lines: their brushes do "
+"not use it."
+msgstr "所选线条中看不出背景色：它们的笔刷不使用背景色。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:861
 msgctxt "(qtundo-format)"
 msgid "Change Brush Stroke Size"
 msgstr "更改笔画的笔刷大小"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:849
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:880
 msgctxt "(qtundo-format)"
 msgid "Change Brush Stroke Brush"
 msgstr "更改笔画的笔刷"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:870
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:901
 msgctxt "(qtundo-format)"
 msgid "Simplify Brush Strokes"
 msgstr "简化笔画"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:876
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:907
 #, kde-format
 msgid "Control points: %1 of %2 left"
 msgstr "控制点：剩余 %1 个，原有 %2 个"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:877
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:908
 #, kde-format
 msgid "No control points can be removed at this tolerance."
 msgstr "在此容差下没有可移除的控制点。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:935
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:933
+#, kde-format
+msgid ""
+"Nothing is selected. Click lines with this tool, or select vector shapes "
+"with the Select Shapes Tool."
+msgstr "没有选中任何对象。请用此工具点击线条，或用形状选择工具选中矢量形状。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1024
 msgctxt "(qtundo-format)"
 msgid "Create Assistants from Brush Strokes"
 msgstr "从笔画创建辅助尺"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:936
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1025
 #, kde-format
 msgid "Assistants created: %1"
 msgstr "已创建辅助尺：%1"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:970
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1059
 #, kde-format
 msgid "The selected lines enclose no area."
 msgstr "所选线条没有围出任何区域。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:974
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1063
 msgctxt "(qtundo-format)"
 msgid "Select Inside Brush Strokes"
 msgstr "选择笔画内部"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:992
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1081
 #, kde-format
 msgid "Select two or more lines to join them."
 msgstr "请选中两条或更多线条以进行连接。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:993
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1082
 #, kde-format
 msgid "Lines drawn with mirrored copies cannot be joined."
 msgstr "带有镜像副本的线条无法连接。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1006
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1095
 msgctxt "(qtundo-format)"
 msgid "Join Brush Strokes"
 msgstr "连接笔画"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1022
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1111
 msgctxt "(qtundo-format)"
 msgid "Move Brush Stroke Points"
 msgstr "移动笔画的点"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1024
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1113
 msgctxt "(qtundo-format)"
 msgid "Change Brush Stroke Width"
 msgstr "更改笔画宽度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1026
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1115
 msgctxt "(qtundo-format)"
 msgid "Cut Brush Stroke"
 msgstr "切断笔画"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1028
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1117
 msgctxt "(qtundo-format)"
 msgid "Add Brush Stroke Point"
 msgstr "添加笔画的点"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1030
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1119
 msgctxt "(qtundo-format)"
 msgid "Delete Brush Stroke Point"
 msgstr "删除笔画的点"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1032
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1121
 msgctxt "(qtundo-format)"
 msgid "Switch Brush Stroke Corner"
 msgstr "切换笔画的角点"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1034
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1123
 msgctxt "(qtundo-format)"
 msgid "Change Brush Stroke Density"
 msgstr "更改笔画浓度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1036
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1125
 msgctxt "(qtundo-format)"
 msgid "Add Brush Stroke Width"
 msgstr "增减笔画宽度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1038
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1127
 msgctxt "(qtundo-format)"
 msgid "Redraw Brush Stroke"
 msgstr "重绘笔画"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1040
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1129
 msgctxt "(qtundo-format)"
 msgid "Redraw Brush Stroke Width"
 msgstr "重绘笔画宽度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1242
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1331
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Move Points"
 msgstr "移动点"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1243
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1332
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Change Width"
 msgstr "更改宽度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1244
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1333
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Cut"
 msgstr "切断"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1245
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1334
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Add Point"
 msgstr "添加点"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1246
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1335
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Delete Point"
 msgstr "删除点"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1247
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1336
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Switch Corner"
 msgstr "切换角点"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1248
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1337
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Change Density"
 msgstr "更改浓度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1249
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1338
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Add Width"
 msgstr "增减宽度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1250
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1339
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Free Transform"
 msgstr "自由变换"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1251
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1340
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Redraw"
 msgstr "重绘"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1252
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1341
 #, kde-format
 msgctxt "@item:inlistbox Edit Brush Strokes"
 msgid "Redraw Width"
 msgstr "重绘宽度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1254
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1343
 #, kde-format
 msgid ""
 "Move Points: drag part of a line. Change Width: drag right for a wider line, "
@@ -67177,7 +67190,7 @@ msgstr ""
 "或内部。重绘：从线条上开始，画出该部分应走的路径。重绘宽度：沿线条描画其中一"
 "部分，使其具有当前笔刷的宽度。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1279
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1368
 #, kde-format
 msgid ""
 "How far along the line an edit reaches from the dragged point, in image "
@@ -67185,27 +67198,27 @@ msgid ""
 msgstr ""
 "编辑从拖动点沿线条影响的范围，以图像像素为单位。0 表示只移动一个控制点。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1285
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1374
 #, kde-format
 msgid "Reach:"
 msgstr "影响范围："
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1288
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1377
 #, kde-format
 msgid "Apply Color"
 msgstr "应用颜色"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1290
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1379
 #, kde-format
 msgid "Draws the selected lines with the current foreground color"
 msgstr "用当前前景色绘制选中的线条"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1292
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1381
 #, kde-format
 msgid "Apply Background Color"
 msgstr "应用背景色"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1295
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1384
 #, kde-format
 msgid ""
 "Draws the selected lines with the current background color, which shows with "
@@ -67214,34 +67227,34 @@ msgstr ""
 "用当前背景色重绘所选线条；只有混合两种颜色或在两者之间绘制渐变的笔刷才会显示"
 "背景色"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1298
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1387
 #, kde-format
 msgid "Apply Size"
 msgstr "应用大小"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1300
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1389
 #, kde-format
 msgid "Draws the selected lines with the current brush size"
 msgstr "用当前笔刷大小绘制选中的线条"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1302
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1391
 #, kde-format
 msgid "Apply Brush"
 msgstr "应用笔刷"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1304
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1393
 #, kde-format
 msgid ""
 "Draws the selected lines with the current brush preset, at the width they "
 "have"
 msgstr "用当前笔刷预设绘制选中的线条，保持其现有宽度"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1311
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1400
 #, kde-format
 msgid "Join Lines"
 msgstr "连接线条"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1314
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1403
 #, kde-format
 msgid ""
 "Makes one line of the selected lines by connecting their nearest ends. It "
@@ -67250,12 +67263,12 @@ msgstr ""
 "将选中的线条在最近的端点处连接成一条线。新线条采用最先选中的线条的笔刷和颜"
 "色。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1318
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1407
 #, kde-format
 msgid "Create Assistants"
 msgstr "创建辅助尺"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1321
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1410
 #, kde-format
 msgid ""
 "Makes painting assistants along the selected lines, simplified with the "
@@ -67265,24 +67278,25 @@ msgstr ""
 "沿所选线条创建绘画辅助尺（按下方的容差简化）：启用“吸附到辅助尺”的笔刷会沿着"
 "它们绘制。要跨越线条的各段连续绘制，请关闭“吸附到单一辅助尺”。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1326
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1415
 #, kde-format
 msgid "Select Inside"
 msgstr "选择内部"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1329
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1418
 #, kde-format
 msgid ""
 "Selects the area that each of the selected lines encloses. A line that is "
 "not closed is closed by a straight piece from its end to its start."
-msgstr "选择每条所选线条围出的区域。未闭合的线条会用一段从终点到起点的直线闭合。"
+msgstr ""
+"选择每条所选线条围出的区域。未闭合的线条会用一段从终点到起点的直线闭合。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1333
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1422
 #, kde-format
 msgid "Selected lines:"
 msgstr "选中的线条："
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1342
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1431
 #, kde-format
 msgid ""
 "How far a simplified line may leave its path, in image pixels. A larger "
@@ -67291,12 +67305,12 @@ msgstr ""
 "简化后的线条可以偏离原路径的距离，以图像像素为单位。数值越大，移除的控制点越"
 "多。"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1348
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1437
 #, kde-format
 msgid "Simplify Lines"
 msgstr "简化线条"
 
-#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1351
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1440
 #, kde-format
 msgid ""
 "Removes control points from the selected lines, keeping their shape within "
@@ -67993,44 +68007,44 @@ msgctxt "(qtundo-format)"
 msgid "Multibrush Stroke"
 msgstr "多路笔刷笔画"
 
-#: plugins/tools/basictools/kis_tool_multihand.cpp:449
+#: plugins/tools/basictools/kis_tool_multihand.cpp:455
 #, kde-format
 msgid "Symmetry"
 msgstr "旋转对称"
 
-#: plugins/tools/basictools/kis_tool_multihand.cpp:450
+#: plugins/tools/basictools/kis_tool_multihand.cpp:456
 #, kde-format
 msgctxt "Label of Mirror in Multihand brush tool options"
 msgid "Mirror"
 msgstr "镜像"
 
-#: plugins/tools/basictools/kis_tool_multihand.cpp:451
+#: plugins/tools/basictools/kis_tool_multihand.cpp:457
 #, kde-format
 msgid "Translate"
 msgstr "平行"
 
-#: plugins/tools/basictools/kis_tool_multihand.cpp:452
+#: plugins/tools/basictools/kis_tool_multihand.cpp:458
 #, kde-format
 msgid "Snowflake"
 msgstr "雪花"
 
-#: plugins/tools/basictools/kis_tool_multihand.cpp:453
+#: plugins/tools/basictools/kis_tool_multihand.cpp:459
 #, kde-format
 msgid "Copy Translate"
 msgstr "平行 (指定相对位置)"
 
-#: plugins/tools/basictools/kis_tool_multihand.cpp:454
+#: plugins/tools/basictools/kis_tool_multihand.cpp:460
 #, kde-format
 msgid "Copy Translate at Intervals"
 msgstr "平行 (指定间隔)"
 
-#: plugins/tools/basictools/kis_tool_multihand.cpp:565
+#: plugins/tools/basictools/kis_tool_multihand.cpp:571
 #, kde-format
 msgid ""
 "Multibrush Tool does not support more than %1 brushes; use a larger interval."
 msgstr "多路笔刷工具不支持超过 %1 路笔画。请使用更大的笔画间隔值。"
 
-#: plugins/tools/basictools/kis_tool_multihand.h:99
+#: plugins/tools/basictools/kis_tool_multihand.h:104
 #, kde-format
 msgid "Multibrush Tool"
 msgstr "多路笔刷工具"

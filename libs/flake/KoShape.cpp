@@ -250,6 +250,13 @@ void KoShape::setSize(const QSizeF &newSize)
 {
     QSizeF oldSize(size());
 
+    // Solstice: setSizeImpl() is const and writes through the data that
+    // copies of this shape still share. A vector layer paints shallow
+    // copies in another thread: a resize in the GUI thread changed the size
+    // of a copy that was being painted, and it was painted at the wrong
+    // size into the area of the update.
+    s.detach();
+
     // always set size, as d->size and size() may vary
     setSizeImpl(newSize);
 
