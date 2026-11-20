@@ -21,7 +21,7 @@
 ![Solstice main window painting the Solstice splash artwork, with the Brush Presets docker grouped by bundle, Quick Brush Adjustments, HueSVC, the Quick Access Palette, Layers and the Brush section of Tool Options](docs/images/solstice-main-window.webp)
 
 <p align="center">
-  <a href="docs/vector-brush-strokes.md"><img src="docs/images/vector_brush_strokes/cover.gif" alt="A purple line is drawn with a pressure brush on a vector layer, its points are dragged with the Edit Brush Strokes Tool, parts of it are removed with the vector eraser, and the pieces are enlarged with the Select Shapes Tool and stay sharp" width="720"></a><br>
+  <a href="docs/vector-brush-strokes.md"><img src="docs/images/vector_brush_strokes/cover.gif" alt="A vector layer is added and a blue line is drawn on it with a pressure brush; its points are dragged with the Edit Brush Strokes Tool, the vector eraser cuts gaps into it, and after the Transform Tool enlarges it the line is still sharp when zoomed in" width="720"></a><br>
   <b><a href="docs/vector-brush-strokes.md">Vector brush strokes</a></b>: draw with a brush, then edit, erase and scale the line.
 </p>
 
