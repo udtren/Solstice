@@ -38,6 +38,12 @@ Freehand Brush; the choice applies to all brush tools. The eraser is as
 large as the brush outline shows, whatever the pen pressure. One drag is
 one undo step.
 
+With the Multibrush Tool the eraser works at every copy of the brush, as
+the tool is set up when the drag starts (symmetry, mirror, snowflake,
+translate, copy translate), so a figure drawn with the Multibrush is
+erased on all its sides at once. With the Freehand Brush it erases under
+the pen only: each copy of a Multibrush stroke is a line of its own.
+
 The part of a line before a cut looks exactly as it did. The part after it
 is drawn again from the cut, so with soft, textured or scattering brushes
 its dabs can land slightly differently; ink pens show no difference.
@@ -131,7 +137,11 @@ lines again:
 - **Apply Color**: with the current foreground color.
 - **Apply Background Color**: with the current background color. It shows
   only with brushes that use the background color: those that mix the two
-  colors (the Mix option) or paint a gradient between them.
+  colors (the Mix option) or paint a gradient between them. When it
+  shows in none of the selected lines, a message says so; the background
+  color is stored all the same. A brush that mixes the colors by pen
+  pressure shows none of it in a line drawn at full pressure (with a
+  mouse).
 - **Apply Size**: with the current brush size.
 - **Apply Brush**: with the current brush preset, at the width each line
   has. The line's path and pen pressure stay; only the brush changes.
@@ -170,6 +180,20 @@ themselves stay as they are.
 - It is one undo step. The assistants are ordinary ones: move, hide or
   delete them with the Assistant Tool, and they are saved with the
   document.
+
+The button also works for vector shapes: lines, rectangles, ellipses,
+polygons and curves made with the shape tools on a vector layer. Select
+them with the Select Shapes Tool, switch to the Edit Brush Strokes Tool
+and press **Create Assistants**.
+
+- A whole ellipse or circle becomes one Ellipse assistant, also when it
+  is rotated or skewed.
+- Any other shape becomes a Ruler assistant for every straight side and
+  a Spline assistant for every curved piece of its outline (a rounded
+  rectangle: four of each; a pie or an arc: its curves and sides).
+- The Tolerance does not apply: the shape's own points are used. Text is
+  left out. The shapes stay as they are; hide the vector layer if only
+  the assistants are wanted.
 
 ### A selection from lines
 
@@ -276,7 +300,7 @@ it has been checked with a real pen by the developers' tests.
 | Correct line width: scale up or down [6E] | Partly | **Change Width** around a dragged point; **Apply Size** for whole lines |
 | Redraw vector line by tracing over it [6F] | Yes | **Redraw** mode: draw from a place on a line; the part up to where the drawing meets the line again, or the rest of the line, takes the drawn path |
 | Redraw vector line width by tracing over it [6G] | Yes | **Redraw Width** mode: the traced part takes the width of the current brush, following the pen pressure of the trace |
-| Ruler from vector, Selection from ruler [7] | Partly | **Create Assistants** for the selected lines: Spline and Ruler assistants along their paths, which brushes snap to; **Select Inside** selects the area a line encloses. One assistant per piece of a line, not one ruler per line; the selection comes from the lines, not from the assistants |
+| Ruler from vector, Selection from ruler [7] | Partly | **Create Assistants** for the selected lines and vector shapes: Spline, Ruler and Ellipse assistants along their paths, which brushes snap to; **Select Inside** selects the area a line encloses. One assistant per piece of a line, not one ruler per line; the selection comes from the lines, not from the assistants |
 
 ## Current limitations
 

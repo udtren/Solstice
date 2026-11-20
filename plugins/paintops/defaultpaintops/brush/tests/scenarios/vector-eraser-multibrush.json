@@ -1,0 +1,200 @@
+{
+  "format": "solstice-test-control-scenario",
+  "version": 1,
+  "name": "vector-eraser-multibrush",
+  "description": "The Multibrush draws a stroke with its copies on a vector layer. In eraser mode with the Vector Eraser set to Whole Line, crossing the drawn line removes every copy, because the eraser erases at each copy of the brush; undo returns them.",
+  "covers": "Vector eraser with the Multibrush Tool: it erases at every copy of the brush (docs/agent/vector-brush-strokes.md)",
+  "steps": [
+    {
+      "call": "document_new",
+      "args": {
+        "width": 800,
+        "height": 600
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "add_new_shape_layer"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "tool_activate",
+      "args": {
+        "id": "KritaShape/KisToolMultiBrush"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "preset": "b) Basic-5 Size Opacity",
+        "size": 12,
+        "opacity": 1,
+        "eraser": false,
+        "color": "#000000"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "empty": "sha256"
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 340,
+            "y": 260
+          },
+          {
+            "x": 348,
+            "y": 264
+          },
+          {
+            "x": 356,
+            "y": 268
+          },
+          {
+            "x": 364,
+            "y": 272
+          },
+          {
+            "x": 372,
+            "y": 276
+          },
+          {
+            "x": 380,
+            "y": 280
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "drawn": "sha256"
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$empty"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbVectorEraserMode",
+        "value": "Whole Line"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "eraser": true,
+        "size": 10
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 360,
+            "y": 255
+          },
+          {
+            "x": 360,
+            "y": 262
+          },
+          {
+            "x": 360,
+            "y": 270
+          },
+          {
+            "x": 360,
+            "y": 278
+          },
+          {
+            "x": 360,
+            "y": 285
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Erase Brush Strokes",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$empty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbVectorEraserMode",
+        "value": "Touched Part"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "eraser": false,
+        "size": 20
+      }
+    },
+    {
+      "call": "document_close"
+    }
+  ]
+}

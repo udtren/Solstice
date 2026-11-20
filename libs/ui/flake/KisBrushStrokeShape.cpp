@@ -647,6 +647,23 @@ KisBrushStrokeShape *KisBrushStrokeShape::createPiece(KisRecordedBrushStrokeSP p
             points << job.control1 << job.control2;
         }
     }
+    // the canvas mirror paints copies of every dab around its axes: they
+    // are part of the picture, though no job holds them
+    if (piece->mirrorHorizontal || piece->mirrorVertical) {
+        const QRectF own = points.boundingRect();
+        const QPointF center = piece->mirrorAxesCenter;
+        const qreal left = 2 * center.x() - own.right();
+        const qreal top = 2 * center.y() - own.bottom();
+        if (piece->mirrorHorizontal) {
+            points << QPointF(left, own.top()) << QPointF(left + own.width(), own.bottom());
+        }
+        if (piece->mirrorVertical) {
+            points << QPointF(own.left(), top) << QPointF(own.right(), top + own.height());
+        }
+        if (piece->mirrorHorizontal && piece->mirrorVertical) {
+            points << QPointF(left, top) << QPointF(left + own.width(), top + own.height());
+        }
+    }
 
     // this shape's own properties (stacking order, transparency, name), a
     // stroke and pictures of its own

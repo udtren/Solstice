@@ -15,7 +15,7 @@ document first.
 | [kis_shape_layer.h](../../libs/ui/flake/kis_shape_layer.h), [kis_shape_layer.cc](../../libs/ui/flake/kis_shape_layer.cc) | Stroke preview (temporary target), `createAddShapeCommand()`, `finishBrushStrokePreview()`, the `brushstrokes` file |
 | [kis_painter_based_stroke_strategy.cpp](../../libs/ui/tool/strokes/kis_painter_based_stroke_strategy.cpp) | Temporary target for a vector layer, forced Build-up handling, the finishing barrier job |
 | [freehand_stroke.cpp](../../libs/ui/tool/strokes/freehand_stroke.cpp) | Recording on a vector layer, `createVectorShapeCommand()`, no Instant Preview clone |
-| [kis_tool_freehand.cc](../../libs/ui/tool/kis_tool_freehand.cc) | The tool gate (`setPaintsOnVectorLayers()`), eraser refusal |
+| [kis_tool_freehand.cc](../../libs/ui/tool/kis_tool_freehand.cc) | The tool gate (`setPaintsOnVectorLayers()`), eraser refusal, the vector eraser's drag (`eraseVector()`, virtual `vectorEraserTransformations()`); [kis_tool_multihand.cpp](../../plugins/tools/basictools/kis_tool_multihand.cpp) overrides the latter |
 | [KisBrushStrokeLayerReplay.cpp](../../libs/ui/brushstrokelayer/KisBrushStrokeLayerReplay.cpp) | `renderStrokes()`, which the shape calls |
 | [kis_shape_layer_canvas.cpp](../../libs/ui/flake/kis_shape_layer_canvas.cpp), [inplace_transform_stroke_strategy.cpp](../../plugins/tools/tool_transform2/strokes/inplace_transform_stroke_strategy.cpp) | Transform previews: the preview paint scope in `repaint()`, `setBrushStrokePreview()`, and its use by the Transform Tool's in-place stroke |
 | [KisBrushStrokeShapeEraser.h](../../libs/ui/flake/KisBrushStrokeShapeEraser.h), [KisBrushStrokeShapeEraser.cpp](../../libs/ui/flake/KisBrushStrokeShapeEraser.cpp) | The vector eraser: cutting a recorded stroke, replacing shapes during a drag, its undo command, the mode setting |
@@ -137,8 +137,22 @@ nothing; it owns whichever shapes are not in the layer. Dropping the eraser
 without `finish()` cancels. The mode (`TouchedPart`, `WholeLine`) is read
 from `VectorBrushStrokes/eraserMode` in `kritarc` when a drag starts.
 
+**The Multibrush's eraser (2026-11-20).** `KisToolFreehand::eraseVector()`
+calls `erase()` once for every map of
+`vectorEraserTransformations()` (image pixels; the identity by default),
+read when the drag starts. `KisToolMultihand` returns the list its
+`initTransformations()` gave the helper for that drag, so the eraser
+sweeps at every copy of the brush with the same radius. Before, it erased
+under the pen only. In Translate mode the copies' places are random for
+each drag, as for painting.
+
 A stroke with canvas mirror flags is cut along its recorded path only; its
 mirrored copies follow, since each piece keeps the flags and axes.
+`KisBrushStrokeShape::createPiece()` takes the rectangle of a piece from
+its jobs and from their mirror images around `mirrorAxesCenter`: the
+copies are painted, though no job holds them. Until 2026-11-20 it took
+the jobs only, so the shape of an edited or erased canvas-mirror line was
+the drawn side's rectangle and `paint()` clipped the copy at its edge.
 
 **Up to Intersection (`cutStrokeUpToIntersections()`).** The touched
 stretches are found as above, then expressed as places along each line (the
@@ -628,6 +642,18 @@ shapes outside any image stroke (flake interaction strategies), with no
 place to end a preview, so selected strokes are still drawn again at every
 step there.
 
+**Resizing and the painting copies (2026-11-20).** The layer paints
+shallow copies of its shapes in a worker thread
+(`KoShapeManager::preparePaintJobs()`). `KoShape::setSizeImpl()` is const
+and wrote the size into the data a copy still shares, so every step of a
+resize drag (`KoShapeResizeCommand::replaceResizeAction()` first sets the
+size the drag started with) changed the size of a copy that was being
+painted. A brush stroke is slow to draw again, so the copy was often
+caught: ink at the starting size was painted into the update's patches
+and stayed where later updates did not reach, outside the shape and not
+selectable. `KoShape::setSize()` now detaches its data first. Sizes set
+through `setSizeImpl()` alone (`KoShapeGroup`) still write through.
+
 ## Persistence and compatibility
 
 The shape is an SVG `<image>` with the picture as an inline PNG (covering
@@ -699,8 +725,12 @@ and install it before running tests
 | `KisVectorBrushStrokeTest` | Stroke to shape for Build-up, Wash and half opacity against a paint layer; undo/redo; image scale redraw and sharpness; move keeps pixels; rotation; `.kra` round trip at 300 ppi and scale after load; document copy at 300 ppi (path shape and brush stroke); inline SVG; plain images stay image shapes; redraw time (reported) |
 | `KisVectorBrushStrokeTest` (eraser) | `testCutStroke`: untouched, a cut across lines and across a curve, cut points on the eraser's reach, everything erased. `testEraserCutsShapes`: two shapes, empty where erased, pixels beside the cut, undo/redo, `.kra` round trip. `testEraserWholeLineAndCancel`, `testEraserOnScaledLayer` |
 | `KisVectorBrushStrokeTest` (intersections) | `testCutUpToIntersections`: between two crossings, before the first, after the last (on a curve), no crossing, a line ending two pixels short of the stroke, one ending far short. `testEraserUpToIntersection`: two crossing strokes on a layer, each trimmed to the other, two undo steps, the setting |
+| `KisVectorBrushStrokeTest::testPathPieces` (also) | `pathPieces(QPainterPath)`: a line, a curve, a straight curve as a line, a piece without length dropped, the four sides of a closed rectangle; `ellipseAxes()`: as drawn, taller than wide, and under rotation, shear and scale (the three points on the mapped ellipse, axes at a right angle, the first the longer), refused for an empty rectangle and a flattening transform |
+| `vector-shape-assistants.json` scenario | In the application: an ellipse from the Ellipse Tool, selected with the Select Shapes Tool, Create Assistants (one undo step; none with nothing selected); a brush stroke drawn 12 px inside the ellipse's top on a paint layer with Snap to Assistants lies on the ellipse |
+| `vector-eraser-multibrush.json` scenario | In the application: a Multibrush stroke with the fresh profile's copies, then the Multibrush in eraser mode, Whole Line, across the drawn line: the layer is empty (every copy removed), one "Erase Brush Strokes" step, undo returns the picture |
 | `vector-eraser-intersection.json` scenario | In the application: two crossing strokes, the mode chosen in the combo box, one stroke touched near its start and removed up to the crossing, undo |
-| `KisVectorBrushStrokeTest` (path editing) | `testPathEditFunctions`: nearest place on lines and on a curve, control points, a move with and without reach (falloff, connected path, original untouched), width, split. `testShapeEdit`: a move in two steps on the layer, undo/redo, cancel, no undo step without a change, width, cut |
+| `KisVectorBrushStrokeTest::testMovedShapeKeepsPicture` | Also: a copy of the shape keeps its size and bounding rectangle when the shape is resized |
+| `KisVectorBrushStrokeTest` (path editing) | `testShapeEdit` also: a line with the canvas mirror's flags, a point moved: the new shape's rectangle holds both sides and the copy is painted to its far end. `testPathEditFunctions`: nearest place on lines and on a curve, control points, a move with and without reach (falloff, connected path, original untouched), width, split. `testShapeEdit`: a move in two steps on the layer, undo/redo, cancel, no undo step without a change, width, cut |
 | `KisVectorBrushStrokeTest` (properties) | `testStrokeColorSizeBrush`: the three functions leave the stroke alone; two lines recolored in one undo step with unchanged coverage; a larger brush for one line only; another brush at the same width, saved and loaded; undo of each |
 | `KisVectorBrushStrokeTest::testSimplify` | Fewer jobs within the tolerance both ways at 0.1, 1 and 4 px; end points, pressure peak and running time kept; a straight line becomes one curve and then stays; a corner stays a point of the path; mirrored copies simplified alike and drawn in turns; on the layer one undo step with nearly the same ink |
 | `KisVectorBrushStrokeTest::testAddDeletePoint` | A point added on a curve and on a line: same path, the place's pen values, the new point alone moves; nothing added on an existing point; the nearest control point from both halves of a job and from the starting dab; a point deleted between two lines (one curve through the place), at the line's start (the dab moves along) and end; a line of one job unchanged; a mirrored copy untouched; on the layer no visible change from an added point, undo of both |
@@ -710,6 +740,7 @@ and install it before running tests
 | `KisVectorBrushStrokeTest::testSwitchCorner` | A point between two lines made a curve (handles along the neighbours' direction, a third of the way; points and pen values kept) and a corner again (the two lines as they were); a right angle rounded at one and at both turns, one of them made a corner again while the other keeps its handle; the corner flags of a line's points; a line coming back on itself; the line's ends, the starting dab and no place unchanged; the drawn line's last joint a curve point by its handle; a simplified line's inner points all curve points, one made a corner and a curve again; a mirrored copy untouched; on the layer a corner changes pixels only near it, undo of both steps |
 | `KisVectorBrushStrokeTest::testRedrawWidth` | `redrawnWidth()` on a straight line of 20 jobs at a pressure of 0.7: one width from x = 60 to 140 gives control points every 4 px with that width (by the brush's curve), the part's ends and the rest keep theirs, the jobs meet with the same pen values on the path as drawn, 10 jobs more; widths that change along the part, given in any order; a part inside one job (two ends and a point between); a part up to a line end, where the end and the first dab take the width; a width beyond the brush makes it grow and the rest keeps its width; invalid input returns the stroke; a brush that does not follow the pressure gets the mean as its size; `widthShare()` for a preset; on the layer a line 12 px wide is 5 px wide in the part and as drawn outside; undo and redo |
 | `KisVectorBrushStrokeTest::testRedraw` | `redrawn()` on a straight line of 20 jobs: an arc between two places replaces that part (the path passes the arc's top and no longer the old middle), the rest is unchanged point for point, the jobs meet and the pen's time does not run back, the last point keeps its time; the same with the path reversed and with a path 3 px beside the line; a path that leaves the line takes the line's end with it, towards the end or towards the start (the first dab goes along); invalid input returns the stroke; on the layer ink is on the arc and gone from the old middle; undo and redo |
+| `KisVectorBrushStrokeTest::testStrokeBackgroundColor` (also) | `usesBackgroundColor()`: false for the Mix brush at full pressure, for the brush without Mix and for no stroke; true for the Mix brush at half pressure |
 | `KisVectorBrushStrokeTest::testStrokeBackgroundColor` | `withBackgroundColor()` changes `bgColor` only and returns the stroke itself for the color it has; on the layer, a line of a brush with the Mix option at half pressure loses its green when the background goes from white to red (mean green 125 to 0) and keeps its alpha; undo and redo |
 | `KisVectorBrushStrokeTest::testMapPoints` | `mapped()` with a projective map on a stroke with a point, lines and a curve: every point and handle is where the map puts it, the pen's values and the preset stay, jobs still meet; a stroke with the canvas mirror and a map that gives no finite place return the stroke itself; on the layer a line moved 20 px down and halved towards its start has its ink there (top and bottom within 1 px, 80 px shorter within 3 px); undo and redo |
 | `KisVectorBrushStrokeTest::testAddWidth` | `widthShare()` of `b) Basic-5 Size` rises with the pressure and is 1 at full pressure; `addWidth()` on a line at the pressure 0.7: the anchor's width grows by the amount and the neighbours' by the cosine falloff, the preset stays, nothing changes beyond the reach; a thick and a thin part get the same amount with a long reach; thinner by half the width, and a pressure of at least 0.01; wider than the brush: the brush grows to that width and the other places keep theirs; without the Size option the brush size of the stroke changes (at least 1 px) and the pressures stay; on the layer the line is 6 px wider and 6 px thinner at the place (within 2 px) and as drawn at the ends; undo and redo |
@@ -835,6 +866,23 @@ the page is read again, change the date. The SVG row rests on
   is, no grow or feather, and no area from several lines that only
   together form an outline (join them first). The border is the path,
   not the ink's edge.
+- Create Assistants for vector shapes (2026-11-20): every selected
+  `KoPathShape` (`KoSelection::selectedVisibleShapes()`, any layer the
+  selection holds) besides the brush strokes. `pathPieces(QPainterPath)`
+  turns the shape's `outline()` into pieces (a curve with its handles on
+  its chord is a line; pieces without length are dropped), mapped by
+  `absoluteTransformation()`: shapes are in document coordinates, as
+  assistants are. A shape whose `pathShapeId()` is "EllipseShape" (the
+  class is in the path shapes plugin, so it is told by name), closed and
+  all curves, becomes one `ellipse` assistant with the handles of
+  `ellipseAxes()`: both ends of the longer axis and one of the shorter,
+  the ellipse's own axes under the shape's transformation (shear moves
+  them). With neither strokes nor path shapes selected: "Nothing is
+  selected. Click lines with this tool, or select vector shapes with the
+  Select Shapes Tool." The tool itself selects brush strokes only; the
+  shapes are selected in the Select Shapes Tool and stay selected when
+  the tool changes. Not covered: text shapes, a shape's inner subpaths
+  told apart, arcs as Ellipse assistants.
 - Create Assistants: one assistant per piece, so a long line gives many;
   they are not linked to the line (an edit of the line leaves them), and
   `AssistantsCommand` keeps the assistant objects themselves, not clones
@@ -886,7 +934,17 @@ the page is read again, change the date. The SVG row rests on
   button `btnEditBrushStrokesApplyBackgroundColor`, undo text "Change
   Brush Stroke Background Color", added 2026-11-18) sets `bgColor`, which
   the replay gives to the painter. Most presets ignore it, so the button
-  often changes nothing visible but still makes an undo step.
+  often changes nothing visible but still makes an undo step. Since
+  2026-11-20 a message says so ("The background color does not show in
+  the selected lines: their brushes do not use it."):
+  `KisBrushStrokePathEdit::usesBackgroundColor(stroke, recordRect)` draws
+  the stroke with a black and a white background color
+  (`KisBrushStrokeLayer::renderStrokes()`, in the GUI thread) and compares
+  the pictures, so it holds for every engine and option. The tool tries
+  one line of each preset object among the selected lines, at most 8;
+  with more it shows no message. A Mix brush at full pressure counts as
+  not showing it. No test control tool reads floating messages: the
+  message itself is not covered by a scenario.
 - Apply Color sets the foreground color only; a stroke's background color,
   gradient and pattern cannot be changed.
 - Up to Intersection sees brush strokes on the same layer only, and its

@@ -192,6 +192,17 @@ public:
     /// use that mix the two colors or paint a gradient between them
     static KisRecordedBrushStrokeSP withBackgroundColor(KisRecordedBrushStrokeSP stroke, const KoColor &color);
 
+    /**
+     * Whether the background color shows in the picture of @p stroke: the
+     * stroke is drawn twice within @p recordRect (recorded pixels), with a
+     * black and with a white background color, and the pictures are
+     * compared. That holds for every brush engine and option, at the cost
+     * of two drawings; it blocks until they are done. A brush that mixes
+     * the colors by pressure shows none of it in a line drawn at full
+     * pressure.
+     */
+    static bool usesBackgroundColor(KisRecordedBrushStrokeSP stroke, const QRectF &recordRect);
+
     /// @p stroke drawn with a brush of @p size (its diameter, in recorded
     /// pixels)
     static KisRecordedBrushStrokeSP withBrushSize(KisRecordedBrushStrokeSP stroke, qreal size);
@@ -232,6 +243,23 @@ public:
      * dabs and pieces without length are left out.
      */
     static QVector<PathPiece> pathPieces(KisRecordedBrushStrokeSP stroke, qreal tolerance);
+
+    /**
+     * The pieces of @p path (a vector shape's outline), in its own
+     * coordinates: one for every line and curve with a length, also the
+     * line that closes a subpath.
+     */
+    static QVector<PathPiece> pathPieces(const QPainterPath &path);
+
+    /**
+     * The ellipse inscribed in @p rect as @p transform shows it: the two
+     * ends of its longer axis and one end of the shorter one, which is
+     * what an Ellipse assistant takes as handles. A transform with shear
+     * still gives an ellipse, with other axes than the mapped ones. False
+     * for an empty rectangle or a transform that flattens it.
+     */
+    static bool
+    ellipseAxes(const QRectF &rect, const QTransform &transform, QPointF *major1, QPointF *major2, QPointF *minor);
 
     /**
      * The areas that the lines of @p stroke enclose, in recorded pixels:

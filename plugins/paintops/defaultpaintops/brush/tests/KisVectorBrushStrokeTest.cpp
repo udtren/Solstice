@@ -507,6 +507,16 @@ void KisVectorBrushStrokeTest::testMovedShapeKeepsPicture()
 
     const QImage after = toImage(d.layer->projection(), wide);
     QCOMPARE(after.copy(QRect(47, 37, 200, 100)), before.copy(QRect(40, 40, 200, 100)));
+
+    // a copy (the layer paints copies in another thread) keeps its size
+    // when the shape is resized
+    QScopedPointer<KoShape> copy(shape->cloneShape());
+    const QSizeF size = shape->size();
+    const QRectF bounds = copy->boundingRect();
+    shape->setSize(size * 0.25);
+    QCOMPARE(copy->size(), size);
+    QCOMPARE(copy->boundingRect(), bounds);
+    QCOMPARE(shape->size(), size * 0.25);
 }
 
 /// A rotated shape is drawn again along the rotated path
@@ -1315,6 +1325,37 @@ void KisVectorBrushStrokeTest::testShapeEdit()
     QCOMPARE(strokeShapes(d.layer).size(), 1);
     repaint(d.image, d.layer);
     QVERIFY(maxDifference(toImage(d.layer->projection()), before) <= 2);
+
+    // a line with the canvas mirror's copy: the edited shape holds the
+    // copy too, which no job has
+    {
+        Document m;
+        paintLine(m.image,
+                  m.layer,
+                  loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp")),
+                  KoColor(Qt::black, cs),
+                  QPointF(20, 30),
+                  QPointF(80, 70));
+        KisBrushStrokeShape *line = strokeShapes(m.layer).first();
+        QSharedPointer<KisRecordedBrushStroke> mirrored(new KisRecordedBrushStroke(*line->brushStroke()));
+        mirrored->mirrorHorizontal = true;
+        mirrored->mirrorAxesCenter = QPointF(100, 50);
+        const KisBrushStrokePathEdit::Hit end = KisBrushStrokePathEdit::nearestPoint(mirrored, QPointF(80, 70));
+        KisBrushStrokeShapeEdit edit(m.layer, line);
+        edit.setStrokes({KisBrushStrokePathEdit::movePoints(mirrored, end, QPointF(0, 10), 20.0)});
+        QCOMPARE(edit.shapes().size(), 1);
+        const QRectF rect = edit.shapes().first()->recordRect();
+        QVERIFY(rect.contains(QPointF(20, 30)));
+        QVERIFY(rect.contains(QPointF(180, 30)));
+        QVERIFY(rect.contains(QPointF(120, 80)));
+        m.document->undoStack()->push(edit.finish(kundo2_noi18n("mirrored")));
+        repaint(m.image, m.layer);
+        const QImage both = toImage(m.layer->projection());
+        QVERIFY(qAlpha(both.pixel(50, 50)) > 100);
+        QVERIFY(qAlpha(both.pixel(150, 50)) > 100);
+        QVERIFY(qAlpha(both.pixel(178, 31)) > 100);
+        QVERIFY(qAlpha(both.pixel(121, 79)) > 100);
+    }
 }
 
 /// A line takes another color, brush size or brush; several lines in one
@@ -2549,6 +2590,22 @@ void KisVectorBrushStrokeTest::testStrokeBackgroundColor()
     QCOMPARE(Edit::withBackgroundColor(changed, red), changed);
     QCOMPARE(Edit::withBackgroundColor(KisRecordedBrushStrokeSP(), red), KisRecordedBrushStrokeSP());
 
+    // At full pressure the Mix option gives the foreground color alone:
+    // the background color does not show. Nor does it without the option.
+    QVERIFY(!Edit::usesBackgroundColor(stroke, strokeShapes(d.layer).first()->recordRect()));
+    QVERIFY(!Edit::usesBackgroundColor(KisRecordedBrushStrokeSP(), QRectF(0, 0, 10, 10)));
+    {
+        Document plain;
+        paintLine(plain.image,
+                  plain.layer,
+                  loadPreset(QStringLiteral("b)_Basic-5_Size_default.kpp")),
+                  KoColor(Qt::black, cs),
+                  QPointF(20, 50),
+                  QPointF(180, 50));
+        KisBrushStrokeShape *shape = strokeShapes(plain.layer).first();
+        QVERIFY(!Edit::usesBackgroundColor(shape->brushStroke(), shape->recordRect()));
+    }
+
     // on the layer, at half pressure: the line loses its green to the red
     // background color and keeps its shape
     KUndo2Command *command = KisBrushStrokeShapeEdit::replaceStrokes(
@@ -2567,6 +2624,9 @@ void KisVectorBrushStrokeTest::testStrokeBackgroundColor()
     d.document->undoStack()->push(command);
     repaint(d.image, d.layer);
     const QImage before = toImage(d.layer->projection());
+    // at half pressure the background color shows
+    QVERIFY(Edit::usesBackgroundColor(strokeShapes(d.layer).first()->brushStroke(),
+                                      strokeShapes(d.layer).first()->recordRect()));
     command = KisBrushStrokeShapeEdit::replaceStrokes(
         d.layer,
         {strokeShapes(d.layer).first()},
@@ -3118,6 +3178,75 @@ void KisVectorBrushStrokeTest::testPathPieces()
         QVERIFY(!flat.contains(QPointF(100, 51)));
     }
     QVERIFY(Edit::closedPath(KisRecordedBrushStrokeSP()).isEmpty());
+
+    // --- the outline of a vector shape: a line, a closed rectangle (four
+    // lines, the closing one too), a curve, and a curve that is straight
+    {
+        QPainterPath path;
+        path.moveTo(10, 10);
+        path.lineTo(50, 10);
+        path.lineTo(50, 10); // no length
+        path.cubicTo(60, 10, 70, 20, 70, 30);
+        path.cubicTo(70, 40, 70, 50, 70, 60); // straight
+        path.addRect(QRectF(100, 100, 40, 20));
+        const QVector<Edit::PathPiece> pieces = Edit::pathPieces(path);
+        QCOMPARE(pieces.size(), 7);
+        QVERIFY(!pieces[0].curve);
+        QCOMPARE(pieces[0].start, QPointF(10, 10));
+        QCOMPARE(pieces[0].end, QPointF(50, 10));
+        QVERIFY(pieces[1].curve);
+        QCOMPARE(pieces[1].control1, QPointF(60, 10));
+        QCOMPARE(pieces[1].control2, QPointF(70, 20));
+        QCOMPARE(pieces[1].end, QPointF(70, 30));
+        QVERIFY(!pieces[2].curve);
+        QCOMPARE(pieces[2].end, QPointF(70, 60));
+        for (int i = 3; i < 7; i++) {
+            QVERIFY(!pieces[i].curve);
+        }
+        QCOMPARE(pieces[3].start, QPointF(100, 100));
+        QCOMPARE(pieces[6].end, QPointF(100, 100));
+        QVERIFY(Edit::pathPieces(QPainterPath()).isEmpty());
+    }
+
+    // --- the axes of an ellipse: as drawn, turned, and sheared
+    {
+        QPointF a;
+        QPointF b;
+        QPointF c;
+        const QRectF rect(0, 0, 80, 40);
+        QVERIFY(Edit::ellipseAxes(rect, QTransform::fromTranslate(10, 20), &a, &b, &c));
+        QVERIFY(QLineF(a, QPointF(10, 40)).length() < 1e-6 || QLineF(a, QPointF(90, 40)).length() < 1e-6);
+        QVERIFY(qAbs(QLineF(a, b).length() - 80.0) < 1e-6);
+        QVERIFY(qAbs(QLineF(c, QPointF(50, 40)).length() - 20.0) < 1e-6);
+
+        // taller than wide: the longer axis is the vertical one
+        QVERIFY(Edit::ellipseAxes(QRectF(0, 0, 40, 80), QTransform(), &a, &b, &c));
+        QVERIFY(qAbs(a.x() - 20.0) < 1e-6 && qAbs(b.x() - 20.0) < 1e-6);
+        QVERIFY(qAbs(QLineF(a, b).length() - 80.0) < 1e-6);
+
+        // any affine map: the three points are on the mapped ellipse, the
+        // axes at a right angle, the first the longer
+        QTransform sheared;
+        sheared.rotate(30);
+        sheared.shear(0.6, 0.0);
+        sheared.scale(1.5, 0.7);
+        QVERIFY(Edit::ellipseAxes(rect, sheared, &a, &b, &c));
+        const QTransform back = sheared.inverted();
+        auto onEllipse = [&](const QPointF &point) {
+            const QPointF local = back.map(point) - rect.center();
+            return qAbs(local.x() * local.x() / 1600.0 + local.y() * local.y() / 400.0 - 1.0) < 1e-6;
+        };
+        QVERIFY(onEllipse(a));
+        QVERIFY(onEllipse(b));
+        QVERIFY(onEllipse(c));
+        const QPointF center = (a + b) / 2;
+        QVERIFY(QLineF(center, sheared.map(rect.center())).length() < 1e-6);
+        QVERIFY(qAbs(QPointF::dotProduct(b - center, c - center)) < 1e-6);
+        QVERIFY(QLineF(center, b).length() >= QLineF(center, c).length());
+
+        QVERIFY(!Edit::ellipseAxes(QRectF(), QTransform(), &a, &b, &c));
+        QVERIFY(!Edit::ellipseAxes(rect, QTransform::fromScale(1, 0), &a, &b, &c));
+    }
 }
 
 /// The points of a stroke's path moved by a map, as Free Transform does

@@ -7,6 +7,9 @@
 #ifndef KIS_TOOL_FREEHAND_H_
 #define KIS_TOOL_FREEHAND_H_
 
+#include <QTransform>
+#include <QVector>
+
 #include <brushengine/kis_paint_information.h>
 #include <brushengine/kis_paintop_settings.h>
 #include <kis_distance_information.h>
@@ -134,6 +137,11 @@ protected:
         m_paintsOnVectorLayers = value;
     }
 
+    /// Solstice: where the vector eraser erases for one place of the pen,
+    /// as maps of image pixels: the pen's own place by default. The
+    /// Multibrush gives the maps of its copies; read when a drag starts.
+    virtual QVector<QTransform> vectorEraserTransformations() const;
+
 private:
     KisPaintingInformationBuilder *m_infoBuilder {nullptr};
     KisToolFreehandHelper *m_helper {nullptr};
@@ -143,6 +151,8 @@ private:
     /// pixels
     QScopedPointer<KisBrushStrokeShapeEraser> m_vectorEraser;
     QPointF m_vectorEraserLastPoint;
+    QVector<QTransform> m_vectorEraserTransformations;
+    void eraseVector(const QPointF &from, const QPointF &to);
     qreal vectorEraserRadius();
     void finishVectorEraser();
 

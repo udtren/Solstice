@@ -11,6 +11,7 @@
 #include <QPainterPath>
 #include <QPointer>
 #include <QPushButton>
+#include <QSet>
 #include <QVBoxLayout>
 #include <QtMath>
 
@@ -23,6 +24,7 @@
 #include <KoCanvasBase.h>
 #include <KoCanvasResourceProvider.h>
 #include <KoColor.h>
+#include <KoPathShape.h>
 #include <KoPointerEvent.h>
 #include <KoSelectedShapesProxy.h>
 #include <KoSelection.h>
@@ -806,11 +808,40 @@ void KisToolEditBrushStrokes::applyColor()
 void KisToolEditBrushStrokes::applyBackgroundColor()
 {
     const KoColor color = canvas()->resourceManager()->backgroundColor();
+
+    // Most brushes do not use the background color, and the lines then
+    // look the same. Whether a brush uses it is found by drawing a line
+    // with it twice, so one line of each brush is tried, and of a few
+    // brushes only.
+    const int maximumTried = 8;
+    bool shows = false;
+    bool known = vectorLayer() && nodeEditable();
+    QSet<const KisPaintOpPreset *> tried;
+    Q_FOREACH (const KisBrushStrokeShape *shape, selectedStrokes()) {
+        const KisRecordedBrushStrokeSP stroke = shape->brushStroke();
+        if (!known || shows || !stroke || tried.contains(stroke->preset.data())) {
+            continue;
+        }
+        if (tried.size() >= maximumTried) {
+            known = false;
+            break;
+        }
+        tried.insert(stroke->preset.data());
+        shows = KisBrushStrokePathEdit::usesBackgroundColor(stroke, shape->recordRect());
+    }
+
     changeSelectedStrokes(
         [&](const KisBrushStrokeShape *shape) {
             return KisBrushStrokePathEdit::withBackgroundColor(shape->brushStroke(), color);
         },
         kundo2_i18n("Change Brush Stroke Background Color"));
+
+    if (known && !shows && !tried.isEmpty()) {
+        KisCanvas2 *kiscanvas = static_cast<KisCanvas2 *>(canvas());
+        kiscanvas->viewManager()->showFloatingMessage(
+            i18n("The background color does not show in the selected lines: their brushes do not use it."),
+            QIcon());
+    }
 }
 
 void KisToolEditBrushStrokes::applySize()
@@ -886,9 +917,21 @@ void KisToolEditBrushStrokes::createAssistants()
     if (!vectorLayer() || !image() || !decoration) {
         return;
     }
-    if (shapes.isEmpty()) {
+    // vector shapes with a path (lines, rectangles, ellipses, polygons,
+    // curves) that are selected, from the Select Shapes Tool
+    QList<KoPathShape *> paths;
+    KoSelection *selection = canvas()->selectedShapesProxy() ? canvas()->selectedShapesProxy()->selection() : nullptr;
+    if (selection) {
+        Q_FOREACH (KoShape *shape, selection->selectedVisibleShapes()) {
+            if (KoPathShape *path = dynamic_cast<KoPathShape *>(shape)) {
+                paths << path;
+            }
+        }
+    }
+    if (shapes.isEmpty() && paths.isEmpty()) {
         kiscanvas->viewManager()->showFloatingMessage(
-            i18n("No lines are selected. Click lines with this tool to select them."),
+            i18n("Nothing is selected. Click lines with this tool, or select vector shapes with the Select Shapes "
+                 "Tool."),
             koIcon("object-locked"));
         return;
     }
@@ -923,6 +966,52 @@ void KisToolEditBrushStrokes::createAssistants()
                 add(piece.control2);
             }
             created << assistant;
+        }
+    }
+    // Vector shapes are in document coordinates already. A whole ellipse
+    // is one Ellipse assistant; anything else a Ruler for every straight
+    // piece of its outline and a Spline for every curved one.
+    Q_FOREACH (const KoPathShape *shape, paths) {
+        const QTransform toDocument = shape->absoluteTransformation();
+        const QVector<KisBrushStrokePathEdit::PathPiece> pieces = KisBrushStrokePathEdit::pathPieces(shape->outline());
+        if (pieces.isEmpty()) {
+            continue;
+        }
+        auto make = [&](const QString &id, const QVector<QPointF> &handles) {
+            KisPaintingAssistantFactory *factory = KisPaintingAssistantFactoryRegistry::instance()->get(id);
+            if (!factory) {
+                return;
+            }
+            KisPaintingAssistantSP assistant = toQShared(factory->createPaintingAssistant());
+            for (const QPointF &handle : handles) {
+                assistant->addHandle(new KisPaintingAssistantHandle(handle), HandleType::NORMAL);
+            }
+            created << assistant;
+        };
+
+        bool wholeEllipse = shape->pathShapeId() == QLatin1String("EllipseShape")
+            && QLineF(pieces.first().start, pieces.last().end).length() < 1e-6;
+        for (const KisBrushStrokePathEdit::PathPiece &piece : pieces) {
+            wholeEllipse = wholeEllipse && piece.curve;
+        }
+        QPointF major1;
+        QPointF major2;
+        QPointF minor;
+        if (wholeEllipse
+            && KisBrushStrokePathEdit::ellipseAxes(shape->outlineRect(), toDocument, &major1, &major2, &minor)) {
+            make(QStringLiteral("ellipse"), {major1, major2, minor});
+            continue;
+        }
+        for (const KisBrushStrokePathEdit::PathPiece &piece : pieces) {
+            if (piece.curve) {
+                make(QStringLiteral("spline"),
+                     {toDocument.map(piece.start),
+                      toDocument.map(piece.end),
+                      toDocument.map(piece.control1),
+                      toDocument.map(piece.control2)});
+            } else {
+                make(QStringLiteral("ruler"), {toDocument.map(piece.start), toDocument.map(piece.end)});
+            }
         }
     }
     if (created.isEmpty()) {

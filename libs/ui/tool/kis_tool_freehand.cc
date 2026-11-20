@@ -279,12 +279,13 @@ void KisToolFreehand::beginPrimaryAction(KoPointerEvent *event)
         KisShapeLayerSP layer = dynamic_cast<KisShapeLayer *>(currentNode().data());
         m_vectorEraser.reset(new KisBrushStrokeShapeEraser(layer, KisBrushStrokeShapeEraser::configuredMode()));
         m_vectorEraserLastPoint = convertToPixelCoord(event);
+        m_vectorEraserTransformations = vectorEraserTransformations();
 
         setMode(KisTool::PAINT_MODE);
         if (KisCanvas2 *canvas2 = dynamic_cast<KisCanvas2 *>(canvas())) {
             canvas2->viewManager()->disableControls();
         }
-        m_vectorEraser->erase(m_vectorEraserLastPoint, m_vectorEraserLastPoint, vectorEraserRadius());
+        eraseVector(m_vectorEraserLastPoint, m_vectorEraserLastPoint);
         return;
     }
     // XXX: move this to KisTool and make it work properly for clone layers: for clone layers, the shape paint tools don't work either
@@ -324,7 +325,7 @@ void KisToolFreehand::continuePrimaryAction(KoPointerEvent *event)
 
     if (m_vectorEraser) {
         const QPointF point = convertToPixelCoord(event);
-        m_vectorEraser->erase(m_vectorEraserLastPoint, point, vectorEraserRadius());
+        eraseVector(m_vectorEraserLastPoint, point);
         m_vectorEraserLastPoint = point;
         return;
     }
@@ -333,6 +334,19 @@ void KisToolFreehand::continuePrimaryAction(KoPointerEvent *event)
      * Actual painting
      */
     doStroke(event);
+}
+
+QVector<QTransform> KisToolFreehand::vectorEraserTransformations() const
+{
+    return {QTransform()};
+}
+
+void KisToolFreehand::eraseVector(const QPointF &from, const QPointF &to)
+{
+    const qreal radius = vectorEraserRadius();
+    for (const QTransform &transform : std::as_const(m_vectorEraserTransformations)) {
+        m_vectorEraser->erase(transform.map(from), transform.map(to), radius);
+    }
 }
 
 qreal KisToolFreehand::vectorEraserRadius()

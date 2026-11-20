@@ -3866,3 +3866,90 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   its PDB symbols while attached.
 - Not verified: Linux, the GPU engine, and `ctest` (the plugin was built
   out of tree because `_build` compiles another checkout).
+
+## 2026-11-20 ingest: the shape of an edited canvas-mirror line
+
+- Found by the user's manual test: after Move Points on a line drawn with
+  the canvas mirror, the mirrored side was cut off at a straight edge.
+  `KisBrushStrokeShape::createPiece()` made the new shape's rectangle from
+  the jobs alone; the mirror's copies are painted without jobs. It now
+  adds the jobs' mirror images (`docs/agent/vector-brush-strokes.md`,
+  the eraser's paragraph on canvas mirror flags). The eraser's pieces had
+  the same rectangle.
+- A rectangle taken from a stroke's jobs misses what the canvas mirror
+  paints. Anything that bounds a stroke has to mirror the points too, as
+  `applyDensity()` and the layer transform do.
+- No unit test had a canvas-mirror stroke go through
+  `KisBrushStrokeShapeEdit`; `testShapeEdit` has one now.
+
+## 2026-11-20 ingest: a resize changed the size of painting copies
+
+- Found by the user's manual test: after shrinking an enlarged brush
+  stroke with the Select Shapes Tool, pieces of its ink stayed outside
+  the shape. `KoShape::setSize()` wrote through the data shared with the
+  shallow copies a vector layer paints in its worker thread; it detaches
+  now (`docs/agent/vector-brush-strokes.md`, "Resizing and the painting
+  copies").
+- `KoShape`'s size is `mutable` in its shared data and `setSizeImpl()` is
+  const: any holder of a copy sees a later size. The transformation and
+  everything else detach as usual.
+- The cause was found by reading, not reproduced: the unit test shows the
+  shared size, not the race. Whether the leftovers are gone is for the
+  manual check.
+
+## 2026-11-20 ingest: the vector eraser with the Multibrush
+
+- The user asked whether it was intended that the Multibrush in eraser
+  mode cut one copy only. It was not designed: the vector eraser lives in
+  `KisToolFreehand` and used the pen's place alone. It now erases through
+  `vectorEraserTransformations()`, which `KisToolMultihand` overrides
+  (`docs/agent/vector-brush-strokes.md`, "The Multibrush's eraser").
+- Scenario `vector-eraser-multibrush.json` passes on the fixed build; it
+  was not run on a build without the change.
+- A scratch launch of the installed `solstice.exe` from a plain shell
+  exits with 0xC0000135: the toolchain's `bin` has to be on `PATH`
+  (`run_scenarios.py --launch` inherits the environment).
+
+## 2026-11-20 manual check of the three fixes
+
+- The user checked all three in the application and found them working:
+  the edited canvas-mirror line keeps its copy, no ink is left after
+  shrinking a stroke with the Select Shapes Tool, and the Multibrush's
+  eraser cuts every copy. The resize fix is confirmed by this check
+  only; the race itself was never reproduced in a test.
+
+## 2026-11-20 ingest: a message when the background color does not show
+
+- The user found Apply Background Color without effect: their brush does
+  not use the background color, which is as designed. The button now
+  tells (`docs/agent/vector-brush-strokes.md`, known gaps, "Apply
+  Background Color").
+- Whether a brush uses a color is asked by drawing: two pictures with
+  different colors, compared. Option names differ by engine; the picture
+  does not.
+- The Mix option gives the foreground color alone at full pressure, so a
+  line drawn with the mouse shows no background color even with Mix on.
+
+## 2026-11-20 ingest: assistants from vector shapes
+
+- Create Assistants of the Edit Brush Strokes Tool takes selected vector
+  path shapes too (`docs/agent/vector-brush-strokes.md`, known gaps,
+  "Create Assistants for vector shapes"): a whole ellipse is one Ellipse
+  assistant, other outlines Ruler and Spline assistants.
+- Vector shapes are in document coordinates, like assistants; brush
+  stroke records are in pixels and go through `pixelToDocument()`.
+- An Ellipse assistant's handles are the two ends of one axis and a
+  point on the ellipse. Under a sheared transformation the mapped axes of
+  a shape are not the ellipse's axes: `ellipseAxes()` finds them.
+- `EllipseShape` lives in a plugin; from outside it is told by
+  `KoPathShape::pathShapeId()`.
+- Scenario `vector-shape-assistants.json` passed on the first run:
+  drawing with the Ellipse Tool, selecting with `InteractionTool` by a
+  click on the outline, and the selection kept across the tool change
+  all work through test control.
+
+## 2026-11-20 manual check before the merge
+
+- The user checked the Apply Background Color message and Create
+  Assistants for vector shapes in the application, with the three fixes
+  above, and found all working.
