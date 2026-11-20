@@ -6,17 +6,14 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1) is a
-performance and fix release for the CPU side: faster layer bounds, a faster
-start, less idle work and a smaller resource cache. It builds on
-[1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0), which gives each
-[Layer Comp](layer-comps.md) its own [Fast Image Export](lazy-tools.md)
-settings through saved exports, and adds **Show in File Explorer** to the
-Recent Images and [Asset Library](asset-library.md) menus, and on
-[1.0.0](https://github.com/udtren/Solstice/releases/tag/v1.0.0), which moved
-more of the layer stack to the [GPU engine](gpu-engine.md) and starts the
-engine by itself only on NVIDIA Blackwell; other graphics cards need an
-option.
+[1.2.0](https://github.com/udtren/Solstice/releases/tag/v1.2.0) adds
+[Vector Brush Strokes](vector-brush-strokes.md): brush strokes on vector
+layers stay objects that can be erased, reshaped, restyled and scaled. It
+builds on [1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1),
+a performance and fix release for the CPU side, and on
+[1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0), which gives
+each [Layer Comp](layer-comps.md) its own [Fast Image Export](lazy-tools.md)
+settings through saved exports.
 
 ## Getting started
 
