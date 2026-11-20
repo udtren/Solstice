@@ -6,7 +6,11 @@
 #include "KisBrushStrokeLayer.h"
 #include "KisBrushStrokeLayerPrivate.h"
 
+#include <QApplication>
+#include <QMutex>
+#include <QThread>
 #include <QtMath>
+#include <mutex>
 
 #include <KisAsynchronousStrokeUpdateHelper.h>
 #include <KoCanvasResourceProvider.h>
@@ -161,6 +165,50 @@ void drawStroke(KisImageSP image,
 }
 } // namespace
 
+namespace
+{
+/// Images of finished redraws that wait for the GUI thread to destroy them
+struct RetiredImage {
+    KisImageSP image;
+    KisPaintLayerSP layer;
+};
+QMutex s_retiredMutex;
+QVector<RetiredImage *> s_retired;
+
+void destroyRetiredImages()
+{
+    QVector<RetiredImage *> retired;
+    {
+        QMutexLocker locker(&s_retiredMutex);
+        retired.swap(s_retired);
+    }
+    qDeleteAll(retired);
+}
+
+/// Has the GUI thread destroy @p image: from its event loop, or when the
+/// application quits. Images still waiting when the process ends without
+/// either (a test) are left alone; destroying an image after the
+/// application object is gone crashes. Takes the caller's references: the
+/// GUI thread may get there before the caller returns, and a reference the
+/// caller kept would then be the last one, released in the wrong thread.
+void retireInGuiThread(KisImageSP &image, KisPaintLayerSP &layer)
+{
+    static std::once_flag connected;
+    std::call_once(connected, []() {
+        QObject::connect(qApp, &QCoreApplication::aboutToQuit, qApp, &destroyRetiredImages);
+    });
+    // not yet visible to the GUI thread: the caller's references go first
+    RetiredImage *retired = new RetiredImage{image, layer};
+    image = nullptr;
+    layer = nullptr;
+    {
+        QMutexLocker locker(&s_retiredMutex);
+        s_retired << retired;
+    }
+    QMetaObject::invokeMethod(qApp, &destroyRetiredImages, Qt::QueuedConnection);
+}
+} // namespace
+
 KisPaintDeviceSP KisBrushStrokeLayer::renderStrokes(const QVector<KisRecordedBrushStrokeSP> &strokes,
                                                     const KoColorSpace *colorSpace,
                                                     const QRect &imageBounds,
@@ -180,7 +228,15 @@ KisPaintDeviceSP KisBrushStrokeLayer::renderStrokes(const QVector<KisRecordedBru
             drawStroke(image, layer, *stroke, QPointF(deviceOffset - stroke->deviceOffset), transform);
         }
     }
-    return layer->paintDevice();
+    KisPaintDeviceSP device = layer->paintDevice();
+    // The image lives in the GUI thread (KisImage's constructor moves it
+    // there) and starts timers there while the strokes run. Destroying it
+    // in this thread leaves a running timer registered for a dead object,
+    // which crashes when it fires; the GUI thread destroys it.
+    if (QThread::currentThread() != qApp->thread()) {
+        retireInGuiThread(image, layer);
+    }
+    return device;
 }
 
 QVector<KisRecordedBrushStrokeSP>

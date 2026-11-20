@@ -33,6 +33,11 @@
 #include "brushengine/kis_paintop_utils.h"
 #include "KisAsynchronousStrokeUpdateHelper.h"
 #include "KisBrushStrokeLayer.h"
+#include "KisBrushStrokeShape.h"
+#include "kis_shape_layer.h"
+#include <kis_image.h>
+#include <kis_paint_device.h>
+#include <kis_painter.h>
 #include "kis_command_utils.h"
 #include <QRandomGenerator>
 #include <KisUsageLogger.h>
@@ -82,6 +87,9 @@ struct FreehandStrokeStrategy::Private
     /// the layer whose recorded change this stroke has begun and not yet
     /// handed to its undo command (KisRecordedChangeScopeCommand)
     KisBrushStrokeLayerSP recordedChangeLayer;
+    /// Solstice: the vector layer whose stroke is recorded to become a
+    /// shape (docs/agent/vector-brush-strokes.md)
+    KisShapeLayerSP vectorLayer;
 };
 
 FreehandStrokeStrategy::FreehandStrokeStrategy(KisResourcesSnapshotSP resources,
@@ -161,14 +169,18 @@ void FreehandStrokeStrategy::initRecording(const QVector<KisFreehandStrokeInfo *
 {
     KisResourcesSnapshotSP resources = m_d->resources;
     KisBrushStrokeLayer *layer = dynamic_cast<KisBrushStrokeLayer *>(resources->currentNode().data());
+    KisShapeLayer *vectorLayer = dynamic_cast<KisShapeLayer *>(resources->currentNode().data());
+    if (!resources->currentPaintOpPreset() || !resources->throughLayerTargets().isEmpty()) {
+        return;
+    }
     // an animated layer's record is never drawn again (its frames differ);
     // a through-layer erase is not part of the layer's own strokes
-    if (!layer || !layer->paintDevice() || layer->paintDevice()->keyframeChannel()
-        || !resources->currentPaintOpPreset() || !resources->throughLayerTargets().isEmpty()) {
+    if (!vectorLayer && (!layer || !layer->paintDevice() || layer->paintDevice()->keyframeChannel())) {
         return;
     }
 
     m_d->recordingLayer = layer;
+    m_d->vectorLayer = vectorLayer;
     m_d->recording.reset(new KisRecordedBrushStroke());
     // dabs rendered on several threads may differ with the threads' timing
     setSequentialDabRendering(true);
@@ -224,7 +236,9 @@ void FreehandStrokeStrategy::recordJob(const Data &data)
         KisUsageLogger::log(
             QStringLiteral("Brush stroke layer: a stroke with a job of type %1 is not recorded").arg(data.type));
         // its pixels are not the record: the layer checks them
-        m_d->recordingLayer->markChangeUnrecorded();
+        if (m_d->recordingLayer) {
+            m_d->recordingLayer->markChangeUnrecorded();
+        }
         m_d->recording.reset();
         m_d->recordingLayer.clear();
     }
@@ -240,7 +254,7 @@ void FreehandStrokeStrategy::endRecordedChange()
 
 void FreehandStrokeStrategy::initStrokeCallback()
 {
-    if (m_d->recording) {
+    if (m_d->recording && m_d->recordingLayer) {
         KisPaintDeviceSP device = m_d->recordingLayer->paintDevice();
         m_d->recording->deviceOffset = QPoint(device->x(), device->y());
         // the stroke's pixel changes belong to its record
@@ -255,7 +269,10 @@ void FreehandStrokeStrategy::finishStrokeCallback()
 {
     m_d->efficiencyMeasurer.notifyRenderingFinished();
 
-    if (m_d->recording && !m_d->recording->jobs.isEmpty()) {
+    if (m_d->vectorLayer) {
+        // the stroke becomes a shape; its undo command adds it
+        setAdditionalUndoCommand(createVectorShapeCommand(), nullptr);
+    } else if (m_d->recording && !m_d->recording->jobs.isEmpty()) {
         // the undo command closes the stroke's recorded change after the
         // last of its pixels is merged, and brackets undo and redo
         KisBrushStrokeLayer *layer = m_d->recordingLayer.data();
@@ -283,6 +300,37 @@ void FreehandStrokeStrategy::finishStrokeCallback()
     }
 
     KisPainterBasedStrokeStrategy::finishStrokeCallback();
+}
+
+KUndo2Command *FreehandStrokeStrategy::createVectorShapeCommand()
+{
+    KisPaintDeviceSP target = targetDevice();
+    KisImageSP image = m_d->resources->image();
+    if (!m_d->recording || m_d->recording->jobs.isEmpty() || !target || !image) {
+        return nullptr;
+    }
+
+    // what the stroke painted, as the layer shows its preview: a Wash
+    // stroke's opacity and blend mode apply to the whole stroke
+    const QRect extent = target->extent();
+    KisPaintDeviceSP merged = new KisPaintDevice(target->colorSpace());
+    {
+        KisPainter gc(merged);
+        gc.setOpacityF(m_d->resources->needsIndirectPainting() ? m_d->resources->opacity() : OPACITY_OPAQUE_F);
+        gc.setCompositeOpId(m_d->resources->compositeOpId());
+        gc.bitBlt(extent.topLeft(), target, extent);
+    }
+    const QRect bounds = merged->exactBounds();
+    if (bounds.isEmpty()) {
+        return nullptr;
+    }
+
+    KisBrushStrokeShape *shape = KisBrushStrokeShape::fromStroke(m_d->recording,
+                                                                 merged->convertToQImage(nullptr, bounds),
+                                                                 bounds.topLeft(),
+                                                                 image->xRes(),
+                                                                 image->yRes());
+    return shape ? m_d->vectorLayer->createAddShapeCommand(shape) : nullptr;
 }
 
 void FreehandStrokeStrategy::cancelStrokeCallback()
@@ -520,6 +568,9 @@ KisStrokeStrategy* FreehandStrokeStrategy::createLodClone(int levelOfDetail)
 {
     if (!m_d->resources->presetAllowsLod()) return 0;
     if (!m_d->resources->currentNode()->supportsLodPainting()) return 0;
+    // Solstice: a stroke on a vector layer is recorded once, at full size
+    if (m_d->vectorLayer)
+        return 0;
 
     FreehandStrokeStrategy *clone = new FreehandStrokeStrategy(*this, levelOfDetail);
     return clone;

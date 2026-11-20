@@ -46,6 +46,8 @@ option.
   in Tool Options with the eye marks.
 - [Brush Stroke Layer](brush-stroke-layer.md): a layer that redraws its
   strokes when scaled.
+- [Brush strokes on vector layers](vector-brush-strokes.md): brush strokes
+  as movable, resizable objects.
 - [Photoshop brushes](photoshop-brushes.md): importing `.abr` files.
 - [At least 1 pixel](brush-minimum-one-pixel.md): thin, pressure-tapered
   brush lines keep at least 1 pixel instead of fading out.

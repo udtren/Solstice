@@ -6,6 +6,7 @@
  */
 
 #include "KisApplication.h"
+#include "KisBrushStrokeShape.h"
 #include <KisSolsticePaths.h>
 
 #include <stdlib.h>
@@ -538,6 +539,7 @@ void KisApplication::loadPlugins()
 
     KoShapeRegistry *r = KoShapeRegistry::instance();
     r->add(new KisShapeSelectionFactory());
+    KisBrushStrokeShape::registerFactory();
     KoColorSpaceRegistry::instance();
     KisActionRegistry::instance();
     KisFilterRegistry::instance();

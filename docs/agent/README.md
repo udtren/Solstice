@@ -20,6 +20,8 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
   cover shared implementation rules.
 - [Brush Stroke Layer](brush-stroke-layer.md) owns recording, replay, persistence,
   lifecycle and regression checks; its original plan is archived below.
+- [Brush strokes on vector layers](vector-brush-strokes.md) owns the stroke
+  shape, the vector layer's stroke preview and their file form.
 - [Photoshop brush import](abr-import.md) owns parsing, conversion, resource
   compatibility and verification scope; its development history is archived below.
 - [Brush option shared model](brush-option-shared-model.md) owns state,

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kdeorg\n"
 "Report-Msgid-Bugs-To: https://github.com/udtren/Solstice/issues\n"
-"POT-Creation-Date: 2026-11-13 12:28+0900\n"
+"POT-Creation-Date: 2026-11-20 08:58+0900\n"
 "PO-Revision-Date: 2024-04-22 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
@@ -15446,8 +15446,8 @@ msgid ""
 "Contributors"
 msgstr "© 1999–2026 Krita 开发者；Solstice 修改部分 © 2026 Solstice 贡献者"
 
-#: krita/main.cc:932 libs/ui/KisApplication.cpp:562
-#: libs/ui/KisApplication.cpp:868
+#: krita/main.cc:932 libs/ui/KisApplication.cpp:564
+#: libs/ui/KisApplication.cpp:870
 #, kde-format
 msgctxt "@title:window"
 msgid "Solstice: Warning"
@@ -15577,7 +15577,7 @@ msgstr "重做"
 
 #: libs/flake/KoMarkerCollection.cpp:67
 #: libs/flake/resources/KoSvgSymbolCollectionResource.cpp:136
-#: libs/ui/flake/kis_shape_layer.cc:615
+#: libs/ui/flake/kis_shape_layer.cc:696
 #, kde-format
 msgid ""
 "Parsing error in the main document at line %1, column %2\n"
@@ -20360,7 +20360,7 @@ msgid "Imported Image"
 msgstr "导入的图像"
 
 #. i18n.
-#: libs/image/kis_image.cc:769 libs/ui/KisDocument.cpp:2653
+#: libs/image/kis_image.cc:769 libs/ui/KisDocument.cpp:2656
 #: libs/ui/kis_import_catcher.cc:50 plugins/impex/psd/psd_loader.cpp:221
 #, kde-format
 msgctxt "Name for the bottom-most layer in the layerstack"
@@ -20569,7 +20569,7 @@ msgid "Onion Skins"
 msgstr "绘图纸外观"
 
 #: libs/image/kis_layer_properties_icons.cpp:30
-#: libs/resources/KisResourceModel.cpp:116
+#: libs/resources/KisResourceModel.cpp:123
 #: libs/resources/KisStorageModel.cpp:520
 #: libs/resources/KisTagResourceModel.cpp:641
 #: plugins/extensions/dbexplorer/DlgDbExplorer.cpp:111
@@ -22531,14 +22531,14 @@ msgstr "未解析的资源数据块"
 msgid "Local Resources"
 msgstr "本地资源"
 
-#: libs/resources/KisResourceCacheDb.cpp:358
+#: libs/resources/KisResourceCacheDb.cpp:359
 #: libs/resourcewidgets/KisStorageChooserWidget.cpp:179
-#: libs/ui/KisApplication.cpp:1265 libs/ui/KisApplication.cpp:1269
-#: libs/ui/KisApplication.cpp:1285 libs/ui/KisApplication.cpp:1316
-#: libs/ui/KisApplication.cpp:1330 libs/ui/KisApplication.cpp:1359
-#: libs/ui/KisDocument.cpp:1046 libs/ui/KisDocument.cpp:1061
-#: libs/ui/KisDocument.cpp:2010 libs/ui/KisDocument.cpp:2054
-#: libs/ui/KisDocument.cpp:2065 libs/ui/KisMainWindow.cpp:1234
+#: libs/ui/KisApplication.cpp:1267 libs/ui/KisApplication.cpp:1271
+#: libs/ui/KisApplication.cpp:1287 libs/ui/KisApplication.cpp:1318
+#: libs/ui/KisApplication.cpp:1332 libs/ui/KisApplication.cpp:1361
+#: libs/ui/KisDocument.cpp:1049 libs/ui/KisDocument.cpp:1064
+#: libs/ui/KisDocument.cpp:2013 libs/ui/KisDocument.cpp:2057
+#: libs/ui/KisDocument.cpp:2068 libs/ui/KisMainWindow.cpp:1234
 #: libs/ui/KisMainWindow.cpp:1371 libs/ui/KisMainWindow.cpp:1468
 #: libs/ui/KisMainWindow.cpp:2135 libs/ui/KisMainWindow.cpp:2299
 #: libs/ui/KisMainWindow.cpp:2309 libs/ui/KisMainWindow.cpp:2450
@@ -22614,7 +22614,7 @@ msgctxt "@title:window"
 msgid "Solstice"
 msgstr "Solstice"
 
-#: libs/resources/KisResourceCacheDb.cpp:359
+#: libs/resources/KisResourceCacheDb.cpp:360
 #, kde-format
 msgid ""
 "The resource database scheme has changed. Solstice will backup your database "
@@ -22693,7 +22693,7 @@ msgstr "正在同步资源。"
 msgid "Could not synchronize %1 with the database"
 msgstr "无法将 %1 与数据库同步"
 
-#: libs/resources/KisResourceModel.cpp:98
+#: libs/resources/KisResourceModel.cpp:105
 #: libs/resources/KisStorageModel.cpp:510
 #: libs/resources/KisTagResourceModel.cpp:623
 #: plugins/extensions/dbexplorer/DlgDbExplorer.cpp:82
@@ -22703,14 +22703,14 @@ msgstr "无法将 %1 与数据库同步"
 msgid "Id"
 msgstr "ID"
 
-#: libs/resources/KisResourceModel.cpp:100
+#: libs/resources/KisResourceModel.cpp:107
 #: libs/resources/KisTagResourceModel.cpp:625
 #: plugins/extensions/dbexplorer/DlgDbExplorer.cpp:84
 #, kde-format
 msgid "Storage ID"
 msgstr "存储项 ID"
 
-#: libs/resources/KisResourceModel.cpp:102
+#: libs/resources/KisResourceModel.cpp:109
 #: libs/resources/KisStorageModel.cpp:524
 #: libs/resources/KisTagResourceModel.cpp:627
 #: plugins/extensions/dbexplorer/DlgDbExplorer.cpp:108
@@ -22720,25 +22720,25 @@ msgstr "存储项 ID"
 msgid "Name"
 msgstr "名称"
 
-#: libs/resources/KisResourceModel.cpp:104
+#: libs/resources/KisResourceModel.cpp:111
 #: libs/resources/KisTagResourceModel.cpp:629
 #, kde-format
 msgid "File Name"
 msgstr "文件名"
 
-#: libs/resources/KisResourceModel.cpp:106
+#: libs/resources/KisResourceModel.cpp:113
 #: libs/resources/KisTagResourceModel.cpp:631
 #, kde-format
 msgid "Tooltip"
 msgstr "悬停提示"
 
-#: libs/resources/KisResourceModel.cpp:110
+#: libs/resources/KisResourceModel.cpp:117
 #: libs/resources/KisTagResourceModel.cpp:635
 #, kde-format
 msgid "Status"
 msgstr "状态"
 
-#: libs/resources/KisResourceModel.cpp:112
+#: libs/resources/KisResourceModel.cpp:119
 #: libs/resources/KisStorageModel.cpp:514
 #: libs/resources/KisTagResourceModel.cpp:637
 #: libs/resourcewidgets/KisIconToolTip.cpp:116
@@ -22746,38 +22746,38 @@ msgstr "状态"
 msgid "Location"
 msgstr "位置"
 
-#: libs/resources/KisResourceModel.cpp:118
+#: libs/resources/KisResourceModel.cpp:125
 #: libs/resources/KisTagResourceModel.cpp:643
 #: libs/resources/KisTagResourceModel.cpp:673
 #, kde-format
 msgid "Storage Active"
 msgstr "存储激活"
 
-#: libs/resources/KisResourceModel.cpp:120
+#: libs/resources/KisResourceModel.cpp:127
 #: libs/resources/KisTagResourceModel.cpp:645
 #: plugins/extensions/dbexplorer/DlgDbExplorer.cpp:87
 #, kde-format
 msgid "md5sum"
 msgstr "md5 校验和"
 
-#: libs/resources/KisResourceModel.cpp:124
+#: libs/resources/KisResourceModel.cpp:131
 #: libs/resources/KisTagResourceModel.cpp:649
 #, kde-format
 msgid "Large Thumbnail"
 msgstr "大缩略图"
 
-#: libs/resources/KisResourceModel.cpp:126
+#: libs/resources/KisResourceModel.cpp:133
 #: libs/resources/KisTagResourceModel.cpp:651
 #, kde-format
 msgid "Dirty"
 msgstr "有未保存修改"
 
-#: libs/resources/KisResourceModel.cpp:130
+#: libs/resources/KisResourceModel.cpp:137
 #, kde-format
 msgid "Broken Status"
 msgstr "损坏状态"
 
-#: libs/resources/KisResourceModel.cpp:132
+#: libs/resources/KisResourceModel.cpp:139
 #, kde-format
 msgid "Broken Status Message"
 msgstr "损坏状态消息"
@@ -22988,7 +22988,7 @@ msgid "Tag File Name"
 msgstr "标签文件名"
 
 #: libs/resourcewidgets/KisIconToolTip.cpp:108
-#: libs/ui/widgets/kis_paintop_presets_editor.cpp:964
+#: libs/ui/widgets/kis_paintop_presets_editor.cpp:985
 #, kde-format
 msgid "Resource is broken!"
 msgstr "资源已损坏。"
@@ -23328,20 +23328,20 @@ msgstr "删除此标签"
 msgid "Undelete"
 msgstr "取消删除"
 
-#: libs/ui/KisApplication.cpp:418
+#: libs/ui/KisApplication.cpp:419
 #: plugins/extensions/resourcemanager/wdgtagselection.cpp:266
 #, kde-format
 msgid "Brush presets"
 msgstr "笔刷预设"
 
-#: libs/ui/KisApplication.cpp:423 libs/ui/KisApplication.cpp:427
-#: libs/ui/KisApplication.cpp:431 libs/ui/KisApplication.cpp:435
+#: libs/ui/KisApplication.cpp:424 libs/ui/KisApplication.cpp:428
+#: libs/ui/KisApplication.cpp:432 libs/ui/KisApplication.cpp:436
 #: plugins/extensions/resourcemanager/wdgtagselection.cpp:267
 #, kde-format
 msgid "Brush tips"
 msgstr "笔尖图像"
 
-#: libs/ui/KisApplication.cpp:440 libs/ui/KisApplication.cpp:444
+#: libs/ui/KisApplication.cpp:441 libs/ui/KisApplication.cpp:445
 #: libs/ui/kis_control_frame.cpp:248
 #: plugins/extensions/resourcemanager/dlg_embed_tags.cpp:63
 #: plugins/extensions/resourcemanager/page_tag_chooser.cpp:58
@@ -23350,7 +23350,7 @@ msgstr "笔尖图像"
 msgid "Gradients"
 msgstr "渐变"
 
-#: libs/ui/KisApplication.cpp:450
+#: libs/ui/KisApplication.cpp:451
 #: plugins/extensions/resourcemanager/dlg_embed_tags.cpp:66
 #: plugins/extensions/resourcemanager/page_tag_chooser.cpp:61
 #: plugins/extensions/resourcemanager/wdgtagselection.cpp:270
@@ -23358,7 +23358,7 @@ msgstr "渐变"
 msgid "Palettes"
 msgstr "色板"
 
-#: libs/ui/KisApplication.cpp:459 libs/ui/kis_control_frame.cpp:196
+#: libs/ui/KisApplication.cpp:460 libs/ui/kis_control_frame.cpp:196
 #: plugins/dockers/patterndocker/patterndocker_dock.cpp:19
 #: plugins/extensions/resourcemanager/dlg_embed_tags.cpp:65
 #: plugins/extensions/resourcemanager/page_tag_chooser.cpp:60
@@ -23367,7 +23367,7 @@ msgstr "色板"
 msgid "Patterns"
 msgstr "图案"
 
-#: libs/ui/KisApplication.cpp:469 libs/ui/widgets/kis_workspace_chooser.cpp:90
+#: libs/ui/KisApplication.cpp:470 libs/ui/widgets/kis_workspace_chooser.cpp:90
 #: plugins/extensions/resourcemanager/dlg_embed_tags.cpp:67
 #: plugins/extensions/resourcemanager/page_tag_chooser.cpp:62
 #: plugins/extensions/resourcemanager/wdgtagselection.cpp:268
@@ -23375,50 +23375,50 @@ msgstr "图案"
 msgid "Workspaces"
 msgstr "工作区"
 
-#: libs/ui/KisApplication.cpp:473
+#: libs/ui/KisApplication.cpp:474
 #, kde-format
 msgid "SVG symbol libraries"
 msgstr "矢量图形库"
 
-#: libs/ui/KisApplication.cpp:477 libs/ui/widgets/kis_workspace_chooser.cpp:104
+#: libs/ui/KisApplication.cpp:478 libs/ui/widgets/kis_workspace_chooser.cpp:104
 #, kde-format
 msgid "Window layouts"
 msgstr "窗口布局"
 
-#: libs/ui/KisApplication.cpp:485
+#: libs/ui/KisApplication.cpp:486
 #: plugins/extensions/resourcemanager/wdgtagselection.cpp:273
 #, kde-format
 msgid "Gamut masks"
 msgstr "色域蒙版"
 
-#: libs/ui/KisApplication.cpp:490
+#: libs/ui/KisApplication.cpp:491
 #, kde-format
 msgid "SeExpr Scripts"
 msgstr "SeExpr 脚本"
 
-#: libs/ui/KisApplication.cpp:496
+#: libs/ui/KisApplication.cpp:497
 #, kde-format
 msgctxt "Resource type name"
 msgid "Layer styles"
 msgstr "图层样式"
 
-#: libs/ui/KisApplication.cpp:502
+#: libs/ui/KisApplication.cpp:503
 #, kde-format
 msgid "Font Families"
 msgstr "字体系列"
 
-#: libs/ui/KisApplication.cpp:506
+#: libs/ui/KisApplication.cpp:507
 #, kde-format
 msgid "Style Presets"
 msgstr "文本样式预设"
 
-#: libs/ui/KisApplication.cpp:515 libs/ui/KisApplication.cpp:527
+#: libs/ui/KisApplication.cpp:516 libs/ui/KisApplication.cpp:528
 #, kde-format
 msgctxt "@title:window"
 msgid "Solstice: Fatal error"
 msgstr "Solstice：发生严重错误"
 
-#: libs/ui/KisApplication.cpp:516
+#: libs/ui/KisApplication.cpp:517
 #, kde-format
 msgid ""
 "%1\n"
@@ -23429,7 +23429,7 @@ msgstr ""
 "\n"
 "Solstice 将会立即退出。"
 
-#: libs/ui/KisApplication.cpp:529
+#: libs/ui/KisApplication.cpp:530
 #, kde-format
 msgid ""
 "\n"
@@ -23440,7 +23440,7 @@ msgstr ""
 "\n"
 "Solstice 将会立即退出。"
 
-#: libs/ui/KisApplication.cpp:563
+#: libs/ui/KisApplication.cpp:565
 #, kde-format
 msgid ""
 "You are running a 32 bits build on a 64 bits Windows.\n"
@@ -23451,65 +23451,65 @@ msgstr ""
 "这将导致程序性能低下，或引发其他问题。\n"
 "请下载并安装 64 位版本的 Krita。"
 
-#: libs/ui/KisApplication.cpp:578
+#: libs/ui/KisApplication.cpp:580
 #, kde-format
 msgid "Initializing Globals..."
 msgstr "正在初始化全局参数..."
 
-#: libs/ui/KisApplication.cpp:611
+#: libs/ui/KisApplication.cpp:613
 #, kde-format
 msgid "Adding resource types..."
 msgstr "正在添加资源类型…"
 
-#: libs/ui/KisApplication.cpp:615
+#: libs/ui/KisApplication.cpp:617
 #, kde-format
 msgid "Loading plugins..."
 msgstr "正在加载插件..."
 
-#: libs/ui/KisApplication.cpp:621
+#: libs/ui/KisApplication.cpp:623
 #, kde-format
 msgid "Loading resources..."
 msgstr "正在加载资源..."
 
-#: libs/ui/KisApplication.cpp:630
+#: libs/ui/KisApplication.cpp:632
 #, kde-format
 msgid "Loading Main Window..."
 msgstr "正在加载主窗口..."
 
-#: libs/ui/KisApplication.cpp:662
+#: libs/ui/KisApplication.cpp:664
 #, kde-format
 msgid "Launching..."
 msgstr "正在启动..."
 
-#: libs/ui/KisApplication.cpp:752
+#: libs/ui/KisApplication.cpp:754
 #, kde-format
 msgid "Mimetype not found, try using the -mimetype option"
 msgstr "无法找到 MIME 类型，请尝试使用 -mimetype 选项"
 
-#: libs/ui/KisApplication.cpp:814
+#: libs/ui/KisApplication.cpp:816
 #, kde-format
 msgid "Failed to render animation frames!"
 msgstr "动画帧导出失败。"
 
-#: libs/ui/KisApplication.cpp:841 libs/ui/KisApplication.cpp:1122
+#: libs/ui/KisApplication.cpp:843 libs/ui/KisApplication.cpp:1124
 #, kde-format
 msgid "File layer"
 msgstr "文件图层"
 
-#: libs/ui/KisApplication.cpp:852 libs/ui/KisApplication.cpp:858
-#: libs/ui/KisApplication.cpp:1113 libs/ui/KisApplication.cpp:1133
-#: libs/ui/KisApplication.cpp:1138
+#: libs/ui/KisApplication.cpp:854 libs/ui/KisApplication.cpp:860
+#: libs/ui/KisApplication.cpp:1115 libs/ui/KisApplication.cpp:1135
+#: libs/ui/KisApplication.cpp:1140
 #, kde-format
 msgctxt "@title:window"
 msgid "Solstice:Warning"
 msgstr "Solstice：警告"
 
-#: libs/ui/KisApplication.cpp:853 libs/ui/KisApplication.cpp:1134
+#: libs/ui/KisApplication.cpp:855 libs/ui/KisApplication.cpp:1136
 #, kde-format
 msgid "Cannot add %1 as a file layer: the file does not exist."
 msgstr "无法将 %1 添加为文件图层: 该文件不存在。"
 
-#: libs/ui/KisApplication.cpp:859
+#: libs/ui/KisApplication.cpp:861
 #, kde-format
 msgid ""
 "Cannot add the file layer: no document is open.\n"
@@ -23529,7 +23529,7 @@ msgstr ""
 "(菜单栏 -> 设置 -> 配置 Solstice -> 常规 -> 窗口) 中勾选了“只允许一个 "
 "Solstice 实例”。"
 
-#: libs/ui/KisApplication.cpp:869
+#: libs/ui/KisApplication.cpp:871
 #, kde-format
 msgid ""
 "Cannot add the file layer: no document is open.\n"
@@ -23539,32 +23539,32 @@ msgstr ""
 "无法添加文件图层：没有已打开的图像。\n"
 "您可以使用 --new-image 参数新建一个图像，也可以打开一个已有图像。"
 
-#: libs/ui/KisApplication.cpp:1114
+#: libs/ui/KisApplication.cpp:1116
 #, kde-format
 msgid "Couldn't open file %1"
 msgstr "无法打开图像 %1"
 
-#: libs/ui/KisApplication.cpp:1139
+#: libs/ui/KisApplication.cpp:1141
 #, kde-format
 msgid "Cannot add the file layer: no document is open."
 msgstr "无法添加文件图层：没有已打开的图像。"
 
-#: libs/ui/KisApplication.cpp:1266
+#: libs/ui/KisApplication.cpp:1268
 #, kde-format
 msgid "No template found for: %1"
 msgstr "没有找到适用于 %1 的模板"
 
-#: libs/ui/KisApplication.cpp:1270
+#: libs/ui/KisApplication.cpp:1272
 #, kde-format
 msgid "Too many templates found for: %1"
 msgstr "适用于 %1 的模板过多"
 
-#: libs/ui/KisApplication.cpp:1286
+#: libs/ui/KisApplication.cpp:1288
 #, kde-format
 msgid "Template %1 failed to load."
 msgstr "模板 %1 加载失败。"
 
-#: libs/ui/KisApplication.cpp:1317
+#: libs/ui/KisApplication.cpp:1319
 #, kde-format
 msgid ""
 "Solstice configurations reset!\n"
@@ -23579,7 +23579,7 @@ msgstr ""
 "\n"
 "请重新启动 Solstice 使更改生效。"
 
-#: libs/ui/KisApplication.cpp:1331
+#: libs/ui/KisApplication.cpp:1333
 #, kde-format
 msgid ""
 "Failed to clear %1\n"
@@ -23590,7 +23590,7 @@ msgstr ""
 "\n"
 "请确保没有其他程序正在使用该文件，然后重试。"
 
-#: libs/ui/KisApplication.cpp:1360
+#: libs/ui/KisApplication.cpp:1362
 #, kde-format
 msgid "Do you want to clear the settings file?"
 msgstr "您想要清除设置文件吗？"
@@ -23736,62 +23736,62 @@ msgctxt "(qtundo-format)"
 msgid "Clone Document"
 msgstr "复制图像副本"
 
-#: libs/ui/KisDocument.cpp:787
+#: libs/ui/KisDocument.cpp:788
 #, kde-format
 msgid "%1 cannot be written to. Please save under a different name."
 msgstr "无法写入 %1 。请换一个文件名保存。"
 
-#: libs/ui/KisDocument.cpp:832
+#: libs/ui/KisDocument.cpp:833
 #, kde-format
 msgctxt "Saving error message"
 msgid "Failed to create a backup file"
 msgstr "创建备份文件失败"
 
-#: libs/ui/KisDocument.cpp:849
+#: libs/ui/KisDocument.cpp:850
 #, kde-format
 msgctxt "Saving error message"
 msgid "Failed to create a numbered backup file"
 msgstr "创建数字文件名序列的备份文件失败"
 
-#: libs/ui/KisDocument.cpp:871
+#: libs/ui/KisDocument.cpp:872
 #, kde-format
 msgid "Exporting Document..."
 msgstr "正在导出图像..."
 
-#: libs/ui/KisDocument.cpp:872
+#: libs/ui/KisDocument.cpp:873
 #, kde-format
 msgid "Saving Document..."
 msgstr "正在保存图像..."
 
-#: libs/ui/KisDocument.cpp:887
+#: libs/ui/KisDocument.cpp:888
 #, kde-format
 msgid ""
 "Could not start saving %1. Wait until the current save operation has "
 "finished."
 msgstr "无法开始 %1 的保存操作。请在当前的保存操作结束后重试。"
 
-#: libs/ui/KisDocument.cpp:892
+#: libs/ui/KisDocument.cpp:893
 #, kde-format
 msgid "Could not start saving %1. Image is busy"
 msgstr "无法开始 %1 的保存操作。图像正忙"
 
-#: libs/ui/KisDocument.cpp:897
+#: libs/ui/KisDocument.cpp:898
 #, kde-format
 msgid "Could not start saving %1. Unknown failure has happened"
 msgstr "无法开始 %1 的保存操作。发生了未知错误"
 
-#: libs/ui/KisDocument.cpp:1040
+#: libs/ui/KisDocument.cpp:1043
 #, kde-format
 msgctxt "%1 --- failing file name, %2 --- error message"
 msgid "Error during saving %1: %2"
 msgstr "保存 %1 时出错：%2"
 
-#: libs/ui/KisDocument.cpp:1047
+#: libs/ui/KisDocument.cpp:1050
 #, kde-format
 msgid "Could not save %1."
 msgstr "无法保存 %1。"
 
-#: libs/ui/KisDocument.cpp:1064
+#: libs/ui/KisDocument.cpp:1067
 #, kde-format
 msgctxt ""
 "dialog box shown to the user if there were warnings while saving the "
@@ -23799,45 +23799,45 @@ msgctxt ""
 msgid "%1 has been saved but is incomplete."
 msgstr "%1 已被保存，但不完整。"
 
-#: libs/ui/KisDocument.cpp:1070
+#: libs/ui/KisDocument.cpp:1073
 #, kde-format
 msgctxt ""
 "dialog box shown to the user if there were warnings while saving the document"
 msgid "Some problems were encountered when saving."
 msgstr "保存时遇到了一些问题。"
 
-#: libs/ui/KisDocument.cpp:1087
+#: libs/ui/KisDocument.cpp:1090
 #, kde-format
 msgid "Finished saving %1"
 msgstr "已完成保存 %1"
 
-#: libs/ui/KisDocument.cpp:1522
+#: libs/ui/KisDocument.cpp:1525
 #, kde-format
 msgid "Autosaving... %1"
 msgstr "正在自动保存... %1"
 
-#: libs/ui/KisDocument.cpp:1530
+#: libs/ui/KisDocument.cpp:1533
 #, kde-format
 msgid "Autosaving..."
 msgstr "正在自动保存..."
 
-#: libs/ui/KisDocument.cpp:1536
+#: libs/ui/KisDocument.cpp:1539
 #, kde-format
 msgid "Autosaving postponed: document is busy..."
 msgstr "自动保存已推迟：图像正被占用..."
 
-#: libs/ui/KisDocument.cpp:1679
+#: libs/ui/KisDocument.cpp:1682
 #, kde-format
 msgctxt "%1 --- failing file name, %2 --- error message"
 msgid "Error during autosaving %1: %2"
 msgstr "自动保存 %1 时出错：%2"
 
-#: libs/ui/KisDocument.cpp:1693
+#: libs/ui/KisDocument.cpp:1696
 #, kde-format
 msgid "Finished autosaving %1"
 msgstr "已完成自动保存 %1"
 
-#: libs/ui/KisDocument.cpp:1943
+#: libs/ui/KisDocument.cpp:1946
 #, kde-format
 msgid ""
 "Malformed Path\n"
@@ -23846,38 +23846,38 @@ msgstr ""
 "路径格式错误\n"
 "%1"
 
-#: libs/ui/KisDocument.cpp:2011
+#: libs/ui/KisDocument.cpp:2014
 #, kde-format
 msgid "File %1 does not exist."
 msgstr "文件 %1 不存在。"
 
-#: libs/ui/KisDocument.cpp:2040
+#: libs/ui/KisDocument.cpp:2043
 #, kde-format
 msgid "Opening document"
 msgstr "正在打开图像"
 
-#: libs/ui/KisDocument.cpp:2055
+#: libs/ui/KisDocument.cpp:2058
 #, kde-format
 msgid "Could not open %1."
 msgstr "无法打开 %1。"
 
-#: libs/ui/KisDocument.cpp:2066
+#: libs/ui/KisDocument.cpp:2069
 #, kde-format
 msgid "There were problems opening %1."
 msgstr "打开 %1 时遇到问题。"
 
-#: libs/ui/KisDocument.cpp:2184
+#: libs/ui/KisDocument.cpp:2187
 #, kde-format
 msgid "Not Saved"
 msgstr "未保存图像"
 
-#: libs/ui/KisDocument.cpp:2660
+#: libs/ui/KisDocument.cpp:2663
 #, kde-format
 msgctxt "Name of automatically created background color fill layer"
 msgid "Background Fill"
 msgstr "背景色填充"
 
-#: libs/ui/KisDocument.cpp:2722
+#: libs/ui/KisDocument.cpp:2725
 #, kde-format
 msgctxt ""
 "progress dialog message when the user closes the document that is being saved"
@@ -26860,7 +26860,7 @@ msgstr "0"
 #: plugins/impex/jpeg/kis_wdg_options_jpeg.ui:262
 #: plugins/impex/jxl/kis_wdg_options_jpegxl.ui:1019
 #: plugins/impex/webp/kis_wdg_options_webp.ui:818
-#: libs/resources/KisResourceModel.cpp:128
+#: libs/resources/KisResourceModel.cpp:135
 #: libs/resources/KisTagResourceModel.cpp:653
 #: plugins/dockers/logdocker/LogDockerDock.cpp:197
 #, kde-format
@@ -27536,7 +27536,9 @@ msgstr "导出为视频"
 #: plugins/paintops/spray/KisSprayShapeOptionModel.cpp:88
 #: plugins/paintops/spray/KisSprayShapeOptionWidget.cpp:36
 #: plugins/paintops/spray/KisSprayShapeOptionWidget.cpp:40
-#: plugins/tools/basictools/kis_tool_brush.cc:513
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1277
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1340
+#: plugins/tools/basictools/kis_tool_brush.cc:520
 #: plugins/tools/basictools/kis_tool_fill.cc:582
 #: plugins/tools/basictools/kis_tool_fill.cc:598
 #: plugins/tools/basictools/kis_tool_fill.cc:610
@@ -29268,6 +29270,16 @@ msgctxt "@title:window"
 msgid "Stroke Selection Properties"
 msgstr "描边 - 选区属性"
 
+#: libs/ui/flake/KisBrushStrokeShape.cpp:178
+#, kde-format
+msgid "Brush Stroke"
+msgstr "笔画"
+
+#: libs/ui/flake/KisBrushStrokeShapeEraser.cpp:798
+msgctxt "(qtundo-format)"
+msgid "Erase Brush Strokes"
+msgstr "擦除笔画"
+
 #: libs/ui/flake/KisReferenceImagesLayer.cpp:24
 msgctxt "(qtundo-format)"
 msgid "Add reference image"
@@ -29282,6 +29294,13 @@ msgstr "参考图像"
 #, kde-format
 msgid "Vector Layer %1"
 msgstr "矢量图层 %1"
+
+#: libs/ui/flake/kis_shape_layer.cc:801
+#, kde-format
+msgid ""
+"The brush strokes of vector layer \"%1\" could not be read. They are shown "
+"as pictures and are not drawn again when resized."
+msgstr "无法读取矢量图层“%1”的笔画。它们将显示为图片，调整大小时不会重新绘制。"
 
 #: libs/ui/flake/kis_take_all_shapes_command.cpp:15
 msgctxt "(qtundo-format)"
@@ -33695,7 +33714,7 @@ msgid "HSV CCW"
 msgstr "HSV 逆时针色相"
 
 #. i18n: context: string @ property (windowTitle), widget (QWidget, DlgSessionManager)
-#: libs/ui/forms/wdgsessionmanager.ui:18 libs/ui/KisApplication.cpp:481
+#: libs/ui/forms/wdgsessionmanager.ui:18 libs/ui/KisApplication.cpp:482
 #, kde-format
 msgid "Sessions"
 msgstr "会话管理"
@@ -35751,8 +35770,8 @@ msgstr "打开工作区切换/管理面板"
 msgid "Brush composite"
 msgstr "笔刷混合模式"
 
-#: libs/ui/kis_paintop_box.cc:1384 libs/ui/kis_paintop_box.cc:1406
-#: libs/ui/kis_paintop_box.cc:1423
+#: libs/ui/kis_paintop_box.cc:1390 libs/ui/kis_paintop_box.cc:1412
+#: libs/ui/kis_paintop_box.cc:1429
 #, kde-format
 msgid ""
 "%1\n"
@@ -37143,7 +37162,9 @@ msgstr ""
 msgid ""
 "Export the image as this layer comp shows it. The comp is applied to a copy "
 "of the image, so the canvas does not change."
-msgstr "按此 Layer Comp 的显示效果导出图像。Layer Comp 应用于图像的副本，因此画布不会改变。"
+msgstr ""
+"按此 Layer Comp 的显示效果导出图像。Layer Comp 应用于图像的副本，因此画布不会"
+"改变。"
 
 #: libs/ui/lazytools/KisLazyToolsFastExportDialog.cpp:193
 #: plugins/python/comics_project_management_tools/comics_metadata_dialog.py:344
@@ -37502,7 +37523,7 @@ msgid ""
 msgstr "此工具无法在克隆图层绘制，请选中一个颜料图层、矢量图层或者蒙版图层。"
 
 #: libs/ui/tool/KisToolOutlineBase.cpp:169
-#: libs/ui/tool/kis_tool_freehand.cc:273
+#: libs/ui/tool/kis_tool_freehand.cc:299
 #: libs/ui/tool/kis_tool_polyline_base.cpp:122
 #: libs/ui/tool/kis_tool_rectangle_base.cpp:167
 #: plugins/tools/basictools/kis_tool_line.cc:212
@@ -37566,7 +37587,7 @@ msgstr "无选项"
 msgid "Local selection is locked."
 msgstr "局部选区蒙版已锁定。"
 
-#: libs/ui/tool/kis_tool_freehand.cc:268
+#: libs/ui/tool/kis_tool_freehand.cc:294
 #, kde-format
 msgid ""
 "The brush tool cannot paint on this layer.  Please select a paint layer or "
@@ -39609,7 +39630,7 @@ msgstr "重命名笔刷预设"
 msgid "Detach Brush Editor"
 msgstr "分离笔刷编辑器"
 
-#: libs/ui/widgets/kis_paintop_presets_editor.cpp:545
+#: libs/ui/widgets/kis_paintop_presets_editor.cpp:556
 #, kde-format
 msgctxt "%1 is the name of a brush engine"
 msgid "%1 Engine"
@@ -41447,7 +41468,7 @@ msgstr "保存辅助尺布局"
 #: plugins/impex/jxl/kis_wdg_options_jpegxl.ui:860
 #: plugins/impex/jxl/kis_wdg_options_jpegxl.ui:974
 #: libs/resources/KisTagModel.cpp:125 libs/resources/KisTagModel.cpp:301
-#: libs/ui/widgets/kis_paintop_presets_editor.cpp:613
+#: libs/ui/widgets/kis_paintop_presets_editor.cpp:624
 #, kde-format
 msgid "All"
 msgstr "全部"
@@ -45335,25 +45356,25 @@ msgctxt "@info:tooltip"
 msgid "Toggle Quick Access gestures"
 msgstr "切换 Quick Access 手势"
 
-#: plugins/dockers/quickaccess/QuickAdjustDock.cpp:401
+#: plugins/dockers/quickaccess/QuickAdjustDock.cpp:408
 #, kde-format
 msgctxt "@action:button"
 msgid "Size"
 msgstr "大小"
 
-#: plugins/dockers/quickaccess/QuickAdjustDock.cpp:402
+#: plugins/dockers/quickaccess/QuickAdjustDock.cpp:409
 #, kde-format
 msgctxt "@action:button"
 msgid "Opacity"
 msgstr "不透明度"
 
-#: plugins/dockers/quickaccess/QuickAdjustDock.cpp:403
+#: plugins/dockers/quickaccess/QuickAdjustDock.cpp:410
 #, kde-format
 msgctxt "@action:button"
 msgid "Flow"
 msgstr "流量"
 
-#: plugins/dockers/quickaccess/QuickAdjustDock.cpp:404
+#: plugins/dockers/quickaccess/QuickAdjustDock.cpp:411
 #, kde-format
 msgctxt "@action:button"
 msgid "Rotation"
@@ -47057,7 +47078,7 @@ msgctxt "@info:placeholder"
 msgid "New Style Preset"
 msgstr "新文本样式预设"
 
-#: plugins/dockers/textproperties/TextPropertiesDock.cpp:36
+#: plugins/dockers/textproperties/TextPropertiesDock.cpp:37
 #, kde-format
 msgid "Text Properties"
 msgstr "文本属性"
@@ -49293,7 +49314,7 @@ msgstr "图层/蒙版"
 #: libs/ui/imagesize/imagesize.xmlgui:4
 #: plugins/extensions/imagesplit/imagesplit.xmlgui:4
 #: plugins/extensions/separate_channels/imageseparate.xmlgui:4
-#: libs/resources/KisResourceModel.cpp:108
+#: libs/resources/KisResourceModel.cpp:115
 #: libs/resources/KisTagResourceModel.cpp:633
 #: plugins/filters/solsticeeffects/KisColorReferenceConfigWidget.cpp:78
 #: plugins/paintops/libpaintop/KisPredefinedBrushModel.cpp:55
@@ -49877,7 +49898,7 @@ msgstr "存储项"
 
 #. i18n: context: string @ property (text), widget (QLabel, label)
 #: plugins/extensions/dbexplorer/WdgDbExplorer.ui:43
-#: libs/resources/KisResourceModel.cpp:114
+#: libs/resources/KisResourceModel.cpp:121
 #: libs/resources/KisTagResourceModel.cpp:639
 #, kde-format
 msgid "Resource Type"
@@ -49902,7 +49923,7 @@ msgstr "版本"
 
 #. i18n: context: string @ attribute (title), widget (QWidget, tabTags)
 #: plugins/extensions/dbexplorer/WdgDbExplorer.ui:139
-#: libs/resources/KisResourceModel.cpp:122
+#: libs/resources/KisResourceModel.cpp:129
 #: libs/resources/KisTagResourceModel.cpp:647
 #: libs/resourcewidgets/KisIconToolTip.cpp:100
 #, kde-format
@@ -51093,7 +51114,7 @@ msgstr "边框宽度："
 #: plugins/extensions/modify_selection/wdg_border_selection.ui:127
 #: plugins/paintops/sketch/wdgsketchoptions.ui:179
 #: libs/image/kis_layer_properties_icons.cpp:39
-#: libs/ui/flake/kis_shape_layer.cc:329
+#: libs/ui/flake/kis_shape_layer.cc:410
 #, kde-format
 msgid "Anti-aliasing"
 msgstr "抗锯齿"
@@ -53510,6 +53531,7 @@ msgstr "独立颜色通道"
 #: plugins/tools/tool_transform2/wdg_tool_transform.ui:2042
 #: plugins/filters/solsticeeffects/KisChromaticAberrationConfigWidget.cpp:52
 #: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:42
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1272
 #: plugins/python/highpass/highpass.py:67
 #, kde-format
 msgid "Mode:"
@@ -55123,6 +55145,7 @@ msgid "Dust size:"
 msgstr "灰尘大小："
 
 #: plugins/filters/solsticeeffects/KisRemoveDustConfigWidget.cpp:44
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1356
 #, kde-format
 msgid "Tolerance:"
 msgstr "容差："
@@ -66909,6 +66932,382 @@ msgstr "自定义按钮"
 msgid "Open workflow buttons settings dialog"
 msgstr "打开自定义按钮设置对话框"
 
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:317
+#, kde-format
+msgid "Select a vector layer with brush strokes to edit their lines."
+msgstr "请选择含有笔画的矢量图层以编辑其线条。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:390
+#, kde-format
+msgid "A line keeps at least two control points."
+msgstr "线条至少保留两个控制点。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:401
+#, kde-format
+msgid "Only control points between a line's ends can be switched."
+msgstr "只有线条两端之间的控制点可以切换。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:506
+#, kde-format
+msgid "The frame cannot be folded or flattened."
+msgstr "变换框不能翻折或压平。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:660
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:891
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:948
+#, kde-format
+msgid "No lines are selected. Click lines with this tool to select them."
+msgstr "没有选中线条。请用此工具点击线条以选中它们。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:782
+msgctxt "(qtundo-format)"
+msgid "Transform Brush Strokes"
+msgstr "变换笔画"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:791
+#, kde-format
+msgid "Lines drawn with the canvas mirror cannot be transformed here."
+msgstr "使用画布镜像绘制的线条无法在此变换。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:803
+msgctxt "(qtundo-format)"
+msgid "Change Brush Stroke Color"
+msgstr "更改笔画颜色"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:813
+msgctxt "(qtundo-format)"
+msgid "Change Brush Stroke Background Color"
+msgstr "更改笔画背景色"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:830
+msgctxt "(qtundo-format)"
+msgid "Change Brush Stroke Size"
+msgstr "更改笔画的笔刷大小"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:849
+msgctxt "(qtundo-format)"
+msgid "Change Brush Stroke Brush"
+msgstr "更改笔画的笔刷"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:870
+msgctxt "(qtundo-format)"
+msgid "Simplify Brush Strokes"
+msgstr "简化笔画"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:876
+#, kde-format
+msgid "Control points: %1 of %2 left"
+msgstr "控制点：剩余 %1 个，原有 %2 个"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:877
+#, kde-format
+msgid "No control points can be removed at this tolerance."
+msgstr "在此容差下没有可移除的控制点。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:935
+msgctxt "(qtundo-format)"
+msgid "Create Assistants from Brush Strokes"
+msgstr "从笔画创建辅助尺"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:936
+#, kde-format
+msgid "Assistants created: %1"
+msgstr "已创建辅助尺：%1"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:970
+#, kde-format
+msgid "The selected lines enclose no area."
+msgstr "所选线条没有围出任何区域。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:974
+msgctxt "(qtundo-format)"
+msgid "Select Inside Brush Strokes"
+msgstr "选择笔画内部"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:992
+#, kde-format
+msgid "Select two or more lines to join them."
+msgstr "请选中两条或更多线条以进行连接。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:993
+#, kde-format
+msgid "Lines drawn with mirrored copies cannot be joined."
+msgstr "带有镜像副本的线条无法连接。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1006
+msgctxt "(qtundo-format)"
+msgid "Join Brush Strokes"
+msgstr "连接笔画"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1022
+msgctxt "(qtundo-format)"
+msgid "Move Brush Stroke Points"
+msgstr "移动笔画的点"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1024
+msgctxt "(qtundo-format)"
+msgid "Change Brush Stroke Width"
+msgstr "更改笔画宽度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1026
+msgctxt "(qtundo-format)"
+msgid "Cut Brush Stroke"
+msgstr "切断笔画"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1028
+msgctxt "(qtundo-format)"
+msgid "Add Brush Stroke Point"
+msgstr "添加笔画的点"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1030
+msgctxt "(qtundo-format)"
+msgid "Delete Brush Stroke Point"
+msgstr "删除笔画的点"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1032
+msgctxt "(qtundo-format)"
+msgid "Switch Brush Stroke Corner"
+msgstr "切换笔画的角点"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1034
+msgctxt "(qtundo-format)"
+msgid "Change Brush Stroke Density"
+msgstr "更改笔画浓度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1036
+msgctxt "(qtundo-format)"
+msgid "Add Brush Stroke Width"
+msgstr "增减笔画宽度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1038
+msgctxt "(qtundo-format)"
+msgid "Redraw Brush Stroke"
+msgstr "重绘笔画"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1040
+msgctxt "(qtundo-format)"
+msgid "Redraw Brush Stroke Width"
+msgstr "重绘笔画宽度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1242
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Move Points"
+msgstr "移动点"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1243
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Change Width"
+msgstr "更改宽度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1244
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Cut"
+msgstr "切断"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1245
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Add Point"
+msgstr "添加点"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1246
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Delete Point"
+msgstr "删除点"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1247
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Switch Corner"
+msgstr "切换角点"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1248
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Change Density"
+msgstr "更改浓度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1249
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Add Width"
+msgstr "增减宽度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1250
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Free Transform"
+msgstr "自由变换"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1251
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Redraw"
+msgstr "重绘"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1252
+#, kde-format
+msgctxt "@item:inlistbox Edit Brush Strokes"
+msgid "Redraw Width"
+msgstr "重绘宽度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1254
+#, kde-format
+msgid ""
+"Move Points: drag part of a line. Change Width: drag right for a wider line, "
+"left for a thinner one. Cut: click a line to cut it in two. Add Point: click "
+"a line for a new control point and drag to move it. Delete Point: click a "
+"control point to remove it. Switch Corner: click a control point to switch "
+"it between a corner and a curve. Change Density: drag left for a lighter "
+"line, right to bring it back. Add Width: drag right to make a line wider by "
+"a fixed amount, left to make it thinner. Free Transform: click lines to "
+"select them, then drag the corners, the sides or the inside of their frame. "
+"Redraw: start on a line and draw the path that part of it should take. "
+"Redraw Width: trace part of a line to give it the width of the current brush."
+msgstr ""
+"移动点：拖动线条的一部分。更改宽度：向右拖动使线条变粗，向左拖动使线条变细。"
+"切断：点击线条将其切成两段。添加点：点击线条添加新的控制点，拖动可移动它。删"
+"除点：点击控制点将其移除。切换角点：点击控制点，使其在角点和曲线之间切换。更"
+"改浓度：向左拖动使线条变淡，向右拖动使其恢复。增减宽度：向右拖动使线条按固定"
+"量变粗，向左拖动使其变细。自由变换：点击线条将其选中，然后拖动变换框的角、边"
+"或内部。重绘：从线条上开始，画出该部分应走的路径。重绘宽度：沿线条描画其中一"
+"部分，使其具有当前笔刷的宽度。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1279
+#, kde-format
+msgid ""
+"How far along the line an edit reaches from the dragged point, in image "
+"pixels. 0 moves a single control point."
+msgstr ""
+"编辑从拖动点沿线条影响的范围，以图像像素为单位。0 表示只移动一个控制点。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1285
+#, kde-format
+msgid "Reach:"
+msgstr "影响范围："
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1288
+#, kde-format
+msgid "Apply Color"
+msgstr "应用颜色"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1290
+#, kde-format
+msgid "Draws the selected lines with the current foreground color"
+msgstr "用当前前景色绘制选中的线条"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1292
+#, kde-format
+msgid "Apply Background Color"
+msgstr "应用背景色"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1295
+#, kde-format
+msgid ""
+"Draws the selected lines with the current background color, which shows with "
+"brushes that mix the two colors or paint a gradient between them"
+msgstr ""
+"用当前背景色重绘所选线条；只有混合两种颜色或在两者之间绘制渐变的笔刷才会显示"
+"背景色"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1298
+#, kde-format
+msgid "Apply Size"
+msgstr "应用大小"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1300
+#, kde-format
+msgid "Draws the selected lines with the current brush size"
+msgstr "用当前笔刷大小绘制选中的线条"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1302
+#, kde-format
+msgid "Apply Brush"
+msgstr "应用笔刷"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1304
+#, kde-format
+msgid ""
+"Draws the selected lines with the current brush preset, at the width they "
+"have"
+msgstr "用当前笔刷预设绘制选中的线条，保持其现有宽度"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1311
+#, kde-format
+msgid "Join Lines"
+msgstr "连接线条"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1314
+#, kde-format
+msgid ""
+"Makes one line of the selected lines by connecting their nearest ends. It "
+"takes the brush and color of the line selected first."
+msgstr ""
+"将选中的线条在最近的端点处连接成一条线。新线条采用最先选中的线条的笔刷和颜"
+"色。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1318
+#, kde-format
+msgid "Create Assistants"
+msgstr "创建辅助尺"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1321
+#, kde-format
+msgid ""
+"Makes painting assistants along the selected lines, simplified with the "
+"tolerance below: brushes with Snap to Assistants follow them. Turn off Snap "
+"to Single Line to follow a line across its pieces."
+msgstr ""
+"沿所选线条创建绘画辅助尺（按下方的容差简化）：启用“吸附到辅助尺”的笔刷会沿着"
+"它们绘制。要跨越线条的各段连续绘制，请关闭“吸附到单一辅助尺”。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1326
+#, kde-format
+msgid "Select Inside"
+msgstr "选择内部"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1329
+#, kde-format
+msgid ""
+"Selects the area that each of the selected lines encloses. A line that is "
+"not closed is closed by a straight piece from its end to its start."
+msgstr "选择每条所选线条围出的区域。未闭合的线条会用一段从终点到起点的直线闭合。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1333
+#, kde-format
+msgid "Selected lines:"
+msgstr "选中的线条："
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1342
+#, kde-format
+msgid ""
+"How far a simplified line may leave its path, in image pixels. A larger "
+"value removes more control points."
+msgstr ""
+"简化后的线条可以偏离原路径的距离，以图像像素为单位。数值越大，移除的控制点越"
+"多。"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1348
+#, kde-format
+msgid "Simplify Lines"
+msgstr "简化线条"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.cpp:1351
+#, kde-format
+msgid ""
+"Removes control points from the selected lines, keeping their shape within "
+"the tolerance"
+msgstr "移除选中线条的控制点，并使其形状保持在容差范围内"
+
+#: plugins/tools/basictools/KisToolEditBrushStrokes.h:171
+#, kde-format
+msgid "Edit Brush Strokes Tool"
+msgstr "笔画编辑工具"
+
 #. i18n: context: text @ Action (KisToolPath), Actions (tool-shortcuts), ActionCollection (Tools)
 #: plugins/tools/basictools/KisToolPath.action:7
 #, kde-format
@@ -66936,36 +67335,36 @@ msgctxt "action"
 msgid "Freehand Path Tool"
 msgstr "手绘路径工具/自由钢笔"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:36
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:37
 msgctxt "(qtundo-format)"
 msgid "Erase Through Layers"
 msgstr "穿透图层擦除"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:59
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:60
 #, kde-format
 msgid "There are no visible, unlocked paint layers to erase."
 msgstr "没有可擦除的可见且未锁定的颜料图层。"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:85
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:86
 #, kde-format
 msgctxt "@option:check"
 msgid "Selected layers only"
 msgstr "仅选中的图层"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:88
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:89
 #, kde-format
 msgid ""
 "Erase only the selected layers and the layers in the selected groups. When "
 "unchecked, every visible layer is erased."
 msgstr "仅擦除选中的图层和选中图层组内的图层。未勾选时，擦除所有可见图层。"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:96
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:97
 #, kde-format
 msgctxt "@option:check"
 msgid "Erase alpha locked layers"
 msgstr "擦除透明度已锁定的图层"
 
-#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:99
+#: plugins/tools/basictools/KisToolThroughLayerEraser.cpp:100
 #, kde-format
 msgid ""
 "Erase layers with Alpha Lock on as well, in spite of the lock. When "
@@ -66978,102 +67377,102 @@ msgstr ""
 msgid "Through-Layer Eraser Tool"
 msgstr "Through-Layer Eraser 工具"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:60
+#: plugins/tools/basictools/kis_tool_brush.cc:61
 msgctxt "(qtundo-format)"
 msgid "Freehand Brush Stroke"
 msgstr "手绘笔刷笔画"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:225
+#: plugins/tools/basictools/kis_tool_brush.cc:232
 #, kde-format
 msgid "Sample Count at Max Speed:"
 msgstr "最大速度下的采样次数："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:235
+#: plugins/tools/basictools/kis_tool_brush.cc:242
 #, kde-format
 msgid "Sample Count at Min Speed:"
 msgstr "最小速度下的采样次数："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:245
+#: plugins/tools/basictools/kis_tool_brush.cc:252
 #, kde-format
 msgid "Distance at Max Speed:"
 msgstr "最大速度下的距离："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:255
+#: plugins/tools/basictools/kis_tool_brush.cc:262
 #, kde-format
 msgid "Distance at Min Speed:"
 msgstr "最小速度下的距离："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:430
+#: plugins/tools/basictools/kis_tool_brush.cc:437
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "None"
 msgstr "关闭"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:431
+#: plugins/tools/basictools/kis_tool_brush.cc:438
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "Basic"
 msgstr "基本 - 只平滑笔画棱角"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:432
+#: plugins/tools/basictools/kis_tool_brush.cc:439
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "Weighted"
 msgstr "高级 - 自定义平滑参数"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:433
+#: plugins/tools/basictools/kis_tool_brush.cc:440
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "Stabilizer"
 msgstr "最强 - 延迟并平均化处理"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:434
+#: plugins/tools/basictools/kis_tool_brush.cc:441
 #, kde-format
 msgctxt "@item:inlistbox Brush Smoothing"
 msgid "Pixel"
 msgstr "像素画"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:436
+#: plugins/tools/basictools/kis_tool_brush.cc:443
 #, kde-format
 msgid "Brush Smoothing:"
 msgstr "防抖和笔画平滑"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:501
+#: plugins/tools/basictools/kis_tool_brush.cc:508
 #, kde-format
 msgid "Delay:"
 msgstr "延迟："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:506
+#: plugins/tools/basictools/kis_tool_brush.cc:513
 #, kde-format
 msgid "Delay the brush stroke to make the line smoother"
 msgstr "延迟笔画响应以平滑线条"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:510
+#: plugins/tools/basictools/kis_tool_brush.cc:517
 #, kde-format
 msgid "Radius where the brush is blocked"
 msgstr "笔刷延迟的半径大小"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:517
+#: plugins/tools/basictools/kis_tool_brush.cc:524
 #, kde-format
 msgid "Finish line:"
 msgstr "笔末挑尖："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:529
+#: plugins/tools/basictools/kis_tool_brush.cc:536
 #, kde-format
 msgid "Stabilize Sensors:"
 msgstr "稳定各种传感器："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:537
+#: plugins/tools/basictools/kis_tool_brush.cc:544
 #, kde-format
 msgid "Stroke Ending:"
 msgstr "笔末挑尖："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:543
+#: plugins/tools/basictools/kis_tool_brush.cc:550
 #, kde-format
 msgid "Smooth Pressure"
 msgstr "平滑压力值"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:549
+#: plugins/tools/basictools/kis_tool_brush.cc:556
 #, kde-format
 msgctxt "@info:tooltip"
 msgid ""
@@ -67082,38 +67481,38 @@ msgid ""
 msgstr ""
 "勾选后，距离数值将按照视图缩放比例自动缩放，使距离的效果在感官上保持一致。"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:554
+#: plugins/tools/basictools/kis_tool_brush.cc:561
 #, kde-format
 msgid "Scalable Distance"
 msgstr "距离与视图缩放成比例"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:569
+#: plugins/tools/basictools/kis_tool_brush.cc:576
 #: plugins/tools/basictools/kis_tool_line.cc:111
 #, kde-format
 msgid "Snap to Assistants"
 msgstr "吸附到辅助尺"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:571
+#: plugins/tools/basictools/kis_tool_brush.cc:579
 #, kde-format
 msgid "You need to add Assistants before this tool will work."
 msgstr "此工具在添加辅助尺后才能工作。"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:576
+#: plugins/tools/basictools/kis_tool_brush.cc:584
 #, kde-format
 msgid "Assistant Magnetism"
 msgstr "辅助尺磁性"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:582
+#: plugins/tools/basictools/kis_tool_brush.cc:590
 #, kde-format
 msgid "Magnetism:"
 msgstr "吸附力度："
 
-#: plugins/tools/basictools/kis_tool_brush.cc:585
+#: plugins/tools/basictools/kis_tool_brush.cc:593
 #, kde-format
 msgid "Snap to Single Line"
 msgstr "吸附到单一辅助尺"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:588
+#: plugins/tools/basictools/kis_tool_brush.cc:597
 #, kde-format
 msgctxt "@info:tooltip"
 msgid ""
@@ -67121,24 +67520,24 @@ msgid ""
 "using the infinite assistants."
 msgstr "只吸附到单一辅助尺，避免在使用多个辅助尺时吸附失控。"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:593
+#: plugins/tools/basictools/kis_tool_brush.cc:602
 #: plugins/tools/basictools/kis_tool_line.cc:114
 #, kde-format
 msgid "Snap Eraser"
 msgstr "吸附橡皮擦"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:596
+#: plugins/tools/basictools/kis_tool_brush.cc:605
 #, kde-format
 msgctxt "@info:tooltip"
 msgid "Enable snapping when using erasers"
 msgstr "启用橡皮擦的吸附功能"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:617
+#: plugins/tools/basictools/kis_tool_brush.cc:626
 #, kde-format
 msgid "At least 1 pixel"
 msgstr "至少 1 像素"
 
-#: plugins/tools/basictools/kis_tool_brush.cc:621
+#: plugins/tools/basictools/kis_tool_brush.cc:630
 #, kde-format
 msgctxt "@info:tooltip"
 msgid ""
@@ -67148,7 +67547,40 @@ msgstr ""
 "当压感或其他传感器使笔刷变小时，让笔刷保持至少 1 像素大小，以免细的渐细线条淡"
 "出消失"
 
-#: plugins/tools/basictools/kis_tool_brush.h:149
+#: plugins/tools/basictools/kis_tool_brush.cc:641
+#, kde-format
+msgctxt "@item:inlistbox Vector Eraser"
+msgid "Touched Part"
+msgstr "接触部分"
+
+#: plugins/tools/basictools/kis_tool_brush.cc:642
+#, kde-format
+msgctxt "@item:inlistbox Vector Eraser"
+msgid "Whole Line"
+msgstr "整条线"
+
+#: plugins/tools/basictools/kis_tool_brush.cc:643
+#, kde-format
+msgctxt "@item:inlistbox Vector Eraser"
+msgid "Up to Intersection"
+msgstr "擦除到交点"
+
+#: plugins/tools/basictools/kis_tool_brush.cc:645
+#, kde-format
+msgid ""
+"What the eraser removes from brush strokes on a vector layer: the part of a "
+"line it touches, every line it touches, or a touched line as far as the next "
+"line crossing it"
+msgstr ""
+"橡皮擦从矢量图层的笔画中擦除的内容：线条被接触到的部分、被接触到的整条线，或"
+"被接触的线条直到与其相交的下一条线为止的一段"
+
+#: plugins/tools/basictools/kis_tool_brush.cc:651
+#, kde-format
+msgid "Vector Eraser:"
+msgstr "矢量橡皮擦："
+
+#: plugins/tools/basictools/kis_tool_brush.h:151
 #, kde-format
 msgid "Freehand Brush Tool"
 msgstr "手绘笔刷工具/画笔"
@@ -68464,13 +68896,13 @@ msgid "Caps:"
 msgstr "线头圆度："
 
 #: plugins/tools/karbonplugins/tools/CalligraphyTool/KarbonCalligraphyOptionWidget.cpp:130
-#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:278
+#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:279
 #, kde-format
 msgid "Mass:"
 msgstr "重量："
 
 #: plugins/tools/karbonplugins/tools/CalligraphyTool/KarbonCalligraphyOptionWidget.cpp:139
-#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:285
+#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:286
 #, kde-format
 msgid "Drag:"
 msgstr "拽引："
@@ -70032,17 +70464,17 @@ msgctxt "(qtundo-format)"
 msgid "Dynamic Brush Stroke"
 msgstr "力学笔刷笔画"
 
-#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:294
+#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:295
 #, kde-format
 msgid "Fixed angle:"
 msgstr "固定角度："
 
-#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:315
+#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:316
 #, kde-format
 msgid "Initial width:"
 msgstr "初始宽度："
 
-#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:320
+#: plugins/tools/tool_dyna/kis_tool_dyna.cpp:321
 #, kde-format
 msgid "Width range:"
 msgstr "宽度范围："
@@ -71236,7 +71668,7 @@ msgstr "控制点模式："
 msgid "Unlock Points"
 msgstr "编辑点模式"
 
-#: plugins/tools/tool_transform2/strokes/inplace_transform_stroke_strategy.cpp:154
+#: plugins/tools/tool_transform2/strokes/inplace_transform_stroke_strategy.cpp:173
 #: plugins/tools/tool_transform2/strokes/transform_stroke_strategy.cpp:64
 msgctxt "(qtundo-format)"
 msgid "Transform"
@@ -71700,11 +72132,21 @@ msgctxt "action"
 msgid "Through-Layer Eraser Tool"
 msgstr "Through-Layer Eraser 工具"
 
+#. i18n: context: text @ Action (KritaShape/KisToolEditBrushStrokes), Actions (tool-shortcuts), ActionCollection (Tools)
+#. i18n: context: toolTip @ Action (KritaShape/KisToolEditBrushStrokes), Actions (tool-shortcuts), ActionCollection (Tools)
+#. i18n: context: iconText @ Action (KritaShape/KisToolEditBrushStrokes), Actions (tool-shortcuts), ActionCollection (Tools)
+#: plugins/tools/tools.action:47 plugins/tools/tools.action:49
+#: plugins/tools/tools.action:50
+#, kde-format
+msgctxt "action"
+msgid "Edit Brush Strokes Tool"
+msgstr "笔画编辑工具"
+
 #. i18n: context: text @ Action (KritaShape/KisToolLazyBrush), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolLazyBrush), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolLazyBrush), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:47 plugins/tools/tools.action:49
-#: plugins/tools/tools.action:50
+#: plugins/tools/tools.action:57 plugins/tools/tools.action:59
+#: plugins/tools/tools.action:60
 #, kde-format
 msgctxt "action"
 msgid "Colorize Mask Tool"
@@ -71713,8 +72155,8 @@ msgstr "智能填色蒙版工具"
 #. i18n: context: text @ Action (KritaShape/KisToolSmartPatch), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolSmartPatch), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolSmartPatch), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:56 plugins/tools/tools.action:58
-#: plugins/tools/tools.action:59
+#: plugins/tools/tools.action:66 plugins/tools/tools.action:68
+#: plugins/tools/tools.action:69
 #, kde-format
 msgctxt "action"
 msgid "Smart Patch Tool"
@@ -71723,8 +72165,8 @@ msgstr "智能补丁工具/仿制图章/修复画笔"
 #. i18n: context: text @ Action (PanTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (PanTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (PanTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:65 plugins/tools/tools.action:67
-#: plugins/tools/tools.action:68
+#: plugins/tools/tools.action:75 plugins/tools/tools.action:77
+#: plugins/tools/tools.action:78
 #, kde-format
 msgctxt "action"
 msgid "Pan Tool"
@@ -71733,8 +72175,8 @@ msgstr "视图平移工具/抓手"
 #. i18n: context: text @ Action (InteractionTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (InteractionTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (InteractionTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:74 plugins/tools/tools.action:76
-#: plugins/tools/tools.action:77
+#: plugins/tools/tools.action:84 plugins/tools/tools.action:86
+#: plugins/tools/tools.action:87
 #, kde-format
 msgctxt "action"
 msgid "Select Shapes Tool"
@@ -71742,14 +72184,14 @@ msgstr "形状选择工具"
 
 #. i18n: context: text @ Action (KritaSelected/KisToolColorSampler), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaSelected/KisToolColorSampler), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:84 plugins/tools/tools.action:87
+#: plugins/tools/tools.action:94 plugins/tools/tools.action:97
 #, kde-format
 msgctxt "action"
 msgid "Color Sampler"
 msgstr "拾色器"
 
 #. i18n: context: toolTip @ Action (KritaSelected/KisToolColorSampler), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:86
+#: plugins/tools/tools.action:96
 #, kde-format
 msgctxt "action"
 msgid "Sample a color from the image or current layer"
@@ -71757,14 +72199,14 @@ msgstr "拾色器/滴管：拾取图像或当前图层颜色"
 
 #. i18n: context: text @ Action (KritaFill/KisToolFill), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaFill/KisToolFill), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:94 plugins/tools/tools.action:97
+#: plugins/tools/tools.action:104 plugins/tools/tools.action:107
 #, kde-format
 msgctxt "action"
 msgid "Fill Tool"
 msgstr "填充工具/油漆桶"
 
 #. i18n: context: toolTip @ Action (KritaFill/KisToolFill), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:96
+#: plugins/tools/tools.action:106
 #, kde-format
 msgctxt "action"
 msgid "Fill a contiguous area of color with a color, or fill a selection."
@@ -71773,8 +72215,8 @@ msgstr "填充工具/油漆桶：用一种颜色填充一片相连的颜色或�
 #. i18n: context: text @ Action (KritaShape/KisToolLine), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolLine), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolLine), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:104 plugins/tools/tools.action:106
-#: plugins/tools/tools.action:107
+#: plugins/tools/tools.action:114 plugins/tools/tools.action:116
+#: plugins/tools/tools.action:117
 #, kde-format
 msgctxt "action"
 msgid "Line Tool"
@@ -71783,8 +72225,8 @@ msgstr "直线工具"
 #. i18n: context: text @ Action (KritaShape/KisToolEllipse), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolEllipse), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolEllipse), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:114 plugins/tools/tools.action:116
-#: plugins/tools/tools.action:117
+#: plugins/tools/tools.action:124 plugins/tools/tools.action:126
+#: plugins/tools/tools.action:127
 #, kde-format
 msgctxt "action"
 msgid "Ellipse Tool"
@@ -71793,8 +72235,8 @@ msgstr "椭圆工具"
 #. i18n: context: text @ Action (KritaShape/KisToolBrush), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolBrush), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolBrush), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:124 plugins/tools/tools.action:126
-#: plugins/tools/tools.action:127
+#: plugins/tools/tools.action:134 plugins/tools/tools.action:136
+#: plugins/tools/tools.action:137
 #, kde-format
 msgctxt "action"
 msgid "Freehand Brush Tool"
@@ -71802,14 +72244,14 @@ msgstr "手绘笔刷工具"
 
 #. i18n: context: text @ Action (KritaFill/KisToolGradient), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaFill/KisToolGradient), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:134 plugins/tools/tools.action:137
+#: plugins/tools/tools.action:144 plugins/tools/tools.action:147
 #, kde-format
 msgctxt "action"
 msgid "Gradient Tool"
 msgstr "渐变工具"
 
 #. i18n: context: toolTip @ Action (KritaFill/KisToolGradient), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:136
+#: plugins/tools/tools.action:146
 #, kde-format
 msgctxt "action"
 msgid "Draw a gradient."
@@ -71817,14 +72259,14 @@ msgstr "渐变工具：拉出渐变"
 
 #. i18n: context: text @ Action (KritaShape/KisToolMeasure), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolMeasure), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:144 plugins/tools/tools.action:147
+#: plugins/tools/tools.action:154 plugins/tools/tools.action:157
 #, kde-format
 msgctxt "action"
 msgid "Measurement Tool"
 msgstr "测量工具"
 
 #. i18n: context: toolTip @ Action (KritaShape/KisToolMeasure), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:146
+#: plugins/tools/tools.action:156
 #, kde-format
 msgctxt "action"
 msgid "Measure the distance between two points"
@@ -71832,14 +72274,14 @@ msgstr "测量工具：测量两点间距离"
 
 #. i18n: context: text @ Action (KritaTransform/KisToolMove), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaTransform/KisToolMove), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:154 plugins/tools/tools.action:157
+#: plugins/tools/tools.action:164 plugins/tools/tools.action:167
 #, kde-format
 msgctxt "action"
 msgid "Move Tool"
 msgstr "移动工具"
 
 #. i18n: context: toolTip @ Action (KritaTransform/KisToolMove), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:156
+#: plugins/tools/tools.action:166
 #, kde-format
 msgctxt "action"
 msgid "Move a layer"
@@ -71848,8 +72290,8 @@ msgstr "移动图层"
 #. i18n: context: text @ Action (KarbonCalligraphyTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KarbonCalligraphyTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KarbonCalligraphyTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:164 plugins/tools/tools.action:166
-#: plugins/tools/tools.action:167
+#: plugins/tools/tools.action:174 plugins/tools/tools.action:176
+#: plugins/tools/tools.action:177
 #, kde-format
 msgctxt "action"
 msgid "Calligraphy"
@@ -71858,8 +72300,8 @@ msgstr "西文书法"
 #. i18n: context: text @ Action (PathTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (PathTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (PathTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:174 plugins/tools/tools.action:176
-#: plugins/tools/tools.action:177
+#: plugins/tools/tools.action:184 plugins/tools/tools.action:186
+#: plugins/tools/tools.action:187
 #, kde-format
 msgctxt "action"
 msgid "Edit Shapes Tool"
@@ -71868,8 +72310,8 @@ msgstr "锚点编辑工具：对矢量图形的锚点进行操作"
 #. i18n: context: text @ Action (ZoomTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (ZoomTool), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (ZoomTool), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:184 plugins/tools/tools.action:186
-#: plugins/tools/tools.action:187
+#: plugins/tools/tools.action:194 plugins/tools/tools.action:196
+#: plugins/tools/tools.action:197
 #, kde-format
 msgctxt "action"
 msgid "Zoom Tool"
@@ -71878,8 +72320,8 @@ msgstr "缩放工具"
 #. i18n: context: text @ Action (ToolReferenceImages), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (ToolReferenceImages), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (ToolReferenceImages), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:194 plugins/tools/tools.action:196
-#: plugins/tools/tools.action:197
+#: plugins/tools/tools.action:204 plugins/tools/tools.action:206
+#: plugins/tools/tools.action:207
 #, kde-format
 msgctxt "action"
 msgid "Reference Images Tool"
@@ -71888,8 +72330,8 @@ msgstr "参考图像工具"
 #. i18n: context: text @ Action (KritaShape/KisToolKnife), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: toolTip @ Action (KritaShape/KisToolKnife), Actions (tool-shortcuts), ActionCollection (Tools)
 #. i18n: context: iconText @ Action (KritaShape/KisToolKnife), Actions (tool-shortcuts), ActionCollection (Tools)
-#: plugins/tools/tools.action:204 plugins/tools/tools.action:206
-#: plugins/tools/tools.action:207
+#: plugins/tools/tools.action:214 plugins/tools/tools.action:216
+#: plugins/tools/tools.action:217
 #, kde-format
 msgctxt "action"
 msgid "Comic Panel Editing Tool"
@@ -72167,6 +72609,12 @@ msgstr ""
 "切换全范围/子范围模式。\n"
 "全范围：[%1, %2]\n"
 "子范围：[%3, %4]"
+
+#, kde-format
+#~ msgid ""
+#~ "The eraser cannot erase on a vector layer. Select a stroke with the "
+#~ "Select Shapes Tool and delete it."
+#~ msgstr "橡皮擦无法在矢量图层上擦除。请使用形状选择工具选中笔画后将其删除。"
 
 #, kde-format
 #~ msgid "Hold constant value. No interpolation."

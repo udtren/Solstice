@@ -15,6 +15,7 @@
 #include <kritaui_export.h>
 #include <KisDelayedUpdateNodeInterface.h>
 #include <KisCroppedOriginalLayerInterface.h>
+#include <kis_indirect_painting_support.h>
 
 class QRect;
 class QIcon;
@@ -40,11 +41,13 @@ const QString KIS_SHAPE_LAYER_ID = "KisShapeLayer";
 
    XXX: what about removing shapes?
 */
-class KRITAUI_EXPORT KisShapeLayer
-        : public KisExternalLayer,
-        public KoShapeLayer,
-        public KisDelayedUpdateNodeInterface,
-        public KisCroppedOriginalLayerInterface
+class KRITAUI_EXPORT KisShapeLayer : public KisExternalLayer,
+                                     public KoShapeLayer,
+                                     public KisDelayedUpdateNodeInterface,
+                                     public KisCroppedOriginalLayerInterface,
+                                     // Solstice: the brush tool's stroke is previewed on a temporary
+                                     // target until it becomes a shape (docs/agent/vector-brush-strokes.md)
+                                     public KisIndirectPaintingSupport
 {
     Q_OBJECT
 
@@ -176,8 +179,43 @@ public:
     bool antialiased() const;
     void setAntialiased(const bool antialiased);
 
+    /// Solstice: the layer shows the brush stroke being drawn (its
+    /// temporary target) over its shapes
+    bool needProjection() const override;
+
+    /**
+     * Solstice: while enabled, the layer's brush stroke shapes are painted
+     * with their latest pictures scaled wherever they would have to draw
+     * their strokes again, which is fast but blurred. For the steps of a
+     * transform in progress (the Transform Tool). Disabling it asks for an
+     * exact repaint of what was painted that way; follow it with
+     * forceUpdateTimedNode(). Never leave it enabled: saving and exporting
+     * read the layer's picture as it is. Any thread.
+     */
+    void setBrushStrokePreview(bool enabled);
+
+    /**
+     * Solstice: an undo command that adds @p shape (in document
+     * coordinates, not yet in a layer) to this layer above its other
+     * shapes. The command owns the shape while it is not in the layer, and
+     * changes the layer in the GUI thread from whichever thread runs it.
+     */
+    KUndo2Command *createAddShapeCommand(KoShape *shape);
+
+    /**
+     * Solstice: ends the preview of a brush stroke. With @p keep its pixels
+     * are painted into the layer's picture first, so that the stroke stays
+     * visible until the layer has painted the stroke's shape. Called by the
+     * stroke, in a barrier job.
+     */
+    void finishBrushStrokePreview(bool keep);
+
 protected:
     using KoShape::isVisible;
+
+    void copyOriginalToProjection(const KisPaintDeviceSP original,
+                                  KisPaintDeviceSP projection,
+                                  const QRect &rect) const override;
 
     bool loadSvg(QIODevice *device, const QString &baseXmlDir, QStringList *warnings = 0);
 

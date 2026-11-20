@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-13
+updated: 2026-11-18
 ---
 
 # Agent wiki
@@ -136,7 +136,8 @@ Document ownership and lifecycle are defined in
   default arguments and lambda captures.
 - [No strong image reference during a copy](pitfalls/strong-image-ref-during-copy.md):
   `toStrongRef()` in code reached from `setImage()` deletes an image whose
-  copy constructor is still running (crash on saving clipped layers).
+  copy constructor is still running (crash on saving clipped layers; freeze
+  on autosave with a vector layer, through a signal compressor).
 - [Weak pointers as ordered map keys](pitfalls/weak-pointer-map-keys.md):
   a `KisWeakSharedPtr` key turns into `nullptr` when its object dies and
   corrupts the map (missing layer docker thumbnails).
@@ -208,6 +209,14 @@ Document ownership and lifecycle are defined in
   store" let an older extent win. A test that compares two results reading
   the same cache cannot see it.
 
+- [A temporary image destroyed outside the GUI thread](pitfalls/temporary-image-destroyed-off-gui-thread.md):
+  `KisImage` lives in the GUI thread and starts timers there; deleting it
+  in a worker left a timer for a dead object (crash in the event loop). A
+  test that blocks in `waitForDone()` can also deadlock with a vector
+  layer's GUI-thread transform.
+- [Resizing a copied shape resizes its source](pitfalls/koshape-copy-shares-size.md):
+  `KoShape::setSize()` does not detach the data a copy shares; set the
+  transformation first.
 - [Tests load the installed plugins](pitfalls/tests-load-installed-plugins.md):
   a new virtual function in a plugin base class crashes in stale installed
   plugins; build everything and install first.

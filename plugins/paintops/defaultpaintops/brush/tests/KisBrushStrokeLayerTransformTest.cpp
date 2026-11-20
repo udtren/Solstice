@@ -12,8 +12,11 @@
 
 #include <KisAsynchronousStrokeUpdateHelper.h>
 #include <KisBrushStrokeLayer.h>
+#include <KisBrushStrokeShape.h>
+#include <KisDocument.h>
 #include <KisGlobalResourcesInterface.h>
 #include <KisLodPreferences.h>
+#include <KisPart.h>
 #include <KoCanvasResourceProvider.h>
 #include <KoColorSpaceRegistry.h>
 #include <KoCompositeOpRegistry.h>
@@ -26,7 +29,9 @@
 #include <kis_pixel_selection.h>
 #include <kis_resources_snapshot.h>
 #include <kis_selection.h>
+#include <kis_shape_layer.h>
 #include <kis_undo_stores.h>
+#include <kundo2stack.h>
 #include <strokes/KisFreehandStrokeInfo.h>
 #include <strokes/freehand_stroke.h>
 #include <strokes/move_stroke_strategy.h>
@@ -52,6 +57,7 @@ private Q_SLOTS:
     void testCancelledContinuedTransformRedraws();
     void testSelectionMoveWithInstantPreview();
     void testSelectionDuplicateWithInstantPreview();
+    void testVectorLayerPreviewsDuringTransform();
 };
 
 namespace
@@ -356,6 +362,113 @@ void KisBrushStrokeLayerTransformTest::testSelectionDuplicateWithInstantPreview(
     QCOMPARE(layer->strokes().first(), original);
     QVERIFY2(KisBrushStrokeLayer::strokesMatchPixels(layer->strokes(), layer->paintDevice(), &difference),
              qPrintable(difference));
+}
+
+namespace
+{
+/// The share of the covered pixels that are half transparent
+qreal edgeBlur(const QImage &image)
+{
+    int covered = 0;
+    int partial = 0;
+    for (int y = 0; y < image.height(); y++) {
+        for (int x = 0; x < image.width(); x++) {
+            const int alpha = qAlpha(image.pixel(x, y));
+            if (alpha > 25) {
+                covered++;
+                partial += alpha < 230;
+            }
+        }
+    }
+    return covered ? qreal(partial) / covered : 0.0;
+}
+
+/// Waits for the image with the event loop running, and for the vector
+/// layer's repaint: the layer changes its shapes in the GUI thread
+void settle(KisImageSP image, KisShapeLayerSP layer)
+{
+    for (int round = 0; round < 3; round++) {
+        for (int idle = 0; idle < 3;) {
+            QTest::qWait(5);
+            idle = image->isIdle() ? idle + 1 : 0;
+        }
+        layer->forceUpdateTimedNode();
+    }
+    for (int idle = 0; idle < 3;) {
+        QTest::qWait(5);
+        idle = image->isIdle() ? idle + 1 : 0;
+    }
+}
+} // namespace
+
+/// The Transform Tool on a vector layer with a brush stroke: while the
+/// stroke is open the line shows its picture scaled; applying or
+/// cancelling draws it exactly (docs/agent/vector-brush-strokes.md)
+void KisBrushStrokeLayerTransformTest::testVectorLayerPreviewsDuringTransform()
+{
+    const KoColorSpace *cs = KoColorSpaceRegistry::instance()->rgb8();
+    QScopedPointer<KisDocument> document(KisPart::instance()->createDocument());
+    document->setFileBatchMode(true);
+    KisImageSP image =
+        new KisImage(document->createUndoStore(), imageBounds.width(), imageBounds.height(), cs, "vector transform");
+    document->setCurrentImage(image);
+    KisShapeLayerSP layer = new KisShapeLayer(document->shapeController(), image, "vector", OPACITY_OPAQUE_U8);
+    image->addNode(layer, image->root());
+    paintStroke(image, layer, loadPreset(QStringLiteral("d)_Ink-3_Gpen.kpp")));
+    settle(image, layer);
+    QCOMPARE(layer->shapes().size(), 1);
+    QVERIFY(dynamic_cast<KisBrushStrokeShape *>(layer->shapes().first()));
+    const QRect wide(-100, -100, 600, 400);
+    const QImage drawn = toImage(layer->projection(), wide);
+
+    // a transform in progress: the last step of the drag is shown, scaled
+    KisStrokeId id;
+    ToolTransformArgs args;
+    QVERIFY(startTransform(image, layer, &id, &args));
+    args.setScaleX(1.8);
+    args.setScaleY(1.8);
+    image->addJob(id,
+                  new InplaceTransformStrokeStrategy::UpdateTransformData(
+                      args,
+                      InplaceTransformStrokeStrategy::UpdateTransformData::PAINT_DEVICE));
+    image->addJob(id, new KisAsynchronousStrokeUpdateHelper::UpdateData(true));
+    QTest::qWait(400);
+    const QImage preview = toImage(layer->original(), wide);
+    const qreal previewBlur = edgeBlur(preview);
+
+    // applied: drawn again
+    image->endStroke(id);
+    settle(image, layer);
+    const QImage applied = toImage(layer->projection(), wide);
+    const qreal appliedBlur = edgeBlur(applied);
+    qInfo() << "edge blur while transforming" << previewBlur << "after applying" << appliedBlur;
+    QVERIFY(applied != drawn);
+    QVERIFY(previewBlur > appliedBlur * 1.3);
+
+    // the same as a transform that never previews: undo and redo it
+    document->undoStack()->undo();
+    settle(image, layer);
+    QCOMPARE(toImage(layer->projection(), wide), drawn);
+    document->undoStack()->redo();
+    settle(image, layer);
+    QCOMPARE(toImage(layer->projection(), wide), applied);
+
+    // cancelled after a step: the applied drawing again, not a preview of it
+    ToolTransformArgs continued;
+    QVERIFY(startTransform(image, layer, &id, &continued));
+    QCOMPARE(continued.scaleX(), 1.8);
+    continued.setScaleX(2.6);
+    continued.setScaleY(2.6);
+    image->addJob(id,
+                  new InplaceTransformStrokeStrategy::UpdateTransformData(
+                      continued,
+                      InplaceTransformStrokeStrategy::UpdateTransformData::PAINT_DEVICE));
+    image->addJob(id, new KisAsynchronousStrokeUpdateHelper::UpdateData(true));
+    QTest::qWait(400);
+    QVERIFY(toImage(layer->original(), wide) != applied);
+    image->cancelStroke(id);
+    settle(image, layer);
+    QCOMPARE(toImage(layer->projection(), wide), applied);
 }
 
 SOLSTICE_BRUSH_TEST_MAIN_WITH_BUNDLES(KisBrushStrokeLayerTransformTest,

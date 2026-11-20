@@ -3407,3 +3407,440 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `KisMyPaintOpTest` and `KisMyPaintParityTest` passed; the three were
   installed. Not verified: the zip-handler assert, the eraser toggle and
   MyPaint preset activation in the running app (manual checks pending).
+
+## 2026-11-18 ingest: brush strokes on vector layers
+
+- New feature on `claude/vector-layer-brush-strokes` (not committed when
+  this entry was written): the brush tools draw on a vector layer and each
+  stroke becomes a `KisBrushStrokeShape`. Documents:
+  `docs/vector-brush-strokes.md`, `docs/agent/vector-brush-strokes.md`.
+- Source of the idea: the user's request, pointing at a custom build shown
+  in krita-artists.org topic 48515. That thread describes no design; this
+  one reuses the Brush Stroke Layer's recording and replay.
+- New pitfall:
+  [temporary image destroyed outside the GUI thread](pitfalls/temporary-image-destroyed-off-gui-thread.md),
+  with the test deadlock against `TransformShapeLayerDeferred`.
+- Lessons: a vector layer's repaint is a spontaneous job and waits for open
+  strokes, so the finished stroke is painted into the layer's device before
+  the preview goes; `clang-format --lines` re-sorted four include blocks
+  again (restored from `HEAD`).
+- Measured: redrawing 100 short strokes at twice the size took 863 ms in
+  `KisVectorBrushStrokeTest::testManyStrokesRedrawTime`.
+- Not verified: pen input, Multibrush, Dynamic Brush, canvas mirror, the
+  Select Shapes Tool, the Transform Tool, the GPU engine, upstream Krita.
+
+## 2026-11-18 ingest: autosave freeze with a vector layer
+
+- The user tested the vector brush strokes and Solstice froze while they
+  were in another application. `lldb --batch -p <pid>` with
+  `thread backtrace all` on the frozen process (then detach) gave the
+  cause without killing it: autosave copying the document.
+- Cause and fix: [strong image reference during a copy](pitfalls/strong-image-ref-during-copy.md),
+  new section. The path is from the 2026-W44 intake and needs only a
+  vector layer and a resolution other than 72 ppi; a path shape reproduces
+  it in `KisVectorBrushStrokeTest::testDocumentCopyWithVectorLayer`. `main`
+  itself was not run to confirm it there.
+- Lesson: the earlier tests used 72 ppi images, where the copied layer
+  resets nothing. New documents are 300 ppi; the `.kra` test now is too.
+- `kis_shape_layer_test` `testMergeDown`/`testScaleAndMergeDown` fail as
+  recorded for `main` on 2026-10-27 (alpha 150 against 255).
+- After the fix: the copy test passes for both shapes; in a scratch
+  instance with `AutoSaveInterval=10` the autosave file appeared and
+  painting continued. A first attempt used `document_export_png` as the
+  check, which proves nothing: `exportDocumentSync()` does not copy the
+  document. The scenario runner also closes every document when a run
+  ends, so the wait has to be inside one session.
+
+## 2026-11-18 ingest: vector eraser for brush strokes
+
+- The user asked for CSP-style editable vector lines and a vector eraser,
+  pointing at CSP's "Mastering vector layers" article and Blender's Grease
+  Pencil. Findings: the recorded stroke already is a path of control points
+  with pen values; a prototype cut one and bent one. Grease Pencil's eraser
+  (`editors/sculpt_paint/grease_pencil/erase.cc`) inserts points on the
+  eraser circle and starts a new curve at each cut; its trim tool finds
+  stroke crossings by brute force. Ideas only, no code taken.
+- Built the first step: the eraser in the brush tools cuts strokes
+  (Touched Part, Whole Line), documented in
+  `docs/agent/vector-brush-strokes.md` ("Vector eraser").
+- New pitfall: [resizing a copied shape resizes its source](pitfalls/koshape-copy-shares-size.md).
+- Lessons: `update_translations.py` lists files with `git ls-files`, so
+  strings in new, untracked files are skipped until `git add -N`; the
+  catalog entries for `KisBrushStrokeShape.cpp` were missing after the
+  first run for that reason. `clang-format --lines` re-sorted include
+  blocks again.
+- Measured: after a cut on the test stroke, 2 of 731 covered pixels differ
+  beside the cut (G-pen); the prototype showed 59 of 1184 (soft round, size
+  40) and 125 of 1502 (rough image tip), nearly all after the cut.
+- Verified in a scratch instance through test control: a cut across a
+  stroke with undo and redo, and Whole Line chosen in the combo box. Not
+  verified: pen input.
+
+## 2026-11-18 ingest: vector eraser, Up to Intersection
+
+- Third eraser mode: a touched line is removed as far as the nearest line
+  crossing it on each side. Design and limits in
+  `docs/agent/vector-brush-strokes.md` ("Vector eraser"); the approach
+  follows Grease Pencil's trim tool (brute-force segment crossings), with
+  line ends extended by half of both widths so that a line ending at
+  another counts.
+- Lesson from the tests: a check area for "nothing left here" has to keep
+  clear of the other stroke's ink, not only of its path; two failures were
+  the test's areas, not the cut.
+- Verified: `KisVectorBrushStrokeTest` (20 cases) and the scenario
+  `vector-eraser-intersection.json` in a scratch instance. Not verified:
+  pen input, T junctions and loops in the application, speed with many
+  strokes.
+
+## 2026-11-18 ingest: Edit Brush Strokes Tool, and a race in the image hand-off
+
+- New tool for the paths of brush strokes on a vector layer (Move Points
+  with a reach, Change Width, Cut): `docs/agent/vector-brush-strokes.md`
+  ("Editing the path").
+- A crash in the test suite on busy runs led to a race in this morning's
+  fix for the temporary replay image; see the new section of
+  [temporary image destroyed outside the GUI thread](pitfalls/temporary-image-destroyed-off-gui-thread.md).
+  Found by crashing inside a Qt message handler on the timer warning;
+  20 rounds of the 100-stroke test under CPU load were clean afterwards.
+- Lessons: the document's undo stack skips steps while the image is busy
+  (test flakiness until every step settled the image first); parallel
+  instances of one brush test fight over the shared test resources and
+  fail to load presets, so load a machine with unrelated work instead;
+  `canvas_capture` does not show decorations, so the tool's overlay could
+  not be checked by an agent.
+- Verified: `KisVectorBrushStrokeTest` (now with path editing cases) and
+  the scenario `edit-brush-strokes-tool.json` in a scratch instance. Not
+  verified: the overlay's look, pen input, zoomed and rotated views.
+
+## 2026-11-18 ingest: assert dialog at autosave after the vector layer fix
+
+- The user left Solstice idle and got "SAFE ASSERT
+  !KisLayerUtils::hasDelayedNodeWithUpdates(newRoot)" (KisDocument.cpp).
+  My autosave fix deferred the copied layer's repaint, which left the copy
+  with a pending update. Root fix: a copied vector layer keeps its
+  resolution and ignores empty updates, so it keeps its picture and needs
+  no repaint; see
+  [strong image reference during a copy](pitfalls/strong-image-ref-during-copy.md).
+- Lessons: `KRITA_NO_ASSERT_MSG=1` in my scratch run hid the assert (now:
+  read the log); a scratch launch exits with 0 while the user's Solstice is
+  running; the test changed the image resolution after creating the layer,
+  which the layer never hears of, so it did not show what a real 300 ppi
+  document does.
+- Verified after installing: `testDocumentCopyWithVectorLayer` (picture
+  kept, nothing pending); autosave in a scratch instance at a 10-second
+  interval, once with `KRITA_NO_ASSERT_MSG=1` (no "ASSERT" in three logs)
+  and once with assert dialogs enabled (the session kept answering); the
+  five brush and vector scenarios.
+
+## 2026-11-18 ingest: color, size and brush of selected lines
+
+- The Edit Brush Strokes Tool selects lines by click and applies the
+  current color, brush size or brush preset to them
+  (`docs/agent/vector-brush-strokes.md`, "Editing the path").
+- Bug found by the new save/load test: a picture whose rectangle starts on
+  a half pixel came back one pixel off, because saving rounded the
+  difference between two offsets while painting rounds each offset. Both
+  are now rounded as `paint()` does, and piece rectangles lie on whole
+  pixels. It affected eraser pieces and edited lines saved since this
+  morning's builds only (never released).
+- The user registered a backlog item in `docs/agent/todo.md`: a CSP
+  feature comparison table on the vector layer page, after the vector
+  layer work is complete.
+- Verified: `KisVectorBrushStrokeTest` and the extended scenario
+  `edit-brush-strokes-tool.json`. Not verified: the orange selection
+  overlay (captures leave out decorations), pen input.
+
+## 2026-11-18 ingest: transform previews for brush strokes on vector layers
+
+- The Transform Tool's in-place stroke now previews a vector layer's brush
+  strokes with scaled pictures and draws them exactly when the transform is
+  applied or cancelled (`docs/agent/vector-brush-strokes.md`, "Transform
+  previews"). Chosen over an idle-timer refinement because nothing
+  approximate can then outlive the stroke: saving and export never see it.
+- Finding: with Instant Preview off, `finishAction()` does not apply the
+  transform again; the last preview step is the result. The exact repaint
+  therefore has to be requested when the stroke finalizes.
+- Measured: 15 ms against 107 to 109 ms for 30 short strokes
+  (`testTransformPreview`).
+- Harness limit: `input_key` Escape does not cancel a transform (same on a
+  paint layer), and `query_pixels` refuses while a transform is open; a
+  vector layer reports no `exactBounds` in `query_state`.
+- Verified after installing: the unit suites; in a scratch instance a
+  corner drag with Apply, undo and redo (no assert lines in the logs); the
+  vector and brush scenarios and two Transform Tool scenarios with assert
+  dialogs enabled. Once in four runs `vector-brush-stroke.json` failed at
+  `query_state` with "The image is busy" right after `wait_idle` following
+  Add Vector Layer; three reruns passed. Not explained: either a delayed
+  job starting after `wait_idle` saw the image idle, or something new.
+
+## 2026-11-18 ingest: simplifying brush strokes on vector layers
+
+- `KisBrushStrokePathEdit::simplified()` and Simplify Lines in the Edit
+  Brush Strokes Tool (`docs/agent/vector-brush-strokes.md`, "Editing the
+  path"). Curve fitting (Schneider) was chosen over thinning the control
+  points (Ramer-Douglas-Peucker): a recorded stroke may already consist of
+  long curves, where the control points alone do not describe the path, and
+  a second pass over thinned points would drift.
+- The pen pressure is part of the fit's error because a CURVE job
+  interpolates the pen values linearly between its ends; without it a
+  straight line with a pressure bump would lose the bump.
+- Test pitfall: `KisBrushStrokePathEdit::nearestPoint()` measures a curve
+  as 16 chords, so on a strongly bent curve of about 100 px it is off by
+  0.2 px. A test that checks a path deviation below that has to measure
+  another way.
+- A job that is split into several by the fit must be ordered by its
+  place in its own line, not by the original job's index, or all parts of
+  one mirrored copy are drawn before the other copy's.
+- Verified after installing: `KisVectorBrushStrokeTest` (25 passed) and
+  the related suites; `edit-brush-strokes-tool.json` with assert dialogs
+  enabled; a scratch run with two tablet strokes at 1 px and 5 px.
+
+## 2026-11-18 ingest: adding and deleting control points of brush strokes
+
+- `insertPoint()`, `nearestControlPoint()` and `deletePoint()` in
+  `KisBrushStrokePathEdit`, and the modes Add Point and Delete Point of the
+  Edit Brush Strokes Tool (`docs/agent/vector-brush-strokes.md`, "Editing
+  the path").
+- Deleting fits one curve to the two jobs' path instead of only joining
+  their far handles: on a freshly drawn line (short LINE jobs) the handles
+  carry no shape, and on a simplified line the fit keeps what one curve
+  can.
+- `nearestPoint()` returns the POINT job at a line's start for a cursor
+  there (it comes first and ties do not replace it); anything that turns a
+  hit into a control point has to treat that job as the path's first
+  point.
+- Harness: `query_state`'s `undo.count` does not drop after `edit_undo`
+  (it counts the stack, not the index); compare `undo.lastCommand` or
+  pixels to tell whether a click made a step.
+- In one of six scratch runs the first Delete Point click after Simplify Lines did nothing (no undo step, same picture) while the identical sequence worked in the other five; not explained. The tool's path is deterministic, and a window appearing over the pointer suppresses a synthetic press (wiki: synthetic canvas input), which the floating message shown by Simplify Lines may have done.
+
+## 2026-11-18 ingest: joining brush strokes on vector layers
+
+- `KisBrushStrokePathEdit::joined()`, `KisBrushStrokeShapeEdit::joinStrokes()`
+  and Join Lines in the Edit Brush Strokes Tool
+  (`docs/agent/vector-brush-strokes.md`, "Editing the path").
+- A reversed or appended line makes the recorded pen time run back; the
+  joined stroke's time is rewritten job by job. Nothing was seen to break
+  with time running back, but timed spacing compares times, so it is not
+  left to chance.
+- The connection between two ends takes their pen values. Pen strokes
+  taper, so the joint is thin; seen in the scratch run. Left as it is
+  (the record stays what was drawn); Change Width fixes it by hand.
+- Scenario detail: with a 20 px brush two strokes 20 px apart already
+  shade the gap; the join scenario keeps 40 px between them.
+- Verified after installing: `KisVectorBrushStrokeTest` and the related
+  suites, the four vector scenarios with assert dialogs enabled, and the
+  scratch run with tapered tablet strokes.
+
+## 2026-11-18 ingest: comparison with Clip Studio Paint in the vector guide
+
+- The backlog entry from `docs/agent/todo.md` is done: the user guide
+  lists the functions of the official "Mastering vector layers" page
+  against Solstice (31 rows: 16 yes, 7 partly, 8 no). The rules for keeping it are in
+  `docs/agent/vector-brush-strokes.md`.
+- Largest gaps it shows: no curve/corner setting or handles on control
+  points, no per-point opacity, no redraw-by-tracing tools, no ruler from
+  a vector line, and SVG export writes pictures.
+
+## 2026-11-18 ingest: switching control points between corner and curve
+
+- `KisBrushStrokePathEdit::isCorner()`, `switchCorner()` and the corner
+  flags of `controlPoints()`, and the mode Switch Corner of the Edit Brush
+  Strokes Tool (`docs/agent/vector-brush-strokes.md`, "Editing the path").
+  The comparison table's row is now Yes (17 yes, 7 partly, 7 no).
+- No flag is stored: a corner is a control point without handles or with
+  a turn above 10 degrees. That keeps the record format as it is, and
+  makes every inner point of a freshly drawn line a corner, which is why
+  the squares show only in the Switch Corner mode.
+- A LINE job made a CURVE for a curve point has to come back as a LINE
+  when the point is a corner again; a CURVE with its handles on the chord
+  is straight but spreads the pen's values differently along it.
+- Harness: a read right after `wait_idle` near a scenario's start failed
+  with "The image is busy" in 2 of 5 runs of the four vector scenarios in
+  one instance (`docs/agent/test-control.md`); suspected idle tasks, not
+  checked.
+- Verified after installing: `KisVectorBrushStrokeTest` (28) and the
+  related suites, the four vector scenarios with assert dialogs enabled
+  (each passed in at least four of five runs; the failures were the busy
+  reads above), and the scratch run with pictures.
+
+## 2026-11-18 ingest: density of brush strokes at control points
+
+- `KisPaintInformation::densityFactor()`, `KisBrushStrokePathEdit::scaleDensity()`,
+  `applyDensity()` in `KisBrushStrokeShape.cpp` and the mode Change Density
+  of the Edit Brush Strokes Tool (`docs/agent/vector-brush-strokes.md`,
+  "Editing the path"). The comparison table's row is now Yes (18 yes, 7
+  partly, 6 no).
+- First design, dropped before it was built into the tree: multiply each
+  dab's opacity in `KisBrushOp::paintAt()`. With Wash the alpha-darken
+  composite caps the ink at the dab's opacity, but a Build-up stroke
+  composites every dab with Over, so overlapping dabs add up again:
+  ten overlapping dabs at half opacity are nearly opaque. Ink pens are
+  Build-up with close spacing, the main use of vector layers. The density
+  is therefore applied to the finished picture along the path, which also
+  makes it independent of the brush engine.
+- Carrying the value in `KisPaintInformation` (mixed like the pressure)
+  made cuts, added points, simplifying and joining keep it without
+  changes; storing it beside the jobs would have needed code in each.
+- The stroke data gets a new version only when a density is used, so a
+  document without one stays readable by builds that know version 3.
+- Verified with `KisVectorBrushStrokeTest` (30) and the related suites. In the application: the scenario's Change Density step (the four vector scenarios passed three times in a row) and a scratch run with an ink pen, a Wash brush and a looped line (ink at the place 255 to 60 and 65, the crossing stays dark, a drag back and undo restore it).
+
+## 2026-11-18 ingest: width of brush strokes by a fixed amount
+
+- `KisBrushStrokePathEdit::addWidth()`, `widthShare()`,
+  `sizeFollowsPressure()` and the mode Add Width of the Edit Brush Strokes
+  Tool (`docs/agent/vector-brush-strokes.md`, "Editing the path"). The
+  comparison table's row is now Yes (19 yes, 7 partly, 5 no).
+- The first version took the width as brush size times pressure. The
+  unit test on the layer showed it wrong at once: after the brush grew
+  from 12 to 18 px, the places that should have kept 12 px were 7 px
+  wide. The Size option's pressure curve of `b) Basic-5 Size` is far from
+  straight (0.23 at a pressure of 0.5). A width in pixels needs the
+  brush's own curve; the pressure is not a width.
+- The curve is read from the preset's settings by key, because the
+  option's classes live in `plugins/paintops/libpaintop`, above
+  `libs/ui`. The keys are those of `KisKritaSensorPack::read()`; a change
+  there has to be followed in `sizeResponse()`.
+- `KisPaintOpSettings::setPaintOpSize()` does not keep a double exactly
+  (18.0036 came back equal to six digits only): compare sizes with a
+  tolerance in tests.
+- The "image is busy" read right after `wait_idle` showed up again in a
+  scratch run (this branch does not have the fix of pull request 105);
+  the scratch script retries its reads.
+- Verified with `KisVectorBrushStrokeTest` (31) and the related suites,
+  the scenario (three runs in a row) and a scratch run with measured
+  widths (+10 px: 11.8 to 22.0, 13.3 to 23.1, 9.4 to 19.2).
+
+## 2026-11-18 ingest: Free Transform of selected brush strokes
+
+- `KisBrushStrokePathEdit::mapped()` and `canMapPoints()`, and the mode
+  Free Transform of the Edit Brush Strokes Tool: a frame around the
+  selected lines with corner and side handles
+  (`docs/agent/vector-brush-strokes.md`, "Editing the path"). The
+  comparison table's row is now Yes (20 yes, 7 partly, 4 no).
+- Why not the Transform Tool: it transforms a vector layer through the
+  layer's transformation, Free Transform only, in a stroke of its own
+  with previews; limiting it to selected shapes would reach into
+  `tool_transform2` and its in-place stroke. Why not shape
+  transformations: a stroke shape is drawn again with its brush and
+  cannot hold a projective transformation. Mapping the control points
+  needs neither.
+- The strokes are drawn again only at the release; during the drag the
+  paths are shown through the frame's transformation. Redrawing every
+  selected stroke on each move event was the alternative and would have
+  needed one edit object per shape and a combined undo command.
+- A scenario step failed in a way that looked like a bug of the feature:
+  a vertical drag moved the line 169 px to the left. The canvas of the
+  test instance is 228 px wide, the drag was outside it, and the
+  autoscroll moved the view under the remaining synthesized points
+  (`docs/agent/test-control.md`, "A drag outside the canvas scrolls the
+  view"). Found by writing the event positions and
+  `KisCanvas2::documentOffset()` to a file from the tool; `qWarning()`
+  does not reach a log the harness can read.
+- The unit test's line vanished partly after a move by 40 px: the test
+  document is 100 px high and a stroke's picture is clipped to the image.
+- Verified with `KisVectorBrushStrokeTest` (32) and the related suites,
+  the scenario (three runs in a row) and a scratch run (three steps, the
+  unselected line unchanged, a folded frame refused, undo restores).
+
+## 2026-11-18 ingest: background color of selected brush strokes
+
+- `KisBrushStrokePathEdit::withBackgroundColor()` and the button Apply
+  Background Color of the Edit Brush Strokes Tool. The comparison table's
+  "Change sub color" row is now Yes (21 yes, 7 partly, 3 no).
+- The test first measured the red channel and saw no change: a mix of
+  black with white and a mix of black with red have the same red. Measure
+  the channel the new color lacks.
+- The harness has no tool for the background color; the scenario swaps
+  the colors with the action `toggle_fg_bg` around the click.
+- Free Transform now takes the frame's target from the release position
+  instead of the last move. The scenario's second frame drag made no
+  undo step in one run before that change and in one run after it; the
+  cause was not found. With the tool writing each press and release to a
+  file, 41 more runs (8 of the block alone, 15 of the scenario, 14 of the
+  four vector scenarios, plus the earlier ones) showed the frame, the
+  handle and the selection as expected every time. The other failures in
+  those runs were the known busy read (twice) and once the eraser
+  scenario's stroke making no "Erase Brush Strokes" step, so single
+  synthesized drags do get lost on this computer now and then.
+- Verified with `KisVectorBrushStrokeTest` (33) and the scenarios.
+
+## 2026-11-19 ingest: redrawing a part of a brush stroke
+
+- `KisBrushStrokePathEdit::redrawn()` and the mode Redraw of the Edit
+  Brush Strokes Tool (`docs/agent/vector-brush-strokes.md`, "Editing the
+  path"). The comparison table's "Redraw vector line" row is now Yes (22
+  yes, 7 partly, 2 no: redrawing the width by tracing, rulers from
+  vectors).
+- The pen's values of the new part come from the old part at the same
+  share of its length, through `KisPaintInformation::mix()`. That keeps
+  the width's course and the time without inventing values from the
+  mouse or pen that draws the correction.
+- The part is described by distances along the line, not by job indices:
+  inserting points first would shift the indices of the second place, and
+  both places can lie in one job.
+- A test expected a path drawn 3 px beside the line to keep that offset
+  in the middle. It does not: both ends are 3 px off, and the blend of
+  two equal shifts is that shift everywhere. The header's sentence was
+  wrong the same way and was corrected.
+- Verified with `KisVectorBrushStrokeTest` (34), the scenario and a
+  scratch run with three kinds of redraw.
+
+## 2026-11-19 ingest: redrawing the width of a brush stroke by tracing
+
+- `KisBrushStrokePathEdit::redrawnWidth()` and the mode Redraw Width of
+  the Edit Brush Strokes Tool (`docs/agent/vector-brush-strokes.md`,
+  "Editing the path"). The comparison table's "Redraw vector line width"
+  row is now Yes (23 yes, 7 partly, 1 no: rulers from vectors).
+- The width of the trace is what the current brush would paint: its size
+  times the share its Size option gives the trace's pressure
+  (`widthShare()` for a preset). A mouse traces at full pressure.
+- The share-to-pressure step of Add Width became `withShares()`, used by
+  both; Add Width's test covers the change.
+- Control points are added where the width is to change, because a width
+  lives at a control point and a simplified line has few. The distances
+  along the line are kept from before the division: a curve's length is
+  measured by sampling, so the divided line's distances differ in the
+  last digits, enough to put a boundary point on the wrong side.
+- A test helper that checked every job's end point failed on the POINT
+  job, whose `pi2` is unset (0, 0). The function was right.
+- Verified with `KisVectorBrushStrokeTest` (35), the scenario and a
+  scratch run with a mouse trace, a pen trace of rising pressure and a
+  trace that leaves the line.
+
+## 2026-11-19 ingest: assistants along brush strokes
+
+- `KisBrushStrokePathEdit::pathPieces()` and the button Create
+  Assistants of the Edit Brush Strokes Tool
+  (`docs/agent/vector-brush-strokes.md`, "Editing the path"). The
+  comparison table's "Ruler from vector, Selection from ruler" row is now
+  Partly (23 yes, 8 partly, 0 no): no selection from a line.
+- Solstice's rulers are painting assistants. A line becomes a chain of
+  Spline and Ruler assistants; a brush follows the chain only with "Snap
+  to Single Line" off.
+- For the path alone, simplify a copy with one pressure: the pressure
+  counts as width in `simplified()` and costs pieces (10 jobs against 9
+  on the test's wave).
+- A fitted curve of a straight path is a CURVE job with its handles on
+  the chord; `isOnChord()` tells it from a curve.
+- Assistants are in document coordinates (`KisImage::pixelToDocument()`),
+  a spline's handles are start, end, control 1, control 2.
+- The Freehand Brush's assistant check boxes had no object names; they
+  have now, for test control.
+- Four scenario runs in a row failed at unrelated steps and the next four
+  passed, same build, same canvas size. Not explained.
+
+## 2026-11-20 ingest: a selection from brush strokes
+
+- `KisBrushStrokePathEdit::closedPath()` and the button Select Inside of
+  the Edit Brush Strokes Tool (`docs/agent/vector-brush-strokes.md`,
+  "Editing the path"). The comparison row "Ruler from vector, Selection
+  from ruler" stays Partly: the selection comes from the lines, and a
+  line gives several assistants, not one ruler.
+- A pixel selection from a tool outside the selection tools:
+  `KisPainter::paintPainterPath()` into a `KisPixelSelection` with
+  `KisDefaultBounds`, then `KisSelectionToolHelper::
+  selectPixelSelection()`, which makes the undo step.
+- `query_state` reports `selection.active`, its bounds and pixel count:
+  enough to check a selection without a picture.

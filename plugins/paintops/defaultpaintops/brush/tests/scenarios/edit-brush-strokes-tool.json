@@ -1,0 +1,2063 @@
+{
+  "format": "solstice-test-control-scenario",
+  "version": 1,
+  "name": "edit-brush-strokes-tool",
+  "description": "The Edit Brush Strokes Tool on a brush stroke of a vector layer: dragging its middle moves that part of the line, a drag in Change Width changes the picture, a click in Cut makes an undo step and leaves the line in place; a click selects the line and the Apply buttons give it the current color, background color (one undo step; a brush that does not use it looks the same), brush size and brush; Simplify Lines makes one undo step, leaves the line where it is, and has nothing left to take the second time; Add Point with a drag adds a point and moves it, Delete Point removes one with a click, Switch Corner switches one with a click, each one undo step; a drag to the left in Change Density makes the black line gray in the middle (seen over the white background) and leaves it 60 pixels away as it was; a drag to the right in Add Width makes the line 25 pixels wider in the middle (ink 14 pixels above its path, where it was white) and leaves the place 60 pixels along the line white; in Free Transform a click selects the line, a drag inside its frame moves it 50 pixels down and a drag of the frame's bottom side stretches it downwards, one undo step each; in Redraw an arc drawn from one place of the line to another replaces the part between them (ink on the arc, none where the middle was, the ends as they were), one undo step; in Redraw Width a trace along 60 pixels of the line with a brush of 60 pixels makes that part as wide (ink 23 pixels above the path, where it was white) and leaves the line 60 pixels further as it was, one undo step; everything is undone to the drawn line. Create Assistants on the selected line makes one undo step that leaves the picture as it is. Select Inside on the straight line, which encloses nothing, makes no selection and no undo step. The Add Width and Free Transform drags stay within the 228 pixels of canvas that a fresh profile shows after view_reset, which they call first: a drag outside the canvas scrolls the view while the remaining points keep their widget positions.",
+  "covers": "Edit Brush Strokes Tool through the input manager and its Tool Options (docs/agent/vector-brush-strokes.md)",
+  "steps": [
+    {
+      "call": "document_new",
+      "args": {
+        "width": 800,
+        "height": 600
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "add_new_shape_layer"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "tool_activate",
+      "args": {
+        "id": "KritaShape/KisToolBrush"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "preset": "b) Basic-5 Size Opacity",
+        "size": 20,
+        "opacity": 1,
+        "eraser": false,
+        "color": "#000000"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "save": {
+        "middleEmpty": "sha256"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 257,
+        "width": 6,
+        "height": 6
+      },
+      "save": {
+        "movedEmpty": "sha256"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "save": {
+        "leftEmpty": "sha256"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 457,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "save": {
+        "rightEmpty": "sha256"
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 330.0,
+            "y": 300.0
+          },
+          {
+            "x": 335.83,
+            "y": 300.0
+          },
+          {
+            "x": 341.67,
+            "y": 300.0
+          },
+          {
+            "x": 347.5,
+            "y": 300.0
+          },
+          {
+            "x": 353.33,
+            "y": 300.0
+          },
+          {
+            "x": 359.17,
+            "y": 300.0
+          },
+          {
+            "x": 365.0,
+            "y": 300.0
+          },
+          {
+            "x": 370.83,
+            "y": 300.0
+          },
+          {
+            "x": 376.67,
+            "y": 300.0
+          },
+          {
+            "x": 382.5,
+            "y": 300.0
+          },
+          {
+            "x": 388.33,
+            "y": 300.0
+          },
+          {
+            "x": 394.17,
+            "y": 300.0
+          },
+          {
+            "x": 400.0,
+            "y": 300.0
+          },
+          {
+            "x": 405.83,
+            "y": 300.0
+          },
+          {
+            "x": 411.67,
+            "y": 300.0
+          },
+          {
+            "x": 417.5,
+            "y": 300.0
+          },
+          {
+            "x": 423.33,
+            "y": 300.0
+          },
+          {
+            "x": 429.17,
+            "y": 300.0
+          },
+          {
+            "x": 435.0,
+            "y": 300.0
+          },
+          {
+            "x": 440.83,
+            "y": 300.0
+          },
+          {
+            "x": 446.67,
+            "y": 300.0
+          },
+          {
+            "x": 452.5,
+            "y": 300.0
+          },
+          {
+            "x": 458.33,
+            "y": 300.0
+          },
+          {
+            "x": 464.17,
+            "y": 300.0
+          },
+          {
+            "x": 470.0,
+            "y": 300.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "drawn": "sha256"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$middleEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 257,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$movedEmpty"
+        }
+      }
+    },
+    {
+      "call": "tool_activate",
+      "args": {
+        "id": "KritaShape/KisToolEditBrushStrokes"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Move Points"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "sliderEditBrushStrokesReach",
+        "value": 40
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 400,
+          "y": 300
+        },
+        "to": {
+          "x": 400,
+          "y": 260
+        },
+        "steps": 10
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "activeTool": "KritaShape/KisToolEditBrushStrokes",
+        "undo.lastCommand": "Move Brush Stroke Points",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$middleEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 257,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$movedEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$leftEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 457,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$rightEmpty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Change Width"
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 400,
+          "y": 300
+        },
+        "to": {
+          "x": 240,
+          "y": 300
+        },
+        "steps": 10
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Change Brush Stroke Width"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "thin": "sha256"
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 306,
+        "width": 6,
+        "height": 3
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Cut"
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Cut Brush Stroke"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$middleEmpty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Move Points"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 313,
+        "width": 6,
+        "height": 4
+      },
+      "save": {
+        "belowBefore": "sha256"
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "color": "#ff0000"
+      }
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesApplyColor"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Change Brush Stroke Color"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ff0000"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 313,
+        "width": 6,
+        "height": 4
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$belowBefore"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "toggle_fg_bg"
+      }
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesApplyBackgroundColor"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Change Brush Stroke Background Color"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ff0000"
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "toggle_fg_bg"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "size": 40
+      }
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesApplySize"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Change Brush Stroke Size"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 313,
+        "width": 6,
+        "height": 4
+      },
+      "expect": {
+        "meanColor": "#ff0000"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "preset": "b) Basic-1",
+        "size": 20,
+        "color": "#000000"
+      }
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesApplyBrush"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Change Brush Stroke Brush"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ff0000"
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 450
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "sliderEditBrushStrokesSimplify",
+        "value": 1.0
+      }
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesSimplify"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Simplify Brush Strokes",
+        "activeLayer.class": "KisShapeLayer"
+      },
+      "save": {
+        "simplifiedCount": "undo.count"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$middleEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$leftEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 457,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$rightEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 257,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$movedEmpty"
+        }
+      }
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesSimplify"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Simplify Brush Strokes",
+        "undo.count": {
+          "equals": "$simplifiedCount"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Add Point"
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 365,
+          "y": 300
+        },
+        "to": {
+          "x": 365,
+          "y": 270
+        },
+        "steps": 6
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Add Brush Stroke Point",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$middleEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 457,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$rightEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 257,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$movedEmpty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Delete Point"
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Delete Brush Stroke Point"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$middleEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$leftEmpty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Switch Corner"
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Switch Brush Stroke Corner",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$middleEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 257,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$movedEmpty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Change Density"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "save": {
+        "leftDrawn": "sha256"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#000000"
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 400,
+          "y": 300
+        },
+        "to": {
+          "x": 240,
+          "y": 300
+        },
+        "steps": 10
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Change Brush Stroke Density",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#000000"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$leftDrawn"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Add Width"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 283,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 400,
+          "y": 300
+        },
+        "to": {
+          "x": 500,
+          "y": 300
+        },
+        "steps": 10
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Add Brush Stroke Width",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 283,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 283,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Free Transform"
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 347,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 360,
+          "y": 304
+        },
+        "to": {
+          "x": 360,
+          "y": 354
+        },
+        "steps": 10
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Transform Brush Strokes",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 347,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "input_drag",
+      "args": {
+        "from": {
+          "x": 400,
+          "y": 360
+        },
+        "to": {
+          "x": 400,
+          "y": 420
+        },
+        "steps": 10
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Transform Brush Strokes"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 377,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Redraw"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 252,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 360.0,
+            "y": 300.0
+          },
+          {
+            "x": 363.33,
+            "y": 294.13
+          },
+          {
+            "x": 366.67,
+            "y": 288.35
+          },
+          {
+            "x": 370.0,
+            "y": 282.78
+          },
+          {
+            "x": 373.33,
+            "y": 277.5
+          },
+          {
+            "x": 376.67,
+            "y": 272.61
+          },
+          {
+            "x": 380.0,
+            "y": 268.18
+          },
+          {
+            "x": 383.33,
+            "y": 264.3
+          },
+          {
+            "x": 386.67,
+            "y": 261.03
+          },
+          {
+            "x": 390.0,
+            "y": 258.43
+          },
+          {
+            "x": 393.33,
+            "y": 256.53
+          },
+          {
+            "x": 396.67,
+            "y": 255.38
+          },
+          {
+            "x": 400.0,
+            "y": 255.0
+          },
+          {
+            "x": 403.33,
+            "y": 255.38
+          },
+          {
+            "x": 406.67,
+            "y": 256.53
+          },
+          {
+            "x": 410.0,
+            "y": 258.43
+          },
+          {
+            "x": 413.33,
+            "y": 261.03
+          },
+          {
+            "x": 416.67,
+            "y": 264.3
+          },
+          {
+            "x": 420.0,
+            "y": 268.18
+          },
+          {
+            "x": 423.33,
+            "y": 272.61
+          },
+          {
+            "x": 426.67,
+            "y": 277.5
+          },
+          {
+            "x": 430.0,
+            "y": 282.78
+          },
+          {
+            "x": 433.33,
+            "y": 288.35
+          },
+          {
+            "x": 436.67,
+            "y": 294.13
+          },
+          {
+            "x": 440.0,
+            "y": 300.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Redraw Brush Stroke",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 252,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 457,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Redraw Width"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "size": 60
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 277,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 370.0,
+            "y": 300.0
+          },
+          {
+            "x": 375.0,
+            "y": 300.0
+          },
+          {
+            "x": 380.0,
+            "y": 300.0
+          },
+          {
+            "x": 385.0,
+            "y": 300.0
+          },
+          {
+            "x": 390.0,
+            "y": 300.0
+          },
+          {
+            "x": 395.0,
+            "y": 300.0
+          },
+          {
+            "x": 400.0,
+            "y": 300.0
+          },
+          {
+            "x": 405.0,
+            "y": 300.0
+          },
+          {
+            "x": 410.0,
+            "y": 300.0
+          },
+          {
+            "x": 415.0,
+            "y": 300.0
+          },
+          {
+            "x": 420.0,
+            "y": 300.0
+          },
+          {
+            "x": 425.0,
+            "y": 300.0
+          },
+          {
+            "x": 430.0,
+            "y": 300.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Redraw Brush Stroke Width",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 277,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 277,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 337,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": {
+          "notEquals": "#ffffff"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 457,
+        "y": 277,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ffffff"
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Move Points"
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesCreateAssistants"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Create Assistants from Brush Strokes",
+        "activeLayer.class": "KisShapeLayer"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": {
+          "notEquals": "Create Assistants from Brush Strokes"
+        }
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesSelectInside"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": {
+          "notEquals": "Select Inside Brush Strokes"
+        },
+        "selection.active": false
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Move Points"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "preset": "b) Basic-5 Size Opacity",
+        "size": 20,
+        "color": "#000000"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "sliderEditBrushStrokesReach",
+        "value": 60
+      }
+    },
+    {
+      "call": "tool_activate",
+      "args": {
+        "id": "KritaShape/KisToolBrush"
+      }
+    },
+    {
+      "call": "document_close"
+    }
+  ]
+}

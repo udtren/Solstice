@@ -155,7 +155,7 @@ Verification (2026-10-26, cloud session, no Krita build available):
 | Reference image comparison (QtGui only) | `TestControlImageCompare.{h,cpp}`, `tests/TestControlImageCompareTest.cpp` |
 | Scenario runner (developer tool) | `dev-tools/test-control/run_scenarios.py`, `test_run_scenarios.py` |
 | Paint trace series (developer tool, phase 4) | `dev-tools/test-control/paint_trace_series.py`, `test_paint_trace_series.py`; summaries by `build-tools/paint-trace/summarize.py` |
-| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`); `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (9); `libs/ui/tests/scenarios/lazy-*.json` (4); `plugins/dockers/layerdocker/tests/scenarios/` (1); `plugins/dockers/quickaccess/tests/scenarios/` (3) |
+| Scenarios (next to the covered feature's tests) | `plugins/paintops/defaultpaintops/brush/tests/scenarios/brush-stroke-undo.json`, `eraser-stroke.json`, `pressure-stroke.json` (with `.expected.json` and `.refs/`), `vector-brush-stroke.json`, `vector-eraser-intersection.json`, `edit-brush-strokes-tool.json`, `vector-join-lines.json`; `libs/ui/tests/scenarios/rect-select-fill.json`; `plugins/tools/selectiontools/tests/scenarios/` (5); `plugins/tools/tool_transform2/tests/scenarios/` (9); `libs/ui/tests/scenarios/lazy-*.json` (4); `plugins/dockers/layerdocker/tests/scenarios/` (1); `plugins/dockers/quickaccess/tests/scenarios/` (3) |
 | Object names for the Puppet Warp options (no behavior change) | `plugins/tools/tool_transform2/kis_tool_transform_config_widget.cpp` |
 | Hook in an upstream file | `plugins/extensions/CMakeLists.txt` (`add_subdirectory(testcontrol)` only when `BUILD_WITH_QT6`) |
 
@@ -212,7 +212,7 @@ tested in the cloud session.
 | `wait_idle` | `timeoutMs` (default 10000) | `KisImage::isIdle()` held on three polls 20 ms apart, and, while the current selection has a shape selection, for 600 ms plus twice the longest poll gap, measured with a clock; waited time (at least 40 ms, or about 640 ms), longest gap between polls (`maxPollGapMs`) |
 | `query_state` | `includeLayerHash` | Active tool, document, undo count/index/last command text, selection (bounds, selected pixel count, SHA-256 of the selection projection), active layer (name, class, exact bounds, color space, SHA-256 of its pixels) |
 | `action_trigger` | `name`, `async` | Triggers a main window action (`edit_undo`, `deselect`, tool actions, ...). With `async`, replies first and triggers from the event loop afterwards, for actions that open a modal dialog (Rename Alternative) |
-| `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only |
+| `canvas_capture` | `maxSize` | PNG of the canvas widget as an MCP image block; diagnostic only. It shows the image but not the canvas decorations: tool overlays, the crop rectangle and selection outlines were all missing (Windows, OpenGL canvas, 2026-11-18) |
 | `canvas_frames` | `action` (`start`/`read`/`stop`, default `read`), `sinceMs` | Times when the current canvas presented frames, for timing without the paint trace: `start` clears the record and follows the canvas widget (`frameSwapped()` of the OpenGL canvas, connected by name, the paint trace's command-swap endpoint; otherwise the start of each paint event, `kind` `paint`); `read` returns the frames after `sinceMs`, `recording`, `overflowed` (more than 100000 frames) and `nowMs`. All times are milliseconds on one monotonic clock (`TestControlTiming::clockMs()`, `std::chrono::steady_clock`) |
 | `query_pixels` | `x`, `y`, `width`, `height` (image pixels, default the whole image, at most 4096x4096), `source` (`layer`/`projection`), `includePng`, `maxPngSize`, `fullResolutionPng` (at most 2048x2048), `reference` (base64 PNG), `maxChannelDiff`, `maxMismatchPixels` | SHA-256 of the device's pixels, non-transparent and opaque counts, mean alpha, mean color of the non-transparent pixels (8-bit sRGB), color space; optional PNG; with a reference, `reference` (`matches`, `maxChannelDiff`, `mismatchPixels`, `tolerance`) |
 | `document_open` | `path` (relative to the test root) | Opens without dialogs (`KisMainWindow::BatchMode`); document and canvas once its view is active |
@@ -553,6 +553,16 @@ desktop was in use, with Solstice behind another application.
 
 Findings:
 
+- **A drag outside the canvas scrolls the view (2026-11-18).** With the
+  228 px canvas, a synthesized drag whose points lie outside the canvas
+  widget starts the tool proxy's autoscroll about 100 ms after the press.
+  The remaining points keep the widget positions computed for the old
+  scroll position, so they arrive at other image coordinates (a vertical
+  drag at image x 360 continued at x 191). Tools that add up a drag in
+  image pixels then do something else than the scenario says. Call
+  `view_reset` before such a drag and keep it inside the visible part
+  (image x 286 to 514 for an 800 px document), or ask for a larger
+  window in a scratch run (`view_reset` with 1920x1080).
 - **Fresh profile, narrow canvas.** With a new profile's default dockers,
   `view_reset` (window 1280x900) leaves a canvas 228 px wide; image
   coordinates beyond it miss the canvas (19 of a drag's 24 points), so
@@ -892,6 +902,21 @@ warning, close it in every process (the runner cannot).
   runs of the scenario passed. A document switch within 100 ms probably hit
   the same queue with the other document's dummies; not reproduced.
 
+- `query_pixels` with `source: layer` fails on a vector layer ("The active
+  node has no pixels"), and the projection of a new document has an opaque
+  background, so its alpha is 255 everywhere: judge how light ink on a
+  vector layer is by `meanColor` over the background (2026-11-18).
+- A read can fail with "The image is busy" right after `wait_idle` near a
+  scenario's start (2026-11-18): running the four vector scenarios in one
+  instance five times, two runs lost one scenario at its first read after
+  `document_new`, `view_reset`, `add_new_shape_layer`, `wait_idle`
+  (`query_state` at step 5 of `vector-brush-stroke`, `query_pixels` at step
+  7 of `vector-eraser-intersection`); the first scenario of a run never
+  failed, and `vector-brush-stroke` alone passed 3 of 3. Not explained.
+  Suspected and not checked: an idle task (layer thumbnails, Overview;
+  they start 50 to 200 ms after the image falls idle) beginning after the
+  40 ms `wait_idle` took. Run a failed scenario again before reading
+  anything into such a failure.
 - Transform Tool: the transform runs as a stroke that keeps the image busy
   until Apply, Return or a tool switch, so `query_state` and `query_pixels`
   fail with "busy" between the tool's activation and Apply. Read what is

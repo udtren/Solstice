@@ -35,7 +35,7 @@
 #include "kis_image_view_converter.h"
 #include "kis_default_bounds.h"
 #include "kis_do_something_command.h"
-
+#include "KisBrushStrokeShape.h"
 
 KisShapeLayerCanvasBase::KisShapeLayerCanvasBase(KisShapeLayer *parent)
     : KoCanvasBase(0)
@@ -198,8 +198,23 @@ void KisShapeLayerCanvas::setImage(KisImageWSP image)
     m_projection->setDefaultBounds(new KisDefaultBounds(image));
     if (image && m_hasUpdateOnSetImage) {
         m_hasUpdateOnSetImage = false;
-        const QRectF documentRect = viewConverter()->viewToDocument(m_cachedImageRect);
-        updateCanvas(documentRect);
+        /**
+         * Solstice: not updateCanvas(). Its compressor starts the repaint
+         * at once, and this function also runs inside KisImage's copy
+         * constructor (saving and autosave copy the image), before any
+         * KisImageSP holds the new image. The repaint and its job take
+         * strong references, and releasing them deleted the image that was
+         * still being built: a crash or a freeze on autosave of a document
+         * with a vector layer. The compressor is started from the event
+         * loop instead; a forced repaint still finds the update pending.
+         * See docs/agent/wiki/pitfalls/strong-image-ref-during-copy.md.
+         */
+        {
+            QMutexLocker locker(&m_dirtyRegionMutex);
+            m_dirtyRegion += kisGrowRect(m_cachedImageRect, 2);
+        }
+        m_hasUpdateInCompressor = true;
+        QMetaObject::invokeMethod(&m_asyncUpdateSignalCompressor, "start", Qt::QueuedConnection);
     }
 }
 
@@ -247,7 +262,16 @@ private:
 void KisShapeLayerCanvas::updateCanvas(const QVector<QRectF> &region)
 {
     if (!m_image){
-        m_hasUpdateOnSetImage = true;
+        // Solstice: only an update of something. The shape manager also
+        // forwards empty rectangles (a copied layer gets one before it has
+        // an image), and the whole layer was then repainted in every copy
+        // of a document: saving expects a copy without pending updates.
+        Q_FOREACH (const QRectF &rc, region) {
+            if (!rc.isEmpty()) {
+                m_hasUpdateOnSetImage = true;
+                break;
+            }
+        }
         return;
     }
     if (!m_parentLayer->image() || m_isDestroying) {
@@ -432,6 +456,10 @@ void KisShapeLayerCanvas::repaint()
     QRect repaintRect = paintJobsOrder.uncroppedViewUpdateRect;
     m_projection->clear(repaintRect);
 
+    // Solstice: the steps of a transform in progress scale the brush
+    // strokes' pictures (setBrushStrokePreview())
+    KisBrushStrokeShape::PreviewPaintScope previewScope(m_brushStrokePreview.loadAcquire());
+
     Q_FOREACH (const KoShapeManager::PaintJob &job, paintJobsOrder.jobs) {
         if (job.isEmpty()) {
             m_projection->clear(job.viewUpdateRect);
@@ -491,6 +519,10 @@ void KisShapeLayerCanvas::repaint()
 
     delete[] dstData;
     m_projection->purgeDefaultPixels();
+    if (previewScope.usedPreview()) {
+        QMutexLocker locker(&m_dirtyRegionMutex);
+        m_previewPaintedRect |= repaintRect;
+    }
     m_parentLayer->setDirty(repaintRect);
 
     m_hasChangedWhileBeingInvisible |= !m_parentLayer->visible(true);
@@ -531,6 +563,27 @@ void KisShapeLayerCanvas::forceRepaintWithHiddenAreas()
 
     m_asyncUpdateSignalCompressor.stop();
     m_safeForcedConnection.start();
+}
+
+void KisShapeLayerCanvas::setBrushStrokePreview(bool enabled)
+{
+    if (enabled) {
+        m_brushStrokePreview.storeRelease(1);
+        return;
+    }
+    m_brushStrokePreview.storeRelease(0);
+
+    // what was painted with scaled pictures is painted again, exactly
+    {
+        QMutexLocker locker(&m_dirtyRegionMutex);
+        if (m_previewPaintedRect.isEmpty()) {
+            return;
+        }
+        m_dirtyRegion += m_previewPaintedRect;
+        m_previewPaintedRect = QRect();
+    }
+    m_hasUpdateInCompressor = true;
+    m_asyncUpdateSignalCompressor.start();
 }
 
 void KisShapeLayerCanvas::resetCache(const KoColorSpace *colorSpace)

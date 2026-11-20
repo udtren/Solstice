@@ -7,6 +7,7 @@
 #define KIS_SHAPE_LAYER_CANVAS_H
 
 #include <QMutex>
+#include <QAtomicInt>
 #include <QRegion>
 #include <KoCanvasBase.h>
 
@@ -48,6 +49,12 @@ public:
     bool hasChangedWhileBeingInvisible();
     virtual void rerenderAfterBeingInvisible() = 0;
     virtual void resetCache(const KoColorSpace *colorSpace) = 0;
+
+    /// Solstice: see KisShapeLayer::setBrushStrokePreview()
+    virtual void setBrushStrokePreview(bool enabled)
+    {
+        Q_UNUSED(enabled);
+    }
 
     KoShapeManager *shapeManager() const override;
     const KoViewConverter *viewConverter() const override;
@@ -102,7 +109,7 @@ public:
 
     void resetCache(const KoColorSpace *colorSpace = 0) override;
     void rerenderAfterBeingInvisible() override;
-
+    void setBrushStrokePreview(bool enabled) override;
 
 private Q_SLOTS:
     friend class KisRepaintShapeLayerLayerJob;
@@ -122,6 +129,10 @@ private:
     bool m_forceUpdateHiddenAreasOnly = false;
     QRegion m_dirtyRegion;
     QMutex m_dirtyRegionMutex;
+    /// Solstice: brush stroke shapes show scaled pictures while this is
+    /// set, and where any did (image pixels, under m_dirtyRegionMutex)
+    QAtomicInt m_brushStrokePreview;
+    QRect m_previewPaintedRect;
     KoShapeManager::PaintJobsOrder m_paintJobsOrder;
 
     QRect m_cachedImageRect;

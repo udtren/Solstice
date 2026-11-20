@@ -115,6 +115,8 @@ private:
     void updateSmoothnessDistanceLabel();
 private:
     QComboBox *m_cmbSmoothingType {0};
+    /// Solstice: how the eraser erases brush strokes on a vector layer
+    QComboBox *m_cmbVectorEraserMode{0};
 
     QCheckBox *m_chkAssistant {0};
     KisSliderSpinBox *m_sliderMagnetism {0};

@@ -1,0 +1,419 @@
+{
+  "format": "solstice-test-control-scenario",
+  "version": 1,
+  "name": "vector-join-lines",
+  "description": "Join Lines in the Edit Brush Strokes Tool: a black and a red brush stroke with a gap between them on a vector layer are selected by clicks and joined into one black line that covers the gap; a second press with one line selected does nothing; undo returns the two strokes, redo the joined line.",
+  "covers": "Join Lines of the Edit Brush Strokes Tool (docs/agent/vector-brush-strokes.md)",
+  "steps": [
+    {
+      "call": "document_new",
+      "args": {
+        "width": 800,
+        "height": 600
+      }
+    },
+    {
+      "call": "view_reset"
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "add_new_shape_layer"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "tool_activate",
+      "args": {
+        "id": "KritaShape/KisToolBrush"
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "preset": "b) Basic-5 Size Opacity",
+        "size": 20,
+        "opacity": 1,
+        "eraser": false,
+        "color": "#000000"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "save": {
+        "gapEmpty": "sha256"
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 310.0,
+            "y": 300.0
+          },
+          {
+            "x": 315.83,
+            "y": 300.0
+          },
+          {
+            "x": 321.67,
+            "y": 300.0
+          },
+          {
+            "x": 327.5,
+            "y": 300.0
+          },
+          {
+            "x": 333.33,
+            "y": 300.0
+          },
+          {
+            "x": 339.17,
+            "y": 300.0
+          },
+          {
+            "x": 345.0,
+            "y": 300.0
+          },
+          {
+            "x": 350.83,
+            "y": 300.0
+          },
+          {
+            "x": 356.67,
+            "y": 300.0
+          },
+          {
+            "x": 362.5,
+            "y": 300.0
+          },
+          {
+            "x": 368.33,
+            "y": 300.0
+          },
+          {
+            "x": 374.17,
+            "y": 300.0
+          },
+          {
+            "x": 380.0,
+            "y": 300.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "color": "#ff0000"
+      }
+    },
+    {
+      "call": "input_stroke",
+      "args": {
+        "points": [
+          {
+            "x": 420.0,
+            "y": 300.0
+          },
+          {
+            "x": 425.83,
+            "y": 300.0
+          },
+          {
+            "x": 431.67,
+            "y": 300.0
+          },
+          {
+            "x": 437.5,
+            "y": 300.0
+          },
+          {
+            "x": 443.33,
+            "y": 300.0
+          },
+          {
+            "x": 449.17,
+            "y": 300.0
+          },
+          {
+            "x": 455.0,
+            "y": 300.0
+          },
+          {
+            "x": 460.83,
+            "y": 300.0
+          },
+          {
+            "x": 466.67,
+            "y": 300.0
+          },
+          {
+            "x": 472.5,
+            "y": 300.0
+          },
+          {
+            "x": 478.33,
+            "y": 300.0
+          },
+          {
+            "x": 484.17,
+            "y": 300.0
+          },
+          {
+            "x": 490.0,
+            "y": 300.0
+          }
+        ]
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "save": {
+        "drawn": "sha256"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$gapEmpty"
+        }
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 452,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#ff0000"
+      }
+    },
+    {
+      "call": "tool_activate",
+      "args": {
+        "id": "KritaShape/KisToolEditBrushStrokes"
+      }
+    },
+    {
+      "call": "ui_set",
+      "args": {
+        "objectName": "cmbEditBrushStrokesMode",
+        "value": "Move Points"
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 400,
+        "y": 450
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 345,
+        "y": 300
+      }
+    },
+    {
+      "call": "input_click",
+      "args": {
+        "x": 455,
+        "y": 300
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesJoin"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Join Brush Strokes",
+        "activeLayer.class": "KisShapeLayer"
+      },
+      "save": {
+        "joinedCount": "undo.count"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$gapEmpty"
+        },
+        "meanColor": "#000000"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 452,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#000000"
+      }
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 342,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "meanColor": "#000000"
+      }
+    },
+    {
+      "call": "ui_click",
+      "args": {
+        "objectName": "btnEditBrushStrokesJoin"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_state",
+      "expect": {
+        "undo.lastCommand": "Join Brush Strokes",
+        "undo.count": {
+          "equals": "$joinedCount"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_redo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection",
+        "x": 397,
+        "y": 297,
+        "width": 6,
+        "height": 6
+      },
+      "expect": {
+        "sha256": {
+          "notEquals": "$gapEmpty"
+        }
+      }
+    },
+    {
+      "call": "action_trigger",
+      "args": {
+        "name": "edit_undo"
+      }
+    },
+    {
+      "call": "wait_idle"
+    },
+    {
+      "call": "query_pixels",
+      "args": {
+        "source": "projection"
+      },
+      "expect": {
+        "sha256": {
+          "equals": "$drawn"
+        }
+      }
+    },
+    {
+      "call": "brush_set",
+      "args": {
+        "color": "#000000"
+      }
+    },
+    {
+      "call": "tool_activate",
+      "args": {
+        "id": "KritaShape/KisToolBrush"
+      }
+    },
+    {
+      "call": "document_close"
+    }
+  ]
+}
