@@ -4035,3 +4035,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - A `.bat` file written from bash with `printf` turned `\r` in a Windows
   path (`...\scratchpad\r_Test.txt`) into a carriage return, and the
   test runs wrote nothing: write batch files from Python with raw strings.
+
+## 2026-11-21 ingest: HueSVC popup and false Leave under a pen
+
+- The Quick Access HueSVC popup closed as soon as its shortcut opened it
+  while a pen hovered (Windows, Qt 6.8); with a mouse it stayed open. A
+  Leave event is no longer trusted: `QuickColorPopup` checks the pointer
+  (recent tablet position, else `QCursor::pos()`) and polls every 100 ms
+  until it is outside. New page:
+  [A hovering pen sends false Leave events](pitfalls/pen-hover-false-leave.md);
+  lifecycle rule in `docs/agent/quick-access.md`.
+- `QuickColorPopup` moved to its own header so the interaction test can
+  drive it with a replaced cursor source instead of moving the real cursor.

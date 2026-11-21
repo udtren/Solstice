@@ -26,6 +26,7 @@ set(KRITA_QUICKACCESS_DOCKER_SOURCES
     QuickAdjustToolOptionsPad.cpp
     QuickAdjustKeyController.cpp
     QuickColorSelectorDock.cpp
+    QuickColorPopup.cpp
     QuickAccessDock.cpp
     QuickAccessDockPopups.cpp
     QuickAccessDockWidgets.cpp
