@@ -57,7 +57,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [What's new in 1.2.0](#whats-new-in-120)
+- [In development: 1.2.1](#in-development-121)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -70,11 +70,18 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## What's new in 1.2.0
+## In development: 1.2.1
 
-[Solstice 1.2.0](https://github.com/udtren/Solstice/releases/tag/v1.2.0) adds
-[Vector Brush Strokes](docs/vector-brush-strokes.md): the brush tools paint
-on vector layers, and every stroke stays an object. The eraser cuts lines
+Solstice 1.2.1 adds the [Docker Tray](docs/docker-tray.md): right-click on
+the canvas with a painting tool, or press its shortcut, and the dockers you
+choose open at the cursor in columns, each with its own size, including
+dockers hidden in the main window. Resize them by dragging on the tray. It
+also keeps the [HueSVC](docs/quick-access.md) popup open when its shortcut
+is pressed while a pen hovers over the canvas.
+
+It builds on [1.2.0](https://github.com/udtren/Solstice/releases/tag/v1.2.0),
+which added [Vector Brush Strokes](docs/vector-brush-strokes.md): the brush
+tools paint on vector layers, and every stroke stays an object. The eraser cuts lines
 (the touched part, the whole line, or up to an intersection), the Edit
 Brush Strokes Tool moves a line's points and changes or redraws its width,
 drawn lines take another color, size or brush, and resizing draws the
@@ -82,9 +89,9 @@ strokes again so they stay sharp. Lines and vector shapes can become
 painting assistants, and the area inside a line a selection. See
 [Vector brush strokes](#vector-brush-strokes) below.
 
-It builds on [1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1),
+Before it came [1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1),
 a performance and fix release for the CPU side (finding a layer's bounds,
-a faster start, less idle work; see [Benchmarks](#benchmarks)), and on
+a faster start, less idle work; see [Benchmarks](#benchmarks)), and
 [1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0), which lets
 each [Layer Comp](docs/layer-comps.md) be exported with its own
 [Fast Image Export](docs/lazy-tools.md) settings.
@@ -204,7 +211,9 @@ required.
   open assets from the welcome page before opening a document.
 - **[Docker Tray](docs/docker-tray.md)**: right-click on the canvas opens
   the dockers you choose, hidden ones included, in columns with their own
-  sizes.
+  sizes. New in 1.2.1.
+
+  <a href="docs/docker-tray.md"><img src="docs/images/docker_tray.gif" alt="The Docker Tray opened over the canvas with the Toolbox, Quick Brush Adjustments, Tool Options, the Quick Access Palette and Layers in three columns, while their places in the main window show that the docker is open in the Docker Tray; the dockers are resized on the tray, and they return to the main window when it closes" width="720"></a>
 - **[Popup Palette removed](docs/quick-access.md)**: the right-click Popup
   Palette and the On-Canvas Brush Editor are replaced by Quick Access and
   the Docker Tray.
@@ -254,7 +263,8 @@ from the welcome page, and Puppet Warp is integrated into the Transform Tool.
 
 Android support and its build and packaging infrastructure have been removed.
 The right-click Popup Palette and the On-Canvas Brush Editor have been removed
-as well.
+as well; right-click with a painting tool opens the
+[Docker Tray](docs/docker-tray.md) instead.
 Solstice does not merge upstream Krita wholesale; upstream changes are
 reviewed regularly and adopted selectively as needed. Solstice-specific
 changes and support are maintained in this repository.

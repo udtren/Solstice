@@ -9,6 +9,8 @@ Brush Presets or Undo History with one click.
 It takes the place of the docker area of Krita's right-click Popup Palette,
 which Solstice removed.
 
+![The Docker Tray opened over the canvas with the Toolbox, Quick Brush Adjustments, Tool Options, the Quick Access Palette and Layers in three columns, while their places in the main window show that the docker is open in the Docker Tray; the dockers are resized on the tray, and they return to the main window when it closes](images/docker_tray.gif)
+
 ## Opening and closing
 
 - **Right-click on the canvas** with a painting tool (brushes, shapes, fill,

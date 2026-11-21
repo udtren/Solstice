@@ -4071,3 +4071,10 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   with a pointer at the old path.
 - README's "Popup Palette removed" entry now says what right-click does:
   open the Docker Tray.
+
+## 2026-11-21 ingest: preparing Solstice 1.2.1
+
+- The user asked for the Docker Tray to be released as 1.2.1 and added a
+  recording, `docs/images/docker_tray.gif` (800 × 585, 12 s, 1.7 MB), shown
+  in the user guide and under the Docker Tray entry of README's "Other Major
+  Changes". README marks 1.2.1 as in development until the release exists.
