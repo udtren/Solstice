@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QMainWindow>
+#include <QMouseEvent>
 #include <QPointer>
 #include <QPushButton>
 #include <QScreen>
@@ -67,6 +68,24 @@ public:
     {
     }
 };
+
+void drag(QWidget *grip, const QPoint &delta)
+{
+    const QPointF local = grip->rect().center();
+    const QPointF global = grip->mapToGlobal(local.toPoint());
+    QMouseEvent press(QEvent::MouseButtonPress, local, global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(grip, &press);
+    QMouseEvent move(QEvent::MouseMove, local + delta, global + delta, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(grip, &move);
+    QMouseEvent release(QEvent::MouseButtonRelease,
+                        local + delta,
+                        global + delta,
+                        Qt::LeftButton,
+                        Qt::NoButton,
+                        Qt::NoModifier);
+    QCoreApplication::sendEvent(grip, &release);
+    QCoreApplication::processEvents();
+}
 
 QByteArray layoutJson(const QString &columns)
 {
@@ -483,6 +502,64 @@ private Q_SLOTS:
         QCOMPARE(finished.count(), 0);
         QVERIFY(tray->isAncestorOf(f.historyContent));
         QCOMPARE(f.layers->widget(), f.layersContent.data());
+        tray->closeTray();
+    }
+
+    void dragResizes()
+    {
+        Fixture f;
+        f.setLayout(
+            layoutJson(QStringLiteral("[{\"items\":[{\"id\":\"KisLayerBox\",\"w\":200,\"h\":150},"
+                                      "{\"id\":\"History\",\"w\":200,\"h\":100}]},"
+                                      "{\"items\":[{\"id\":\"PresetDocker\",\"w\":180,\"h\":300}]}]")));
+        KisDockerTray *tray = f.tray();
+        tray->popupAt(f.center());
+        QCoreApplication::processEvents();
+        auto *widthGrip = tray->findChild<QWidget *>(QStringLiteral("dockerTrayWidthGrip_0"));
+        auto *heightGrip = tray->findChild<QWidget *>(QStringLiteral("dockerTrayHeightGrip_KisLayerBox"));
+        QVERIFY(widthGrip && heightGrip);
+        QVERIFY(widthGrip->isVisible() && heightGrip->isVisible());
+        QCOMPARE(f.cell(QStringLiteral("KisLayerBox"))->width(), 250);
+        const int trayWidth = tray->width();
+
+        // Wider: every docker of the column, saved at release.
+        drag(widthGrip, QPoint(40, 0));
+        QCOMPARE(f.cell(QStringLiteral("KisLayerBox"))->width(), 290);
+        QCOMPARE(f.cell(QStringLiteral("History"))->width(), 290);
+        QCOMPARE(tray->width(), trayWidth + 40);
+        KisDockerTrayLayout saved = KisDockerTrayLayout::load(f.config);
+        QCOMPARE(saved.columns[0][0].size, QSize(290, 150));
+        QCOMPARE(saved.columns[0][1].size, QSize(290, 100));
+        QCOMPARE(saved.columns[1][0].size, QSize(180, 300));
+        QCOMPARE(tray->trayLayout(), saved);
+
+        // Not below the widest minimum of the column (History: 250).
+        drag(widthGrip, QPoint(-1000, 0));
+        QCOMPARE(f.cell(QStringLiteral("KisLayerBox"))->width(), 250);
+        QCOMPARE(KisDockerTrayLayout::load(f.config).columns[0][0].size.width(), 250);
+
+        // Height: only that docker.
+        drag(heightGrip, QPoint(0, 50));
+        QCOMPARE(f.cell(QStringLiteral("KisLayerBox"))->height(), 200);
+        QCOMPARE(f.cell(QStringLiteral("History"))->height(), 100);
+        saved = KisDockerTrayLayout::load(f.config);
+        QCOMPARE(saved.columns[0][0].size, QSize(250, 200));
+        QCOMPARE(saved.columns[0][1].size, QSize(250, 100));
+
+        drag(heightGrip, QPoint(0, -1000));
+        const int minimumHeight = f.cell(QStringLiteral("KisLayerBox"))->minimumSizeHint().height();
+        QCOMPARE(f.cell(QStringLiteral("KisLayerBox"))->height(),
+                 qMax(minimumHeight, int(KisDockerTrayLayout::MinimumExtent)));
+
+        // The tray stays inside its screen.
+        QScreen *screen = QGuiApplication::screenAt(tray->geometry().center());
+        QVERIFY(screen);
+        QVERIFY(screen->availableGeometry().contains(tray->geometry()));
+
+        // Reopening uses the saved sizes.
+        tray->closeTray();
+        tray->popupAt(f.center());
+        QCOMPARE(f.cell(QStringLiteral("KisLayerBox"))->size(), KisDockerTrayLayout::load(f.config).columns[0][0].size);
         tray->closeTray();
     }
 

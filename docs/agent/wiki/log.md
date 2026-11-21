@@ -4047,3 +4047,17 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   lifecycle rule in `docs/agent/quick-access.md`.
 - `QuickColorPopup` moved to its own header so the interaction test can
   drive it with a replaced cursor source instead of moving the real cursor.
+
+## 2026-11-21 ingest: Docker Tray phase 5
+
+- Docker sizes on the tray are dragged with grips between cells and saved
+  on release ([plan](../docker-tray-plan.md#phase-5-results-2026-11-21)).
+- A window with `QLayout::SetFixedSize` lags behind content that is nested
+  in more widget levels: each child widget's layout updates in its own
+  posted `LayoutRequest`. Activate the layouts innermost first when the
+  size must be right at once (the tray did not grow in a test until then).
+- Clamp an interactive size to the same floor the stored value is clamped
+  to, or the shown and saved sizes differ (a 48 px cell was saved as 50).
+- Bash on this machine failed with "unexpected EOF while looking for
+  matching quote" on long Python heredocs that contain quotes; writing the
+  script to a file and running it works.

@@ -311,7 +311,10 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   active. The embedded Quick Adjust controls are child widgets and send no
   Leave of their own to the popup; the palette popup is a `Qt::Popup`
   and closes on outside clicks, not on Leave, so neither needs the check.
-  Tests: `QuickAccessInteractionTest::colorPopup*`.
+  Tests: `QuickAccessInteractionTest::colorPopup*`. Checked by the user
+  with a pen in the application on 2026-11-21 (the popup stays open under
+  the pen and closes when the pen moves out), on the Docker Tray branch
+  after merging PR #112.
 - Gesture preview is a 3×3 overlay centered on the cursor. Activate and fix the
   complete layout before calculating `cursor - half preview size`, then reapply
   position after showing so Windows does not place its top-left at the cursor.

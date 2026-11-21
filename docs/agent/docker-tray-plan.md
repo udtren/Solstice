@@ -6,11 +6,13 @@ automated tests pass and the user checked it in the application. Phase 2
 (the tray, its action and the right-click hook) implemented and checked by
 the user. Phase 3 (configuration dialog) implemented and checked by the
 user. Phase 4 (dockers that depended on their own visibility) implemented
-and checked by the user. Phases 5-6 not started.** See
+and checked by the user. Phase 5 (drag resizing) implemented and checked
+by the user. Phase 6 not started.** See
 [Phase 1 results](#phase-1-results-2026-11-21),
 [Phase 2 results](#phase-2-results-2026-11-21),
-[Phase 3 results](#phase-3-results-2026-11-21) and
-[Phase 4 results](#phase-4-results-2026-11-21). This plan
+[Phase 3 results](#phase-3-results-2026-11-21),
+[Phase 4 results](#phase-4-results-2026-11-21) and
+[Phase 5 results](#phase-5-results-2026-11-21). This plan
 does not authorize removing anything that
 [the Popup Palette removal](popup-palette-removal.md) kept.
 
@@ -434,6 +436,46 @@ placeholder is replaced); this is a limitation.
   Adjustments on the tray follows the canvas and is disabled without a
   document; Rest Note's time text scales with the cell and its settings open
   from the tray; all four dockers still work as ordinary dockers.
+
+## Phase 5 results (2026-11-21)
+
+### Behavior as implemented
+
+- The spacing of the tray is made of resize grips (`ResizeGrip`, file-local
+  in `KisDockerTray.cpp`, 6 px): a vertical strip to the right of every
+  column (`dockerTrayWidthGrip_<column>`, horizontal resize cursor) and a
+  horizontal strip under every docker (`dockerTrayHeightGrip_<id>`,
+  vertical resize cursor). A grip shows a highlight line while hovered or
+  dragged.
+- Dragging a width grip sets every shown docker of that column to the new
+  width; dragging a height grip changes only that docker. Sizes are clamped
+  between the content's minimum (at least `MinimumExtent`, 50 px, so the
+  shown and stored sizes agree) and `MaximumExtent`.
+- The tray resizes while dragging (its size follows its content). On
+  release the new sizes are written to the layout and saved to `kritarc`,
+  the dialog shows them, and the tray is moved back inside its screen if it
+  grew past an edge. A width drag stores the new width for every shown
+  docker of the column; a height drag keeps the docker's stored width.
+- Nested widget layouts update through posted events, one level per pass
+  of the event loop; the extra container level for the grips made the tray
+  lag behind its content, so `activateLayouts()` activates them innermost
+  first after sizes change.
+- The screen fit (`KisDockerTrayGeometry::fit()`) counts one grip between
+  cells; the grips after the last column and the last docker of a column
+  are subtracted from the available size.
+
+### Verification
+
+- Built `kritaui` and `KisDockerTrayTest`; installed `libs/ui`.
+- `KisDockerTrayTest`: 22 passed, including `dragResizes` (synthetic press,
+  move and release on the grips: width for the whole column, the column
+  minimum, height for one docker, the 50 px floor, saved layout, tray inside
+  its screen, sizes reused on reopening).
+- No new user-visible strings.
+- Checked by the user in the application (2026-11-21, all passed): column
+  width for every docker of the column and its minimum, one docker's
+  height, sizes kept after reopening and shown in the dialog, the tray
+  moving back onto the screen after growing past an edge.
 
 ## Manual checks (to run once implemented)
 

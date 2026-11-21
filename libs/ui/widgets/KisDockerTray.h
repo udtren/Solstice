@@ -81,6 +81,14 @@ private:
     void rebuild(const KisDockerTrayLayout &layout);
     void applySizes(const QRect &availableGeometry);
     void moveCenteredAt(const QPoint &globalPosition, const QRect &availableGeometry);
+    void beginWidthDrag(int column);
+    void dragWidth(int column, int delta);
+    void finishWidthDrag(int column);
+    void finishHeightDrag(const QString &dockerId, int height);
+    /// Moves the tray back inside its screen after it grew.
+    void keepOnScreen();
+    /// Applies size changes through all nested layouts now.
+    void activateLayouts();
     void releaseAll();
 
     struct Private;

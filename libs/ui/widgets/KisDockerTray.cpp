@@ -13,6 +13,8 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
+#include <QMouseEvent>
+#include <QPainter>
 #include <QPointer>
 #include <QScreen>
 #include <QToolButton>
@@ -23,6 +25,7 @@
 #include "dialogs/KisDlgDockerTray.h"
 #include "kis_icon_utils.h"
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -33,10 +36,100 @@ constexpr int TraySpacing = 6;
 // Keep the tray this far inside the screen's available geometry.
 constexpr int ScreenMargin = 8;
 
+/**
+ * A thin strip beside a column (Qt::Horizontal: changes its width) or under
+ * a cell (Qt::Vertical: changes its height). Dragging reports the distance
+ * from the press; release ends the drag.
+ */
+class ResizeGrip : public QWidget
+{
+public:
+    ResizeGrip(Qt::Orientation orientation,
+               QWidget *parent,
+               std::function<void()> begin,
+               std::function<void(int)> drag,
+               std::function<void()> finish)
+        : QWidget(parent)
+        , m_orientation(orientation)
+        , m_begin(std::move(begin))
+        , m_drag(std::move(drag))
+        , m_finish(std::move(finish))
+    {
+        if (orientation == Qt::Horizontal) {
+            setFixedWidth(TraySpacing);
+            setCursor(Qt::SizeHorCursor);
+        } else {
+            setFixedHeight(TraySpacing);
+            setCursor(Qt::SizeVerCursor);
+        }
+        setAttribute(Qt::WA_Hover);
+    }
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        if (event->button() != Qt::LeftButton) {
+            QWidget::mousePressEvent(event);
+            return;
+        }
+        m_start = axis(event->globalPosition().toPoint());
+        m_dragging = true;
+        m_begin();
+        update();
+        event->accept();
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        if (m_dragging) {
+            m_drag(axis(event->globalPosition().toPoint()) - m_start);
+            event->accept();
+        }
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (m_dragging && event->button() == Qt::LeftButton) {
+            m_dragging = false;
+            m_finish();
+            update();
+            event->accept();
+        }
+    }
+
+    void paintEvent(QPaintEvent *) override
+    {
+        if (!m_dragging && !underMouse()) {
+            return;
+        }
+        QPainter painter(this);
+        const QColor color = palette().color(QPalette::Highlight);
+        if (m_orientation == Qt::Horizontal) {
+            painter.fillRect(QRect(width() / 2 - 1, 0, 2, height()), color);
+        } else {
+            painter.fillRect(QRect(0, height() / 2 - 1, width(), 2), color);
+        }
+    }
+
+private:
+    int axis(const QPoint &point) const
+    {
+        return m_orientation == Qt::Horizontal ? point.x() : point.y();
+    }
+
+    Qt::Orientation m_orientation;
+    std::function<void()> m_begin;
+    std::function<void(int)> m_drag;
+    std::function<void()> m_finish;
+    int m_start = 0;
+    bool m_dragging = false;
+};
+
 struct Cell {
     QString dockerId;
     QSize wanted;
     QFrame *frame = nullptr;
+    QWidget *heightGrip = nullptr;
     QLabel *title = nullptr;
     QVBoxLayout *contentLayout = nullptr;
     QLabel *waiting = nullptr;
@@ -60,6 +153,10 @@ struct KisDockerTray::Private {
     QVector<QWidget *> columns;
     std::vector<std::unique_ptr<Cell>> cells;
     QVector<QVector<Cell *>> grid;
+
+    // The drag in progress (a resize grip).
+    int dragStart = 0;
+    int dragMinimum = 0;
 
     Cell *cell(const QString &dockerId) const
     {
@@ -121,7 +218,8 @@ KisDockerTray::KisDockerTray(QMainWindow *window, KSharedConfigPtr config)
 
     m_d->columnsLayout = new QHBoxLayout();
     m_d->columnsLayout->setContentsMargins(0, 0, 0, 0);
-    m_d->columnsLayout->setSpacing(TraySpacing);
+    // The width grips are the spacing between columns.
+    m_d->columnsLayout->setSpacing(0);
     panelLayout->addLayout(m_d->columnsLayout);
 
     m_d->emptyHint =
@@ -183,6 +281,7 @@ void KisDockerTray::popupAt(const QPoint &globalPosition)
             cell->title->setText(docker->windowTitle());
         }
         cell->frame->setVisible(cell->present);
+        cell->heightGrip->setVisible(cell->present);
         any |= cell->present;
     }
     for (int c = 0; c < m_d->grid.size(); ++c) {
@@ -197,7 +296,7 @@ void KisDockerTray::popupAt(const QPoint &globalPosition)
     m_d->emptyHint->setVisible(!any);
 
     applySizes(available);
-    layout()->activate();
+    activateLayouts();
     adjustSize();
     moveCenteredAt(globalPosition, available);
     show();
@@ -334,11 +433,33 @@ void KisDockerTray::rebuild(const KisDockerTrayLayout &layout)
     m_d->layout = layout;
     m_d->built = true;
 
-    for (const QVector<KisDockerTrayCell> &columnCells : layout.columns) {
-        auto *column = new QWidget(m_d->panel);
+    for (int c = 0; c < layout.columns.size(); ++c) {
+        const QVector<KisDockerTrayCell> &columnCells = layout.columns[c];
+        // A column: its cells, each with a height grip below, then a width
+        // grip on the right. The grips are the spacing between cells.
+        auto *columnContainer = new QWidget(m_d->panel);
+        auto *containerLayout = new QHBoxLayout(columnContainer);
+        containerLayout->setContentsMargins(0, 0, 0, 0);
+        containerLayout->setSpacing(0);
+        auto *column = new QWidget(columnContainer);
         auto *columnLayout = new QVBoxLayout(column);
         columnLayout->setContentsMargins(0, 0, 0, 0);
-        columnLayout->setSpacing(TraySpacing);
+        columnLayout->setSpacing(0);
+        containerLayout->addWidget(column, 0, Qt::AlignTop);
+        auto *widthGrip = new ResizeGrip(
+            Qt::Horizontal,
+            columnContainer,
+            [this, c] {
+                beginWidthDrag(c);
+            },
+            [this, c](int delta) {
+                dragWidth(c, delta);
+            },
+            [this, c] {
+                finishWidthDrag(c);
+            });
+        widthGrip->setObjectName(QStringLiteral("dockerTrayWidthGrip_%1").arg(c));
+        containerLayout->addWidget(widthGrip);
         QVector<Cell *> gridColumn;
 
         for (const KisDockerTrayCell &trayCell : columnCells) {
@@ -370,13 +491,33 @@ void KisDockerTray::rebuild(const KisDockerTrayLayout &layout)
             cell->contentLayout->addWidget(cell->waiting, 1);
 
             columnLayout->addWidget(cell->frame);
-            gridColumn << cell.get();
+            Cell *rawCell = cell.get();
+            cell->heightGrip = new ResizeGrip(
+                Qt::Vertical,
+                column,
+                [this, rawCell] {
+                    m_d->dragStart = rawCell->frame->height();
+                    // Never below what the layout can store.
+                    m_d->dragMinimum =
+                        qMax(rawCell->frame->minimumSizeHint().height(), int(KisDockerTrayLayout::MinimumExtent));
+                },
+                [this, rawCell](int delta) {
+                    rawCell->frame->setFixedHeight(
+                        qBound(m_d->dragMinimum, m_d->dragStart + delta, int(KisDockerTrayLayout::MaximumExtent)));
+                    activateLayouts();
+                },
+                [this, rawCell] {
+                    finishHeightDrag(rawCell->dockerId, rawCell->frame->height());
+                });
+            cell->heightGrip->setObjectName(QStringLiteral("dockerTrayHeightGrip_") + trayCell.dockerId);
+            columnLayout->addWidget(cell->heightGrip);
+            gridColumn << rawCell;
             m_d->cells.push_back(std::move(cell));
         }
         columnLayout->addStretch(1);
 
-        m_d->columnsLayout->addWidget(column, 0, Qt::AlignTop);
-        m_d->columns << column;
+        m_d->columnsLayout->addWidget(columnContainer, 0, Qt::AlignTop);
+        m_d->columns << columnContainer;
         m_d->grid << gridColumn;
     }
 }
@@ -413,7 +554,10 @@ void KisDockerTray::applySizes(const QRect &availableGeometry)
     if (availableGeometry.isValid()) {
         const int frame = 2 * (TrayMargin + m_d->panel->frameWidth());
         const int header = m_d->header->sizeHint().height() + TraySpacing;
-        available = (availableGeometry.size() - QSize(frame, frame + header)).expandedTo(QSize(1, 1));
+        // fit() counts a spacing between cells; the grips also follow the
+        // last column and the last cell of each column.
+        available = (availableGeometry.size() - QSize(frame + TraySpacing, frame + header + TraySpacing))
+                        .expandedTo(QSize(1, 1));
     }
 
     const QVector<QVector<QSize>> sizes = KisDockerTrayGeometry::fit(wanted, minimum, available, TraySpacing);
@@ -422,6 +566,101 @@ void KisDockerTray::applySizes(const QRect &availableGeometry)
             shown[c][r]->frame->setFixedSize(sizes[c][r]);
         }
     }
+}
+
+void KisDockerTray::beginWidthDrag(int column)
+{
+    m_d->dragStart = 0;
+    // Never below what the layout can store.
+    m_d->dragMinimum = KisDockerTrayLayout::MinimumExtent;
+    for (Cell *cell : m_d->grid.value(column)) {
+        if (cell->present) {
+            m_d->dragStart = qMax(m_d->dragStart, cell->frame->width());
+            m_d->dragMinimum = qMax(m_d->dragMinimum, cell->frame->minimumSizeHint().width());
+        }
+    }
+}
+
+void KisDockerTray::dragWidth(int column, int delta)
+{
+    const int width = qBound(m_d->dragMinimum, m_d->dragStart + delta, int(KisDockerTrayLayout::MaximumExtent));
+    for (Cell *cell : m_d->grid.value(column)) {
+        if (cell->present) {
+            cell->frame->setFixedWidth(width);
+        }
+    }
+    activateLayouts();
+}
+
+void KisDockerTray::activateLayouts()
+{
+    // Nested widgets update their layouts through posted events, one level
+    // per pass of the event loop; update them now, innermost first, so the
+    // window takes its new size at once.
+    for (const std::unique_ptr<Cell> &cell : m_d->cells) {
+        cell->frame->layout()->activate();
+    }
+    for (QWidget *container : m_d->columns) {
+        for (QWidget *child : container->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly)) {
+            if (child->layout()) {
+                child->layout()->activate();
+            }
+        }
+        container->layout()->activate();
+    }
+    m_d->panel->layout()->activate();
+    layout()->activate();
+}
+
+void KisDockerTray::finishWidthDrag(int column)
+{
+    // Every shown docker of the column takes the new width.
+    for (Cell *cell : m_d->grid.value(column)) {
+        if (!cell->present) {
+            continue;
+        }
+        const QPoint position = m_d->layout.find(cell->dockerId);
+        if (position.x() < 0) {
+            continue;
+        }
+        const QSize stored = m_d->layout.columns[position.x()][position.y()].size;
+        m_d->layout.setSize(cell->dockerId, QSize(cell->frame->width(), stored.height()));
+        cell->wanted = m_d->layout.columns[position.x()][position.y()].size;
+    }
+    m_d->layout.save(m_d->config);
+    keepOnScreen();
+}
+
+void KisDockerTray::finishHeightDrag(const QString &dockerId, int height)
+{
+    const QPoint position = m_d->layout.find(dockerId);
+    if (position.x() >= 0) {
+        const QSize stored = m_d->layout.columns[position.x()][position.y()].size;
+        m_d->layout.setSize(dockerId, QSize(stored.width(), height));
+        if (Cell *cell = m_d->cell(dockerId)) {
+            cell->wanted = m_d->layout.columns[position.x()][position.y()].size;
+        }
+        m_d->layout.save(m_d->config);
+    }
+    keepOnScreen();
+}
+
+void KisDockerTray::keepOnScreen()
+{
+    activateLayouts();
+    QScreen *screen = QGuiApplication::screenAt(geometry().center());
+    if (!screen) {
+        screen = this->screen();
+    }
+    if (!screen) {
+        return;
+    }
+    const QRect available =
+        screen->availableGeometry().adjusted(ScreenMargin, ScreenMargin, -ScreenMargin, -ScreenMargin);
+    QRect rect = geometry();
+    rect.moveLeft(qMax(available.left(), qMin(rect.left(), available.right() - rect.width() + 1)));
+    rect.moveTop(qMax(available.top(), qMin(rect.top(), available.bottom() - rect.height() + 1)));
+    move(rect.topLeft());
 }
 
 void KisDockerTray::moveCenteredAt(const QPoint &globalPosition, const QRect &availableGeometry)
