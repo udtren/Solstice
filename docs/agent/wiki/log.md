@@ -3987,3 +3987,94 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `main`.
 - The guide's comparison section now says the functions were checked by
   hand with a pen tablet (PR #110).
+
+## 2026-11-21 ingest: Docker Tray design and phase 1
+
+- The user approved a Docker Tray: a right-click popup with several dockers,
+  hidden ones included, in columns with individual sizes
+  ([plan](history/docker-tray-development.md)).
+- Phase 1 added `KisDockerBorrowRegistry`; the toolbar docker box and the
+  Quick Adjust Tool Options pad now borrow through it. Before, the docker
+  box could have borrowed the pad's placeholder label.
+- New concept page: [showing a docker's content elsewhere](concepts/docker-content-borrowing.md),
+  with the per-docker audit of dependencies on the `QDockWidget` itself.
+
+## 2026-11-21 ingest: Docker Tray phase 2
+
+- `KisDockerTray` opens at the cursor from the `show_docker_tray` action or
+  a right-click with any `KisToolPaint` tool, borrows every docker of the
+  `kritarc` layout and returns them on close ([plan](history/docker-tray-development.md#phase-2-results-2026-11-21)).
+- `KisInputManager::deregisterPopupWidget()` calls `dismiss()` and then
+  reads its popup pointer again: a popup must not emit `finished()` from
+  `dismiss()`, or the re-entrant deregistration nulls the pointer and the
+  `KIS_ASSERT` fires. The tray splits `dismiss()` (hide only) from
+  `closeTray()` (hide and `finished()`).
+- Overriding a virtual that a base class defines inline
+  (`KoToolBase::popupWidget()`) in `KisToolPaint` changes what the tool
+  plugins' own vtables point to: they must be rebuilt and installed, not
+  only `kritaui`.
+
+## 2026-11-21 ingest: Docker Tray phase 3
+
+- The tray's configure button opens `KisDlgDockerTray`: available dockers,
+  columns with their dockers, move, add/remove columns, numeric sizes
+  ([plan](history/docker-tray-development.md#phase-3-results-2026-11-21)).
+- A tray with no existing docker now opens with a hint: a popup that only
+  ever shows configured content needs another way to reach its settings.
+- On a Japanese Windows console, Python scripts that print `krita.po`
+  entries stop with `UnicodeEncodeError` (cp932); run them with
+  `PYTHONUTF8=1` and write to a file.
+
+## 2026-11-21 ingest: Docker Tray phase 4
+
+- Layers thumbnails, the Quick Adjust sync timer and Rest Note's font
+  scaling now follow their content widget's Show/Hide/Resize events instead
+  of the dock's, so they work on the tray while the docker is hidden
+  ([plan](history/docker-tray-development.md#phase-4-results-2026-11-21),
+  [concept](concepts/docker-content-borrowing.md)).
+- A `.bat` file written from bash with `printf` turned `\r` in a Windows
+  path (`...\scratchpad\r_Test.txt`) into a carriage return, and the
+  test runs wrote nothing: write batch files from Python with raw strings.
+
+## 2026-11-21 ingest: HueSVC popup and false Leave under a pen
+
+- The Quick Access HueSVC popup closed as soon as its shortcut opened it
+  while a pen hovered (Windows, Qt 6.8); with a mouse it stayed open. A
+  Leave event is no longer trusted: `QuickColorPopup` checks the pointer
+  (recent tablet position, else `QCursor::pos()`) and polls every 100 ms
+  until it is outside. New page:
+  [A hovering pen sends false Leave events](pitfalls/pen-hover-false-leave.md);
+  lifecycle rule in `docs/agent/quick-access.md`.
+- `QuickColorPopup` moved to its own header so the interaction test can
+  drive it with a replaced cursor source instead of moving the real cursor.
+
+## 2026-11-21 ingest: Docker Tray phase 5
+
+- Docker sizes on the tray are dragged with grips between cells and saved
+  on release ([plan](history/docker-tray-development.md#phase-5-results-2026-11-21)).
+- A window with `QLayout::SetFixedSize` lags behind content that is nested
+  in more widget levels: each child widget's layout updates in its own
+  posted `LayoutRequest`. Activate the layouts innermost first when the
+  size must be right at once (the tray did not grow in a test until then).
+- Clamp an interactive size to the same floor the stored value is clamped
+  to, or the shown and saved sizes differ (a 48 px cell was saved as 50).
+- Bash on this machine failed with "unexpected EOF while looking for
+  matching quote" on long Python heredocs that contain quotes; writing the
+  script to a file and running it works.
+
+## 2026-11-21 ingest: Docker Tray phase 6 (documentation)
+
+- The Docker Tray has a user guide ([docker-tray.md](../../docker-tray.md))
+  and a maintained reference ([docker-tray.md](../docker-tray.md)); the plan
+  and phase record moved to
+  [history/docker-tray-development.md](history/docker-tray-development.md),
+  with a pointer at the old path.
+- README's "Popup Palette removed" entry now says what right-click does:
+  open the Docker Tray.
+
+## 2026-11-21 ingest: preparing Solstice 1.2.1
+
+- The user asked for the Docker Tray to be released as 1.2.1 and added a
+  recording, `docs/images/docker_tray.gif` (800 × 585, 12 s, 1.7 MB), shown
+  in the user guide and under the Docker Tray entry of README's "Other Major
+  Changes". README marks 1.2.1 as in development until the release exists.

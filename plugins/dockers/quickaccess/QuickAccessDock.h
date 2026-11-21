@@ -93,6 +93,9 @@ private:
     QString legacyConfigPath() const;
 
     QPointer<KisCanvas2> m_canvas;
+    /// The content (widget()); widget() is a placeholder while the content
+    /// is shown on the Docker Tray.
+    QWidget *m_root{nullptr};
     QTabWidget *m_tabs{nullptr};
     QuickAccess::Document m_document;
     QString m_profilePath;

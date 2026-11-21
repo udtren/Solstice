@@ -79,6 +79,7 @@ QuickAccessDock::QuickAccessDock(QWidget *parent, bool enableGestures)
     connect(m_strokePreviews, &QuickAccessStrokePreviews::changed, this, &QuickAccessDock::updateStrokePreviews);
     setObjectName(QStringLiteral("QuickAccessPalette"));
     auto *root = new QWidget(this);
+    m_root = root;
     auto *layout = new QVBoxLayout(root);
     layout->setContentsMargins(4, 4, 4, 4);
     layout->setSpacing(4);
@@ -701,7 +702,7 @@ void QuickAccessDock::showSettingsDialog()
 
 void QuickAccessDock::applyAppearanceSettings()
 {
-    if (!widget() || !m_tabs)
+    if (!m_root || !m_tabs)
         return;
     const KConfigGroup config = KSharedConfig::openConfig()->group(QStringLiteral("QuickAccess"));
     QColor headerColor(config.readEntry("HeaderButtonColor", QStringLiteral("#828282")));
@@ -715,7 +716,7 @@ void QuickAccessDock::applyAppearanceSettings()
             "QToolButton { background-color: %1; color: %2; border: 1px solid palette(mid); border-radius: 2px; } "
             "QToolButton:hover { border-color: palette(highlight); }")
             .arg(headerColor.name(QColor::HexArgb), headerFontColor.name(QColor::HexArgb));
-    for (QToolButton *button : widget()->findChildren<QToolButton *>()) {
+    for (QToolButton *button : m_root->findChildren<QToolButton *>()) {
         if (button->property("quickAccessHeaderButton").toBool())
             button->setStyleSheet(headerStyle);
     }

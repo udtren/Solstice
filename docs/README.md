@@ -6,10 +6,12 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-[1.2.0](https://github.com/udtren/Solstice/releases/tag/v1.2.0) adds
+In development, 1.2.1 adds the [Docker Tray](docker-tray.md): the dockers you
+choose, at the cursor on right-click. It builds on
+[1.2.0](https://github.com/udtren/Solstice/releases/tag/v1.2.0), which added
 [Vector Brush Strokes](vector-brush-strokes.md): brush strokes on vector
-layers stay objects that can be erased, reshaped, restyled and scaled. It
-builds on [1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1),
+layers stay objects that can be erased, reshaped, restyled and scaled, and on
+[1.1.1](https://github.com/udtren/Solstice/releases/tag/v1.1.1),
 a performance and fix release for the CPU side, and on
 [1.1.0](https://github.com/udtren/Solstice/releases/tag/v1.1.0), which gives
 each [Layer Comp](layer-comps.md) its own [Fast Image Export](lazy-tools.md)
@@ -88,6 +90,8 @@ settings through saved exports.
 - [Lazy Tools](lazy-tools.md): layer color labels, preset layer names,
   saved selections, Fast Image Export and color shortcuts. Extended in 0.5.1;
   saved exports added in 0.8.0.
+- [Docker Tray](docker-tray.md): a right-click popup with the dockers you
+  choose, hidden ones included, in columns with their own sizes.
 - [Docker locks](docker-locks.md): locking the size of docked dockers.
 - [Overview live update](overview-live-update.md): the Overview follows the
   canvas while you paint.

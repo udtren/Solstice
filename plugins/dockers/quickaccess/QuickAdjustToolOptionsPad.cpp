@@ -65,19 +65,24 @@ void QuickAdjustToolOptionsPad::ensure()
         return;
     }
 
-    m_toolOptionsDocker = docker;
-    m_toolOptionsDockerWasVisible = docker->isVisible();
-    m_borrowedToolOptions = docker->widget();
-    m_toolOptionsPlaceholder = new QLabel(i18nc("@info", "Tool Options are open beside Quick Brush Adjustments."));
-    m_toolOptionsPlaceholder->hide();
-
+    const bool dockerWasVisible = docker->isVisible();
     m_toolOptionsPad = new QWidget(mainWindow, Qt::Tool | Qt::FramelessWindowHint);
     m_toolOptionsPad->setObjectName(QStringLiteral("quickAccessToolOptionsPad"));
     m_toolOptionsPad->setAutoFillBackground(true);
     auto *padLayout = new QVBoxLayout(m_toolOptionsPad);
     padLayout->setContentsMargins(4, 4, 4, 4);
-    padLayout->addWidget(m_borrowedToolOptions);
-    docker->setWidget(m_toolOptionsPlaceholder);
+
+    // The registry puts the content into padLayout (dockerContentGranted())
+    // and a placeholder into the docker.
+    m_registry = KisDockerBorrowRegistry::forWindow(context.mainWindow);
+    if (!m_registry || !m_registry->request(QStringLiteral("sharedtooldocker"), this)) {
+        delete m_toolOptionsPad;
+        m_registry.clear();
+        m_toolOptionsToggle->hide();
+        return;
+    }
+    m_toolOptionsDocker = docker;
+    m_toolOptionsDockerWasVisible = dockerWasVisible;
     docker->hide();
     docker->toggleViewAction()->setEnabled(false);
 
@@ -198,22 +203,64 @@ void QuickAdjustToolOptionsPad::position()
     m_toolOptionsPad->move(target);
 }
 
+QString QuickAdjustToolOptionsPad::dockerBorrowerName() const
+{
+    return m_owner->windowTitle();
+}
+
+QString QuickAdjustToolOptionsPad::dockerPlaceholderText() const
+{
+    return i18nc("@info", "Tool Options are open beside Quick Brush Adjustments.");
+}
+
+void QuickAdjustToolOptionsPad::dockerContentGranted(const QString &dockerId, QWidget *content, QWidget *titleArea)
+{
+    Q_UNUSED(dockerId);
+    Q_UNUSED(titleArea);
+    if (!m_toolOptionsPad)
+        return;
+    if (m_waitingLabel)
+        delete m_waitingLabel;
+    m_borrowedToolOptions = content;
+    m_toolOptionsPad->layout()->addWidget(content);
+    if (m_toolOptionsPad->isVisible()) {
+        resizeToContent();
+        position();
+    }
+}
+
+void QuickAdjustToolOptionsPad::dockerContentHeldElsewhere(const QString &dockerId, const QString &holderName)
+{
+    Q_UNUSED(dockerId);
+    if (!m_toolOptionsPad)
+        return;
+    if (m_borrowedToolOptions)
+        m_toolOptionsPad->layout()->removeWidget(m_borrowedToolOptions);
+    m_borrowedToolOptions.clear();
+    if (!m_waitingLabel) {
+        m_waitingLabel = new QLabel(m_toolOptionsPad);
+        m_waitingLabel->setWordWrap(true);
+        m_waitingLabel->setAlignment(Qt::AlignCenter);
+        m_toolOptionsPad->layout()->addWidget(m_waitingLabel);
+    }
+    m_waitingLabel->setText(
+        i18nc("%1 is the name of the widget", "Docker is open in %1. Close %1 to show here.", holderName));
+    m_waitingLabel->show();
+}
+
 void QuickAdjustToolOptionsPad::restore()
 {
-    if (m_toolOptionsDocker && m_borrowedToolOptions) {
-        if (m_toolOptionsPad && m_toolOptionsPad->layout())
-            m_toolOptionsPad->layout()->removeWidget(m_borrowedToolOptions);
-        m_toolOptionsDocker->setWidget(m_borrowedToolOptions);
-        m_borrowedToolOptions->setParent(m_toolOptionsDocker);
+    if (m_registry)
+        m_registry->release(QStringLiteral("sharedtooldocker"), this);
+    if (m_toolOptionsDocker) {
         m_toolOptionsDocker->toggleViewAction()->setEnabled(true);
         m_toolOptionsDocker->setVisible(m_toolOptionsDockerWasVisible);
     }
-    if (m_toolOptionsPlaceholder)
-        m_toolOptionsPlaceholder->deleteLater();
     if (m_toolOptionsPad)
         m_toolOptionsPad->deleteLater();
+    m_registry.clear();
     m_toolOptionsDocker.clear();
     m_borrowedToolOptions.clear();
-    m_toolOptionsPlaceholder.clear();
+    m_waitingLabel.clear();
     m_toolOptionsPad.clear();
 }

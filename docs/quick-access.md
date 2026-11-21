@@ -19,7 +19,8 @@ It consists of four parts:
 Open the dockers from **Settings > Dockers**. Solstice has no right-click
 Popup Palette or On-Canvas Brush Editor; the Quick Access Palette popup, the
 HueSVC popup and Quick Brush Adjustments take their place. Right-click with a
-brush tool does nothing; other tools keep their right-click menus.
+brush tool opens the [Docker Tray](docker-tray.md); other tools keep their
+right-click menus.
 
 ## Contents
 

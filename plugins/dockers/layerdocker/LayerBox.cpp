@@ -173,6 +173,8 @@ LayerBox::LayerBox()
 
     QWidget* mainWidget = new QWidget(this);
     setWidget(mainWidget);
+    m_mainWidget = mainWidget;
+    mainWidget->installEventFilter(this);
 
     m_wdgLayerBox->setupUi(mainWidget);
 
@@ -620,7 +622,7 @@ void LayerBox::setCanvas(KoCanvasBase *canvas)
                                       m_selectionActionsAdapter.data(),
                                       m_nodeManager);
 
-        if (isVisible()) {
+        if (m_mainWidget->isVisible()) {
             m_nodeModel->setIdleTaskManager(m_canvas->viewManager()->idleTasksManager());
         }
 
@@ -689,19 +691,18 @@ void LayerBox::unsetCanvas()
     m_canvas = 0;
 }
 
-void LayerBox::showEvent(QShowEvent *event)
+bool LayerBox::eventFilter(QObject *watched, QEvent *event)
 {
-    QDockWidget::showEvent(event);
-
-    if (m_canvas) {
-        m_nodeModel->setIdleTaskManager(m_canvas->viewManager()->idleTasksManager());
+    // The content's visibility, not the docker's: the content may be shown
+    // on the Docker Tray while the docker is hidden.
+    if (watched == m_mainWidget && m_nodeModel) {
+        if (event->type() == QEvent::Show && m_canvas) {
+            m_nodeModel->setIdleTaskManager(m_canvas->viewManager()->idleTasksManager());
+        } else if (event->type() == QEvent::Hide) {
+            m_nodeModel->setIdleTaskManager(0);
+        }
     }
-}
-
-void LayerBox::hideEvent(QHideEvent *event)
-{
-    QDockWidget::hideEvent(event);
-    m_nodeModel->setIdleTaskManager(0);
+    return QDockWidget::eventFilter(watched, event);
 }
 
 void LayerBox::notifyImageDeleted()

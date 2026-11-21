@@ -10,12 +10,20 @@
 #include <QScopedPointer>
 #include <QWidget>
 
-class KisDockerHud : public QWidget
+#include "KisDockerBorrowRegistry.h"
+
+// Solstice: borrowing goes through KisDockerBorrowRegistry, shared with the
+// Docker Tray and Quick Adjust's Tool Options pad (docs/agent/docker-tray.md).
+class KisDockerHud : public QWidget, public KisDockerBorrower
 {
     Q_OBJECT
 public:
     KisDockerHud(QString borrowerName, QString configId);
     ~KisDockerHud() override;
+
+    QString dockerBorrowerName() const override;
+    void dockerContentGranted(const QString &dockerId, QWidget *content, QWidget *titleArea) override;
+    void dockerContentHeldElsewhere(const QString &dockerId, const QString &holderName) override;
 
 protected:
     void showEvent(QShowEvent *event) override;
@@ -24,7 +32,7 @@ protected:
 public Q_SLOTS:
     void slotUpdateIcons();
     void borrowOrReturnDocker();
-    void returnDocker(bool beingTaken = false);
+    void returnDocker();
     void borrowDocker();
     void setIsShown(bool isShown);
 
@@ -41,8 +49,6 @@ private Q_SLOTS:
 private:
     struct Private;
     const QScopedPointer<Private> m_d;
-
-    static QHash<QString, QList<QString>> borrowedWidgetOwners;
 };
 
 #endif /* __KIS_DOCKER_HUD_H */

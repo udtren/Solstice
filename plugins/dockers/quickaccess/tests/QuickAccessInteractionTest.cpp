@@ -9,6 +9,7 @@
 #include "QuickAccessGesturePreview.h"
 #include "QuickAccessItemDragController.h"
 #include "QuickAccessProfileRepository.h"
+#include "QuickColorPopup.h"
 
 #include <KoResourcePaths.h>
 #include <QApplication>
@@ -25,6 +26,7 @@
 #include <QSignalSpy>
 #include <QSpinBox>
 #include <QStandardPaths>
+#include <QTabletEvent>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTest>
@@ -387,6 +389,106 @@ private Q_SLOTS:
         QCOMPARE(accepted.result(), int(QDialog::Accepted));
         QCOMPARE(accepted.pages().first().toObject().value("gesture_key").toString(), QString("B"));
         QCOMPARE(doc, original); // Only the caller commits accepted values.
+    }
+
+    // A hovering pen on Windows sends Leave while the pointer is still over
+    // the HueSVC popup; only a pointer outside the popup may close it.
+    void colorPopupLeaveWithPointerInsideKeepsOpenUntilOutside()
+    {
+        QuickColorPopup popup(nullptr, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+        popup.setGeometry(200, 200, 240, 240);
+        popup.show();
+        flush();
+        QPoint cursor = popup.frameGeometry().center();
+        popup.setCursorPositionSource([&] {
+            return cursor;
+        });
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(&popup, &leave);
+        QVERIFY(popup.isVisible());
+        QVERIFY(popup.isLeavePollActive());
+        QTest::qWait(3 * QuickColorPopup::leavePollInterval);
+        QVERIFY(popup.isVisible());
+
+        cursor = popup.frameGeometry().bottomRight() + QPoint(40, 40);
+        QTRY_VERIFY_WITH_TIMEOUT(!popup.isVisible(), 2000);
+        QVERIFY(!popup.isLeavePollActive());
+    }
+
+    void colorPopupLeaveWithPointerOutsideClosesAtOnce()
+    {
+        QuickColorPopup popup(nullptr, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+        popup.setGeometry(200, 200, 240, 240);
+        popup.show();
+        flush();
+        const QPoint outside = popup.frameGeometry().topLeft() - QPoint(40, 40);
+        popup.setCursorPositionSource([outside] {
+            return outside;
+        });
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(&popup, &leave);
+        QVERIFY(!popup.isVisible());
+        QVERIFY(!popup.isLeavePollActive());
+    }
+
+    void colorPopupEnterStopsLeavePoll()
+    {
+        QuickColorPopup popup(nullptr, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+        popup.setGeometry(200, 200, 240, 240);
+        popup.show();
+        flush();
+        const QPoint inside = popup.frameGeometry().center();
+        popup.setCursorPositionSource([inside] {
+            return inside;
+        });
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(&popup, &leave);
+        QVERIFY(popup.isLeavePollActive());
+        QEnterEvent enter(QPointF(10, 10), QPointF(10, 10), QPointF(inside));
+        QApplication::sendEvent(&popup, &enter);
+        QVERIFY(!popup.isLeavePollActive());
+        QVERIFY(popup.isVisible());
+        popup.close();
+    }
+
+    // Some drivers do not move the cursor with the pen: a recent tablet
+    // position decides instead of QCursor::pos().
+    void colorPopupUsesRecentTabletPosition()
+    {
+        QuickColorPopup popup(nullptr, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+        popup.setGeometry(200, 200, 240, 240);
+        popup.show();
+        flush();
+        const QPoint inside = popup.frameGeometry().center();
+        const QPoint outside = popup.frameGeometry().topLeft() - QPoint(40, 40);
+        popup.setCursorPositionSource([outside] {
+            return outside;
+        });
+        const auto tabletMove = [&](const QPoint &global) {
+            QTabletEvent event(QEvent::TabletMove,
+                               QPointingDevice::primaryPointingDevice(),
+                               QPointF(global - popup.frameGeometry().topLeft()),
+                               QPointF(global),
+                               0.0,
+                               0.0f,
+                               0.0f,
+                               0.0f,
+                               0.0,
+                               0.0f,
+                               Qt::NoModifier,
+                               Qt::NoButton,
+                               Qt::NoButton);
+            QApplication::sendEvent(&popup, &event);
+        };
+        tabletMove(inside);
+        QCOMPARE(popup.pointerPosition(), inside);
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(&popup, &leave);
+        QVERIFY(popup.isVisible());
+        QVERIFY(popup.isLeavePollActive());
+
+        tabletMove(outside);
+        QTRY_VERIFY_WITH_TIMEOUT(!popup.isVisible(), 2000);
     }
 };
 

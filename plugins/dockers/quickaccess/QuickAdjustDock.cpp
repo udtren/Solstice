@@ -85,6 +85,7 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
     setMinimumSize(100, 100);
 
     auto *root = new QWidget(this);
+    m_root = root;
     auto *outerLayout = new QHBoxLayout(root);
     outerLayout->setContentsMargins(5, 5, 5, 5);
     outerLayout->setSpacing(4);
@@ -210,6 +211,7 @@ QuickAdjustDock::QuickAdjustDock(QWidget *parent, bool compactPopup)
         outerLayout->addLayout(statusLayout);
     }
     setWidget(root);
+    root->installEventFilter(this);
 
     if (compactPopup) {
         m_colorHistoryGroup->hide();
@@ -380,17 +382,29 @@ void QuickAdjustDock::showEvent(QShowEvent *event)
     QDockWidget::showEvent(event);
     if (m_toolOptionsToggle && m_toolOptionsToggle->isChecked())
         m_toolOptions->setVisible(true);
-    // catch up with what changed while the dock was hidden, then follow
-    syncFromCanvas();
-    m_syncTimer->start();
 }
 
 void QuickAdjustDock::hideEvent(QHideEvent *event)
 {
-    m_syncTimer->stop();
     if (m_toolOptions)
         m_toolOptions->hide();
     QDockWidget::hideEvent(event);
+}
+
+bool QuickAdjustDock::eventFilter(QObject *watched, QEvent *event)
+{
+    // The sync timer follows the content, which is also shown on the Docker
+    // Tray while the dock is hidden (docs/agent/docker-tray.md).
+    if (watched == m_root) {
+        if (event->type() == QEvent::Show) {
+            // catch up with what changed while hidden, then follow
+            syncFromCanvas();
+            m_syncTimer->start();
+        } else if (event->type() == QEvent::Hide) {
+            m_syncTimer->stop();
+        }
+    }
+    return QDockWidget::eventFilter(watched, event);
 }
 
 QWidget *QuickAdjustDock::createBrushToggleWidget()
@@ -489,8 +503,8 @@ void QuickAdjustDock::triggerAction(const QString &name)
 
 void QuickAdjustDock::setControlsEnabled(bool enabled)
 {
-    if (widget())
-        widget()->setEnabled(enabled);
+    if (m_root)
+        m_root->setEnabled(enabled);
 }
 
 void QuickAdjustDock::syncFromCanvas()

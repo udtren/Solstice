@@ -168,6 +168,7 @@ maintained references, plans and historical records.
 - Puppet Warp: [development notes](docs/agent/puppet-warp.md).
 - Duplicate selection in the same layer (Move Tool Ctrl-drag): [maintenance reference](docs/agent/duplicate-selection-in-layer.md).
 - Docker locks: [development notes](docs/agent/docker-locks.md).
+- Docker Tray: [maintenance reference](docs/agent/docker-tray.md).
 - Overview live update: [development notes](docs/agent/overview-live-update.md).
 - Versioning and releases: [development notes](docs/agent/versioning.md).
 - Executable naming: [development notes](docs/agent/executable-name.md).

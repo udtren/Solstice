@@ -271,9 +271,14 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   the panel's top-left (100 × 30 px) above the Size bar and took its clicks. `syncFromCanvas()` runs every
   200 ms, so it sets a control only when its value differs; otherwise it
   would reset a value being typed.
-- The 200 ms timer (`quickAdjustSyncTimer`) runs only while the dock is
-  shown (2026-11-13): `showEvent()` synchronizes once and starts it,
-  `hideEvent()` stops it. Before, every main window's dock (and a compact
+- The 200 ms timer (`quickAdjustSyncTimer`) runs only while the dock's
+  content is shown (2026-11-13; since 2026-11-21 an event filter on the
+  content root `m_root` handles `Show`/`Hide`, so the timer also runs while
+  the [Docker Tray](docker-tray.md) shows the content of a hidden dock):
+  `Show` synchronizes once and starts it, `Hide` stops it. The dock's own
+  `showEvent()`/`hideEvent()` only show and hide the Tool Options pad.
+  `setControlsEnabled()` and `QuickAccessDock::applyAppearanceSettings()` use
+  their stored root, not `widget()`, which is a placeholder while borrowed. Before, every main window's dock (and a compact
   popup while it existed) polled for the whole session, hidden or not.
   `updateStatusButtons()` builds and sets a status icon only when the state
   it shows changes (property `quickAccessShownState`, compared together
@@ -286,6 +291,30 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   always-on-top `Qt::Tool`, not a `Qt::Popup`, and closes when the pointer
   leaves it. A combo-box drop-down is a separate `Qt::Popup`; keep HueSVC open
   while any such popup is active so either blending-mode list remains usable.
+- "Leaves it" means the pointer position is outside the popup, not that a
+  `QEvent::Leave` arrived (2026-11-21). With a pen hovering on Windows
+  (Qt 6.8, Windows Ink through OpenTabletDriver), the popup closed as soon
+  as its shortcut opened it: Qt takes the pen through `WM_POINTER`
+  messages, Windows' own mouse tracking does not see the pointer over the
+  new window, and a Leave arrives while the pointer is still inside
+  ([pitfall](wiki/pitfalls/pen-hover-false-leave.md)). `QuickColorPopup`
+  (`QuickColorPopup.h/.cpp`, moved out of `QuickAccessDockPopups.cpp` so
+  tests can reach it) therefore checks the pointer on Leave: outside
+  `frameGeometry()` closes at once; inside starts a 100 ms poll
+  (`leavePollInterval`) that closes the popup once the pointer is outside,
+  stopped by Enter and by closing. Without the poll a popup that ignored a
+  false Leave would never close. The pointer is the last tablet position
+  (from an application event filter installed while the popup is shown) when
+  a tablet event arrived in the last 250 ms (`tabletPositionLifetime`), and
+  `QCursor::pos()` otherwise, because some drivers do not move the cursor
+  with the pen. The poll also keeps the popup open while a combo-box list is
+  active. The embedded Quick Adjust controls are child widgets and send no
+  Leave of their own to the popup; the palette popup is a `Qt::Popup`
+  and closes on outside clicks, not on Leave, so neither needs the check.
+  Tests: `QuickAccessInteractionTest::colorPopup*`. Checked by the user
+  with a pen in the application on 2026-11-21 (the popup stays open under
+  the pen and closes when the pen moves out), on the Docker Tray branch
+  after merging PR #112.
 - Gesture preview is a 3×3 overlay centered on the cursor. Activate and fix the
   complete layout before calculating `cursor - half preview size`, then reapply
   position after showing so Windows does not place its top-left at the cursor.

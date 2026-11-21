@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-18
+updated: 2026-11-21
 ---
 
 # Agent wiki
@@ -70,6 +70,10 @@ Document ownership and lifecycle are defined in
 
 - [Reference image filter cache](concepts/reference-image-filter-cache.md): shape
   effects, preview isolation and asynchronous result ownership.
+
+- [Showing a docker's content elsewhere](concepts/docker-content-borrowing.md):
+  the borrowing registry, what moves with `widget()` and what stays with the
+  `QDockWidget` (visibility events, `widget()` returning the placeholder).
 
 - [Native refactor boundaries](concepts/native-refactor-boundaries.md): sharing
   services without changing compatibility or QObject/deferred-work ownership.
@@ -212,6 +216,10 @@ Document ownership and lifecycle are defined in
   compositing skips a layer outside its extent; "compute, then lock and
   store" let an older extent win. A test that compares two results reading
   the same cache cannot see it.
+- [A hovering pen sends false Leave events](pitfalls/pen-hover-false-leave.md):
+  on Windows a window shown under a hovering pen can get `QEvent::Leave`
+  while the pointer is inside (HueSVC popup closed at once); check the
+  position and poll instead of closing on Leave.
 
 - [A temporary image destroyed outside the GUI thread](pitfalls/temporary-image-destroyed-off-gui-thread.md):
   `KisImage` lives in the GUI thread and starts timers there; deleting it
@@ -291,6 +299,10 @@ Document ownership and lifecycle are defined in
   forum findings, the three options and the open questions before option A
   (Move Tool Ctrl-drag) was implemented; the feature reference owns the
   current contract.
+
+- [Docker Tray development](history/docker-tray-development.md): request,
+  user decisions, docker audit and the dated results of phases 1-5; the
+  feature reference owns the current contract.
 
 - [Brush Stroke Layer development](history/brush-stroke-layer-development.md):
   complete original plan, investigations, measurements and dated verification;

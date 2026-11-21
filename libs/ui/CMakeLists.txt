@@ -329,6 +329,10 @@ set(kritaui_LIB_SRCS
     widgets/KisDlgListPicker.cpp
     widgets/kis_round_hud_button.cpp
     widgets/KisDockerHud.cpp
+    widgets/KisDockerBorrowRegistry.cpp
+    widgets/KisDockerTray.cpp
+    widgets/KisDockerTrayLayout.cpp
+    dialogs/KisDlgDockerTray.cpp
     widgets/KisProofingOptionsWidget.cpp
 
     widgets/KisGrabKeyboardFocusRecoveryWorkaround.cpp
