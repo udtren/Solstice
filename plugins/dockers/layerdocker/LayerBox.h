@@ -77,8 +77,9 @@ public:
     void unsetCanvas() override;
 
 protected:
-    void showEvent(QShowEvent *event) override;
-    void hideEvent(QHideEvent *event) override;
+    // Solstice: thumbnails follow the content's visibility, which can be
+    // shown outside the docker (Docker Tray, docs/agent/docker-tray-plan.md).
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private Q_SLOTS:
 
@@ -164,6 +165,7 @@ private:
     QPointer<KisColorLabelSelectorWidgetMenuWrapper> m_colorSelector;
     QPointer<QWidgetAction> m_colorSelectorAction;
     Ui_WdgLayerBox* m_wdgLayerBox;
+    QWidget *m_mainWidget{nullptr};
     int m_newOpacity;
     KisNodeSP m_changedOpacityNode;
 

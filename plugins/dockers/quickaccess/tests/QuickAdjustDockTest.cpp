@@ -382,6 +382,30 @@ private Q_SLOTS:
         QVERIFY(!popupTimer->isActive());
     }
 
+    void syncTimerFollowsContentShownElsewhere()
+    {
+        // The Docker Tray shows the content while the dock stays hidden.
+        QuickAdjustDock dock;
+        QTimer *timer = dock.findChild<QTimer *>("quickAdjustSyncTimer");
+        QPointer<QWidget> content = dock.widget();
+        QVERIFY(timer && content);
+        QWidget elsewhere;
+        new QVBoxLayout(&elsewhere);
+        elsewhere.layout()->addWidget(content);
+        content->show();
+        QVERIFY(!timer->isActive());
+        elsewhere.show();
+        QVERIFY(timer->isActive());
+        QVERIFY(!dock.isVisible());
+        elsewhere.hide();
+        QVERIFY(!timer->isActive());
+        // Back in the dock, which is hidden: still stopped.
+        dock.setWidget(content);
+        QVERIFY(!timer->isActive());
+        dock.show();
+        QVERIFY(timer->isActive());
+    }
+
     void statusIconsChangeOnlyWithTheirState()
     {
         auto gestures = KSharedConfig::openConfig()->group("QuickAccessGesture");

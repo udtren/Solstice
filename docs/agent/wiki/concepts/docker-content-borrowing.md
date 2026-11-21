@@ -38,5 +38,12 @@ What moves and what does not:
 - Dockers stay canvas observers while hidden, so borrowed content of a
   hidden docker follows the canvas.
 
+The fix pattern (Docker Tray phase 4): watch the content widget's
+`QEvent::Show`/`QEvent::Hide` (or `Resize`) with an event filter instead of
+overriding the dock's `showEvent()`/`hideEvent()`/`resizeEvent()`. Children
+get show and hide events when their parent window shows or hides, and a
+re-parent hides the widget, so the content's events describe where it is
+really seen (`LayerBox`, `QuickAdjustDock`, `RestNoteDock`).
+
 The per-docker audit is in the
 [Docker Tray plan](../../docker-tray-plan.md#docker-audit).

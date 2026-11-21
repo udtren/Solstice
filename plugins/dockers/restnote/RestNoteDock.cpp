@@ -116,6 +116,8 @@ void RestNoteDock::buildUi()
     buttons->addStretch();
     layout->addLayout(buttons);
     setWidget(m_root);
+    // The time font follows the content's size, also on the Docker Tray.
+    m_root->installEventFilter(this);
 
     connect(m_pauseButton, &QPushButton::clicked, this, [this]() {
         if (m_timer.togglePause(QDateTime::currentDateTime())) {
@@ -139,7 +141,10 @@ void RestNoteDock::buildUi()
 
 bool RestNoteDock::eventFilter(QObject *watched, QEvent *event)
 {
-    Q_UNUSED(watched);
+    if (watched == m_root && event->type() == QEvent::Resize) {
+        updateSizing();
+        return false;
+    }
     switch (event->type()) {
     case QEvent::MouseMove:
     case QEvent::MouseButtonPress:
@@ -155,12 +160,6 @@ bool RestNoteDock::eventFilter(QObject *watched, QEvent *event)
         break;
     }
     return false;
-}
-
-void RestNoteDock::resizeEvent(QResizeEvent *event)
-{
-    QDockWidget::resizeEvent(event);
-    updateSizing();
 }
 
 void RestNoteDock::updateSizing()
@@ -321,7 +320,7 @@ void RestNoteDock::cancelTransientWindows()
 
 void RestNoteDock::showSettings()
 {
-    if (!RestNoteSettingsDialog::edit(m_config, widget()))
+    if (!RestNoteSettingsDialog::edit(m_config, m_root))
         return;
     m_config.save();
     m_timer.settingsChanged(m_config);

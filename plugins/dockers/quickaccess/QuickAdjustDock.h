@@ -71,8 +71,12 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
     void hideEvent(QHideEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    /// The content (widget()); it may be shown on the Docker Tray while the
+    /// dock is hidden, and widget() is then a placeholder.
+    QWidget *m_root{nullptr};
     QPointer<KisCanvas2> m_canvas;
     KisCanvasResourceProvider *m_resourceProvider{nullptr};
     QTimer *m_syncTimer{nullptr};

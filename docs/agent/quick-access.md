@@ -271,9 +271,14 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
   the panel's top-left (100 × 30 px) above the Size bar and took its clicks. `syncFromCanvas()` runs every
   200 ms, so it sets a control only when its value differs; otherwise it
   would reset a value being typed.
-- The 200 ms timer (`quickAdjustSyncTimer`) runs only while the dock is
-  shown (2026-11-13): `showEvent()` synchronizes once and starts it,
-  `hideEvent()` stops it. Before, every main window's dock (and a compact
+- The 200 ms timer (`quickAdjustSyncTimer`) runs only while the dock's
+  content is shown (2026-11-13; since 2026-11-21 an event filter on the
+  content root `m_root` handles `Show`/`Hide`, so the timer also runs while
+  the [Docker Tray](docker-tray-plan.md) shows the content of a hidden dock):
+  `Show` synchronizes once and starts it, `Hide` stops it. The dock's own
+  `showEvent()`/`hideEvent()` only show and hide the Tool Options pad.
+  `setControlsEnabled()` and `QuickAccessDock::applyAppearanceSettings()` use
+  their stored root, not `widget()`, which is a placeholder while borrowed. Before, every main window's dock (and a compact
   popup while it existed) polled for the whole session, hidden or not.
   `updateStatusButtons()` builds and sets a status icon only when the state
   it shows changes (property `quickAccessShownState`, compared together

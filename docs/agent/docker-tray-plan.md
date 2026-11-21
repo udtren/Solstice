@@ -5,10 +5,12 @@ shared borrowing registry) implemented on branch `claude/docker-tray`,
 automated tests pass and the user checked it in the application. Phase 2
 (the tray, its action and the right-click hook) implemented and checked by
 the user. Phase 3 (configuration dialog) implemented and checked by the
-user. Phases 4-6 not started.** See
+user. Phase 4 (dockers that depended on their own visibility) implemented
+and checked by the user. Phases 5-6 not started.** See
 [Phase 1 results](#phase-1-results-2026-11-21),
-[Phase 2 results](#phase-2-results-2026-11-21) and
-[Phase 3 results](#phase-3-results-2026-11-21). This plan
+[Phase 2 results](#phase-2-results-2026-11-21),
+[Phase 3 results](#phase-3-results-2026-11-21) and
+[Phase 4 results](#phase-4-results-2026-11-21). This plan
 does not authorize removing anything that
 [the Popup Palette removal](popup-palette-removal.md) kept.
 
@@ -203,12 +205,12 @@ depends on the `QDockWidget` itself:
 
 | Docker | Dependency | Effect on the tray | Plan |
 | --- | --- | --- | --- |
-| Layers (`LayerBox`) | `showEvent()`/`hideEvent()` set and clear the node model's idle task manager; `setCanvas()` sets it only if `isVisible()` | A hidden Layers docker's thumbnails do not update on the tray | Phase 4: tell the docker it is presented elsewhere |
-| Quick Brush Adjustments (`QuickAdjustDock`) | `showEvent()`/`hideEvent()` start/stop the 200 ms canvas sync timer and show its Tool Options pad; `setControlsEnabled()` uses `widget()` | Hidden: controls stop following the canvas. Borrowed: enabling reaches the placeholder, not the controls | Phase 4: route both through the presented-elsewhere hook, or exclude it from the tray |
-| Quick Access (`QuickAccessDock`) | `applyAppearanceSettings()` finds header buttons through `widget()` | Settings changed while borrowed do not restyle the tray copy until it returns | Phase 4: keep a pointer to the root instead of `widget()` |
-| Asset Library (`AssetLibraryDock`) | `resizeEvent()` saves the size and re-flows thumbnail columns; a viewport event filter also re-flows | Column count follows the viewport filter on the tray; size saving does not run (wanted) | Check in phase 4 |
-| Rest Note (`RestNoteDock`) | `resizeEvent()` scales the time font; settings dialog parented to `widget()` | Font not rescaled on the tray; dialog parented to the placeholder | Phase 4 |
-| Toolbox (`KoToolBoxDocker`) | Title bar and `resizeEvent()`/`dockLocationChanged` choose orientation | Orientation stays as in the docker | Acceptable; check in phase 4 |
+| Layers (`LayerBox`) | `showEvent()`/`hideEvent()` set and clear the node model's idle task manager; `setCanvas()` sets it only if `isVisible()` | A hidden Layers docker's thumbnails do not update on the tray | Fixed in phase 4 |
+| Quick Brush Adjustments (`QuickAdjustDock`) | `showEvent()`/`hideEvent()` start/stop the 200 ms canvas sync timer and show its Tool Options pad; `setControlsEnabled()` uses `widget()` | Hidden: controls stop following the canvas. Borrowed: enabling reaches the placeholder, not the controls | Fixed in phase 4 (the Tool Options pad still follows the dock) |
+| Quick Access (`QuickAccessDock`) | `applyAppearanceSettings()` finds header buttons through `widget()` | Settings changed while borrowed do not restyle the tray copy until it returns | Fixed in phase 4 |
+| Asset Library (`AssetLibraryDock`) | `resizeEvent()` saves the size and re-flows thumbnail columns; a viewport event filter also re-flows | Column count follows the viewport filter on the tray; size saving does not run (wanted) | No change needed (phase 4) |
+| Rest Note (`RestNoteDock`) | `resizeEvent()` scales the time font; settings dialog parented to `widget()` | Font not rescaled on the tray; dialog parented to the placeholder | Fixed in phase 4 |
+| Toolbox (`KoToolBoxDocker`) | Title bar and `resizeEvent()`/`dockLocationChanged` choose orientation | Orientation stays as in the docker | Accepted, no change (phase 4) |
 | Timeline, Animation Curves | Playback controls in `KisUtilityTitleBar::widgetArea()` | Borrowed with the content (registry) | Done |
 | Python dockers (`libs/libkis/DockWidget`) | Scripts may call `setWidget()` at any time | A `setWidget()` while borrowed replaces the placeholder | Not covered; document as a limitation |
 
@@ -387,6 +389,51 @@ registry fixes this.
   Cancel changes nothing; removing every docker shows the hint and the
   configure button, then Restore Defaults; the layout survives closing and
   reopening the tray.
+
+## Phase 4 results (2026-11-21)
+
+### Approach
+
+No new interface was needed. A docker that cares whether its content is
+seen watches its **content widget's** `QEvent::Show` and `QEvent::Hide` with
+an event filter, instead of its own `QDockWidget::showEvent()` and
+`hideEvent()`. The content is visible wherever it is shown: in the docker,
+on the tray or in the toolbar docker box. Moving it between them re-parents
+it, which hides it (`Hide`), and the new host shows it (`Show`). Code that
+reached the content through `widget()` keeps its own pointer to the root,
+because `widget()` is the registry's placeholder while the content is
+borrowed.
+
+### Changes
+
+| Docker | Change |
+| --- | --- |
+| Layers (`plugins/dockers/layerdocker/LayerBox.{h,cpp}`, upstream file) | `showEvent()`/`hideEvent()` replaced by `eventFilter()` on the content (`m_mainWidget`): `Show` sets the node model's idle task manager (thumbnails), `Hide` clears it; `setCanvas()` checks `m_mainWidget->isVisible()` |
+| Quick Brush Adjustments (`QuickAdjustDock.{h,cpp}`) | The 200 ms sync timer starts (after one `syncFromCanvas()`) on the content's `Show` and stops on `Hide`; `setControlsEnabled()` uses `m_root`. The Tool Options pad stays tied to the dock's own show/hide and position, so it does not appear while only the tray shows Quick Adjust |
+| Quick Access (`QuickAccessDock.{h,cpp}`) | `applyAppearanceSettings()` uses `m_root` |
+| Rest Note (`RestNoteDock.{h,cpp}`) | The dock's `resizeEvent()` override is removed; `updateSizing()` runs on the content's `Resize` (an event filter on `m_root`); the settings dialog's parent is `m_root` |
+
+Asset Library and the toolbox need nothing. Python dockers that call
+`setWidget()` while their content is borrowed remain unsupported (the
+placeholder is replaced); this is a limitation.
+
+### Verification
+
+- Incremental build of `_build`; installed `plugins/dockers/layerdocker`,
+  `quickaccess` and `restnote`.
+- Passed: `QuickAdjustDockTest` 16 (new `syncTimerFollowsContentShownElsewhere`:
+  the timer runs while the content is shown in another visible widget with
+  the dock hidden, and stops when that widget hides; the existing
+  `syncTimerRunsOnlyWhileShown` still passes), the other Quick Access suites
+  (Config 11, Core 9, GridEdit 11, Interaction 18, ItemProperties 24,
+  KeyController 4), `RestNoteCoreTest` 16, `RestNoteWidgetsTest` 9,
+  `TestNodeView` 4, `KisDockerTrayTest` 21, `KisDockerBorrowRegistryTest` 11.
+- No new user-visible strings.
+- Checked by the user in the application (2026-11-21, all passed): Layers
+  thumbnails update on the tray with the Layers docker hidden; Quick Brush
+  Adjustments on the tray follows the canvas and is disabled without a
+  document; Rest Note's time text scales with the cell and its settings open
+  from the tray; all four dockers still work as ordinary dockers.
 
 ## Manual checks (to run once implemented)
 

@@ -4024,3 +4024,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - On a Japanese Windows console, Python scripts that print `krita.po`
   entries stop with `UnicodeEncodeError` (cp932); run them with
   `PYTHONUTF8=1` and write to a file.
+
+## 2026-11-21 ingest: Docker Tray phase 4
+
+- Layers thumbnails, the Quick Adjust sync timer and Rest Note's font
+  scaling now follow their content widget's Show/Hide/Resize events instead
+  of the dock's, so they work on the tray while the docker is hidden
+  ([plan](../docker-tray-plan.md#phase-4-results-2026-11-21),
+  [concept](concepts/docker-content-borrowing.md)).
+- A `.bat` file written from bash with `printf` turned `\r` in a Windows
+  path (`...\scratchpad\r_Test.txt`) into a carriage return, and the
+  test runs wrote nothing: write batch files from Python with raw strings.

@@ -107,7 +107,11 @@ detection, toast geometry/fonts, and overlay fonts.
 - Keep the original `pause.png`, `play.png`, `refresh.png`, `rest.png`, and
   `setting.png` artwork rather than substituting theme icons.
 - Status, timer, secondary text, and four icon buttons scale with available
-  docker size, matching the original layout.
+  docker size, matching the original layout. Since 2026-11-21 the scaling
+  follows the content root's `Resize` (an event filter on `m_root`) instead
+  of the dock's `resizeEvent()`, so it also works on the
+  [Docker Tray](docker-tray-plan.md); the settings dialog is parented to
+  `m_root`.
 
 Preserve existing source and binary assets under
 `plugins/dockers/restnote/resources`.
