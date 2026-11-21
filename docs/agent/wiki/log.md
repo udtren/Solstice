@@ -3987,3 +3987,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `main`.
 - The guide's comparison section now says the functions were checked by
   hand with a pen tablet (PR #110).
+
+## 2026-11-21 ingest: Docker Tray design and phase 1
+
+- The user approved a Docker Tray: a right-click popup with several dockers,
+  hidden ones included, in columns with individual sizes
+  ([plan](../docker-tray-plan.md)).
+- Phase 1 added `KisDockerBorrowRegistry`; the toolbar docker box and the
+  Quick Adjust Tool Options pad now borrow through it. Before, the docker
+  box could have borrowed the pad's placeholder label.
+- New concept page: [showing a docker's content elsewhere](concepts/docker-content-borrowing.md),
+  with the per-docker audit of dependencies on the `QDockWidget` itself.

@@ -3,6 +3,9 @@ kis_add_tests(KisAssetLibraryTest.cpp
 
 kis_add_tests(KisReferenceImageFiltersTest.cpp LINK_LIBRARIES kritaui kritatestsdk)
 
+kis_add_tests(KisDockerBorrowRegistryTest.cpp
+    LINK_LIBRARIES kritaui kritatestsdk)
+
 kis_add_tests(KisLazyToolsTest.cpp
     LINK_LIBRARIES kritaui kritatestsdk)
 

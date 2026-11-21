@@ -9,6 +9,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QDockWidget>
+#include <QLabel>
 #include <QMainWindow>
 #include <QScrollArea>
 #include <QStandardPaths>
@@ -16,7 +17,9 @@
 #include <QTest>
 #include <QTimer>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <KisAngleSelector.h>
+#include <KisDockerBorrowRegistry.h>
 #include <KisGlobalResourcesInterface.h>
 #include <kconfiggroup.h>
 #include <kis_paintop_preset.h>
@@ -33,6 +36,26 @@ public:
     QSize sizeHint() const override
     {
         return hint;
+    }
+};
+
+class OtherBorrower : public QWidget, public KisDockerBorrower
+{
+public:
+    OtherBorrower()
+    {
+        new QVBoxLayout(this);
+    }
+    QString dockerBorrowerName() const override
+    {
+        return QStringLiteral("Docker Tray");
+    }
+    void dockerContentGranted(const QString &, QWidget *content, QWidget *) override
+    {
+        layout()->addWidget(content);
+    }
+    void dockerContentHeldElsewhere(const QString &, const QString &) override
+    {
     }
 };
 
@@ -145,6 +168,40 @@ private Q_SLOTS:
         QVERIFY(f.source->toggleViewAction()->isEnabled());
         deferredDeletes();
         QVERIFY(pad.isNull());
+    }
+
+    void anotherBorrowerTakesAndReturns()
+    {
+        Fixture f;
+        auto *controller = f.create();
+        f.toggle->setChecked(true);
+        controller->ensure();
+        QPointer<QWidget> pad = f.pad();
+        QVERIFY(pad);
+        QCOMPARE(f.content->parentWidget(), pad.data());
+
+        KisDockerBorrowRegistry *registry = KisDockerBorrowRegistry::forWindow(&f.window);
+        QScopedPointer<OtherBorrower> other(new OtherBorrower);
+        QVERIFY(registry->request(QStringLiteral("sharedtooldocker"), other.data()));
+        QCOMPARE(f.content->parentWidget(), other.data());
+        QLabel *waiting = pad->findChild<QLabel *>();
+        QVERIFY(waiting);
+        QVERIFY(waiting->text().contains(QStringLiteral("Docker Tray")));
+        controller->resizeToContent();
+
+        registry->release(QStringLiteral("sharedtooldocker"), other.data());
+        QCOMPARE(f.content->parentWidget(), pad.data());
+        QVERIFY(!pad->findChild<QLabel *>());
+        QVERIFY(!f.source->toggleViewAction()->isEnabled());
+
+        // Restoring while another borrower holds it leaves the content there.
+        QVERIFY(registry->request(QStringLiteral("sharedtooldocker"), other.data()));
+        delete controller;
+        QCOMPARE(f.content->parentWidget(), other.data());
+        QVERIFY(f.source->toggleViewAction()->isEnabled());
+        registry->release(QStringLiteral("sharedtooldocker"), other.data());
+        QCOMPARE(f.source->widget(), f.content);
+        QCOMPARE(f.content->parentWidget(), f.source);
     }
 
     void guards_data()

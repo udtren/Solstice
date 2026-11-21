@@ -48,6 +48,9 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 
 ## Proposed plans
 
+- [Docker Tray](docker-tray-plan.md): a right-click popup showing several
+  dockers (hidden ones included) in columns with individual sizes; design
+  approved 2026-11-21, phase 1 (shared docker borrowing registry) implemented.
 - [UI test automation through MCP](ui-automation-plan.md): user decisions,
   determinism risks and phases 1-5; phase 0 is implemented and maintained in
   [Test control](test-control.md).

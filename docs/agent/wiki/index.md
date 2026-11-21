@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-18
+updated: 2026-11-21
 ---
 
 # Agent wiki
@@ -70,6 +70,10 @@ Document ownership and lifecycle are defined in
 
 - [Reference image filter cache](concepts/reference-image-filter-cache.md): shape
   effects, preview isolation and asynchronous result ownership.
+
+- [Showing a docker's content elsewhere](concepts/docker-content-borrowing.md):
+  the borrowing registry, what moves with `widget()` and what stays with the
+  `QDockWidget` (visibility events, `widget()` returning the placeholder).
 
 - [Native refactor boundaries](concepts/native-refactor-boundaries.md): sharing
   services without changing compatibility or QObject/deferred-work ownership.

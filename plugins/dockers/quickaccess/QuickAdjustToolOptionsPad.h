@@ -11,14 +11,19 @@
 #include <ksharedconfig.h>
 #include <functional>
 
+#include "KisDockerBorrowRegistry.h"
+
 class QDockWidget;
+class QLabel;
 class QMainWindow;
 class QToolButton;
 class QWidget;
 
 /// Owns the borrowed Tool Options widget's temporary host. The dock supplies
 /// its current canvas context; no view manager is retained across callbacks.
-class QuickAdjustToolOptionsPad : public QObject
+/// The content is borrowed through KisDockerBorrowRegistry, so another
+/// borrower (toolbar docker box, Docker Tray) can take it and give it back.
+class QuickAdjustToolOptionsPad : public QObject, public KisDockerBorrower
 {
 public:
     struct Context {
@@ -39,6 +44,11 @@ public:
     void position();
     void hide();
 
+    QString dockerBorrowerName() const override;
+    QString dockerPlaceholderText() const override;
+    void dockerContentGranted(const QString &dockerId, QWidget *content, QWidget *titleArea) override;
+    void dockerContentHeldElsewhere(const QString &dockerId, const QString &holderName) override;
+
 private:
     void restore();
     QDockWidget *m_owner;
@@ -49,7 +59,8 @@ private:
     QPointer<QDockWidget> m_toolOptionsDocker;
     QPointer<QWidget> m_toolOptionsPad;
     QPointer<QWidget> m_borrowedToolOptions;
-    QPointer<QWidget> m_toolOptionsPlaceholder;
+    QPointer<QLabel> m_waitingLabel;
+    QPointer<KisDockerBorrowRegistry> m_registry;
     bool m_toolOptionsDockerWasVisible{false};
 };
 

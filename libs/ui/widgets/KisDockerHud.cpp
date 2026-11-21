@@ -12,6 +12,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QDockWidget>
+#include <QPointer>
 
 #include <kseparator.h>
 #include "KisMainWindow.h"
@@ -22,13 +23,14 @@
 #include "kis_config.h"
 #include "kis_icon_utils.h"
 
-QHash<QString, QList<QString>> KisDockerHud::borrowedWidgetOwners = QHash<QString, QList<QString>>();
-
 struct KisDockerHud::Private
 {
     QComboBox *dockerComboBox;
     QVBoxLayout *dockerLayout;
-    QDockWidget* oldDockerParent {};
+    QString borrowedDockerId;
+    QPointer<KisDockerBorrowRegistry> registry;
+    QPointer<QWidget> content;
+    QPointer<QWidget> titleArea;
     bool isBorrowing {false};
     QLabel* dockerIOULabel {};
     QToolButton* dockerMenu {};
@@ -98,97 +100,78 @@ void KisDockerHud::borrowOrReturnDocker()
 
 void KisDockerHud::borrowDocker() {
     KisMainWindow *mainWindow = KisPart::instance()->currentMainwindow();
-
-
-    const QString dockerId = m_d->dockerComboBox->currentData().toString();
-    QDockWidget *docker = mainWindow->findChild<QDockWidget*>(dockerId);
-    if (docker == nullptr) {
+    KisDockerBorrowRegistry *registry = KisDockerBorrowRegistry::forWindow(mainWindow);
+    if (registry == nullptr) {
         return;
     }
 
-    QList<QString> &owners = borrowedWidgetOwners[dockerId];
-
-    // If the docker is being borrowed by another widget, request its return
-    if (!owners.empty() && owners.last() != this->objectName()) {
-        KisDockerHud *prevOwner = mainWindow->findChild<KisDockerHud*>(owners.last());
-        prevOwner->returnDocker(true);
+    const QString dockerId = m_d->dockerComboBox->currentData().toString();
+    m_d->registry = registry;
+    m_d->borrowedDockerId = dockerId;
+    m_d->isBorrowing = true;
+    if (!registry->request(dockerId, this)) {
+        m_d->registry = nullptr;
+        m_d->borrowedDockerId.clear();
+        m_d->isBorrowing = false;
     }
+}
 
-    // Notify any waiting borrowers that we own it now
-    Q_FOREACH(QString waitingWidgetId, owners) {
-        KisDockerHud *waitingWidget = mainWindow->findChild<KisDockerHud*>(waitingWidgetId);
-        waitingWidget->showBorrowerLabel(m_d->borrowerName);
+void KisDockerHud::returnDocker()
+{
+    if (m_d->registry) {
+        m_d->registry->release(m_d->borrowedDockerId, this);
     }
-
-    if (!owners.contains(this->objectName())) {
-        owners.append(this->objectName());
+    if (m_d->content) {
+        m_d->dockerLayout->removeWidget(m_d->content);
     }
+    if (m_d->titleArea) {
+        m_d->dockerLayout->removeWidget(m_d->titleArea);
+    }
+    hideBorrowerLabel();
 
-    // Now actually borrow it.
+    m_d->content = nullptr;
+    m_d->titleArea = nullptr;
+    m_d->registry = nullptr;
+    m_d->borrowedDockerId.clear();
+    m_d->isBorrowing = false;
+}
 
-    m_d->oldDockerParent = docker;
+QString KisDockerHud::dockerBorrowerName() const
+{
+    return m_d->borrowerName;
+}
+
+void KisDockerHud::dockerContentGranted(const QString &dockerId, QWidget *content, QWidget *titleArea)
+{
+    Q_UNUSED(dockerId);
+    hideBorrowerLabel();
 
     // Animation dockers have playback controls and such in the titlebar,
     // so we borrow those as well.
-    if (docker->objectName() == "AnimationCurvesDocker" || docker->objectName() == "TimelineDocker") {
-        KisUtilityTitleBar *titleBar = dynamic_cast<KisUtilityTitleBar*>(docker->titleBarWidget());
-        KIS_SAFE_ASSERT_RECOVER_NOOP(titleBar);
-        if (titleBar) {
-            QWidget *widgetArea = titleBar->widgetArea();
-            m_d->dockerLayout->addWidget(widgetArea);
-        }
+    if (titleArea) {
+        m_d->dockerLayout->addWidget(titleArea);
     }
-
-    m_d->dockerLayout->addWidget(docker->widget());
-    docker->setWidget(m_d->dockerIOULabel);
+    m_d->dockerLayout->addWidget(content);
 
     // Hack: somewhat fixes Animation Curves's titlebar being too tall
     m_d->dockerLayout->setStretch(m_d->dockerLayout->count()-1, 1);
 
-    m_d->isBorrowing = true;
+    m_d->content = content;
+    m_d->titleArea = titleArea;
 }
-void KisDockerHud::returnDocker(bool beingTaken) {
-    QString dockerId = m_d->oldDockerParent->objectName();
-    QList<QString>* owners = &borrowedWidgetOwners[dockerId];
 
-    if (!owners->isEmpty()) {
-        const int idx = owners->indexOf(this->objectName());
-        const bool wasOwner = idx == owners->count()-1;
-        if (!beingTaken) {
-            owners->removeAt(idx); // we don't want it anymore
-        }
-
-        // If we don't own it, just remove our label
-        if (!wasOwner) {
-            hideBorrowerLabel();
-            return;
-        }
+void KisDockerHud::dockerContentHeldElsewhere(const QString &dockerId, const QString &holderName)
+{
+    Q_UNUSED(dockerId);
+    if (m_d->content) {
+        m_d->dockerLayout->removeWidget(m_d->content);
     }
-
-    // If we own it, actually return it.
-
-    if (m_d->dockerLayout->count() == 2) {
-        // Return the animation dockers' titlebar widget as well
-        KisUtilityTitleBar *titleBar = dynamic_cast<KisUtilityTitleBar*>(m_d->oldDockerParent->titleBarWidget());
-        KIS_SAFE_ASSERT_RECOVER_NOOP(titleBar);
-        if (titleBar) {
-            titleBar->setWidgetArea(m_d->dockerLayout->takeAt(0)->widget());
-        }
+    if (m_d->titleArea) {
+        m_d->dockerLayout->removeWidget(m_d->titleArea);
     }
-
-    QWidget* dockerInside = m_d->dockerLayout->takeAt(0)->widget();
-    m_d->oldDockerParent->setWidget(dockerInside);
-    dockerInside->setParent(m_d->oldDockerParent);
-
-    m_d->oldDockerParent = nullptr;
-    m_d->isBorrowing = false;
-
-    // If another borrower is in line, tell it to take it.
-    if (!beingTaken && !owners->empty()) {
-        KisMainWindow *mainWindow = KisPart::instance()->currentMainwindow();
-        KisDockerHud *newOwner = mainWindow->findChild<KisDockerHud*>(owners->last());
-        newOwner->borrowDocker();
-    }
+    m_d->content = nullptr;
+    m_d->titleArea = nullptr;
+    showBorrowerLabel(holderName);
 }
 
 void KisDockerHud::showDockerConfig()
@@ -309,15 +292,20 @@ void KisDockerHud::showBorrowerLabel(QString borrowerName)
 {
     m_d->dockerIOULabel->setText(i18nc("%1 is the name of the widget",
                                        "Docker is open in %1. Close %1 to show here.", borrowerName));
-    m_d->dockerLayout->addWidget(m_d->dockerIOULabel);
-    m_d->dockerLayout->setStretchFactor(m_d->dockerIOULabel, 1); // push the other widgets to the top
+    if (m_d->dockerLayout->indexOf(m_d->dockerIOULabel) < 0) {
+        m_d->dockerLayout->addWidget(m_d->dockerIOULabel);
+        m_d->dockerLayout->setStretchFactor(m_d->dockerIOULabel, 1); // push the other widgets to the top
+    }
     m_d->dockerIOULabel->show();
 }
 
 void KisDockerHud::hideBorrowerLabel()
 {
+    if (m_d->dockerLayout->indexOf(m_d->dockerIOULabel) < 0) {
+        return;
+    }
     m_d->dockerIOULabel->hide();
-    m_d->dockerLayout->takeAt(0)->widget();
+    m_d->dockerLayout->removeWidget(m_d->dockerIOULabel);
     m_d->dockerIOULabel->setText(i18nc("%1 is the name of the widget",
                                         "Docker is open in %1. Close %1 to show here.", m_d->borrowerName));
 }
