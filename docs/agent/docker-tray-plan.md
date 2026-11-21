@@ -2,8 +2,11 @@
 
 Status: **design approved by the user on 2026-11-21. Phase 1 (audit and
 shared borrowing registry) implemented on branch `claude/docker-tray`,
-automated tests pass and the user checked it in the application; phases 2-6
-not started.** See [Phase 1 results](#phase-1-results-2026-11-21). This plan
+automated tests pass and the user checked it in the application. Phase 2
+(the tray, its action and the right-click hook) implemented and checked by
+the user. Phases 3-6 not started.** See
+[Phase 1 results](#phase-1-results-2026-11-21) and
+[Phase 2 results](#phase-2-results-2026-11-21). This plan
 does not authorize removing anything that
 [the Popup Palette removal](popup-palette-removal.md) kept.
 
@@ -259,6 +262,90 @@ registry fixes this.
   Adjust Tool Options pad (toggle, close and reopen Quick Brush
   Adjustments, Tool Options docker restored), and both together (the pad
   shows "Docker is open in Toolbar Docker Box" and gets Tool Options back).
+
+## Phase 2 results (2026-11-21)
+
+### Source
+
+| Part | Location |
+| --- | --- |
+| Layout model and size fitting | `libs/ui/widgets/KisDockerTrayLayout.{h,cpp}`: `KisDockerTrayLayout` (JSON read/write, defaults, `load()`/`save()` with an injectable `KSharedConfigPtr`), `KisDockerTrayGeometry::fit()` |
+| Tray widget | `libs/ui/widgets/KisDockerTray.{h,cpp}`: `KisDockerTray` (`QWidget`, `KisDockerBorrower`, `KisPopupWidgetInterface`), one per main window, found with `forWindow()` |
+| Shortcut action | `show_docker_tray` in `krita/krita.action` (General, no default shortcut), created in `KisControlFrame::createDockerBox()` (`libs/ui/kis_control_frame.cpp`) |
+| Right-click | `KisToolPaint::popupWidget()` (`libs/ui/tool/kis_tool_paint.{h,cc}`) returns the tray of the canvas's main window |
+| Tests | `libs/ui/tests/KisDockerTrayTest.cpp` |
+
+### Behavior as implemented
+
+- Opening reads the layout from `kritarc` each time (`DockerTray/Layout`;
+  phase 3 adds the dialog, until then it is edited by hand), borrows every
+  docker of the layout, sizes the cells, then shows the tray centered at the
+  cursor and clamped 8 px inside the screen's available geometry. Dockers the
+  window does not have are skipped; if none exists the tray does not open and
+  emits `finished()`.
+- Each cell shows the docker's title above its content. A column is as wide
+  as its widest cell; a cell is never smaller than its content's minimum.
+  When the tray would not fit on the screen, columns and cells shrink in
+  proportion (`KisDockerTrayGeometry::fit()`).
+- The window is a frameless `Qt::Tool` child of the main window with a fixed
+  size constraint, so it follows its content. It is activated when shown, so
+  Esc works at once; the main window gets the focus back when it closes.
+- Closing: Esc, the shortcut again (the action is also added to the tray, so
+  it works while the tray has the focus), a press on the canvas (the tray is
+  registered with `KisInputManager`), right-click on the canvas (the same
+  press), and the application becoming inactive. Every non-spontaneous hide
+  returns all content to the dockers; a spontaneous hide (minimizing the main
+  window) keeps it.
+- `dismiss()` only hides; `closeTray()` hides and emits `finished()`. The
+  input manager calls `dismiss()` from `deregisterPopupWidget()`, which then
+  reads its popup pointer again, so emitting `finished()` there would
+  deregister twice and hit its `KIS_ASSERT`. The destructor emits
+  `finished()` to detach from an input manager that still holds the tray.
+- The right-click popup returns the tray for every tool derived from
+  `KisToolPaint` (brushes, shapes, fill, gradient...), as the Popup Palette
+  did; tools with their own right-click menu (selection, transform, crop,
+  path, reference images) keep it. The change to `KisToolPaint`'s virtual
+  table needs the tool plugins rebuilt and installed.
+- Strings: the action ("Show Docker Tray") and the borrower name ("Docker
+  Tray", used in "Docker is open in Docker Tray"); `zh_CN` translated, the
+  feature name kept in English.
+
+### Verification
+
+- Full build of `_build` (all targets, so every tool plugin picks up the
+  `KisToolPaint` change) and `cmake --install` of the whole build tree.
+- `KisDockerTrayTest`: 18 passed (JSON round trip, cleanup of bad cells,
+  invalid JSON, load/save, `fit()` keep/shrink/minimum, tray per window and
+  window flags, open and close with a hidden docker, cell sizes, centering,
+  `closeTray()` vs `dismiss()`, Esc, missing dockers, nothing to show,
+  screen clamping at both corners, another borrower taking a cell, layout
+  change rebuilds).
+- `KisDockerBorrowRegistryTest` 11, `QuickAdjustDockTest` 15 and
+  `KisInputManagerTest` 8 passed.
+- `po/zh_CN/krita.po` updated with `update_translations.py`; the two new
+  entries translated; `msgfmt --check --statistics`: 10,698 translated, no
+  fuzzy or untranslated entries.
+- Checked by the user in the application (2026-11-21, all passed):
+  right-click with a brush and closing by canvas click, second right-click
+  and Esc, painting right after closing; opening and closing with the
+  shortcut, also after clicking inside the tray; a hidden docker used on the
+  tray and still hidden and working afterwards; drop-down lists and dialogs
+  (Layer Properties) from tray dockers; opening near screen edges and on a
+  second monitor; Timeline with its playback controls. Layers thumbnails of
+  a hidden Layers docker remain a known phase 4 item.
+
+### Trying it before phase 3
+
+Phase 3 adds the configuration dialog. Until then, close Solstice and set
+the layout in `kritarc` (`%APPDATA%\Solstice\config\kritarc`):
+
+```ini
+[DockerTray]
+Layout={"version":1,"trays":[{"name":"Default","columns":[{"items":[{"id":"KisLayerBox","w":300,"h":300},{"id":"History","w":300,"h":200}]},{"items":[{"id":"PresetDocker","w":280,"h":520}]}]}]}
+```
+
+Docker ids are the dock widgets' object names (Settings → Dockers shows
+their titles; the ids are in each docker factory's `id()`).
 
 ## Manual checks (to run once implemented)
 

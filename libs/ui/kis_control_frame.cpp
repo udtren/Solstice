@@ -20,6 +20,7 @@
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QWidgetAction>
+#include <QCursor>
 
 #include <klocalizedstring.h>
 #include <QAction>
@@ -48,6 +49,11 @@
 #include "kis_display_color_converter.h"
 #include <kis_canvas2.h>
 #include "kis_action_registry.h"
+#include "kis_action_manager.h"
+#include "kis_action.h"
+#include "input/kis_input_manager.h"
+#include "KisDockerTray.h"
+#include "KisMainWindow.h"
 
 
 KisControlFrame::KisControlFrame(KisViewManager *view, QWidget *parent, const char* name)
@@ -298,4 +304,27 @@ void KisControlFrame::createDockerBox(KisViewManager * view)
     view->actionCollection()->addAction("docker_box", action);
     connect(action, SIGNAL(triggered()), m_dockerPopupButton, SLOT(showPopupWidget()));
     m_dockerPopup->addAction(action);
+
+    // Solstice: the Docker Tray opens at the cursor and closes with the same
+    // shortcut (docs/agent/docker-tray-plan.md).
+    KisAction *trayAction = view->actionManager()->createAction("show_docker_tray");
+    connect(trayAction, &QAction::triggered, this, [this, trayAction]() {
+        KisDockerTray *tray = KisDockerTray::forWindow(m_viewManager->mainWindow());
+        if (!tray) {
+            return;
+        }
+        if (!tray->actions().contains(trayAction)) {
+            // the shortcut also works while the tray has the focus
+            tray->addAction(trayAction);
+        }
+        if (tray->onScreen()) {
+            tray->closeTray();
+            return;
+        }
+        tray->popupAt(QCursor::pos());
+        if (tray->onScreen() && m_viewManager->inputManager()) {
+            // a press on the canvas closes it
+            m_viewManager->inputManager()->registerPopupWidget(tray);
+        }
+    });
 }

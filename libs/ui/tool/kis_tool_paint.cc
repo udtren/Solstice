@@ -66,6 +66,8 @@
 #include <kis_action.h>
 #include "strokes/kis_color_sampler_stroke_strategy.h"
 #include "kis_paintop_utils.h"
+#include "KisDockerTray.h"
+#include "KisMainWindow.h"
 
 
 struct KisToolPaint::Private
@@ -361,6 +363,15 @@ void KisToolPaint::mouseMoveEvent(KoPointerEvent *event)
     if (mode() == KisTool::HOVER_MODE) {
         requestUpdateOutline(event->point, event);
     }
+}
+
+KisPopupWidgetInterface *KisToolPaint::popupWidget()
+{
+    KisCanvas2 *kisCanvas = dynamic_cast<KisCanvas2 *>(canvas());
+    if (!kisCanvas || !kisCanvas->viewManager()) {
+        return nullptr;
+    }
+    return KisDockerTray::forWindow(kisCanvas->viewManager()->mainWindow());
 }
 
 void KisToolPaint::mouseReleaseEvent(KoPointerEvent *event)

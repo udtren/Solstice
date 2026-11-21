@@ -28,13 +28,15 @@ installation must be deleted by hand; `cmake --install` does not remove it.
   action shows the right-click context menus of the Transform, Crop,
   selection, Path, Shape Select and Reference Images tools and the Enclose
   and Fill subtools (`KoToolBase::popupActionsMenu()`). It opens a popup
-  widget only when the tool returns one (`KoToolBase::popupWidget()`, now
-  `nullptr` for every tool). Removing the action or the profile entries
+  widget only when the tool returns one (`KoToolBase::popupWidget()`; since
+  2026-11-21 `KisToolPaint::popupWidget()` returns the
+  [Docker Tray](docker-tray-plan.md), `nullptr` for other tools). Removing the action or the profile entries
   removes those menus, and saved user profiles name it. This is the most
   likely cause of the problem in an earlier removal attempt.
 - **`KisPopupWidgetInterface` and the popup handling of `KisInputManager`**
   (`registerPopupWidget()`, click-to-dismiss, `popupWasActive`): part of the
-  same mechanism; now without an implementer.
+  same mechanism; implemented again by the Docker Tray (`KisDockerTray`)
+  since 2026-11-21.
 - **The tools' `popupWidget()` overrides and right-click event filters**
   (`kis_tool_select_base.h`, `kis_tool_polyline_base.cpp`,
   `KisToolOutlineBase.cpp`, `kis_tool_path.cc`, `KisPathEnclosingProducer.cpp`,
@@ -63,7 +65,8 @@ installation must be deleted by hand; `cmake --install` does not remove it.
 
 ## Behavior
 
-- Right-click on a brush tool does nothing. Right-click menus of the tools
+- Right-click on a brush tool opened nothing until 2026-11-21; it now opens
+  the [Docker Tray](docker-tray-plan.md). Right-click menus of the tools
   listed above work as before.
 - The Quick Access popups and gestures do not use any of the removed parts.
 

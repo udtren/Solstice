@@ -3998,3 +3998,18 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   box could have borrowed the pad's placeholder label.
 - New concept page: [showing a docker's content elsewhere](concepts/docker-content-borrowing.md),
   with the per-docker audit of dependencies on the `QDockWidget` itself.
+
+## 2026-11-21 ingest: Docker Tray phase 2
+
+- `KisDockerTray` opens at the cursor from the `show_docker_tray` action or
+  a right-click with any `KisToolPaint` tool, borrows every docker of the
+  `kritarc` layout and returns them on close ([plan](../docker-tray-plan.md#phase-2-results-2026-11-21)).
+- `KisInputManager::deregisterPopupWidget()` calls `dismiss()` and then
+  reads its popup pointer again: a popup must not emit `finished()` from
+  `dismiss()`, or the re-entrant deregistration nulls the pointer and the
+  `KIS_ASSERT` fires. The tray splits `dismiss()` (hide only) from
+  `closeTray()` (hide and `finished()`).
+- Overriding a virtual that a base class defines inline
+  (`KoToolBase::popupWidget()`) in `KisToolPaint` changes what the tool
+  plugins' own vtables point to: they must be rebuilt and installed, not
+  only `kritaui`.
