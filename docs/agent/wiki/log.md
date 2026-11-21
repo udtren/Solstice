@@ -3987,3 +3987,15 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   `main`.
 - The guide's comparison section now says the functions were checked by
   hand with a pen tablet (PR #110).
+
+## 2026-11-21 ingest: HueSVC popup and false Leave under a pen
+
+- The Quick Access HueSVC popup closed as soon as its shortcut opened it
+  while a pen hovered (Windows, Qt 6.8); with a mouse it stayed open. A
+  Leave event is no longer trusted: `QuickColorPopup` checks the pointer
+  (recent tablet position, else `QCursor::pos()`) and polls every 100 ms
+  until it is outside. New page:
+  [A hovering pen sends false Leave events](pitfalls/pen-hover-false-leave.md);
+  lifecycle rule in `docs/agent/quick-access.md`.
+- `QuickColorPopup` moved to its own header so the interaction test can
+  drive it with a replaced cursor source instead of moving the real cursor.

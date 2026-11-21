@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-11-18
+updated: 2026-11-21
 ---
 
 # Agent wiki
@@ -212,6 +212,10 @@ Document ownership and lifecycle are defined in
   compositing skips a layer outside its extent; "compute, then lock and
   store" let an older extent win. A test that compares two results reading
   the same cache cannot see it.
+- [A hovering pen sends false Leave events](pitfalls/pen-hover-false-leave.md):
+  on Windows a window shown under a hovering pen can get `QEvent::Leave`
+  while the pointer is inside (HueSVC popup closed at once); check the
+  position and poll instead of closing on Leave.
 
 - [A temporary image destroyed outside the GUI thread](pitfalls/temporary-image-destroyed-off-gui-thread.md):
   `KisImage` lives in the GUI thread and starts timers there; deleting it

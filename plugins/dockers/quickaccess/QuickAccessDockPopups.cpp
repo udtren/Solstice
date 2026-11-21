@@ -7,6 +7,7 @@
 #include "QuickAccessItemPresentation.h"
 #include "QuickAdjustDock.h"
 #include "QuickColorSelectorDock.h"
+#include "QuickColorPopup.h"
 #include <kis_canvas2.h>
 #include <kconfiggroup.h>
 #include <ksharedconfig.h>
@@ -77,26 +78,6 @@ private:
     QPointer<QWidget> m_target;
     QPoint m_dragOffset;
     bool m_dragging{false};
-};
-
-class QuickColorPopup : public QFrame
-{
-public:
-    using QFrame::QFrame;
-
-protected:
-    void leaveEvent(QEvent *event) override
-    {
-        QFrame::leaveEvent(event);
-
-        // A combo box opens its list as a separate Qt::Popup window. Moving
-        // the pointer into that window sends Leave to this popup even though
-        // the user is still interacting with one of its child controls.
-        if (QApplication::activePopupWidget())
-            return;
-
-        close();
-    }
 };
 
 template<typename T>
