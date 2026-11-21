@@ -4078,3 +4078,16 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   recording, `docs/images/docker_tray.gif` (800 × 585, 12 s, 1.7 MB), shown
   in the user guide and under the Docker Tray entry of README's "Other Major
   Changes". README marks 1.2.1 as in development until the release exists.
+
+## 2026-11-21 ingest: Solstice 1.2.1 released
+
+- Regular GitHub Release `v1.2.1` at `948ac276816b` (run 44880267082);
+  record: [1.2.1 release verification](history/release-1.2.1.md).
+- The first attempt of the release build failed while packaging:
+  `add-shellex.py` downloads the Krita shell extension from files.kde.org,
+  which redirects to a mirror chosen per request, and the runner rejected
+  that mirror's certificate chain. The download is pinned by SHA-256, so
+  re-running the failed job was safe, and it passed. If it recurs, give
+  the script fallback mirrors rather than weakening the certificate check.
+- The website shows the Docker Tray in "Other major changes" with a
+  640 px copy of the recording (tidalboxstudio-web #47, #48).

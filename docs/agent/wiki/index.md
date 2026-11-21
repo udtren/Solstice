@@ -363,6 +363,9 @@ Document ownership and lifecycle are defined in
   package integrity, website publication.
 - [1.1.1 release verification](history/release-1.1.1.md): CPU performance
   and fix release, package integrity, website publication.
+- [1.2.1 release verification](history/release-1.2.1.md): the Docker Tray;
+  a KDE mirror's certificate failed the first build; package checks and
+  the website.
 - [1.2.0 release verification](history/release-1.2.0.md): Vector Brush
   Strokes as a second headline feature; package checks and the website.
 
