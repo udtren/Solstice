@@ -6,7 +6,7 @@ application, and everything else Solstice shares with Krita, see the
 Technical notes and document roles are in the [agent guide](agent/README.md).
 The Markdown sources in this repository are the maintained originals.
 
-In development, 1.2.1 adds the [Docker Tray](docker-tray.md): the dockers you
+[1.2.1](https://github.com/udtren/Solstice/releases/tag/v1.2.1) adds the [Docker Tray](docker-tray.md): the dockers you
 choose, at the cursor on right-click. It builds on
 [1.2.0](https://github.com/udtren/Solstice/releases/tag/v1.2.0), which added
 [Vector Brush Strokes](vector-brush-strokes.md): brush strokes on vector

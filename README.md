@@ -57,7 +57,7 @@ features Solstice adds are described in its [user guides](docs/README.md).
 
 ## Contents
 
-- [In development: 1.2.1](#in-development-121)
+- [What's new in 1.2.1](#whats-new-in-121)
 - [Highlights](#highlights)
   - [New Features](#new-features)
   - [Ported Plugins](#ported-plugins)
@@ -70,9 +70,9 @@ features Solstice adds are described in its [user guides](docs/README.md).
 - [Supported environment](#supported-environment)
 - [Relationship to Krita](#relationship-to-krita)
 
-## In development: 1.2.1
+## What's new in 1.2.1
 
-Solstice 1.2.1 adds the [Docker Tray](docs/docker-tray.md): right-click on
+[Solstice 1.2.1](https://github.com/udtren/Solstice/releases/tag/v1.2.1) adds the [Docker Tray](docs/docker-tray.md): right-click on
 the canvas with a painting tool, or press its shortcut, and the dockers you
 choose open at the cursor in columns, each with its own size, including
 dockers hidden in the main window. Resize them by dragging on the tray. It
