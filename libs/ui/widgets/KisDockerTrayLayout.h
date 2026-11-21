@@ -7,6 +7,7 @@
 #define KIS_DOCKER_TRAY_LAYOUT_H
 
 #include <QByteArray>
+#include <QPoint>
 #include <QSize>
 #include <QString>
 #include <QStringList>
@@ -44,8 +45,36 @@ struct KRITAUI_EXPORT KisDockerTrayLayout {
 
     QVector<QVector<KisDockerTrayCell>> columns;
 
+    /// True if no column holds a docker.
     bool isEmpty() const;
     QStringList dockerIds() const;
+
+    // Editing (the configuration dialog). Columns may be empty while
+    // editing; fromJson() drops empty columns when the layout is read back.
+
+    /// Column (x) and row (y) of \p dockerId, or (-1, -1).
+    QPoint find(const QString &dockerId) const;
+    /**
+     * Appends \p dockerId to \p column; \p column equal to the number of
+     * columns appends a new column. Fails if the docker is already there or
+     * the column does not exist.
+     */
+    bool addDocker(const QString &dockerId, int column, const QSize &size = DefaultCellSize);
+    /// Removes the docker; its column stays, even if empty.
+    bool removeDocker(const QString &dockerId);
+    /**
+     * Moves the docker one row up (\p delta -1) or down (+1). Past the top
+     * or bottom of its column it goes to the end of the previous column or
+     * the start of the next one.
+     */
+    bool moveDocker(const QString &dockerId, int delta);
+    /// Moves a whole column one place left (-1) or right (+1).
+    bool moveColumn(int column, int delta);
+    void addColumn();
+    /// Removes the column with its dockers.
+    bool removeColumn(int column);
+    /// Sets the stored size, clamped to [MinimumExtent, MaximumExtent].
+    bool setSize(const QString &dockerId, const QSize &size);
 
     /// One column with the Layers docker.
     static KisDockerTrayLayout defaultLayout();

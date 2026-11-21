@@ -3,16 +3,22 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <QDialogButtonBox>
 #include <QDockWidget>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QLabel>
+#include <QListWidget>
 #include <QMainWindow>
 #include <QPointer>
+#include <QPushButton>
 #include <QScreen>
 #include <QSignalSpy>
+#include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QToolButton>
+#include <QTreeWidget>
 #include <QVBoxLayout>
 
 #include <kconfiggroup.h>
@@ -21,6 +27,7 @@
 #include "KisDockerBorrowRegistry.h"
 #include "KisDockerTray.h"
 #include "KisDockerTrayLayout.h"
+#include "dialogs/KisDlgDockerTray.h"
 
 namespace
 {
@@ -182,6 +189,49 @@ private Q_SLOTS:
         QVERIFY(config->group("DockerTray").readEntry("Layout", QString()).contains(QStringLiteral("\"History\"")));
     }
 
+    void layoutEditing()
+    {
+        KisDockerTrayLayout layout;
+        QVERIFY(layout.isEmpty());
+        QVERIFY(!layout.addDocker(QStringLiteral("A"), 1));
+        QVERIFY(layout.addDocker(QStringLiteral("A"), 0, QSize(10, 99999)));
+        QCOMPARE(layout.columns[0][0].size,
+                 QSize(KisDockerTrayLayout::MinimumExtent, KisDockerTrayLayout::MaximumExtent));
+        QVERIFY(!layout.addDocker(QStringLiteral("A"), 0));
+        QVERIFY(layout.addDocker(QStringLiteral("B"), 0));
+        QVERIFY(layout.addDocker(QStringLiteral("C"), 1));
+        QCOMPARE(layout.find(QStringLiteral("B")), QPoint(0, 1));
+        QCOMPARE(layout.find(QStringLiteral("X")), QPoint(-1, -1));
+
+        // Within a column, then across the column boundary.
+        QVERIFY(layout.moveDocker(QStringLiteral("B"), -1));
+        QCOMPARE(layout.dockerIds(), QStringList({QStringLiteral("B"), QStringLiteral("A"), QStringLiteral("C")}));
+        QVERIFY(layout.moveDocker(QStringLiteral("A"), 1));
+        QCOMPARE(layout.find(QStringLiteral("A")), QPoint(1, 0));
+        QVERIFY(layout.moveDocker(QStringLiteral("A"), -1));
+        QCOMPARE(layout.find(QStringLiteral("A")), QPoint(0, 1));
+        QVERIFY(!layout.moveDocker(QStringLiteral("B"), -1));
+        QVERIFY(!layout.moveDocker(QStringLiteral("C"), 1));
+
+        QVERIFY(layout.moveColumn(1, -1));
+        QCOMPARE(layout.dockerIds(), QStringList({QStringLiteral("C"), QStringLiteral("B"), QStringLiteral("A")}));
+        QVERIFY(!layout.moveColumn(0, -1));
+
+        QVERIFY(layout.setSize(QStringLiteral("C"), QSize(123, 456)));
+        QCOMPARE(layout.columns[0][0].size, QSize(123, 456));
+
+        // An emptied column stays while editing and is dropped when read back.
+        QVERIFY(layout.removeDocker(QStringLiteral("C")));
+        QCOMPARE(layout.columns.size(), 2);
+        layout.addColumn();
+        QCOMPARE(layout.columns.size(), 3);
+        QCOMPARE(KisDockerTrayLayout::fromJson(layout.toJson()).columns.size(), 1);
+        QVERIFY(layout.removeColumn(1));
+        QCOMPARE(layout.dockerIds(), QStringList());
+        QVERIFY(layout.isEmpty());
+        QVERIFY(!layout.removeColumn(5));
+    }
+
     void fitKeepsWantedSizes()
     {
         const QVector<QVector<QSize>> wanted = {{QSize(200, 100), QSize(300, 150)}, {QSize(250, 400)}};
@@ -295,12 +345,20 @@ private Q_SLOTS:
         QVERIFY(f.cell(QStringLiteral("History"))->isVisible());
         tray->closeTray();
 
-        // Nothing to show: the tray stays closed and says it is finished.
+        // Nothing to show: the tray opens with a hint, so the configure
+        // button can be reached.
         f.setLayout(layoutJson(QStringLiteral("[{\"items\":[{\"id\":\"NoSuchDocker\"}]}]")));
         QSignalSpy finished(tray, SIGNAL(finished()));
         tray->popupAt(f.center());
-        QVERIFY(!tray->onScreen());
-        QCOMPARE(finished.count(), 1);
+        QVERIFY(tray->onScreen());
+        QCOMPARE(finished.count(), 0);
+        bool hint = false;
+        for (QLabel *label : tray->findChildren<QLabel *>()) {
+            hint |= label->isVisible() && label->text().contains(QStringLiteral("No dockers"));
+        }
+        QVERIFY(hint);
+        QVERIFY(tray->findChild<QToolButton *>(QStringLiteral("dockerTrayConfigure"))->isVisible());
+        tray->closeTray();
     }
 
     void staysOnScreen()
@@ -342,6 +400,90 @@ private Q_SLOTS:
         QVERIFY(tray->isAncestorOf(f.layersContent));
         tray->closeTray();
         QCOMPARE(f.layers->widget(), f.layersContent.data());
+    }
+
+    void dialogEditsACopy()
+    {
+        KisDockerTrayLayout layout;
+        layout.columns = {{{QStringLiteral("KisLayerBox"), QSize(300, 300)}},
+                          {{QStringLiteral("Gone"), QSize(100, 100)}}};
+        const QVector<KisDlgDockerTray::DockerInfo> dockers = {
+            {QStringLiteral("KisLayerBox"), QStringLiteral("Layers")},
+            {QStringLiteral("History"), QStringLiteral("Undo History")},
+            {QStringLiteral("PresetDocker"), QStringLiteral("Brush Presets")}};
+        KisDlgDockerTray dialog(layout, dockers);
+        auto *available = dialog.findChild<QListWidget *>(QStringLiteral("availableDockers"));
+        auto *tray = dialog.findChild<QTreeWidget *>(QStringLiteral("trayColumns"));
+        auto button = [&dialog](const char *name) {
+            return dialog.findChild<QPushButton *>(QString::fromLatin1(name));
+        };
+        auto *width = dialog.findChild<QSpinBox *>(QStringLiteral("widthSpin"));
+        auto *height = dialog.findChild<QSpinBox *>(QStringLiteral("heightSpin"));
+        QVERIFY(available && tray && width && height);
+
+        // Available: the window's dockers not on the tray, sorted by title.
+        QCOMPARE(available->count(), 2);
+        QCOMPARE(available->item(0)->text(), QStringLiteral("Brush Presets"));
+        QCOMPARE(tray->topLevelItemCount(), 2);
+        QVERIFY(tray->topLevelItem(1)->child(0)->text(0).contains(QStringLiteral("Gone")));
+
+        // Add Undo History to the first column.
+        tray->setCurrentItem(tray->topLevelItem(0));
+        available->setCurrentRow(1);
+        QVERIFY(button("addButton")->isEnabled());
+        button("addButton")->click();
+        QCOMPARE(dialog.trayLayout().columns[0].size(), 2);
+        QCOMPARE(dialog.trayLayout().find(QStringLiteral("History")), QPoint(0, 1));
+        QCOMPARE(available->count(), 1);
+
+        // The selected docker's size.
+        QVERIFY(width->isEnabled());
+        width->setValue(222);
+        height->setValue(111);
+        QCOMPARE(dialog.trayLayout().columns[0][1].size, QSize(222, 111));
+        QCOMPARE(tray->currentItem()->text(1), QStringLiteral("222"));
+
+        // Move it up, then down into the next column.
+        button("upButton")->click();
+        QCOMPARE(dialog.trayLayout().find(QStringLiteral("History")), QPoint(0, 0));
+        button("downButton")->click();
+        button("downButton")->click();
+        QCOMPARE(dialog.trayLayout().find(QStringLiteral("History")), QPoint(1, 0));
+
+        // Remove a docker, add and remove columns.
+        button("removeButton")->click();
+        QCOMPARE(dialog.trayLayout().find(QStringLiteral("History")), QPoint(-1, -1));
+        button("addColumnButton")->click();
+        QCOMPARE(tray->topLevelItemCount(), 3);
+        QVERIFY(button("removeColumnButton")->isEnabled());
+        button("removeColumnButton")->click();
+        QCOMPARE(tray->topLevelItemCount(), 2);
+        // Empty columns are dropped from the result.
+        tray->setCurrentItem(tray->topLevelItem(1)->child(0));
+        button("removeButton")->click();
+        QCOMPARE(dialog.trayLayout().columns.size(), 1);
+        QCOMPARE(layout.columns.size(), 2);
+
+        dialog.findChild<QDialogButtonBox *>(QStringLiteral("buttonBox"))
+            ->button(QDialogButtonBox::RestoreDefaults)
+            ->click();
+        QCOMPARE(dialog.trayLayout(), KisDockerTrayLayout::defaultLayout());
+    }
+
+    void reloadKeepsTheTrayOpen()
+    {
+        Fixture f;
+        KisDockerTray *tray = f.tray();
+        QSignalSpy finished(tray, SIGNAL(finished()));
+        tray->popupAt(f.center());
+        QVERIFY(tray->isAncestorOf(f.layersContent));
+        f.setLayout(layoutJson(QStringLiteral("[{\"items\":[{\"id\":\"History\",\"w\":260,\"h\":100}]}]")));
+        tray->reload();
+        QVERIFY(tray->onScreen());
+        QCOMPARE(finished.count(), 0);
+        QVERIFY(tray->isAncestorOf(f.historyContent));
+        QCOMPARE(f.layers->widget(), f.layersContent.data());
+        tray->closeTray();
     }
 
     void layoutChangeRebuilds()

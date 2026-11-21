@@ -4013,3 +4013,14 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   (`KoToolBase::popupWidget()`) in `KisToolPaint` changes what the tool
   plugins' own vtables point to: they must be rebuilt and installed, not
   only `kritaui`.
+
+## 2026-11-21 ingest: Docker Tray phase 3
+
+- The tray's configure button opens `KisDlgDockerTray`: available dockers,
+  columns with their dockers, move, add/remove columns, numeric sizes
+  ([plan](../docker-tray-plan.md#phase-3-results-2026-11-21)).
+- A tray with no existing docker now opens with a hint: a popup that only
+  ever shows configured content needs another way to reach its settings.
+- On a Japanese Windows console, Python scripts that print `krita.po`
+  entries stop with `UnicodeEncodeError` (cp932); run them with
+  `PYTHONUTF8=1` and write to a file.

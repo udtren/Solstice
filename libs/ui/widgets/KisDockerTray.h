@@ -48,13 +48,19 @@ public:
     /**
      * Opens the tray centered at \p globalPosition, kept inside the
      * available geometry of that screen. Re-reads the layout. If no docker
-     * of the layout exists, nothing is shown and finished() is emitted.
+     * of the layout exists, the tray opens with a hint and its configure
+     * button.
      */
     void popupAt(const QPoint &globalPosition);
 
     bool onScreen() override;
     void dismiss() override;
     void closeTray();
+
+    /// Opens the configuration dialog; on OK saves the layout and reloads an open tray.
+    void configure();
+    /// Rebuilds an open tray from the stored layout, keeping its center.
+    void reload();
 
     QString dockerBorrowerName() const override;
     void dockerContentGranted(const QString &dockerId, QWidget *content, QWidget *titleArea) override;

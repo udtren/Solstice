@@ -15,9 +15,13 @@
 #include <QMainWindow>
 #include <QPointer>
 #include <QScreen>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <klocalizedstring.h>
+
+#include "dialogs/KisDlgDockerTray.h"
+#include "kis_icon_utils.h"
 
 #include <memory>
 #include <vector>
@@ -50,7 +54,9 @@ struct KisDockerTray::Private {
     bool built = false;
 
     QFrame *panel = nullptr;
+    QWidget *header = nullptr;
     QHBoxLayout *columnsLayout = nullptr;
+    QLabel *emptyHint = nullptr;
     QVector<QWidget *> columns;
     std::vector<std::unique_ptr<Cell>> cells;
     QVector<QVector<Cell *>> grid;
@@ -96,9 +102,35 @@ KisDockerTray::KisDockerTray(QMainWindow *window, KSharedConfigPtr config)
     m_d->panel->setFrameShadow(QFrame::Raised);
     outer->addWidget(m_d->panel);
 
-    m_d->columnsLayout = new QHBoxLayout(m_d->panel);
-    m_d->columnsLayout->setContentsMargins(TrayMargin, TrayMargin, TrayMargin, TrayMargin);
+    auto *panelLayout = new QVBoxLayout(m_d->panel);
+    panelLayout->setContentsMargins(TrayMargin, TrayMargin, TrayMargin, TrayMargin);
+    panelLayout->setSpacing(TraySpacing);
+
+    m_d->header = new QWidget(m_d->panel);
+    auto *headerLayout = new QHBoxLayout(m_d->header);
+    headerLayout->setContentsMargins(0, 0, 0, 0);
+    headerLayout->addStretch(1);
+    auto *configure = new QToolButton(m_d->header);
+    configure->setObjectName(QStringLiteral("dockerTrayConfigure"));
+    configure->setAutoRaise(true);
+    configure->setIcon(KisIconUtils::loadIcon(QStringLiteral("applications-system")));
+    configure->setToolTip(i18nc("@info:tooltip", "Configure Docker Tray"));
+    connect(configure, &QToolButton::clicked, this, &KisDockerTray::configure);
+    headerLayout->addWidget(configure);
+    panelLayout->addWidget(m_d->header);
+
+    m_d->columnsLayout = new QHBoxLayout();
+    m_d->columnsLayout->setContentsMargins(0, 0, 0, 0);
     m_d->columnsLayout->setSpacing(TraySpacing);
+    panelLayout->addLayout(m_d->columnsLayout);
+
+    m_d->emptyHint =
+        new QLabel(i18nc("@info", "No dockers are on the Docker Tray. Use the configure button to add some."),
+                   m_d->panel);
+    m_d->emptyHint->setWordWrap(true);
+    m_d->emptyHint->setMinimumWidth(200);
+    m_d->emptyHint->hide();
+    panelLayout->addWidget(m_d->emptyHint);
 
     connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState state) {
         if (state != Qt::ApplicationActive && isVisible()) {
@@ -161,11 +193,8 @@ void KisDockerTray::popupAt(const QPoint &globalPosition)
         m_d->columns[c]->setVisible(columnPresent);
     }
 
-    if (!any) {
-        releaseAll();
-        Q_EMIT finished();
-        return;
-    }
+    // An empty tray still opens, so that its configure button can be reached.
+    m_d->emptyHint->setVisible(!any);
 
     applySizes(available);
     layout()->activate();
@@ -186,6 +215,38 @@ bool KisDockerTray::onScreen()
 void KisDockerTray::dismiss()
 {
     hide();
+}
+
+void KisDockerTray::configure()
+{
+    if (!m_d->window) {
+        return;
+    }
+    QVector<KisDlgDockerTray::DockerInfo> dockers;
+    for (QDockWidget *docker : m_d->window->findChildren<QDockWidget *>(QString(), Qt::FindDirectChildrenOnly)) {
+        if (!docker->objectName().isEmpty()) {
+            dockers.append({docker->objectName(), docker->windowTitle()});
+        }
+    }
+
+    KisDlgDockerTray dialog(KisDockerTrayLayout::load(m_d->config), dockers, this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    dialog.trayLayout().save(m_d->config);
+    reload();
+}
+
+void KisDockerTray::reload()
+{
+    if (!isVisible()) {
+        return;
+    }
+    const QPoint center = geometry().center();
+    // hide() returns the dockers without emitting finished(): the input
+    // manager keeps the tray registered while it reopens.
+    hide();
+    popupAt(center);
 }
 
 void KisDockerTray::closeTray()
@@ -351,7 +412,8 @@ void KisDockerTray::applySizes(const QRect &availableGeometry)
     QSize available;
     if (availableGeometry.isValid()) {
         const int frame = 2 * (TrayMargin + m_d->panel->frameWidth());
-        available = (availableGeometry.size() - QSize(frame, frame)).expandedTo(QSize(1, 1));
+        const int header = m_d->header->sizeHint().height() + TraySpacing;
+        available = (availableGeometry.size() - QSize(frame, frame + header)).expandedTo(QSize(1, 1));
     }
 
     const QVector<QVector<QSize>> sizes = KisDockerTrayGeometry::fit(wanted, minimum, available, TraySpacing);

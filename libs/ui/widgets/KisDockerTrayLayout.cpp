@@ -71,7 +71,108 @@ QVector<int> shrink(const QVector<int> &values, const QVector<int> &minimums, in
 
 bool KisDockerTrayLayout::isEmpty() const
 {
-    return columns.isEmpty();
+    for (const QVector<KisDockerTrayCell> &column : columns) {
+        if (!column.isEmpty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+QPoint KisDockerTrayLayout::find(const QString &dockerId) const
+{
+    for (int c = 0; c < columns.size(); ++c) {
+        for (int r = 0; r < columns[c].size(); ++r) {
+            if (columns[c][r].dockerId == dockerId) {
+                return QPoint(c, r);
+            }
+        }
+    }
+    return QPoint(-1, -1);
+}
+
+bool KisDockerTrayLayout::addDocker(const QString &dockerId, int column, const QSize &size)
+{
+    if (dockerId.isEmpty() || find(dockerId).x() >= 0 || column < 0 || column > columns.size()) {
+        return false;
+    }
+    if (column == columns.size()) {
+        columns.append(QVector<KisDockerTrayCell>());
+    }
+    columns[column].append(KisDockerTrayCell{dockerId, QSize()});
+    setSize(dockerId, size);
+    return true;
+}
+
+bool KisDockerTrayLayout::removeDocker(const QString &dockerId)
+{
+    const QPoint position = find(dockerId);
+    if (position.x() < 0) {
+        return false;
+    }
+    columns[position.x()].removeAt(position.y());
+    return true;
+}
+
+bool KisDockerTrayLayout::moveDocker(const QString &dockerId, int delta)
+{
+    const QPoint position = find(dockerId);
+    if (position.x() < 0 || (delta != -1 && delta != 1)) {
+        return false;
+    }
+    const int c = position.x();
+    const int r = position.y();
+    const int target = r + delta;
+    if (target >= 0 && target < columns[c].size()) {
+        columns[c].move(r, target);
+        return true;
+    }
+    const int targetColumn = c + delta;
+    if (targetColumn < 0 || targetColumn >= columns.size()) {
+        return false;
+    }
+    const KisDockerTrayCell cell = columns[c].takeAt(r);
+    if (delta < 0) {
+        columns[targetColumn].append(cell);
+    } else {
+        columns[targetColumn].prepend(cell);
+    }
+    return true;
+}
+
+bool KisDockerTrayLayout::moveColumn(int column, int delta)
+{
+    const int target = column + delta;
+    if (column < 0 || column >= columns.size() || target < 0 || target >= columns.size()) {
+        return false;
+    }
+    columns.move(column, target);
+    return true;
+}
+
+void KisDockerTrayLayout::addColumn()
+{
+    columns.append(QVector<KisDockerTrayCell>());
+}
+
+bool KisDockerTrayLayout::removeColumn(int column)
+{
+    if (column < 0 || column >= columns.size()) {
+        return false;
+    }
+    columns.removeAt(column);
+    return true;
+}
+
+bool KisDockerTrayLayout::setSize(const QString &dockerId, const QSize &size)
+{
+    const QPoint position = find(dockerId);
+    if (position.x() < 0) {
+        return false;
+    }
+    columns[position.x()][position.y()].size =
+        QSize(qBound(MinimumExtent, size.width(), MaximumExtent), qBound(MinimumExtent, size.height(), MaximumExtent));
+    return true;
 }
 
 QStringList KisDockerTrayLayout::dockerIds() const

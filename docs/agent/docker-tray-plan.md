@@ -4,9 +4,11 @@ Status: **design approved by the user on 2026-11-21. Phase 1 (audit and
 shared borrowing registry) implemented on branch `claude/docker-tray`,
 automated tests pass and the user checked it in the application. Phase 2
 (the tray, its action and the right-click hook) implemented and checked by
-the user. Phases 3-6 not started.** See
-[Phase 1 results](#phase-1-results-2026-11-21) and
-[Phase 2 results](#phase-2-results-2026-11-21). This plan
+the user. Phase 3 (configuration dialog) implemented and checked by the
+user. Phases 4-6 not started.** See
+[Phase 1 results](#phase-1-results-2026-11-21),
+[Phase 2 results](#phase-2-results-2026-11-21) and
+[Phase 3 results](#phase-3-results-2026-11-21). This plan
 does not authorize removing anything that
 [the Popup Palette removal](popup-palette-removal.md) kept.
 
@@ -277,12 +279,11 @@ registry fixes this.
 
 ### Behavior as implemented
 
-- Opening reads the layout from `kritarc` each time (`DockerTray/Layout`;
-  phase 3 adds the dialog, until then it is edited by hand), borrows every
-  docker of the layout, sizes the cells, then shows the tray centered at the
-  cursor and clamped 8 px inside the screen's available geometry. Dockers the
-  window does not have are skipped; if none exists the tray does not open and
-  emits `finished()`.
+- Opening reads the layout from `kritarc` each time (`DockerTray/Layout`),
+  borrows every docker of the layout, sizes the cells, then shows the tray
+  centered at the cursor and clamped 8 px inside the screen's available
+  geometry. Dockers the window does not have are skipped. (Phase 2 did not
+  open a tray with no docker; since phase 3 it opens with a hint, see below.)
 - Each cell shows the docker's title above its content. A column is as wide
   as its widest cell; a cell is never smaller than its content's minimum.
   When the tray would not fit on the screen, columns and cells shrink in
@@ -334,18 +335,58 @@ registry fixes this.
   second monitor; Timeline with its playback controls. Layers thumbnails of
   a hidden Layers docker remain a known phase 4 item.
 
-### Trying it before phase 3
+## Phase 3 results (2026-11-21)
 
-Phase 3 adds the configuration dialog. Until then, close Solstice and set
-the layout in `kritarc` (`%APPDATA%\Solstice\config\kritarc`):
+### Source
 
-```ini
-[DockerTray]
-Layout={"version":1,"trays":[{"name":"Default","columns":[{"items":[{"id":"KisLayerBox","w":300,"h":300},{"id":"History","w":300,"h":200}]},{"items":[{"id":"PresetDocker","w":280,"h":520}]}]}]}
-```
+| Part | Location |
+| --- | --- |
+| Dialog | `libs/ui/dialogs/KisDlgDockerTray.{h,cpp}` (`KisDlgDockerTray`, built in code, no `.ui`) |
+| Editing operations | `KisDockerTrayLayout::find()`, `addDocker()`, `removeDocker()`, `moveDocker()`, `moveColumn()`, `addColumn()`, `removeColumn()`, `setSize()` |
+| Tray header and reload | `KisDockerTray::configure()`, `reload()`; header with the configure button (`dockerTrayConfigure`), empty-tray hint |
+| Tests | `libs/ui/tests/KisDockerTrayTest.cpp` (`layoutEditing`, `dialogEditsACopy`, `reloadKeepsTheTrayOpen`) |
 
-Docker ids are the dock widgets' object names (Settings → Dockers shows
-their titles; the ids are in each docker factory's `id()`).
+### Behavior as implemented
+
+- The tray has a header row with a configure button (top right). It opens
+  **Configure Docker Tray**, a modal dialog over the tray.
+- Left: **Available dockers**, every dock widget of the window not on the
+  tray (hidden ones included), sorted by title. Right: **Dockers on the
+  tray**, one bold row per column ("Column 1", ...) with its dockers and
+  their width and height. A docker of the layout that the window does not
+  have is listed as "<id> (not available)" and kept.
+- **Add** (or double-click) appends the chosen docker to the selected column
+  (or the column of the selected docker; the last column if nothing is
+  selected). **Remove** returns a docker to the available list. **Move Up /
+  Move Down** move a docker within its column and, past either end, to the
+  end of the previous or the start of the next column; with a column
+  selected they move the whole column left or right. **Add Column**, **Remove
+  Column** (with its dockers). **Width / Height** spin boxes (50-4000 px) edit
+  the selected docker. **Restore Defaults** sets the Layers-only layout.
+- The dialog edits a copy. OK saves it (empty columns are dropped) and
+  reloads an open tray around the same center; Cancel changes nothing.
+  Reloading hides the tray without `finished()`, so the input manager keeps
+  it registered, and opens it again.
+- A tray whose layout has no existing docker now opens with a hint ("No
+  dockers are on the Docker Tray. Use the configure button to add some.")
+  instead of staying closed, so the dialog can always be reached.
+- Stored sizes are those of the whole cell, including the docker title. A
+  column shows at the width of its widest cell.
+
+### Verification
+
+- Built `kritaui` and `KisDockerTrayTest`; installed `libs/ui`.
+- `KisDockerTrayTest`: 21 passed (the 18 of phase 2, with the empty-layout
+  case now expecting the hint, plus layout editing, the dialog's buttons and
+  spin boxes on a copy, and reload keeping the tray open).
+- `zh_CN`: 16 new entries translated (feature name kept in English);
+  `msgfmt --check --statistics`: 10,714 translated, no fuzzy or
+  untranslated entries.
+- Checked by the user in the application (2026-11-21, all passed): adding
+  dockers in two columns with new sizes updates the open tray in place;
+  Cancel changes nothing; removing every docker shows the hint and the
+  configure button, then Restore Defaults; the layout survives closing and
+  reopening the tray.
 
 ## Manual checks (to run once implemented)
 
