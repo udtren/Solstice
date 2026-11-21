@@ -394,7 +394,7 @@ void QuickAdjustDock::hideEvent(QHideEvent *event)
 bool QuickAdjustDock::eventFilter(QObject *watched, QEvent *event)
 {
     // The sync timer follows the content, which is also shown on the Docker
-    // Tray while the dock is hidden (docs/agent/docker-tray-plan.md).
+    // Tray while the dock is hidden (docs/agent/docker-tray.md).
     if (watched == m_root) {
         if (event->type() == QEvent::Show) {
             // catch up with what changed while hidden, then follow

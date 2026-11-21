@@ -78,7 +78,7 @@ public:
 
 protected:
     // Solstice: thumbnails follow the content's visibility, which can be
-    // shown outside the docker (Docker Tray, docs/agent/docker-tray-plan.md).
+    // shown outside the docker (Docker Tray, docs/agent/docker-tray.md).
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private Q_SLOTS:

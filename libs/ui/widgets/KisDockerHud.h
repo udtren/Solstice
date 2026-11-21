@@ -13,7 +13,7 @@
 #include "KisDockerBorrowRegistry.h"
 
 // Solstice: borrowing goes through KisDockerBorrowRegistry, shared with the
-// Docker Tray and Quick Adjust's Tool Options pad (docs/agent/docker-tray-plan.md).
+// Docker Tray and Quick Adjust's Tool Options pad (docs/agent/docker-tray.md).
 class KisDockerHud : public QWidget, public KisDockerBorrower
 {
     Q_OBJECT

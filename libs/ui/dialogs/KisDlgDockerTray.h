@@ -16,7 +16,7 @@
 
 /**
  * Configures the Docker Tray: which dockers it shows, in which column and
- * order, and the size of each (docs/agent/docker-tray-plan.md). Works on a
+ * order, and the size of each (docs/agent/docker-tray.md). Works on a
  * copy of the layout; read the result with trayLayout() after accept().
  */
 class KRITAUI_EXPORT KisDlgDockerTray : public QDialog

@@ -110,7 +110,7 @@ detection, toast geometry/fonts, and overlay fonts.
   docker size, matching the original layout. Since 2026-11-21 the scaling
   follows the content root's `Resize` (an event filter on `m_root`) instead
   of the dock's `resizeEvent()`, so it also works on the
-  [Docker Tray](docker-tray-plan.md); the settings dialog is parented to
+  [Docker Tray](docker-tray.md); the settings dialog is parented to
   `m_root`.
 
 Preserve existing source and binary assets under

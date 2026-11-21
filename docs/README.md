@@ -88,6 +88,8 @@ settings through saved exports.
 - [Lazy Tools](lazy-tools.md): layer color labels, preset layer names,
   saved selections, Fast Image Export and color shortcuts. Extended in 0.5.1;
   saved exports added in 0.8.0.
+- [Docker Tray](docker-tray.md): a right-click popup with the dockers you
+  choose, hidden ones included, in columns with their own sizes.
 - [Docker locks](docker-locks.md): locking the size of docked dockers.
 - [Overview live update](overview-live-update.md): the Overview follows the
   canvas while you paint.

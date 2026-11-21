@@ -22,6 +22,9 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
   lifecycle and regression checks; its original plan is archived below.
 - [Brush strokes on vector layers](vector-brush-strokes.md) owns the stroke
   shape, the vector layer's stroke preview and their file form.
+- [Docker Tray](docker-tray.md) owns docker borrowing, the tray's
+  lifecycle and layout persistence, and the rules for dockers shown outside
+  their dock widget.
 - [Photoshop brush import](abr-import.md) owns parsing, conversion, resource
   compatibility and verification scope; its development history is archived below.
 - [Brush option shared model](brush-option-shared-model.md) owns state,
@@ -48,9 +51,6 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 
 ## Proposed plans
 
-- [Docker Tray](docker-tray-plan.md): a right-click popup showing several
-  dockers (hidden ones included) in columns with individual sizes; design
-  approved 2026-11-21, phase 1 (shared docker borrowing registry) implemented.
 - [UI test automation through MCP](ui-automation-plan.md): user decisions,
   determinism risks and phases 1-5; phase 0 is implemented and maintained in
   [Test control](test-control.md).
@@ -71,6 +71,7 @@ command and the PR workflow for links, wiki metadata and changed whitespace.
 | [GPU work-order development](wiki/history/gpu-work-priorities-development.md) | Original priority rationale and dated progress; [GPU priorities](gpu-work-priorities.md) owns remaining work and deferrals |
 | [Illustration filters development](wiki/history/illustration-filters-development.md) | Complete investigation, stage results and measurements; [Illustration filters](illustration-filters.md) owns current behavior and pending checks; [old plan path](illustration-filters-plan.md) remains a pointer |
 | [CPU effects and G'MIC development](wiki/history/cpu-effects-and-gmic-development.md) | Complete plan, phase results and measurements; [CPU effects](cpu-effects.md) and [G'MIC](gmic.md) own maintenance; [old plan path](cpu-effects-and-gmic-plan.md) remains a pointer |
+| [Docker Tray development](wiki/history/docker-tray-development.md) | Request, user decisions, docker audit and phase 1-5 results; [Docker Tray](docker-tray.md) owns the current contract; [old plan path](docker-tray-plan.md) remains a pointer |
 | [Brush Stroke Layer development](wiki/history/brush-stroke-layer-development.md) | Complete original plan and dated results; [Brush Stroke Layer](brush-stroke-layer.md) owns the current contract; [old plan path](brush-stroke-layer-plan.md) remains a pointer |
 | [ABR import development](wiki/history/abr-import-development.md) | Original investigation, staged implementation and dated results; [ABR import](abr-import.md) owns the current contract; [old plan path](abr-import-plan.md) remains a pointer |
 | [UI modernization development](wiki/history/ui-modernization-development.md) | Complete proposal and dated results; [Solstice interface](ui-modernization.md) owns current behavior; [old plan path](ui-modernization-plan.md) remains a pointer |

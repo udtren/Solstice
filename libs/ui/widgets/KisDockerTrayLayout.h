@@ -30,7 +30,7 @@ struct KRITAUI_EXPORT KisDockerTrayCell {
 
 /**
  * The Docker Tray's arrangement: columns of stacked dockers
- * (docs/agent/docker-tray-plan.md). Stored as JSON in kritarc, group
+ * (docs/agent/docker-tray.md). Stored as JSON in kritarc, group
  * `DockerTray`, key `Layout`:
  *
  *   {"version": 1, "trays": [{"name": "Default",

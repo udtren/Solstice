@@ -274,7 +274,7 @@ cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P <krita-dev-root>\_build\plugins\dockers\qu
 - The 200 ms timer (`quickAdjustSyncTimer`) runs only while the dock's
   content is shown (2026-11-13; since 2026-11-21 an event filter on the
   content root `m_root` handles `Show`/`Hide`, so the timer also runs while
-  the [Docker Tray](docker-tray-plan.md) shows the content of a hidden dock):
+  the [Docker Tray](docker-tray.md) shows the content of a hidden dock):
   `Show` synchronizes once and starts it, `Hide` stops it. The dock's own
   `showEvent()`/`hideEvent()` only show and hide the Tool Options pad.
   `setControlsEnabled()` and `QuickAccessDock::applyAppearanceSettings()` use

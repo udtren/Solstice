@@ -3992,7 +3992,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 - The user approved a Docker Tray: a right-click popup with several dockers,
   hidden ones included, in columns with individual sizes
-  ([plan](../docker-tray-plan.md)).
+  ([plan](history/docker-tray-development.md)).
 - Phase 1 added `KisDockerBorrowRegistry`; the toolbar docker box and the
   Quick Adjust Tool Options pad now borrow through it. Before, the docker
   box could have borrowed the pad's placeholder label.
@@ -4003,7 +4003,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 - `KisDockerTray` opens at the cursor from the `show_docker_tray` action or
   a right-click with any `KisToolPaint` tool, borrows every docker of the
-  `kritarc` layout and returns them on close ([plan](../docker-tray-plan.md#phase-2-results-2026-11-21)).
+  `kritarc` layout and returns them on close ([plan](history/docker-tray-development.md#phase-2-results-2026-11-21)).
 - `KisInputManager::deregisterPopupWidget()` calls `dismiss()` and then
   reads its popup pointer again: a popup must not emit `finished()` from
   `dismiss()`, or the re-entrant deregistration nulls the pointer and the
@@ -4018,7 +4018,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 
 - The tray's configure button opens `KisDlgDockerTray`: available dockers,
   columns with their dockers, move, add/remove columns, numeric sizes
-  ([plan](../docker-tray-plan.md#phase-3-results-2026-11-21)).
+  ([plan](history/docker-tray-development.md#phase-3-results-2026-11-21)).
 - A tray with no existing docker now opens with a hint: a popup that only
   ever shows configured content needs another way to reach its settings.
 - On a Japanese Windows console, Python scripts that print `krita.po`
@@ -4030,7 +4030,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Layers thumbnails, the Quick Adjust sync timer and Rest Note's font
   scaling now follow their content widget's Show/Hide/Resize events instead
   of the dock's, so they work on the tray while the docker is hidden
-  ([plan](../docker-tray-plan.md#phase-4-results-2026-11-21),
+  ([plan](history/docker-tray-development.md#phase-4-results-2026-11-21),
   [concept](concepts/docker-content-borrowing.md)).
 - A `.bat` file written from bash with `printf` turned `\r` in a Windows
   path (`...\scratchpad\r_Test.txt`) into a carriage return, and the
@@ -4051,7 +4051,7 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 ## 2026-11-21 ingest: Docker Tray phase 5
 
 - Docker sizes on the tray are dragged with grips between cells and saved
-  on release ([plan](../docker-tray-plan.md#phase-5-results-2026-11-21)).
+  on release ([plan](history/docker-tray-development.md#phase-5-results-2026-11-21)).
 - A window with `QLayout::SetFixedSize` lags behind content that is nested
   in more widget levels: each child widget's layout updates in its own
   posted `LayoutRequest`. Activate the layouts innermost first when the
@@ -4061,3 +4061,13 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
 - Bash on this machine failed with "unexpected EOF while looking for
   matching quote" on long Python heredocs that contain quotes; writing the
   script to a file and running it works.
+
+## 2026-11-21 ingest: Docker Tray phase 6 (documentation)
+
+- The Docker Tray has a user guide ([docker-tray.md](../../docker-tray.md))
+  and a maintained reference ([docker-tray.md](../docker-tray.md)); the plan
+  and phase record moved to
+  [history/docker-tray-development.md](history/docker-tray-development.md),
+  with a pointer at the old path.
+- README's "Popup Palette removed" entry now says what right-click does:
+  open the Docker Tray.

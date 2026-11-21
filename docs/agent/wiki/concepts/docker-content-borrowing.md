@@ -5,7 +5,7 @@ sources:
   - libs/ui/widgets/KisDockerBorrowRegistry.h
   - libs/ui/widgets/KisDockerHud.cpp
   - plugins/dockers/quickaccess/QuickAdjustToolOptionsPad.cpp
-  - docs/agent/docker-tray-plan.md
+  - docs/agent/docker-tray.md
 related:
   - native-refactor-boundaries.md
 ---
@@ -20,7 +20,7 @@ Timeline and Animation Curves, the title bar's `widgetArea()`); the
 workspaces keep working. They borrow through `KisDockerBorrowRegistry`, one
 per main window, which decides who holds a docker and puts a placeholder
 into the docker meanwhile. The rules are in the
-[Docker Tray plan](../../docker-tray-plan.md#shared-borrowing-registry).
+[Docker Tray reference](../../docker-tray.md#borrowing).
 
 What moves and what does not:
 
@@ -46,4 +46,5 @@ re-parent hides the widget, so the content's events describe where it is
 really seen (`LayerBox`, `QuickAdjustDock`, `RestNoteDock`).
 
 The per-docker audit is in the
-[Docker Tray plan](../../docker-tray-plan.md#docker-audit).
+[Docker Tray reference](../../docker-tray.md#dockers-on-the-tray) (dated audit in the
+[development history](../history/docker-tray-development.md#docker-audit)).

@@ -300,6 +300,10 @@ Document ownership and lifecycle are defined in
   (Move Tool Ctrl-drag) was implemented; the feature reference owns the
   current contract.
 
+- [Docker Tray development](history/docker-tray-development.md): request,
+  user decisions, docker audit and the dated results of phases 1-5; the
+  feature reference owns the current contract.
+
 - [Brush Stroke Layer development](history/brush-stroke-layer-development.md):
   complete original plan, investigations, measurements and dated verification;
   current recording/replay/persistence rules live in the feature reference.

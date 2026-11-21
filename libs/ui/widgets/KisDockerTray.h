@@ -23,7 +23,7 @@ class QMainWindow;
  * main window at once, in columns, with the sizes stored in
  * KisDockerTrayLayout. Hidden dockers work too. The content is borrowed
  * through KisDockerBorrowRegistry when the tray opens and returned when it
- * closes. See docs/agent/docker-tray-plan.md.
+ * closes. See docs/agent/docker-tray.md.
  *
  * Two ways to close it:
  * - dismiss() (KisPopupWidgetInterface) only hides it; the input manager

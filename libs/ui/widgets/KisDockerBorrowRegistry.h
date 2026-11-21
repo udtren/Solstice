@@ -22,7 +22,7 @@ class QWidget;
 /**
  * A widget that shows the content of a main-window docker outside the
  * docker (the toolbar docker box, Quick Adjust's Tool Options pad, the
- * Docker Tray). See docs/agent/docker-tray-plan.md.
+ * Docker Tray). See docs/agent/docker-tray.md.
  *
  * Inherit QObject or QWidget first, then this class: the base destructor
  * returns anything still borrowed while the derived widget's children are

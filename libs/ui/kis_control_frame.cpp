@@ -306,7 +306,7 @@ void KisControlFrame::createDockerBox(KisViewManager * view)
     m_dockerPopup->addAction(action);
 
     // Solstice: the Docker Tray opens at the cursor and closes with the same
-    // shortcut (docs/agent/docker-tray-plan.md).
+    // shortcut (docs/agent/docker-tray.md).
     KisAction *trayAction = view->actionManager()->createAction("show_docker_tray");
     connect(trayAction, &QAction::triggered, this, [this, trayAction]() {
         KisDockerTray *tray = KisDockerTray::forWindow(m_viewManager->mainWindow());

@@ -30,7 +30,7 @@ installation must be deleted by hand; `cmake --install` does not remove it.
   and Fill subtools (`KoToolBase::popupActionsMenu()`). It opens a popup
   widget only when the tool returns one (`KoToolBase::popupWidget()`; since
   2026-11-21 `KisToolPaint::popupWidget()` returns the
-  [Docker Tray](docker-tray-plan.md), `nullptr` for other tools). Removing the action or the profile entries
+  [Docker Tray](docker-tray.md), `nullptr` for other tools). Removing the action or the profile entries
   removes those menus, and saved user profiles name it. This is the most
   likely cause of the problem in an earlier removal attempt.
 - **`KisPopupWidgetInterface` and the popup handling of `KisInputManager`**
@@ -66,7 +66,7 @@ installation must be deleted by hand; `cmake --install` does not remove it.
 ## Behavior
 
 - Right-click on a brush tool opened nothing until 2026-11-21; it now opens
-  the [Docker Tray](docker-tray-plan.md). Right-click menus of the tools
+  the [Docker Tray](docker-tray.md). Right-click menus of the tools
   listed above work as before.
 - The Quick Access popups and gestures do not use any of the removed parts.
 

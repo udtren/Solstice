@@ -45,7 +45,7 @@ public:
     void mouseReleaseEvent(KoPointerEvent *event) override;
     void mouseMoveEvent(KoPointerEvent *event) override;
 
-    /// Solstice: right-click opens the Docker Tray (docs/agent/docker-tray-plan.md).
+    /// Solstice: right-click opens the Docker Tray (docs/agent/docker-tray.md).
     KisPopupWidgetInterface *popupWidget() override;
 
 protected:

@@ -202,8 +202,12 @@ required.
 
 - **[Asset Library on the welcome page](docs/asset-library.md)**: browse and
   open assets from the welcome page before opening a document.
+- **[Docker Tray](docs/docker-tray.md)**: right-click on the canvas opens
+  the dockers you choose, hidden ones included, in columns with their own
+  sizes.
 - **[Popup Palette removed](docs/quick-access.md)**: the right-click Popup
-  Palette and the On-Canvas Brush Editor are replaced by Quick Access.
+  Palette and the On-Canvas Brush Editor are replaced by Quick Access and
+  the Docker Tray.
 - **Native Export Region**: the export feature of the Export Region plugin is
   now built in as **File > Export Region...** (`Alt+Shift+E`), which exports
   the selection or the active layer's bounds.
