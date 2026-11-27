@@ -4091,3 +4091,30 @@ Format: `## YYYY-MM-DD <kind>: <subject>`, then what changed and the sources.
   the script fallback mirrors rather than weakening the certificate check.
 - The website shows the Docker Tray in "Other major changes" with a
   640 px copy of the recording (tidalboxstudio-web #47, #48).
+
+## 2026-11-27 ingest: upstream intake 2026-W48 (items 01 to 03)
+
+- Adopted U-2026W48-01 (remote messages queued during startup), 02 (32-bit
+  float copy blending clamp) and 03 (news language codes); rows in the
+  [ledger](../upstream-intake.md#ledger). Items 04 and 05 and the held
+  items were reviewed, not adopted.
+- A clean apply can still carry a defect of its own. U-2026W48-02 applied
+  cleanly, but replacing `unitValue` by `max` also changed the value written
+  for a NaN, so fully transparent RGBA F32 pixels would have received
+  FLT_MAX colours. Read what every changed constant is used for, not only
+  the line the commit message is about. Solstice writes zero there.
+  `TestCompositeOpInversion::testCopyF32KeepsHdrAndClearsTransparent` fails
+  on the upstream-only code with 3.40282e+38 and covers both halves. (In a
+  `KoCompositeOp::ParameterInfo`, a source stride of 0 repeats the first
+  source pixel; a test row needs a real stride.)
+- A renamed identifier that is persisted needs a migration even when
+  upstream ships none: U-2026W48-03 renamed the news language codes and
+  left saved `FetchNewsLanguages` lists pointing at the old ones.
+- Before U-2026W48-05 (Luminosity/Shine (SAI) alpha) can be adopted, the GPU
+  shader must change with it: `OpLuminositySai` in
+  `libs/gpu/shaders/composite_blend.glsl` implements the old CPU formula,
+  and the GPU parity tests compare against the CPU. The new formula does
+  not overflow for 8-bit channels (checked exhaustively).
+- The recorder half of U-2026W46-01 (`08aca5ef2d`) emits
+  `<font color=''>` while paused; give it the normal text colour when it is
+  adopted.

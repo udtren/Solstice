@@ -10,7 +10,10 @@ stretch, neither part collapsible):
 
 - **Krita news** (top): unchanged upstream behavior. The krita.org feeds
   per language (`https://krita.org/<lang>/index.xml`), chosen in the news
-  menu's Language section.
+  menu's Language section. The site codes for Japanese and Simplified Chinese are
+  `ja` and `zh-cn` (upstream fix, U-2026W48-03); a `FetchNewsLanguages` list
+  saved with the former `jp` / `zh` is rewritten when it is read
+  (`KisWelcomePageWidget::setupNewsLangSelection()`).
 - **Solstice releases** (bottom): the Atom feed of the Solstice repository's
   GitHub Releases, `https://github.com/udtren/Solstice/releases.atom`
   (public, no token, HTTP 200 without redirect). While it has no entries, the
