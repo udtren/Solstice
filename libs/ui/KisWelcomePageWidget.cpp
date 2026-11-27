@@ -541,10 +541,10 @@ QString getAutoNewsLang()
     if (autoNewsLang.isEmpty()) {
         // If nothing else, use English.
         autoNewsLang = QString("en");
-    } else if (autoNewsLang == "ja") {
-        return QString("jp");
+    } else if (autoNewsLang == "jp") {
+        return QString("ja");
     } else if (autoNewsLang == "zh_CN") {
-        return QString("zh");
+        return QString("zh-cn");
     } else if (autoNewsLang == "zh_TW") {
         return QString("zh-tw");
     } else if (autoNewsLang == "zh_HK") {
@@ -570,8 +570,8 @@ void KisWelcomePageWidget::setupNewsLangSelection(QMenu *newsOptionsMenu)
         const QString name;
     };
     static const std::array<Lang, 22> newsLangs = {{{QString("en"), QStringLiteral("English")},
-                                                    {QString("jp"), QStringLiteral("日本語")},
-                                                    {QString("zh"), QStringLiteral("中文 (简体)")},
+                                                    {QString("ja"), QStringLiteral("日本語")},
+                                                    {QString("zh-cn"), QStringLiteral("中文 (简体)")},
                                                     {QString("zh-tw"), QStringLiteral("中文 (台灣正體)")},
                                                     {QString("zh-hk"), QStringLiteral("廣東話 (香港)")},
                                                     {QString("ca"), QStringLiteral("Català")},
@@ -600,6 +600,22 @@ void KisWelcomePageWidget::setupNewsLangSelection(QMenu *newsOptionsMenu)
         KisConfig cfg(true);
         auto languagesList = cfg.readList<QString>(newsLangConfigName);
         *enabledNewsLangs = QSet(languagesList.begin(), languagesList.end());
+
+        // Solstice: the menu used "jp" and "zh" before the site codes were
+        // corrected (U-2026W48-03). Carry a saved selection over, or the
+        // language is unchecked and its old code stays in the config forever.
+        bool migrated = false;
+        if (enabledNewsLangs->remove(QStringLiteral("jp"))) {
+            enabledNewsLangs->insert(QStringLiteral("ja"));
+            migrated = true;
+        }
+        if (enabledNewsLangs->remove(QStringLiteral("zh"))) {
+            enabledNewsLangs->insert(QStringLiteral("zh-cn"));
+            migrated = true;
+        }
+        if (migrated) {
+            KisConfig(false).writeList(newsLangConfigName, enabledNewsLangs->values());
+        }
     }
 
     // If no languages are selected in the config, use the automatic selection.

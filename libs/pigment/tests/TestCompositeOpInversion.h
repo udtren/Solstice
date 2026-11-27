@@ -22,6 +22,8 @@ private Q_SLOTS:
     void testF32ModesNaN();
     void testF32ModesNaN_data();
 
+    void testCopyF32KeepsHdrAndClearsTransparent();
+
 #if 0
     void testU16ModesConsistent();
     void testU16ModesConsistent_data();

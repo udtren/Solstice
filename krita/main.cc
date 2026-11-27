@@ -953,9 +953,6 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 #endif
     KisApplication::setAttribute(Qt::AA_CompressHighFrequencyEvents, false);
 
-    // Set up remote arguments.
-    QObject::connect(&app, &KisApplication::messageReceived, &app, &KisApplication::remoteArguments);
-
     // Hardware information
     KisUsageLogger::writeSysInfo("\nHardware Information\n");
     KisUsageLogger::writeSysInfo(
@@ -979,6 +976,14 @@ extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
         KisUsageLogger::log("Could not start Krita Application");
         return 1;
     }
+
+    // Single-application handling. Other instances of Krita send messages to
+    // this instance if the user starts it again, passing relevant arguments
+    // like files to open along. Messages received during startup are queued
+    // and will spill once the application is marked ready.
+    QObject::connect(&app, &KisApplication::messageReceived,
+                     &app, &KisApplication::remoteArguments);
+    app.setSingleApplicationReady();
 
     int state = KisApplication::exec();
 
