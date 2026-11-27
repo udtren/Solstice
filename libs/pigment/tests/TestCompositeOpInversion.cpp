@@ -1750,4 +1750,59 @@ void TestCompositeOpInversion::testToneMappingNegative()
     testToneMapping(QLatin1String("HSY"), HSYType{});
 }
 
+void TestCompositeOpInversion::testCopyF32KeepsHdrAndClearsTransparent()
+{
+    // Solstice (U-2026W48-02): the 32-bit float copy op keeps values above
+    // 1.0, and a pixel whose resulting alpha is null gets a zero colour in
+    // the vectorised path too (0/0 there must not become FLT_MAX).
+    const KoColorSpace *cs =
+        KoColorSpaceRegistry::instance()->colorSpace(RGBAColorModelID.id(), Float32BitsColorDepthID.id(), 0);
+    const KoCompositeOp *op = cs->compositeOp(COMPOSITE_COPY);
+    QVERIFY(op);
+
+    // long enough for the widest vector batch plus a scalar tail
+    const int numPixels = 37;
+    std::vector<float> src(numPixels * 4);
+    std::vector<float> dst(numPixels * 4);
+
+    for (int i = 0; i < numPixels; i++) {
+        const bool transparent = i % 2;
+        for (int c = 0; c < 3; c++) {
+            src[i * 4 + c] = transparent ? 0.0f : 4.0f;
+            dst[i * 4 + c] = transparent ? 0.0f : 4.0f;
+        }
+        src[i * 4 + 3] = transparent ? 0.0f : 1.0f;
+        dst[i * 4 + 3] = transparent ? 0.0f : 0.5f;
+    }
+
+    KoCompositeOp::ParameterInfo params;
+    params.dstRowStart = reinterpret_cast<quint8 *>(dst.data());
+    params.dstRowStride = numPixels * 4 * sizeof(float);
+    params.srcRowStart = reinterpret_cast<const quint8 *>(src.data());
+    // a null source stride would repeat the first source pixel
+    params.srcRowStride = numPixels * 4 * sizeof(float);
+    params.maskRowStart = nullptr;
+    params.maskRowStride = 0;
+    params.rows = 1;
+    params.cols = numPixels;
+    params.opacity = 0.5f;
+    params.flow = 1.0f;
+    params.channelFlags = QBitArray();
+
+    op->composite(params);
+
+    for (int i = 0; i < numPixels; i++) {
+        const bool transparent = i % 2;
+        for (int c = 0; c < 3; c++) {
+            const float value = dst[i * 4 + c];
+            if (transparent) {
+                QCOMPARE(value, 0.0f);
+            } else {
+                QVERIFY2(qAbs(value - 4.0f) < 1e-4f, qPrintable(QString("pixel %1: %2").arg(i).arg(value)));
+            }
+        }
+        QCOMPARE(dst[i * 4 + 3], transparent ? 0.0f : 0.75f);
+    }
+}
+
 SIMPLE_TEST_MAIN(TestCompositeOpInversion)
