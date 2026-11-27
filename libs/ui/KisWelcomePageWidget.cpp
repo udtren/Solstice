@@ -600,6 +600,22 @@ void KisWelcomePageWidget::setupNewsLangSelection(QMenu *newsOptionsMenu)
         KisConfig cfg(true);
         auto languagesList = cfg.readList<QString>(newsLangConfigName);
         *enabledNewsLangs = QSet(languagesList.begin(), languagesList.end());
+
+        // Solstice: the menu used "jp" and "zh" before the site codes were
+        // corrected (U-2026W48-03). Carry a saved selection over, or the
+        // language is unchecked and its old code stays in the config forever.
+        bool migrated = false;
+        if (enabledNewsLangs->remove(QStringLiteral("jp"))) {
+            enabledNewsLangs->insert(QStringLiteral("ja"));
+            migrated = true;
+        }
+        if (enabledNewsLangs->remove(QStringLiteral("zh"))) {
+            enabledNewsLangs->insert(QStringLiteral("zh-cn"));
+            migrated = true;
+        }
+        if (migrated) {
+            KisConfig(false).writeList(newsLangConfigName, enabledNewsLangs->values());
+        }
     }
 
     // If no languages are selected in the config, use the automatic selection.
