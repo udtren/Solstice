@@ -116,10 +116,13 @@ struct CopyCompositor128 {
                     dst_c3 /= newAlpha;
 
 
+                    // Solstice: a NaN is 0/0 in a pixel whose new alpha is null. Clear
+                    // it as the scalar version does; upstream writes the maximum
+                    // (FLT_MAX) into the colour of such fully transparent pixels.
                     const float_v maxValue(KoColorSpaceMathsTraits<channels_type>::max);
-                    dst_c1 = xsimd::select(xsimd::isnan(dst_c1), maxValue, dst_c1);
-                    dst_c2 = xsimd::select(xsimd::isnan(dst_c2), maxValue, dst_c2);
-                    dst_c3 = xsimd::select(xsimd::isnan(dst_c3), maxValue, dst_c3);
+                    dst_c1 = xsimd::select(xsimd::isnan(dst_c1), zeroValue, dst_c1);
+                    dst_c2 = xsimd::select(xsimd::isnan(dst_c2), zeroValue, dst_c2);
+                    dst_c3 = xsimd::select(xsimd::isnan(dst_c3), zeroValue, dst_c3);
                     dst_c1 = xsimd::min(dst_c1, maxValue);
                     dst_c2 = xsimd::min(dst_c2, maxValue);
                     dst_c3 = xsimd::min(dst_c3, maxValue);
@@ -238,9 +241,9 @@ struct CopyCompositor128 {
 
                     const float maxValue = KoColorSpaceMathsTraits<channels_type>::max;
 
-                    dst_c1 = std::isnan(dst_c1) ? maxValue : dst_c1;
-                    dst_c2 = std::isnan(dst_c2) ? maxValue : dst_c2;
-                    dst_c3 = std::isnan(dst_c3) ? maxValue : dst_c3;
+                    dst_c1 = std::isnan(dst_c1) ? 0.0f : dst_c1;
+                    dst_c2 = std::isnan(dst_c2) ? 0.0f : dst_c2;
+                    dst_c3 = std::isnan(dst_c3) ? 0.0f : dst_c3;
 
                     dst_c1 = std::min(dst_c1, maxValue);
                     dst_c2 = std::min(dst_c2, maxValue);
